@@ -5,7 +5,8 @@ Last updated: 2026-08-13
 ## Purpose
 
 This is the compact handoff for a new session. The repository is an initial
-pre-alpha scaffold for a shared Internet Computer timer runtime.
+pre-alpha scaffold for a higher-level wrapper around `ic-cdk-timers` and a
+shared Internet Computer timer runtime.
 
 ## Current foundation
 
@@ -18,6 +19,9 @@ pre-alpha scaffold for a shared Internet Computer timer runtime.
 - `schedule` owns typed post-run directives and checked deadlines.
 - Basic GitHub CI, one formatting-only pre-commit hook, SemVer release helpers,
   development-tool setup, README, changelog, and architecture docs exist.
+- A proposed 0.2 observability contract requires the future canonical snapshot
+  to preserve Canic's timer status, counters, scheduling, and performance
+  information without importing Canic-specific DTOs.
 - Normal development is pinned to Rust 1.97.1; Rust 1.91.0 remains the
   separately checked minimum supported Rust version.
 
@@ -38,10 +42,11 @@ guarantees and tests exist.
 
 ## Next action
 
-Specify bounded identity, scheduling-policy, execution-state, outcome,
-measurement, and snapshot value types first. Settle their ordering and public
-serialization shape in unit tests. Then implement one pure serial registry
-above `TimerControl`, with duplicate detection and deterministic snapshots,
-before connecting it to the platform boundary.
+Review and settle the proposed 0.2
+[observability contract](../design/observability.md), especially outcome
+classification, epoch attribution of interrupted work, and label bounds. Then
+implement its bounded identity, policy, state, outcome, counter, measurement,
+scope, and snapshot value types with transition tests. Registry storage and
+runtime instrumentation follow only after that contract is accepted.
 
 The maintainer owns release tags and all package-publication actions.

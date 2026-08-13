@@ -39,13 +39,22 @@ Metrics should be collected once at the registry boundary. Consumers may adapt
 the snapshot to their own status endpoint or metrics encoder without wrapping
 every callback independently.
 
+The canonical snapshot must be a semantic superset of Canic's current timer
+status, scheduling counters, and instruction metrics before runtime
+instrumentation is implemented. In particular, callback starts and completions
+remain separate because traps and instruction exhaustion can prevent post-run
+measurement, and consecutive expected failures remain cheap functional state
+because recovery decisions consume them. See the
+[observability and Canic parity contract](design/observability.md).
+
 ## Implementation sequence
 
 Keep the runtime work in independently testable layers:
 
-1. Define bounded structured identity, scheduling-policy, execution-state,
-   outcome, measurement, and snapshot value types. Settle their ordering and
-   public serialization shape before storing them.
+1. Review the 0.2 observability contract, then define bounded structured
+   identity, scheduling-policy, execution-state, outcome, counter,
+   measurement, scope, and snapshot value types. Settle their semantics,
+   ordering, and portable shape before storing them.
 2. Add a pure serial registry above `TimerControl`. It should reject duplicate
    identities, own deterministic snapshot ordering, and translate registry
    commands into platform-neutral effects.

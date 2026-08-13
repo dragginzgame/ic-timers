@@ -4,6 +4,16 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+### Added
+
+- Add a proposed 0.2 canonical snapshot and observability contract requiring
+  semantic parity with Canic's existing timer operator surfaces.
+
+### Changed
+
+- Rework the README to identify `ic-timers` as a wrapper around
+  `ic-cdk-timers` and explain the shared coordination and recovery rationale.
+
 ## [0.1.0] - 2026-08-13
 
 ### Added
