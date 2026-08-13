@@ -1,0 +1,26 @@
+[workspace]
+members = ["runtime-probe", "size-probe", "pocketic"]
+resolver = "2"
+
+[workspace.package]
+rust-version = "1.88.0"
+edition = "2024"
+version = "0.0.0"
+publish = false
+license = "MIT"
+
+[workspace.dependencies]
+candid = "0.10"
+ic-cdk = "=0.20.2"
+ic-timers = { path = "../crates/ic-timers" }
+pocket-ic = "=15.0.0"
+serde = "1.0"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[profile.release]
+lto = "thin"
+opt-level = "z"
+panic = "abort"
+strip = "symbols"

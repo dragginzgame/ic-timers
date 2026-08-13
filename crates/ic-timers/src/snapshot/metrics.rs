@@ -1,46 +1,53 @@
-//! Saturating epoch-local counters and performance aggregates.
+//! Saturating epoch-local counters and instruction aggregates.
 
 use super::{TimerCompletion, TimerCompletionOutcome, TimerEpoch, TimerOutcomeSnapshot};
 
 /// Epoch-local timer event counters.
 ///
-/// Fields are private so all mutation preserves saturation and the completion
-/// partition. Consumer adapters read values through the accessors.
+/// Fields are private so mutation preserves saturation and the completion
+/// partition. The registry is the sole writer.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct TimerCounters {
-    requested: u64,
-    armed: u64,
-    started: u64,
-    completed: u64,
+    schedule_requests: u64,
+    wakeups_armed: u64,
+    work_dispatched: u64,
+    scheduler_started: u64,
+    work_started: u64,
+    work_completed: u64,
     succeeded: u64,
     no_work: u64,
     retryable_failure: u64,
     invariant_failure: u64,
     cancelled: u64,
-    stale: u64,
+    stale_wakeups: u64,
+    stale_work: u64,
     coalesced: u64,
-    interrupted: u64,
+    unacknowledged: u64,
 }
 
 impl TimerCounters {
-    /// Record a validated schedule or reconciliation request.
-    pub const fn record_request(&mut self) {
-        self.requested = self.requested.saturating_add(1);
+    pub(crate) const fn record_schedule_request(&mut self) {
+        self.schedule_requests = self.schedule_requests.saturating_add(1);
     }
 
-    /// Record an actual one-shot provider arm.
-    pub const fn record_arm(&mut self) {
-        self.armed = self.armed.saturating_add(1);
+    pub(crate) const fn record_wakeup_armed(&mut self) {
+        self.wakeups_armed = self.wakeups_armed.saturating_add(1);
     }
 
-    /// Record a non-stale callback entering logical execution.
-    pub const fn record_start(&mut self) {
-        self.started = self.started.saturating_add(1);
+    pub(crate) const fn record_work_dispatched(&mut self) {
+        self.work_dispatched = self.work_dispatched.saturating_add(1);
     }
 
-    /// Record one returned callback and its single completion class.
-    pub const fn record_completion(&mut self, outcome: TimerCompletionOutcome) {
-        self.completed = self.completed.saturating_add(1);
+    pub(crate) const fn record_scheduler_started(&mut self) {
+        self.scheduler_started = self.scheduler_started.saturating_add(1);
+    }
+
+    pub(crate) const fn record_work_started(&mut self) {
+        self.work_started = self.work_started.saturating_add(1);
+    }
+
+    pub(crate) const fn record_completion(&mut self, outcome: TimerCompletionOutcome) {
+        self.work_completed = self.work_completed.saturating_add(1);
         match outcome {
             TimerCompletionOutcome::Success => {
                 self.succeeded = self.succeeded.saturating_add(1);
@@ -57,52 +64,66 @@ impl TimerCounters {
         }
     }
 
-    /// Record a logical cancellation that wins arbitration.
-    pub const fn record_cancellation(&mut self) {
+    pub(crate) const fn record_cancellation(&mut self) {
         self.cancelled = self.cancelled.saturating_add(1);
     }
 
-    /// Record a provider callback or completion rejected as stale.
-    pub const fn record_stale(&mut self) {
-        self.stale = self.stale.saturating_add(1);
+    pub(crate) const fn record_stale_wakeup(&mut self) {
+        self.stale_wakeups = self.stale_wakeups.saturating_add(1);
     }
 
-    /// Record scheduling demand merged into existing work.
-    pub const fn record_coalesced(&mut self) {
+    pub(crate) const fn record_stale_work(&mut self) {
+        self.stale_work = self.stale_work.saturating_add(1);
+    }
+
+    pub(crate) const fn record_coalesced(&mut self) {
         self.coalesced = self.coalesced.saturating_add(1);
     }
 
-    /// Record a started generation established not to have completed.
-    ///
-    /// The interruption belongs to the epoch in which it is observed. It can
-    /// therefore describe a generation started in an earlier epoch and has no
-    /// arithmetic invariant with this epoch's `started` count.
-    pub const fn record_interruption(&mut self) {
-        self.interrupted = self.interrupted.saturating_add(1);
+    pub(crate) const fn record_unacknowledged(&mut self) {
+        self.unacknowledged = self.unacknowledged.saturating_add(1);
     }
 
-    /// Return validated scheduling requests.
+    /// Return validated activation and reconciliation requests.
     #[must_use]
-    pub const fn requested(self) -> u64 {
-        self.requested
+    pub const fn schedule_requests(self) -> u64 {
+        self.schedule_requests
     }
 
-    /// Return actual provider arm operations.
+    /// Return ordinary or scheduler provider one-shots armed.
     #[must_use]
-    pub const fn armed(self) -> u64 {
-        self.armed
+    pub const fn wakeups_armed(self) -> u64 {
+        self.wakeups_armed
     }
 
-    /// Return callbacks that entered logical execution.
+    /// Return immediate watchdog work one-shots dispatched.
     #[must_use]
-    pub const fn started(self) -> u64 {
-        self.started
+    pub const fn work_dispatched(self) -> u64 {
+        self.work_dispatched
     }
 
-    /// Return callbacks that completed accounting.
+    /// Return actual provider arms across both callback roles.
     #[must_use]
-    pub const fn completed(self) -> u64 {
-        self.completed
+    pub const fn provider_arms(self) -> u64 {
+        self.wakeups_armed.saturating_add(self.work_dispatched)
+    }
+
+    /// Return accepted watchdog scheduler callbacks.
+    #[must_use]
+    pub const fn scheduler_started(self) -> u64 {
+        self.scheduler_started
+    }
+
+    /// Return accepted consumer-work callbacks.
+    #[must_use]
+    pub const fn work_started(self) -> u64 {
+        self.work_started
+    }
+
+    /// Return consumer work whose completion accounting committed.
+    #[must_use]
+    pub const fn work_completed(self) -> u64 {
+        self.work_completed
     }
 
     /// Return successful-work completions.
@@ -129,34 +150,40 @@ impl TimerCounters {
         self.invariant_failure
     }
 
-    /// Return logical cancellations that won arbitration.
+    /// Return logical cancellations that changed authoritative state.
     #[must_use]
     pub const fn cancelled(self) -> u64 {
         self.cancelled
     }
 
-    /// Return callbacks or completions rejected as stale.
+    /// Return rejected ordinary or scheduler callback generations.
     #[must_use]
-    pub const fn stale(self) -> u64 {
-        self.stale
+    pub const fn stale_wakeups(self) -> u64 {
+        self.stale_wakeups
     }
 
-    /// Return scheduling demands merged into existing work.
+    /// Return rejected watchdog work generations.
+    #[must_use]
+    pub const fn stale_work(self) -> u64 {
+        self.stale_work
+    }
+
+    /// Return scheduling demand satisfied without another logical arm.
     #[must_use]
     pub const fn coalesced(self) -> u64 {
         self.coalesced
     }
 
-    /// Return incomplete generations observed in this epoch.
+    /// Return committed watchdog dispatches retired without completion.
     #[must_use]
-    pub const fn interrupted(self) -> u64 {
-        self.interrupted
+    pub const fn unacknowledged(self) -> u64 {
+        self.unacknowledged
     }
 
     /// Check that every completion belongs to exactly one outcome class.
     #[must_use]
     pub const fn completion_partition_is_valid(self) -> bool {
-        self.completed
+        self.work_completed
             == self
                 .succeeded
                 .saturating_add(self.no_work)
@@ -165,16 +192,7 @@ impl TimerCounters {
     }
 }
 
-/// One callback's completed performance measurement.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct TimerMeasurement {
-    /// Instructions consumed by the callback.
-    pub instructions: u64,
-    /// Wall-clock callback duration in nanoseconds.
-    pub elapsed_ns: u64,
-}
-
-/// Saturating aggregate for one non-negative measurement.
+/// Saturating aggregate for one instruction measurement role.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct MeasurementSummary {
     samples: u64,
@@ -184,8 +202,7 @@ pub struct MeasurementSummary {
 }
 
 impl MeasurementSummary {
-    /// Record one completed sample.
-    pub const fn record(&mut self, value: u64) {
+    pub(crate) const fn record(&mut self, value: u64) {
         self.samples = self.samples.saturating_add(1);
         self.total = self.total.saturating_add(value);
         self.latest = Some(value);
@@ -220,30 +237,32 @@ impl MeasurementSummary {
     }
 }
 
-/// Completed callback performance aggregates for one runtime epoch.
+/// Completed instruction aggregates split by callback role.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct TimerPerformance {
-    instructions: MeasurementSummary,
-    elapsed_ns: MeasurementSummary,
+    scheduler_instructions: MeasurementSummary,
+    work_instructions: MeasurementSummary,
 }
 
 impl TimerPerformance {
-    /// Record one callback with valid end measurements.
-    pub const fn record(&mut self, measurement: TimerMeasurement) {
-        self.instructions.record(measurement.instructions);
-        self.elapsed_ns.record(measurement.elapsed_ns);
+    pub(crate) const fn record_scheduler(&mut self, instructions: u64) {
+        self.scheduler_instructions.record(instructions);
     }
 
-    /// Return the instruction aggregate.
-    #[must_use]
-    pub const fn instructions(self) -> MeasurementSummary {
-        self.instructions
+    pub(crate) const fn record_work(&mut self, instructions: u64) {
+        self.work_instructions.record(instructions);
     }
 
-    /// Return the elapsed-nanosecond aggregate.
+    /// Return normally completed scheduler instruction measurements.
     #[must_use]
-    pub const fn elapsed_ns(self) -> MeasurementSummary {
-        self.elapsed_ns
+    pub const fn scheduler_instructions(self) -> MeasurementSummary {
+        self.scheduler_instructions
+    }
+
+    /// Return normally completed consumer-work instruction measurements.
+    #[must_use]
+    pub const fn work_instructions(self) -> MeasurementSummary {
+        self.work_instructions
     }
 }
 
@@ -257,76 +276,68 @@ pub struct TimerObservabilitySnapshot {
 }
 
 impl TimerObservabilitySnapshot {
-    /// Begin empty observation state for one runtime epoch.
-    #[must_use]
-    pub fn new(epoch: TimerEpoch) -> Self {
+    pub(crate) const fn new(epoch: TimerEpoch) -> Self {
         Self {
             epoch,
-            outcomes: TimerOutcomeSnapshot::default(),
-            counters: TimerCounters::default(),
-            performance: TimerPerformance::default(),
+            outcomes: TimerOutcomeSnapshot::new(),
+            counters: TimerCounters {
+                schedule_requests: 0,
+                wakeups_armed: 0,
+                work_dispatched: 0,
+                scheduler_started: 0,
+                work_started: 0,
+                work_completed: 0,
+                succeeded: 0,
+                no_work: 0,
+                retryable_failure: 0,
+                invariant_failure: 0,
+                cancelled: 0,
+                stale_wakeups: 0,
+                stale_work: 0,
+                coalesced: 0,
+                unacknowledged: 0,
+            },
+            performance: TimerPerformance {
+                scheduler_instructions: MeasurementSummary {
+                    samples: 0,
+                    total: 0,
+                    latest: None,
+                    maximum: None,
+                },
+                work_instructions: MeasurementSummary {
+                    samples: 0,
+                    total: 0,
+                    latest: None,
+                    maximum: None,
+                },
+            },
         }
     }
 
-    /// Replace all epoch-scoped observations with a new empty epoch.
-    ///
-    /// This resets outcomes, timestamps, the expected-failure streak,
-    /// counters, and performance aggregates. Persistent scheduling state is
-    /// owned outside this observation value.
-    pub fn begin_epoch(&mut self, epoch: TimerEpoch) {
-        *self = Self::new(epoch);
-    }
-
-    /// Record one returned callback atomically across outcome and counters.
-    ///
-    /// Performance changes only when a valid end measurement is supplied.
-    pub const fn record_completion(
+    pub(crate) const fn record_completion(
         &mut self,
         completion: TimerCompletion,
         completed_at_ns: u64,
-        measurement: Option<TimerMeasurement>,
     ) {
         self.outcomes.record_completion(completion, completed_at_ns);
-        self.counters.record_completion(completion.outcome);
-        if let Some(measurement) = measurement {
-            self.performance.record(measurement);
-        }
+        self.counters.record_completion(completion.outcome());
     }
 
-    /// Record an interruption in the epoch where it becomes observable.
-    pub const fn record_interruption(&mut self, observed_at_ns: u64) {
-        self.outcomes.record_interruption(observed_at_ns);
-        self.counters.record_interruption();
+    pub(crate) const fn record_unacknowledged(&mut self, observed_at_ns: u64) {
+        self.outcomes.record_unacknowledged(observed_at_ns);
+        self.counters.record_unacknowledged();
     }
 
-    /// Record a validated schedule or reconciliation request.
-    pub const fn record_request(&mut self) {
-        self.counters.record_request();
+    pub(crate) const fn counters_mut(&mut self) -> &mut TimerCounters {
+        &mut self.counters
     }
 
-    /// Record an actual one-shot provider arm.
-    pub const fn record_arm(&mut self) {
-        self.counters.record_arm();
+    pub(crate) const fn record_scheduler_instructions(&mut self, instructions: u64) {
+        self.performance.record_scheduler(instructions);
     }
 
-    /// Record a non-stale callback entering logical execution.
-    pub const fn record_start(&mut self) {
-        self.counters.record_start();
-    }
-
-    /// Record a logical cancellation that wins arbitration.
-    pub const fn record_cancellation(&mut self) {
-        self.counters.record_cancellation();
-    }
-
-    /// Record a provider callback or completion rejected as stale.
-    pub const fn record_stale(&mut self) {
-        self.counters.record_stale();
-    }
-
-    /// Record scheduling demand merged into existing work.
-    pub const fn record_coalesced(&mut self) {
-        self.counters.record_coalesced();
+    pub(crate) const fn record_work_instructions(&mut self, instructions: u64) {
+        self.performance.record_work(instructions);
     }
 
     /// Return the observation epoch.
@@ -347,7 +358,7 @@ impl TimerObservabilitySnapshot {
         self.counters
     }
 
-    /// Return completed callback performance aggregates.
+    /// Return completed instruction aggregates.
     #[must_use]
     pub const fn performance(self) -> TimerPerformance {
         self.performance
@@ -367,55 +378,57 @@ mod tests {
     #[test]
     fn all_counters_saturate() {
         let mut counters = TimerCounters {
-            requested: u64::MAX,
-            armed: u64::MAX,
-            started: u64::MAX,
-            completed: u64::MAX,
+            schedule_requests: u64::MAX,
+            wakeups_armed: u64::MAX,
+            work_dispatched: u64::MAX,
+            scheduler_started: u64::MAX,
+            work_started: u64::MAX,
+            work_completed: u64::MAX,
             succeeded: u64::MAX,
             no_work: u64::MAX,
             retryable_failure: u64::MAX,
             invariant_failure: u64::MAX,
             cancelled: u64::MAX,
-            stale: u64::MAX,
+            stale_wakeups: u64::MAX,
+            stale_work: u64::MAX,
             coalesced: u64::MAX,
-            interrupted: u64::MAX,
+            unacknowledged: u64::MAX,
         };
 
-        counters.record_request();
-        counters.record_arm();
-        counters.record_start();
+        counters.record_schedule_request();
+        counters.record_wakeup_armed();
+        counters.record_work_dispatched();
+        counters.record_scheduler_started();
+        counters.record_work_started();
         counters.record_completion(TimerCompletionOutcome::Success);
         counters.record_cancellation();
-        counters.record_stale();
+        counters.record_stale_wakeup();
+        counters.record_stale_work();
         counters.record_coalesced();
-        counters.record_interruption();
+        counters.record_unacknowledged();
 
-        assert_eq!(counters.requested(), u64::MAX);
-        assert_eq!(counters.armed(), u64::MAX);
-        assert_eq!(counters.started(), u64::MAX);
-        assert_eq!(counters.completed(), u64::MAX);
-        assert_eq!(counters.succeeded(), u64::MAX);
+        assert_eq!(counters.schedule_requests(), u64::MAX);
+        assert_eq!(counters.provider_arms(), u64::MAX);
+        assert_eq!(counters.work_completed(), u64::MAX);
         assert_eq!(counters.cancelled(), u64::MAX);
-        assert_eq!(counters.stale(), u64::MAX);
+        assert_eq!(counters.stale_wakeups(), u64::MAX);
+        assert_eq!(counters.stale_work(), u64::MAX);
         assert_eq!(counters.coalesced(), u64::MAX);
-        assert_eq!(counters.interrupted(), u64::MAX);
+        assert_eq!(counters.unacknowledged(), u64::MAX);
         assert!(counters.completion_partition_is_valid());
     }
 
     #[test]
-    fn measurement_count_and_total_saturate_while_latest_and_maximum_advance() {
-        let mut summary = MeasurementSummary {
-            samples: u64::MAX,
-            total: u64::MAX,
-            latest: Some(10),
-            maximum: Some(20),
-        };
+    fn instruction_roles_are_separate_and_saturating() {
+        let mut performance = TimerPerformance::default();
+        performance.record_scheduler(20);
+        performance.record_work(30);
+        performance.record_work(10);
 
-        summary.record(30);
-
-        assert_eq!(summary.samples(), u64::MAX);
-        assert_eq!(summary.total(), u64::MAX);
-        assert_eq!(summary.latest(), Some(30));
-        assert_eq!(summary.maximum(), Some(30));
+        assert_eq!(performance.scheduler_instructions().total(), 20);
+        assert_eq!(performance.work_instructions().samples(), 2);
+        assert_eq!(performance.work_instructions().total(), 40);
+        assert_eq!(performance.work_instructions().latest(), Some(10));
+        assert_eq!(performance.work_instructions().maximum(), Some(30));
     }
 }

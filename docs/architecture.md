@@ -1,14 +1,20 @@
 # Architecture
 
-## Current foundation
+## Current runtime
 
-The initial crate intentionally keeps two responsibilities separate:
+The current implementation keeps four responsibilities separate:
 
-1. `control` is a pure state machine for one logical timer identity. It owns
-   generations, request ordering, cancellation while running, reconciliation,
-   and stale-completion rejection.
-2. `platform` is the only direct boundary to `ic-cdk-timers`. It exposes
-   one-shot arm and clear operations and owns no recurrence policy.
+1. `control` is the private ordinary-timer state machine. It owns generations,
+   request ordering, cancellation while running, reconciliation, and stale
+   completion rejection.
+2. `registry` is the pure fixed-capacity canonical owner for structured
+   identities, claim generations, policy-specific state, nested arbitration,
+   deterministic snapshots, and provider-neutral effects.
+3. `runtime` owns the one canister-local registry static, erased ordinary
+   callbacks, registration claims, provider-effect application, and live
+   `Once`/`AfterCompletion` dispatch and the two-role watchdog protocol.
+4. `platform` is the private direct boundary to `ic-cdk-timers` and required
+   IC system facts. Its handle is linear and it owns no recurrence policy.
 
 `schedule` contains typed post-run directives and checked conversion from a
 delay to an absolute nanosecond deadline.
@@ -16,75 +22,101 @@ delay to an absolute nanosecond deadline.
 The copied Canic code was adapted into generic library types; Canic-specific
 domain work, storage, and metrics were intentionally not copied.
 
-## Intended runtime
+## Canonical runtime
 
-The next implementation should add one canister-local registry with structured
-identity (`owner`, `subsystem`, `name`) and a complete snapshot for every
-declared timer. Framework and application schedulers must contribute to this
-same registry rather than building private inventories.
+One canister-local owner wraps the pure registry and its structured
+identity (`owner`, `subsystem`, `name`). Framework and application schedulers
+must contribute to that same live registry rather than building private
+inventories. All three policies, lifecycle reconstruction, measurements, and
+the real-canister watchdog evidence matrix are implemented.
 
-The runtime should eventually provide:
+The runtime provides:
 
 - one-shot, after-completion interval, and pre-armed watchdog policies;
 - serial execution with overdue work coalesced into one pending run;
 - cancellation requested safely by the running callback;
 - synchronous lifecycle restoration followed by deferred application work;
-- runtime-start counters, last outcomes, deadlines, instruction consumption,
-  and callback duration;
+- runtime-start counters, last outcomes, deadlines, and instruction
+  consumption;
 - bounded labels and allocation-conscious hot paths; and
 - portable snapshot DTOs so Canic, IcyDB, and standalone canisters can expose
   the same operator view.
 
-Metrics should be collected once at the registry boundary. Consumers may adapt
+Metrics are collected once at the registry boundary. Consumers may adapt
 the snapshot to their own status endpoint or metrics encoder without wrapping
 every callback independently.
 
-The canonical snapshot must be a semantic superset of Canic's current timer
-status, scheduling counters, and instruction metrics before runtime
-instrumentation is implemented. In particular, callback starts and completions
+The canonical snapshot is designed as a semantic superset of Canic's current
+timer status, scheduling counters, and instruction metrics. In particular,
+callback starts and completions
 remain separate because traps and instruction exhaustion can prevent post-run
 measurement, and consecutive expected failures remain cheap functional state
 because recovery decisions consume them. See the
 [observability and Canic parity contract](design/observability.md).
 
+## Frozen 0.3 contract
+
+Patch 1 freezes the registry, callback, ownership, state, counter, lifecycle,
+provider, MSRV, and measurement decisions before runtime mutation. The
+canonical registry holds at most 64 declarations. Ordinary work may be async;
+watchdog work is synchronous so its separate work message cannot cross an
+`await`. Provider handles are private, linear capabilities owned only by the
+registry. See the [Patch 1 runtime contract](design/0.3-patch-1-contract.md).
+
+The live snapshot omits elapsed IC time: message time cannot truthfully measure
+synchronous callback duration. It instead distinguishes scheduler
+and work instructions, and it will call a dispatched watchdog attempt without
+a committed completion *unacknowledged*, not definitely trapped.
+
 ## Implementation sequence
 
 Keep the runtime work in independently testable layers:
 
-1. Review the candidate 0.2 bounded identity, scheduling-policy,
-   execution-state, outcome, counter, measurement, scope, and snapshot value
-   types with Canic and IcyDB. Settle their semantics, ordering, and portable
-   shape before storing them.
-2. Add a pure serial registry above `TimerControl`. It should reject duplicate
-   identities, own deterministic snapshot ordering, and translate registry
-   commands into platform-neutral effects.
-3. Connect those effects to `platform`, then add measured callback execution
-   and the one-shot and after-completion policies.
-4. Add synchronous lifecycle reconstruction and participant composition.
-5. Implement pre-armed watchdog recurrence only together with the PocketIC
-   recovery and isolation evidence described below.
+1. **Complete:** freeze downstream invariants, API/state decisions, provider
+   behavior, Rust 1.88 feasibility, and measurement subjects.
+2. **Complete:** add the coherent value model and pure bounded policy-specific
+   registry.
+3. **Complete:** bind linear platform handles and implement live `Once` and
+   `AfterCompletion` policies.
+4. **Complete:** implement the one-shot two-message `Watchdog` protocol and
+   prove its initial explicit-trap commit boundary in PocketIC.
+5. **Complete:** add lifecycle reconstruction, live observations, measurement,
+   and the IcyDB-shaped fixture.
+6. **Complete:** close the PocketIC recovery/isolation matrix and report Wasm,
+   instruction, cycle, MSRV, and complexity results.
 
-The first slice should stop after value types and their unit tests. In
-particular, it should not choose global storage or callback ownership before
-the public snapshot contract is reviewable.
+Each layer lands with its owner-local correctness tests. Cross-owner
+real-canister evidence closes the final patch rather than substituting for
+pure transition coverage.
 
 ## Safety boundary
 
 An after-completion interval is not a watchdog: if its callback traps or runs
 out of instructions, code after the callback cannot arm a successor. A
-watchdog policy must commit the successor before invoking fallible work while
-still preventing concurrent logical execution. That behavior requires
-PocketIC evidence for trap, instruction exhaustion, upgrade reconstruction,
-external-ingress rejection, independent timers, and insufficient cycles.
-
-Until those tests exist, consumers with recovery-critical timers should retain
-their proven provider rather than adopting this scaffold.
+watchdog policy commits the successor before invoking fallible work while
+preventing concurrent logical execution. PocketIC 15 proves that behavior for
+trap, 40-billion-instruction exhaustion, upgrade reconstruction,
+external-ingress rejection, independent timers, insufficient cycles followed
+by top-up, stop/resume, overdue coalescing, and cancellation in the
+scheduler/work gap. These proofs apply to synchronous `Watchdog`, not
+after-completion recurrence.
 
 ## Consumer integration
 
 - Canic should use the crate for framework timers and register its synchronous
   post-restore lifecycle participant before deferred user hooks.
-- IcyDB should use the watchdog policy for replicated recovery driving once the
-  pre-arm and reconstruction guarantees are proven.
+- IcyDB can evaluate the watchdog policy for replicated recovery driving
+  against its maintained readiness and recovery tests.
 - A canister using both should see one inventory. Ownership labels distinguish
   scheduling clients; they do not create separate timer runtimes.
+
+The downstream gate must prove one resolved `ic-timers` package ID and
+inventory remaining direct `ic-cdk-timers` calls across the complete canister.
+The provider's 250 outstanding-dispatch limit is canister-wide; the registry's
+128-handle maximum bounds only handles owned by this crate. Canic must also
+make its currently infallible application timer facade return typed capacity
+and identity errors before adopting the shared registry.
+
+No downstream adoption has occurred. The exact IcyDB and Canic adoption
+handoff is recorded in the
+[0.3 evidence report](audits/0.3-runtime-evidence-2026-08-13.md).

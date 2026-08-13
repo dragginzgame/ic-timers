@@ -30,12 +30,12 @@ cargo package --locked --offline --allow-dirty --list -p ic-timers
 ## Review questions
 
 - Does production code avoid panics for invalid input or recoverable state?
-- Is every public value inert data, control state, a platform handle, or
+- Is every public value inert data, validated configuration, or documented
   runtime authority, and is that role clear in its name and rustdoc?
 - Can any public constructor bypass a validation or control invariant?
 - Does every validation boundary have a negative test?
-- Do callback starts, completions, interruptions, and measurements remain
-  distinct?
+- Do scheduler starts, work dispatches, work starts, completions,
+  unacknowledged attempts, and measurements remain distinct?
 - Are counters, totals, deadlines, and generations overflow-safe?
 - Does `platform` remain the only direct `ic-cdk-timers` boundary?
 - Do README, architecture, status, changelog, and `SAFETY.md` make the same

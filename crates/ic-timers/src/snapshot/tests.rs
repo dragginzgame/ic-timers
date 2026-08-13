@@ -1,80 +1,12 @@
 use super::*;
-use crate::TimerRegistration;
+use crate::{
+    TimerCadence, TimerDirective, TimerRunResult, TimerSchedule,
+    registry::{CallbackAcceptance, RegistryEffect, TimerRegistry},
+};
 use std::time::Duration;
 
 fn identity(owner: &str, subsystem: &str, name: &str) -> TimerIdentity {
     TimerIdentity::try_new(owner, subsystem, name).expect("fixture identity should be valid")
-}
-
-#[derive(Debug, Eq, PartialEq)]
-struct CanicProjection<'a> {
-    name: &'a str,
-    subsystem: &'a str,
-    timer_mode: &'static str,
-    configured_cadence_ns: Option<u64>,
-    latest_delay_ms: Option<u64>,
-    scheduling_mode: &'static str,
-    registration: &'static str,
-    condition: &'static str,
-    enabled: bool,
-    generation: u64,
-    next_due_at_ns: Option<u64>,
-    last_outcome: Option<&'static str>,
-    last_work_count: u64,
-    last_success_at_ns: Option<u64>,
-    last_failure_at_ns: Option<u64>,
-    consecutive_expected_failures: u64,
-    schedules_since_runtime_start: u64,
-    arms_since_runtime_start: u64,
-    executions_since_runtime_start: u64,
-    successes_since_runtime_start: u64,
-    expected_failures_since_runtime_start: u64,
-    invariant_failures_since_runtime_start: u64,
-    stale_callbacks_since_runtime_start: u64,
-    completed_since_runtime_start: u64,
-    total_instructions: u64,
-}
-
-fn project_to_canic(snapshot: &TimerSnapshot) -> CanicProjection<'_> {
-    let counters = snapshot.observability.counters();
-    let outcomes = snapshot.observability.outcomes();
-    let timer_mode = match snapshot.scheduling.configured_policy {
-        TimerPolicy::Once => "once",
-        TimerPolicy::AfterCompletion { .. } | TimerPolicy::Watchdog { .. } => "interval",
-    };
-    CanicProjection {
-        name: snapshot.identity.name().as_str(),
-        subsystem: snapshot.identity.subsystem().as_str(),
-        timer_mode,
-        configured_cadence_ns: snapshot.scheduling.configured_policy.cadence_ns(),
-        latest_delay_ms: snapshot
-            .scheduling
-            .latest_requested_delay_ns
-            .map(|nanoseconds| nanoseconds / 1_000_000),
-        scheduling_mode: snapshot.scheduling.current_mode.label(),
-        registration: snapshot.state.registration.label(),
-        condition: snapshot.state.condition.label(),
-        enabled: snapshot.state.enabled,
-        generation: snapshot.state.generation,
-        next_due_at_ns: snapshot.scheduling.next_deadline_ns,
-        last_outcome: match outcomes.last_outcome() {
-            Some(TimerLastOutcome::Completed(outcome)) => Some(outcome.label()),
-            Some(TimerLastOutcome::Interrupted) | None => None,
-        },
-        last_work_count: outcomes.last_work_count().unwrap_or_default(),
-        last_success_at_ns: outcomes.last_success_at_ns(),
-        last_failure_at_ns: outcomes.last_failure_at_ns(),
-        consecutive_expected_failures: outcomes.consecutive_expected_failures(),
-        schedules_since_runtime_start: counters.requested(),
-        arms_since_runtime_start: counters.armed(),
-        executions_since_runtime_start: counters.started(),
-        successes_since_runtime_start: counters.succeeded().saturating_add(counters.no_work()),
-        expected_failures_since_runtime_start: counters.retryable_failure(),
-        invariant_failures_since_runtime_start: counters.invariant_failure(),
-        stale_callbacks_since_runtime_start: counters.stale(),
-        completed_since_runtime_start: counters.completed(),
-        total_instructions: snapshot.observability.performance().instructions().total(),
-    }
 }
 
 #[test]
@@ -87,7 +19,6 @@ fn labels_are_bounded_in_utf8_bytes() {
             max_bytes: MAX_TIMER_LABEL_BYTES,
         })
     );
-
     assert!(TimerLabel::new("é".repeat(MAX_TIMER_LABEL_BYTES / 2)).is_ok());
     assert!(matches!(
         TimerLabel::new("é".repeat(MAX_TIMER_LABEL_BYTES / 2 + 1)),
@@ -112,7 +43,7 @@ fn labels_reject_ambiguous_operator_text() {
 }
 
 #[test]
-fn identity_errors_name_the_invalid_component() {
+fn identities_validate_components_and_order_deterministically() {
     assert_eq!(
         TimerIdentity::try_new("canic", "", "renewal"),
         Err(TimerIdentityError {
@@ -120,10 +51,7 @@ fn identity_errors_name_the_invalid_component() {
             source: TimerLabelError::Empty,
         })
     );
-}
 
-#[test]
-fn identities_order_by_owner_subsystem_and_name() {
     let mut identities = [
         identity("icydb", "recovery", "drive"),
         identity("canic", "cycles", "top_up"),
@@ -131,7 +59,6 @@ fn identities_order_by_owner_subsystem_and_name() {
         identity("canic", "auth", "cleanup"),
     ];
     identities.sort();
-
     let labels = identities
         .iter()
         .map(|value| {
@@ -154,11 +81,11 @@ fn identities_order_by_owner_subsystem_and_name() {
 }
 
 #[test]
-fn policy_and_directive_modes_are_distinct() {
-    let policy = TimerPolicy::Watchdog { cadence_ns: 5_000 };
+fn policies_and_directives_have_one_cadence_owner() {
+    let cadence = TimerCadence::from_nanos(5_000).expect("fixture cadence should be valid");
+    let policy = TimerPolicy::Watchdog { cadence };
     assert_eq!(policy.label(), "watchdog");
     assert_eq!(policy.cadence_ns(), Some(5_000));
-    assert_eq!(policy.initial_mode(), TimerSchedulingMode::Watchdog);
 
     assert_eq!(
         TimerDirectiveSnapshot::RetryAfter { delay_ns: 10 }.scheduling_mode(),
@@ -168,12 +95,13 @@ fn policy_and_directive_modes_are_distinct() {
         TimerDirectiveSnapshot::ContinueImmediately.scheduling_mode(),
         Some(TimerSchedulingMode::Continuation)
     );
+    assert_eq!(
+        TimerDirectiveSnapshot::RecurAfterCompletion.scheduling_mode(),
+        Some(TimerSchedulingMode::AfterCompletion)
+    );
     assert_eq!(TimerDirectiveSnapshot::Stop.scheduling_mode(), None);
-}
 
-#[test]
-fn directives_convert_to_portable_nanoseconds_without_truncation() {
-    let directive = crate::TimerDirective::RetryAfter(Duration::from_millis(25));
+    let directive = TimerDirective::RetryAfter(Duration::from_millis(25));
     let snapshot = TimerDirectiveSnapshot::try_from(directive)
         .expect("25 milliseconds should fit in nanoseconds");
     assert_eq!(
@@ -182,225 +110,185 @@ fn directives_convert_to_portable_nanoseconds_without_truncation() {
             delay_ns: 25_000_000,
         }
     );
-    assert_eq!(crate::TimerDirective::from(snapshot), directive);
-
-    assert_eq!(
-        TimerDirectiveSnapshot::try_from(crate::TimerDirective::RecurAfter(Duration::from_secs(
-            u64::MAX
-        ),)),
-        Err(crate::ScheduleError::DelayOutOfRange)
-    );
+    assert_eq!(TimerDirective::from(snapshot), directive);
 }
 
-#[test]
-fn control_registration_has_a_portable_projection() {
-    assert_eq!(
-        TimerRegistrationStatus::from(TimerRegistration::Unregistered),
-        TimerRegistrationStatus::Unregistered
-    );
-    assert_eq!(
-        TimerRegistrationStatus::from(TimerRegistration::Scheduled {
-            generation: 2,
-            deadline_ns: 50,
-        }),
-        TimerRegistrationStatus::Scheduled
-    );
-    assert_eq!(
-        TimerRegistrationStatus::from(TimerRegistration::Running { generation: 2 }),
-        TimerRegistrationStatus::Running
-    );
+#[derive(Debug, Eq, PartialEq)]
+struct CanicProjection<'a> {
+    name: &'a str,
+    subsystem: &'a str,
+    timer_mode: &'static str,
+    configured_cadence_ns: Option<u64>,
+    latest_delay_ms: Option<u64>,
+    scheduling_mode: &'static str,
+    registration: &'static str,
+    condition: &'static str,
+    enabled: bool,
+    generation: u64,
+    next_due_at_ns: Option<u64>,
+    last_outcome: Option<&'static str>,
+    last_work_count: u64,
+    last_failure_at_ns: Option<u64>,
+    consecutive_expected_failures: u64,
+    schedules_since_runtime_start: u64,
+    arms_since_runtime_start: u64,
+    executions_since_runtime_start: u64,
+    completed_since_runtime_start: u64,
+    expected_failures_since_runtime_start: u64,
+    total_instructions: u64,
 }
 
-#[test]
-fn outcome_transitions_match_canic_failure_streak_semantics() {
-    let mut outcomes = TimerOutcomeSnapshot::default();
-    outcomes.record_completion(TimerCompletion::retryable_failure(2), 10);
-    outcomes.record_completion(TimerCompletion::retryable_failure(1), 20);
-    assert_eq!(outcomes.consecutive_expected_failures(), 2);
-    assert_eq!(outcomes.last_failure_at_ns(), Some(20));
-    assert_eq!(outcomes.last_work_count(), Some(1));
-
-    outcomes.record_interruption(25);
-    assert_eq!(outcomes.last_outcome(), Some(TimerLastOutcome::Interrupted));
-    assert_eq!(outcomes.last_interrupted_at_ns(), Some(25));
-    assert_eq!(outcomes.last_work_count(), None);
-    assert_eq!(outcomes.consecutive_expected_failures(), 2);
-
-    outcomes.record_completion(TimerCompletion::no_work(), 30);
-    assert_eq!(outcomes.consecutive_expected_failures(), 0);
-    assert_eq!(outcomes.last_success_at_ns(), Some(30));
-    assert_eq!(outcomes.last_work_count(), Some(0));
-
-    outcomes.record_completion(TimerCompletion::retryable_failure(0), 40);
-    outcomes.record_completion(TimerCompletion::invariant_failure(0), 50);
-    assert_eq!(outcomes.consecutive_expected_failures(), 0);
-    assert_eq!(outcomes.last_failure_at_ns(), Some(50));
-}
-
-#[test]
-fn canonical_snapshot_exposes_functional_failure_state_directly() {
-    let mut snapshot = TimerSnapshot::new(
-        identity("canic", "cycles", "top_up"),
-        TimerPolicy::Once,
-        TimerEpoch {
-            id: 1,
-            started_at_ns: 10,
+fn project_to_canic(snapshot: &TimerSnapshot) -> CanicProjection<'_> {
+    let observations = snapshot.observability();
+    let counters = observations.counters();
+    let outcomes = observations.outcomes();
+    CanicProjection {
+        name: snapshot.identity().name().as_str(),
+        subsystem: snapshot.identity().subsystem().as_str(),
+        timer_mode: match snapshot.policy() {
+            TimerPolicy::Once => "once",
+            TimerPolicy::AfterCompletion { .. } | TimerPolicy::Watchdog { .. } => "interval",
         },
-    );
-    snapshot
-        .observability
-        .record_completion(TimerCompletion::retryable_failure(0), 20, None);
-
-    assert_eq!(snapshot.consecutive_expected_failures(), 1);
-}
-
-#[test]
-fn requests_arms_starts_and_completions_remain_separate() {
-    let mut counters = TimerCounters::default();
-    counters.record_request();
-    counters.record_request();
-    counters.record_coalesced();
-    counters.record_arm();
-    counters.record_start();
-
-    assert_eq!(counters.requested(), 2);
-    assert_eq!(counters.coalesced(), 1);
-    assert_eq!(counters.armed(), 1);
-    assert_eq!(counters.started(), 1);
-    assert_eq!(counters.completed(), 0);
-
-    counters.record_completion(TimerCompletionOutcome::NoWork);
-    assert_eq!(counters.completed(), 1);
-    assert_eq!(counters.no_work(), 1);
-    assert!(counters.completion_partition_is_valid());
-}
-
-#[test]
-fn missing_end_measurement_does_not_create_a_zero_sample() {
-    let epoch = TimerEpoch {
-        id: 7,
-        started_at_ns: 100,
-    };
-    let mut observations = TimerObservabilitySnapshot::new(epoch);
-    observations.record_start();
-    observations.record_completion(TimerCompletion::success(3), 150, None);
-
-    assert_eq!(observations.counters().started(), 1);
-    assert_eq!(observations.counters().completed(), 1);
-    assert_eq!(observations.performance().instructions().samples(), 0);
-    assert_eq!(observations.performance().instructions().latest(), None);
-}
-
-#[test]
-fn performance_tracks_total_latest_and_maximum() {
-    let mut performance = TimerPerformance::default();
-    performance.record(TimerMeasurement {
-        instructions: 100,
-        elapsed_ns: 10,
-    });
-    performance.record(TimerMeasurement {
-        instructions: 75,
-        elapsed_ns: 20,
-    });
-
-    assert_eq!(performance.instructions().samples(), 2);
-    assert_eq!(performance.instructions().total(), 175);
-    assert_eq!(performance.instructions().latest(), Some(75));
-    assert_eq!(performance.instructions().maximum(), Some(100));
-    assert_eq!(performance.elapsed_ns().total(), 30);
-    assert_eq!(performance.elapsed_ns().maximum(), Some(20));
-}
-
-#[test]
-fn beginning_an_epoch_resets_all_observation_state() {
-    let mut observations = TimerObservabilitySnapshot::new(TimerEpoch {
-        id: 1,
-        started_at_ns: 100,
-    });
-    observations.record_request();
-    observations.record_start();
-    observations.record_completion(
-        TimerCompletion::retryable_failure(0),
-        110,
-        Some(TimerMeasurement {
-            instructions: 50,
-            elapsed_ns: 5,
-        }),
-    );
-
-    let next_epoch = TimerEpoch {
-        id: 2,
-        started_at_ns: 200,
-    };
-    observations.begin_epoch(next_epoch);
-
-    assert_eq!(observations.epoch(), next_epoch);
-    assert_eq!(observations.counters(), TimerCounters::default());
-    assert_eq!(observations.outcomes(), TimerOutcomeSnapshot::default());
-    assert_eq!(observations.performance(), TimerPerformance::default());
-    assert_eq!(observations.consecutive_expected_failures(), 0);
-}
-
-#[test]
-fn canic_operator_surface_projects_without_parallel_metrics() {
-    let mut snapshot = TimerSnapshot::new(
-        identity("canic", "auth", "renewal"),
-        TimerPolicy::AfterCompletion { cadence_ns: 1_000 },
-        TimerEpoch {
-            id: 4,
-            started_at_ns: 100,
+        configured_cadence_ns: snapshot.policy().cadence_ns(),
+        latest_delay_ms: snapshot
+            .latest_requested_delay_ns()
+            .map(|nanoseconds| nanoseconds / 1_000_000),
+        scheduling_mode: snapshot.scheduling_mode().label(),
+        registration: snapshot.registration_status().label(),
+        condition: snapshot.process_condition().label(),
+        enabled: snapshot.process_condition() != TimerProcessCondition::Disabled,
+        generation: snapshot.generation().unwrap_or_default(),
+        next_due_at_ns: snapshot.next_deadline_ns(),
+        last_outcome: match outcomes.last_outcome() {
+            Some(TimerLastOutcome::Completed(outcome)) => Some(outcome.label()),
+            Some(TimerLastOutcome::Unacknowledged) | None => None,
         },
-    );
-    snapshot.scheduling.latest_requested_delay_ns = Some(2_000_000_000);
-    snapshot.scheduling.latest_armed_delay_ns = Some(2_000_000_000);
-    snapshot.scheduling.next_deadline_ns = Some(500);
-    snapshot.state = TimerStateSnapshot {
-        enabled: true,
-        registration: TimerRegistrationStatus::Scheduled,
-        condition: TimerProcessCondition::Active,
-        generation: 3,
-        in_flight: false,
-    };
-    snapshot.observability.record_request();
-    snapshot.observability.record_arm();
-    snapshot.observability.record_start();
-    snapshot.observability.record_completion(
-        TimerCompletion::success(2),
-        300,
-        Some(TimerMeasurement {
-            instructions: 90,
-            elapsed_ns: 8,
-        }),
-    );
+        last_work_count: outcomes.last_work_count().unwrap_or_default(),
+        last_failure_at_ns: outcomes.last_failure_at_ns(),
+        consecutive_expected_failures: outcomes.consecutive_expected_failures(),
+        schedules_since_runtime_start: counters.schedule_requests(),
+        arms_since_runtime_start: counters.provider_arms(),
+        executions_since_runtime_start: counters.work_started(),
+        completed_since_runtime_start: counters.work_completed(),
+        expected_failures_since_runtime_start: counters.retryable_failure(),
+        total_instructions: observations.performance().work_instructions().total(),
+    }
+}
 
+#[test]
+fn canonical_registry_snapshot_projects_canic_surface_without_parallel_metrics() {
+    let mut registry = TimerRegistry::new(TimerEpoch::new(4, 100));
+    let timer = identity("canic", "auth", "renewal");
+    let cadence = TimerCadence::from_nanos(1_000_000_000).expect("fixture cadence should be valid");
+    let claim = registry
+        .register_after_completion(timer.clone(), cadence, DeclarationLifetime::Retained)
+        .expect("registration should succeed");
+    let initial_transition = registry
+        .ensure_recurring(&claim, 100)
+        .expect("ensure should succeed");
+    registry
+        .confirm_effect_applied(initial_transition.effect())
+        .expect("fixture provider effect should apply");
+    let token = match initial_transition.into_effect() {
+        RegistryEffect::ArmWakeup { token, .. } => token,
+        effect => panic!("expected arm effect, got {effect:?}"),
+    };
+    assert_eq!(
+        registry.begin_ordinary(&token),
+        CallbackAcceptance::Accepted
+    );
+    let completion_transition = registry
+        .complete_ordinary(
+            &token,
+            200,
+            TimerRunResult::new(
+                TimerCompletion::retryable_failure(2),
+                TimerDirective::RetryAfter(Duration::from_secs(2)),
+            ),
+        )
+        .expect("completion should succeed");
+    registry
+        .confirm_effect_applied(completion_transition.effect())
+        .expect("fixture provider effect should apply");
+
+    let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
     assert_eq!(
         project_to_canic(&snapshot),
         CanicProjection {
             name: "renewal",
             subsystem: "auth",
             timer_mode: "interval",
-            configured_cadence_ns: Some(1_000),
+            configured_cadence_ns: Some(1_000_000_000),
             latest_delay_ms: Some(2_000),
-            scheduling_mode: "after_completion",
+            scheduling_mode: "retry",
             registration: "scheduled",
-            condition: "active",
+            condition: "retrying",
             enabled: true,
-            generation: 3,
-            next_due_at_ns: Some(500),
-            last_outcome: Some("success"),
+            generation: 2,
+            next_due_at_ns: Some(2_000_000_200),
+            last_outcome: Some("retryable_failure"),
             last_work_count: 2,
-            last_success_at_ns: Some(300),
-            last_failure_at_ns: None,
-            consecutive_expected_failures: 0,
+            last_failure_at_ns: Some(200),
+            consecutive_expected_failures: 1,
             schedules_since_runtime_start: 1,
-            arms_since_runtime_start: 1,
+            arms_since_runtime_start: 2,
             executions_since_runtime_start: 1,
-            successes_since_runtime_start: 1,
-            expected_failures_since_runtime_start: 0,
-            invariant_failures_since_runtime_start: 0,
-            stale_callbacks_since_runtime_start: 0,
             completed_since_runtime_start: 1,
-            total_instructions: 90,
+            expected_failures_since_runtime_start: 1,
+            total_instructions: 0,
         }
     );
+}
+
+#[test]
+fn retryable_terminal_completion_projects_failed_canic_condition() {
+    let mut registry = TimerRegistry::new(TimerEpoch::new(5, 100));
+    let timer = identity("canic", "cycles", "topup");
+    let claim = registry
+        .register_once(timer.clone(), DeclarationLifetime::Retained)
+        .expect("registration should succeed");
+    let transition = registry
+        .ensure_once(&claim, 100, TimerSchedule::At(101))
+        .expect("ensure should succeed");
+    registry
+        .confirm_effect_applied(transition.effect())
+        .expect("fixture provider effect should apply");
+    let token = match transition.into_effect() {
+        RegistryEffect::ArmWakeup { token, .. } => token,
+        effect => panic!("expected arm effect, got {effect:?}"),
+    };
+    assert_eq!(
+        registry.begin_ordinary(&token),
+        CallbackAcceptance::Accepted
+    );
+    registry
+        .complete_ordinary(
+            &token,
+            102,
+            TimerRunResult::new(TimerCompletion::retryable_failure(0), TimerDirective::Stop),
+        )
+        .expect("terminal retryable completion should succeed");
+
+    let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
+    assert_eq!(snapshot.process_condition(), TimerProcessCondition::Failed);
+    assert_eq!(project_to_canic(&snapshot).condition, "failed");
+}
+
+#[test]
+fn absolute_past_deadline_remains_coherent_and_arms_with_zero_delay() {
+    let mut registry = TimerRegistry::new(TimerEpoch::new(1, 0));
+    let timer = identity("test", "snapshot", "past");
+    let claim = registry
+        .register_once(timer.clone(), DeclarationLifetime::Retained)
+        .expect("registration should succeed");
+    let transition = registry
+        .ensure_once(&claim, 100, TimerSchedule::At(50))
+        .expect("past deadline should be valid");
+    registry
+        .confirm_effect_applied(transition.effect())
+        .expect("fixture provider effect should apply");
+    let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
+    assert_eq!(snapshot.next_deadline_ns(), Some(50));
+    assert_eq!(snapshot.latest_requested_delay_ns(), None);
+    assert_eq!(snapshot.latest_armed_delay_ns(), Some(0));
 }

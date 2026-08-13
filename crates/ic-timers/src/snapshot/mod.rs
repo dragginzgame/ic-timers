@@ -1,7 +1,7 @@
-//! Provider-neutral timer identity and canonical snapshot values.
+//! Provider-neutral identity and coherent canonical snapshot values.
 //!
-//! This module defines the 0.2 observability contract without owning registry
-//! storage, callback execution, platform effects, or consumer serialization.
+//! Public snapshots are inert observations with private top-level fields. The
+//! registry is their only constructor and mutation authority.
 
 mod identity;
 mod metrics;
@@ -12,50 +12,177 @@ pub use identity::{
     TimerLabelError,
 };
 pub use metrics::{
-    MeasurementSummary, TimerCounters, TimerMeasurement, TimerObservabilitySnapshot,
-    TimerPerformance,
+    MeasurementSummary, TimerCounters, TimerObservabilitySnapshot, TimerPerformance,
 };
 pub use model::{
-    PreArmedSuccessor, TimerCompletion, TimerCompletionOutcome, TimerDirectiveSnapshot, TimerEpoch,
+    DeclarationLifetime, InactiveReason, OrdinaryRuntimeStateSnapshot, TimerCompletion,
+    TimerCompletionOutcome, TimerControlFailure, TimerDirectiveSnapshot, TimerEpoch,
     TimerLastOutcome, TimerOutcomeSnapshot, TimerPolicy, TimerProcessCondition,
-    TimerRegistrationStatus, TimerSchedulingMode, TimerSchedulingSnapshot, TimerStateSnapshot,
+    TimerRegistrationStatus, TimerRunResult, TimerRuntimeStateSnapshot, TimerSchedulingMode,
+    WatchdogAttemptSnapshot, WatchdogAttemptStatus, WatchdogDecision, WatchdogRunResult,
+    WatchdogRuntimeStateSnapshot,
 };
 
 /// Canonical provider-neutral operator snapshot for one logical timer.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TimerSnapshot {
-    /// Stable structured identity used for lookup and deterministic inventory ordering.
-    pub identity: TimerIdentity,
-    /// Configured policy and authoritative scheduling details.
-    pub scheduling: TimerSchedulingSnapshot,
-    /// Current logical and operator-facing state.
-    pub state: TimerStateSnapshot,
-    /// Epoch-scoped outcomes, counters, measurements, and functional failure streak.
-    pub observability: TimerObservabilitySnapshot,
+    identity: TimerIdentity,
+    policy: TimerPolicy,
+    lifetime: DeclarationLifetime,
+    state: TimerRuntimeStateSnapshot,
+    scheduling_mode: TimerSchedulingMode,
+    latest_directive: Option<TimerDirectiveSnapshot>,
+    latest_requested_delay_ns: Option<u64>,
+    latest_armed_delay_ns: Option<u64>,
+    observability: TimerObservabilitySnapshot,
 }
 
 impl TimerSnapshot {
-    /// Construct an unregistered timer snapshot for one observation epoch.
-    #[must_use]
-    pub fn new(identity: TimerIdentity, policy: TimerPolicy, epoch: TimerEpoch) -> Self {
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) const fn new(
+        identity: TimerIdentity,
+        policy: TimerPolicy,
+        lifetime: DeclarationLifetime,
+        state: TimerRuntimeStateSnapshot,
+        scheduling_mode: TimerSchedulingMode,
+        latest_directive: Option<TimerDirectiveSnapshot>,
+        latest_requested_delay_ns: Option<u64>,
+        latest_armed_delay_ns: Option<u64>,
+        observability: &TimerObservabilitySnapshot,
+    ) -> Self {
         Self {
             identity,
-            scheduling: TimerSchedulingSnapshot::new(policy),
-            state: TimerStateSnapshot {
-                enabled: true,
-                registration: TimerRegistrationStatus::Unregistered,
-                condition: TimerProcessCondition::Idle,
-                generation: 0,
-                in_flight: false,
-            },
-            observability: TimerObservabilitySnapshot::new(epoch),
+            policy,
+            lifetime,
+            state,
+            scheduling_mode,
+            latest_directive,
+            latest_requested_delay_ns,
+            latest_armed_delay_ns,
+            observability: *observability,
         }
     }
 
-    /// Return recovery-sensitive expected-failure state for this timer.
-    ///
-    /// A registry can expose this after one ordered lookup by `identity`;
-    /// callers do not need to scan counters or rebuild an adapter snapshot.
+    /// Return the stable structured identity.
+    #[must_use]
+    pub const fn identity(&self) -> &TimerIdentity {
+        &self.identity
+    }
+
+    /// Return the configured scheduling policy.
+    #[must_use]
+    pub const fn policy(&self) -> TimerPolicy {
+        self.policy
+    }
+
+    /// Return whether the declaration remains after terminal stop.
+    #[must_use]
+    pub const fn lifetime(&self) -> DeclarationLifetime {
+        self.lifetime
+    }
+
+    /// Return the closed policy-specific runtime state.
+    #[must_use]
+    pub const fn state(&self) -> TimerRuntimeStateSnapshot {
+        self.state
+    }
+
+    /// Return the reason for the current authoritative schedule.
+    #[must_use]
+    pub const fn scheduling_mode(&self) -> TimerSchedulingMode {
+        self.scheduling_mode
+    }
+
+    /// Return the latest completed ordinary directive.
+    #[must_use]
+    pub const fn latest_directive(&self) -> Option<TimerDirectiveSnapshot> {
+        self.latest_directive
+    }
+
+    /// Return the latest requested relative delay.
+    #[must_use]
+    pub const fn latest_requested_delay_ns(&self) -> Option<u64> {
+        self.latest_requested_delay_ns
+    }
+
+    /// Return the latest relative delay represented by an arm effect.
+    #[must_use]
+    pub const fn latest_armed_delay_ns(&self) -> Option<u64> {
+        self.latest_armed_delay_ns
+    }
+
+    /// Return the next authoritative absolute deadline.
+    #[must_use]
+    pub const fn next_deadline_ns(&self) -> Option<u64> {
+        self.state.next_deadline_ns()
+    }
+
+    /// Return a portable registration projection.
+    #[must_use]
+    pub fn registration_status(&self) -> TimerRegistrationStatus {
+        self.state.into()
+    }
+
+    /// Return an operator-facing condition derived from coherent state.
+    #[must_use]
+    pub const fn process_condition(&self) -> TimerProcessCondition {
+        match self.state {
+            TimerRuntimeStateSnapshot::Inactive {
+                reason: InactiveReason::Cancelled,
+            } => TimerProcessCondition::Disabled,
+            TimerRuntimeStateSnapshot::Inactive {
+                reason: InactiveReason::InvariantFailure | InactiveReason::ControlFailure(_),
+            } => TimerProcessCondition::Failed,
+            TimerRuntimeStateSnapshot::Inactive {
+                reason: InactiveReason::Stopped,
+            } if matches!(
+                self.observability.outcomes().last_outcome(),
+                Some(TimerLastOutcome::Completed(
+                    TimerCompletionOutcome::RetryableFailure
+                ))
+            ) =>
+            {
+                TimerProcessCondition::Failed
+            }
+            TimerRuntimeStateSnapshot::Inactive { .. } => TimerProcessCondition::Idle,
+            TimerRuntimeStateSnapshot::Ordinary(_) | TimerRuntimeStateSnapshot::Watchdog(_)
+                if matches!(self.scheduling_mode, TimerSchedulingMode::Retry) =>
+            {
+                TimerProcessCondition::Retrying
+            }
+            TimerRuntimeStateSnapshot::Ordinary(_) | TimerRuntimeStateSnapshot::Watchdog(_) => {
+                TimerProcessCondition::Active
+            }
+        }
+    }
+
+    /// Return the latest authoritative callback generation.
+    #[must_use]
+    pub const fn generation(&self) -> Option<u64> {
+        match self.state {
+            TimerRuntimeStateSnapshot::Inactive { .. } => None,
+            TimerRuntimeStateSnapshot::Ordinary(
+                OrdinaryRuntimeStateSnapshot::Scheduled { generation, .. }
+                | OrdinaryRuntimeStateSnapshot::Running { generation },
+            ) => Some(generation),
+            TimerRuntimeStateSnapshot::Watchdog(WatchdogRuntimeStateSnapshot::Scheduled {
+                scheduler_generation,
+                ..
+            }) => Some(scheduler_generation),
+            TimerRuntimeStateSnapshot::Watchdog(WatchdogRuntimeStateSnapshot::AwaitingWork {
+                successor_generation,
+                ..
+            }) => Some(successor_generation),
+        }
+    }
+
+    /// Return epoch-scoped outcomes, counters, and measurements.
+    #[must_use]
+    pub const fn observability(&self) -> TimerObservabilitySnapshot {
+        self.observability
+    }
+
+    /// Return recovery-sensitive expected-failure state directly.
     #[must_use]
     pub const fn consecutive_expected_failures(&self) -> u64 {
         self.observability.consecutive_expected_failures()

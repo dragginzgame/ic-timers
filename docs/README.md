@@ -2,14 +2,23 @@
 
 - [Architecture](architecture.md): current boundary, intended runtime, and
   consumer integration.
-- [Observability contract](design/observability.md): proposed canonical timer
-  snapshot, counter semantics, and Canic parity requirements.
+- [Observability contract](design/observability.md): implemented canonical
+  timer snapshot, counter semantics, and remaining Canic adapter gate.
+- [0.3 production runtime design](design/0.3-production-timer-runtime.md):
+  bounded registry, two-message watchdog protocol, lifecycle seam, and
+  completed recovery evidence gate.
+- [0.3 Patch 1 contract](design/0.3-patch-1-contract.md): frozen capacity,
+  public API, policy/state, counters, provider evidence, MSRV, and measurement
+  decisions before runtime implementation.
 - [Safety boundary](../SAFETY.md): implemented guarantees, missing recovery
   behavior, and required evidence.
 - [Code-hygiene audit](audits/code-hygiene.md): recurring mechanical and API
   review checklist.
 - [Latest hygiene report](audits/code-hygiene-2026-08-13.md): adopted peer
   practices, evidence, and deliberately deferred machinery.
+- [0.3 runtime evidence](audits/0.3-runtime-evidence-2026-08-13.md): PocketIC
+  matrix, Rust 1.88 verdict, Wasm/instruction/cycle cohorts, complexity, and
+  downstream adoption sketch.
 - [Releasing](releasing.md): version and release commands.
 - [Changelog lines](changelog/README.md): release-line working notes.
 - [Current status](status/current.md): compact handoff for the next session.

@@ -1,22 +1,22 @@
-//! Portable scheduling, state, outcome, and epoch values.
+//! Closed policy, state, outcome, and epoch values.
 
-use crate::{ScheduleError, TimerDirective, TimerRegistration};
+use crate::{ScheduleError, TimerCadence, TimerDirective};
 use std::time::Duration;
 
 /// Configured recurrence policy for one logical timer.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum TimerPolicy {
-    /// Run at most once unless an explicit later request schedules it again.
+    /// Run at most once unless an explicit directive or request schedules it.
     Once,
     /// Arm the next run after the current callback completes.
     AfterCompletion {
-        /// Configured delay following completion, in nanoseconds.
-        cadence_ns: u64,
+        /// Validated configured cadence.
+        cadence: TimerCadence,
     },
-    /// Pre-arm a successor before invoking fallible work.
+    /// Commit a successor before dispatching synchronous fallible work.
     Watchdog {
-        /// Configured watchdog cadence, in nanoseconds.
-        cadence_ns: u64,
+        /// Validated configured cadence.
+        cadence: TimerCadence,
     },
 }
 
@@ -33,27 +33,33 @@ impl TimerPolicy {
 
     /// Return a configured cadence when the policy recurs.
     #[must_use]
-    pub const fn cadence_ns(self) -> Option<u64> {
+    pub const fn cadence(self) -> Option<TimerCadence> {
         match self {
             Self::Once => None,
-            Self::AfterCompletion { cadence_ns } | Self::Watchdog { cadence_ns } => {
-                Some(cadence_ns)
-            }
+            Self::AfterCompletion { cadence } | Self::Watchdog { cadence } => Some(cadence),
         }
     }
 
-    /// Return the initial effective scheduling mode.
+    /// Return the configured cadence in nanoseconds, when present.
     #[must_use]
-    pub const fn initial_mode(self) -> TimerSchedulingMode {
-        match self {
-            Self::Once => TimerSchedulingMode::Once,
-            Self::AfterCompletion { .. } => TimerSchedulingMode::AfterCompletion,
-            Self::Watchdog { .. } => TimerSchedulingMode::Watchdog,
+    pub const fn cadence_ns(self) -> Option<u64> {
+        match self.cadence() {
+            Some(cadence) => Some(cadence.as_nanos()),
+            None => None,
         }
     }
 }
 
-/// Effective reason for the currently authoritative schedule.
+/// Whether a stopped declaration remains in the bounded registry.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum DeclarationLifetime {
+    /// Keep callback authority available for a later ensure request.
+    Retained,
+    /// Remove the declaration after terminal completion or cancellation.
+    RemoveWhenStopped,
+}
+
+/// Effective reason for the currently authoritative ordinary schedule.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum TimerSchedulingMode {
     /// Initial or explicitly requested one-shot work.
@@ -66,7 +72,7 @@ pub enum TimerSchedulingMode {
     Retry,
     /// Immediate continuation of bounded work.
     Continuation,
-    /// A successor committed before fallible work begins.
+    /// A successor committed before fallible watchdog work.
     Watchdog,
 }
 
@@ -85,7 +91,7 @@ impl TimerSchedulingMode {
     }
 }
 
-/// Portable representation of the latest post-run scheduling directive.
+/// Portable representation of the latest ordinary scheduling directive.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum TimerDirectiveSnapshot {
     /// Stop after the completed invocation.
@@ -102,11 +108,8 @@ pub enum TimerDirectiveSnapshot {
         /// Absolute IC timestamp in nanoseconds.
         deadline_ns: u64,
     },
-    /// Recur after a delay measured from completion.
-    RecurAfter {
-        /// Requested delay in nanoseconds.
-        delay_ns: u64,
-    },
+    /// Recur using the registration's configured cadence.
+    RecurAfterCompletion,
 }
 
 impl TimerDirectiveSnapshot {
@@ -118,7 +121,7 @@ impl TimerDirectiveSnapshot {
             Self::ContinueImmediately => Some(TimerSchedulingMode::Continuation),
             Self::RetryAfter { .. } => Some(TimerSchedulingMode::Retry),
             Self::ScheduleAt { .. } => Some(TimerSchedulingMode::Deadline),
-            Self::RecurAfter { .. } => Some(TimerSchedulingMode::AfterCompletion),
+            Self::RecurAfterCompletion => Some(TimerSchedulingMode::AfterCompletion),
         }
     }
 }
@@ -134,9 +137,7 @@ impl TryFrom<TimerDirective> for TimerDirectiveSnapshot {
                 delay_ns: duration_ns(delay)?,
             },
             TimerDirective::ScheduleAt(deadline_ns) => Self::ScheduleAt { deadline_ns },
-            TimerDirective::RecurAfter(delay) => Self::RecurAfter {
-                delay_ns: duration_ns(delay)?,
-            },
+            TimerDirective::RecurAfterCompletion => Self::RecurAfterCompletion,
         })
     }
 }
@@ -150,9 +151,7 @@ impl From<TimerDirectiveSnapshot> for TimerDirective {
                 Self::RetryAfter(Duration::from_nanos(delay_ns))
             }
             TimerDirectiveSnapshot::ScheduleAt { deadline_ns } => Self::ScheduleAt(deadline_ns),
-            TimerDirectiveSnapshot::RecurAfter { delay_ns } => {
-                Self::RecurAfter(Duration::from_nanos(delay_ns))
-            }
+            TimerDirectiveSnapshot::RecurAfterCompletion => Self::RecurAfterCompletion,
         }
     }
 }
@@ -161,58 +160,166 @@ fn duration_ns(duration: Duration) -> Result<u64, ScheduleError> {
     u64::try_from(duration.as_nanos()).map_err(|_| ScheduleError::DelayOutOfRange)
 }
 
-/// One watchdog successor made authoritative before the current work.
+/// Typed terminal failure in pure timer control.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct PreArmedSuccessor {
-    /// Generation the successor callback must present.
-    pub generation: u64,
-    /// Absolute successor deadline in nanoseconds.
-    pub deadline_ns: u64,
+pub enum TimerControlFailure {
+    /// A callback generation counter reached its maximum.
+    GenerationExhausted,
+    /// A nested request sequence reached its maximum.
+    RequestSequenceExhausted,
+    /// Checked successor deadline arithmetic overflowed.
+    DeadlineOverflow,
+    /// A requested relative delay cannot be encoded as `u64` nanoseconds.
+    DelayOutOfRange,
+    /// A directive is not legal for the timer's configured policy.
+    DirectiveNotAllowed,
+    /// A checked registry effect could not establish canonical provider ownership.
+    ProviderBindingFailed,
 }
 
-/// Scheduling portion of the canonical timer snapshot.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct TimerSchedulingSnapshot {
-    /// Timer's configured behavior across successful runs.
-    pub configured_policy: TimerPolicy,
-    /// Reason the currently authoritative deadline was selected.
-    pub current_mode: TimerSchedulingMode,
-    /// Most recent completed callback directive.
-    pub latest_directive: Option<TimerDirectiveSnapshot>,
-    /// Most recent relative delay requested from the wrapper.
-    pub latest_requested_delay_ns: Option<u64>,
-    /// Most recent relative delay actually armed with the provider.
-    pub latest_armed_delay_ns: Option<u64>,
-    /// Next authoritative absolute deadline.
-    pub next_deadline_ns: Option<u64>,
-    /// Watchdog successor committed before current fallible work.
-    pub pre_armed_successor: Option<PreArmedSuccessor>,
-}
-
-impl TimerSchedulingSnapshot {
-    /// Construct an unscheduled snapshot for a configured policy.
+impl TimerControlFailure {
+    /// Return a stable adapter-friendly label.
     #[must_use]
-    pub const fn new(configured_policy: TimerPolicy) -> Self {
-        Self {
-            configured_policy,
-            current_mode: configured_policy.initial_mode(),
-            latest_directive: None,
-            latest_requested_delay_ns: None,
-            latest_armed_delay_ns: None,
-            next_deadline_ns: None,
-            pre_armed_successor: None,
+    pub const fn label(self) -> &'static str {
+        match self {
+            Self::GenerationExhausted => "generation_exhausted",
+            Self::RequestSequenceExhausted => "request_sequence_exhausted",
+            Self::DeadlineOverflow => "deadline_overflow",
+            Self::DelayOutOfRange => "delay_out_of_range",
+            Self::DirectiveNotAllowed => "directive_not_allowed",
+            Self::ProviderBindingFailed => "provider_binding_failed",
         }
     }
 }
 
-/// Portable projection of the control registration.
+/// Why a retained declaration currently has no authoritative callback.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum InactiveReason {
+    /// The declaration has not yet been scheduled.
+    NeverScheduled,
+    /// Work returned a terminal stop decision.
+    Stopped,
+    /// Explicit cancellation won request arbitration.
+    Cancelled,
+    /// Consumer work reported an invariant or terminal failure.
+    InvariantFailure,
+    /// Checked pure control reached a terminal failure.
+    ControlFailure(TimerControlFailure),
+}
+
+/// Coherent ordinary timer state.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum OrdinaryRuntimeStateSnapshot {
+    /// One callback generation is scheduled.
+    Scheduled {
+        /// Generation the callback must present.
+        generation: u64,
+        /// Authoritative absolute deadline.
+        deadline_ns: u64,
+    },
+    /// One callback generation owns logical execution.
+    Running {
+        /// Generation owned by the running callback.
+        generation: u64,
+    },
+}
+
+/// Status of the watchdog attempt paired with a committed successor.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum WatchdogAttemptStatus {
+    /// The scheduler committed the work callback, which has not committed a start.
+    Dispatched,
+    /// The accepted work callback is currently executing synchronously.
+    Running,
+}
+
+/// One watchdog work attempt paired with an authoritative successor.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct WatchdogAttemptSnapshot {
+    generation: u64,
+    status: WatchdogAttemptStatus,
+}
+
+impl WatchdogAttemptSnapshot {
+    pub(crate) const fn new(generation: u64, status: WatchdogAttemptStatus) -> Self {
+        Self { generation, status }
+    }
+
+    /// Return the attempt generation.
+    #[must_use]
+    pub const fn generation(self) -> u64 {
+        self.generation
+    }
+
+    /// Return whether work is dispatched or running.
+    #[must_use]
+    pub const fn status(self) -> WatchdogAttemptStatus {
+        self.status
+    }
+}
+
+/// Coherent watchdog timer state.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum WatchdogRuntimeStateSnapshot {
+    /// One scheduler generation is authoritative and no work is outstanding.
+    Scheduled {
+        /// Generation the scheduler callback must present.
+        scheduler_generation: u64,
+        /// Authoritative absolute successor deadline.
+        deadline_ns: u64,
+    },
+    /// A successor is authoritative while one work attempt is outstanding.
+    AwaitingWork {
+        /// Generation the successor scheduler must present.
+        successor_generation: u64,
+        /// Absolute successor deadline.
+        successor_deadline_ns: u64,
+        /// The one paired work attempt.
+        attempt: WatchdogAttemptSnapshot,
+    },
+}
+
+/// Closed policy-specific runtime state.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum TimerRuntimeStateSnapshot {
+    /// The retained declaration has no authoritative callback.
+    Inactive {
+        /// Reason scheduling is inactive.
+        reason: InactiveReason,
+    },
+    /// State legal only for `Once` and `AfterCompletion`.
+    Ordinary(OrdinaryRuntimeStateSnapshot),
+    /// State legal only for `Watchdog`.
+    Watchdog(WatchdogRuntimeStateSnapshot),
+}
+
+impl TimerRuntimeStateSnapshot {
+    /// Return the next authoritative deadline, when one exists.
+    #[must_use]
+    pub const fn next_deadline_ns(self) -> Option<u64> {
+        match self {
+            Self::Inactive { .. }
+            | Self::Ordinary(OrdinaryRuntimeStateSnapshot::Running { .. }) => None,
+            Self::Ordinary(OrdinaryRuntimeStateSnapshot::Scheduled { deadline_ns, .. })
+            | Self::Watchdog(WatchdogRuntimeStateSnapshot::Scheduled { deadline_ns, .. }) => {
+                Some(deadline_ns)
+            }
+            Self::Watchdog(WatchdogRuntimeStateSnapshot::AwaitingWork {
+                successor_deadline_ns,
+                ..
+            }) => Some(successor_deadline_ns),
+        }
+    }
+}
+
+/// Portable projection of the provider-neutral registration state.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum TimerRegistrationStatus {
-    /// No provider callback is registered or running.
+    /// No callback is authoritative.
     Unregistered,
-    /// One provider callback is scheduled.
+    /// At least one provider callback is scheduled.
     Scheduled,
-    /// One callback owns logical execution.
+    /// Consumer work currently owns logical execution.
     Running,
 }
 
@@ -228,31 +335,50 @@ impl TimerRegistrationStatus {
     }
 }
 
-impl From<TimerRegistration> for TimerRegistrationStatus {
-    fn from(value: TimerRegistration) -> Self {
+impl From<TimerRuntimeStateSnapshot> for TimerRegistrationStatus {
+    fn from(value: TimerRuntimeStateSnapshot) -> Self {
         match value {
-            TimerRegistration::Unregistered => Self::Unregistered,
-            TimerRegistration::Scheduled { .. } => Self::Scheduled,
-            TimerRegistration::Running { .. } => Self::Running,
+            TimerRuntimeStateSnapshot::Inactive { .. } => Self::Unregistered,
+            TimerRuntimeStateSnapshot::Ordinary(state) => match state {
+                OrdinaryRuntimeStateSnapshot::Scheduled { .. } => Self::Scheduled,
+                OrdinaryRuntimeStateSnapshot::Running { .. } => Self::Running,
+            },
+            TimerRuntimeStateSnapshot::Watchdog(state) => match state {
+                WatchdogRuntimeStateSnapshot::Scheduled { .. }
+                | WatchdogRuntimeStateSnapshot::AwaitingWork {
+                    attempt:
+                        WatchdogAttemptSnapshot {
+                            status: WatchdogAttemptStatus::Dispatched,
+                            ..
+                        },
+                    ..
+                } => Self::Scheduled,
+                WatchdogRuntimeStateSnapshot::AwaitingWork {
+                    attempt:
+                        WatchdogAttemptSnapshot {
+                            status: WatchdogAttemptStatus::Running,
+                            ..
+                        },
+                    ..
+                } => Self::Running,
+            },
         }
     }
 }
 
-/// Operator-facing condition of one timer process.
+/// Operator-facing condition derived from coherent state and scheduling mode.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum TimerProcessCondition {
-    /// Configuration prevents the timer from running.
+    /// Explicit cancellation disabled the current declaration.
     Disabled,
-    /// Enabled but without pending work.
+    /// Declared but without pending work.
     Idle,
     /// Scheduled or running normally.
     Active,
     /// Waiting for an expected retry.
     Retrying,
-    /// Stopped by an invariant or terminal failure.
+    /// Stopped by an invariant or control failure.
     Failed,
-    /// Expected logical work has no provider registration.
-    MissingRegistration,
 }
 
 impl TimerProcessCondition {
@@ -265,34 +391,6 @@ impl TimerProcessCondition {
             Self::Active => "active",
             Self::Retrying => "retrying",
             Self::Failed => "failed",
-            Self::MissingRegistration => "missing_registration",
-        }
-    }
-}
-
-/// State portion of the canonical timer snapshot.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct TimerStateSnapshot {
-    /// Whether configuration permits future execution.
-    pub enabled: bool,
-    /// Current logical control registration.
-    pub registration: TimerRegistrationStatus,
-    /// Operator-facing process condition.
-    pub condition: TimerProcessCondition,
-    /// Latest allocated callback generation.
-    pub generation: u64,
-    /// Whether one callback currently owns logical execution.
-    pub in_flight: bool,
-}
-
-impl Default for TimerStateSnapshot {
-    fn default() -> Self {
-        Self {
-            enabled: true,
-            registration: TimerRegistrationStatus::Unregistered,
-            condition: TimerProcessCondition::Idle,
-            generation: 0,
-            in_flight: false,
         }
     }
 }
@@ -323,22 +421,20 @@ impl TimerCompletionOutcome {
     }
 }
 
-/// Latest observed terminal event for a timer invocation.
+/// Latest observed terminal event for one timer invocation.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum TimerLastOutcome {
     /// One callback returned with a classified completion.
     Completed(TimerCompletionOutcome),
-    /// A started generation was later established not to have completed.
-    Interrupted,
+    /// A committed watchdog dispatch was retired without committed completion.
+    Unacknowledged,
 }
 
-/// Classified result of one returned callback.
+/// Classified result of one returned consumer invocation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TimerCompletion {
-    /// Completion classification.
-    pub outcome: TimerCompletionOutcome,
-    /// Bounded units of application work completed by this invocation.
-    pub work_count: u64,
+    outcome: TimerCompletionOutcome,
+    work_count: u64,
 }
 
 impl TimerCompletion {
@@ -360,7 +456,7 @@ impl TimerCompletion {
         }
     }
 
-    /// Construct an expected failure, retaining any completed partial work.
+    /// Construct an expected failure, retaining completed partial work.
     #[must_use]
     pub const fn retryable_failure(work_count: u64) -> Self {
         Self {
@@ -369,13 +465,102 @@ impl TimerCompletion {
         }
     }
 
-    /// Construct an invariant failure, retaining any completed partial work.
+    /// Construct an invariant failure, retaining completed partial work.
     #[must_use]
     pub const fn invariant_failure(work_count: u64) -> Self {
         Self {
             outcome: TimerCompletionOutcome::InvariantFailure,
             work_count,
         }
+    }
+
+    /// Return the completion class.
+    #[must_use]
+    pub const fn outcome(self) -> TimerCompletionOutcome {
+        self.outcome
+    }
+
+    /// Return bounded application work units reported by the consumer.
+    #[must_use]
+    pub const fn work_count(self) -> u64 {
+        self.work_count
+    }
+}
+
+/// Ordinary callback result with one legal scheduling proposal.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct TimerRunResult {
+    completion: TimerCompletion,
+    directive: TimerDirective,
+}
+
+impl TimerRunResult {
+    /// Construct a result, forcing invariant failures to stop.
+    #[must_use]
+    pub const fn new(completion: TimerCompletion, directive: TimerDirective) -> Self {
+        Self {
+            directive: if matches!(completion.outcome, TimerCompletionOutcome::InvariantFailure) {
+                TimerDirective::Stop
+            } else {
+                directive
+            },
+            completion,
+        }
+    }
+
+    /// Return the completion classification and work count.
+    #[must_use]
+    pub const fn completion(self) -> TimerCompletion {
+        self.completion
+    }
+
+    /// Return the post-run scheduling proposal.
+    #[must_use]
+    pub const fn directive(self) -> TimerDirective {
+        self.directive
+    }
+}
+
+/// Watchdog decision after one synchronous bounded work attempt.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum WatchdogDecision {
+    /// Retain the successor committed by the scheduler message.
+    Continue,
+    /// Terminate and clear the committed successor.
+    Stop,
+}
+
+/// Synchronous watchdog work result.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct WatchdogRunResult {
+    completion: TimerCompletion,
+    decision: WatchdogDecision,
+}
+
+impl WatchdogRunResult {
+    /// Construct a result, forcing invariant failures to stop.
+    #[must_use]
+    pub const fn new(completion: TimerCompletion, decision: WatchdogDecision) -> Self {
+        Self {
+            decision: if matches!(completion.outcome, TimerCompletionOutcome::InvariantFailure) {
+                WatchdogDecision::Stop
+            } else {
+                decision
+            },
+            completion,
+        }
+    }
+
+    /// Return the completion classification and work count.
+    #[must_use]
+    pub const fn completion(self) -> TimerCompletion {
+        self.completion
+    }
+
+    /// Return whether the committed successor remains authoritative.
+    #[must_use]
+    pub const fn decision(self) -> WatchdogDecision {
+        self.decision
     }
 }
 
@@ -386,13 +571,27 @@ pub struct TimerOutcomeSnapshot {
     last_work_count: Option<u64>,
     last_success_at_ns: Option<u64>,
     last_failure_at_ns: Option<u64>,
-    last_interrupted_at_ns: Option<u64>,
+    last_unacknowledged_at_ns: Option<u64>,
     consecutive_expected_failures: u64,
 }
 
 impl TimerOutcomeSnapshot {
-    /// Record one returned callback using saturating failure-streak arithmetic.
-    pub const fn record_completion(&mut self, completion: TimerCompletion, completed_at_ns: u64) {
+    pub(crate) const fn new() -> Self {
+        Self {
+            last_outcome: None,
+            last_work_count: None,
+            last_success_at_ns: None,
+            last_failure_at_ns: None,
+            last_unacknowledged_at_ns: None,
+            consecutive_expected_failures: 0,
+        }
+    }
+
+    pub(crate) const fn record_completion(
+        &mut self,
+        completion: TimerCompletion,
+        completed_at_ns: u64,
+    ) {
         self.last_outcome = Some(TimerLastOutcome::Completed(completion.outcome));
         self.last_work_count = Some(completion.work_count);
         match completion.outcome {
@@ -412,14 +611,10 @@ impl TimerOutcomeSnapshot {
         }
     }
 
-    /// Record an interruption observed by recovery or reconstruction.
-    ///
-    /// An interruption is not a completed callback and does not change the
-    /// expected-failure streak.
-    pub const fn record_interruption(&mut self, observed_at_ns: u64) {
-        self.last_outcome = Some(TimerLastOutcome::Interrupted);
+    pub(crate) const fn record_unacknowledged(&mut self, observed_at_ns: u64) {
+        self.last_outcome = Some(TimerLastOutcome::Unacknowledged);
         self.last_work_count = None;
-        self.last_interrupted_at_ns = Some(observed_at_ns);
+        self.last_unacknowledged_at_ns = Some(observed_at_ns);
     }
 
     /// Return the latest terminal event.
@@ -428,7 +623,7 @@ impl TimerOutcomeSnapshot {
         self.last_outcome
     }
 
-    /// Return work reported by the latest completion, or `None` after interruption.
+    /// Return work reported by the latest completion.
     #[must_use]
     pub const fn last_work_count(self) -> Option<u64> {
         self.last_work_count
@@ -446,10 +641,10 @@ impl TimerOutcomeSnapshot {
         self.last_failure_at_ns
     }
 
-    /// Return the latest time an incomplete generation was established.
+    /// Return when a dispatched watchdog attempt was most recently retired.
     #[must_use]
-    pub const fn last_interrupted_at_ns(self) -> Option<u64> {
-        self.last_interrupted_at_ns
+    pub const fn last_unacknowledged_at_ns(self) -> Option<u64> {
+        self.last_unacknowledged_at_ns
     }
 
     /// Return consecutive retryable failures since the latest reset outcome.
@@ -462,10 +657,30 @@ impl TimerOutcomeSnapshot {
 /// Identity and start time of one runtime-local observation epoch.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct TimerEpoch {
-    /// Monotonic runtime epoch chosen by the lifecycle owner.
-    pub id: u64,
-    /// IC timestamp at which this observation epoch began.
-    pub started_at_ns: u64,
+    canister_version: u64,
+    started_at_ns: u64,
+}
+
+impl TimerEpoch {
+    #[allow(dead_code)] // Constructed from IC system facts in Patch 5.
+    pub(crate) const fn new(canister_version: u64, started_at_ns: u64) -> Self {
+        Self {
+            canister_version,
+            started_at_ns,
+        }
+    }
+
+    /// Return the IC canister version that owns this volatile epoch.
+    #[must_use]
+    pub const fn canister_version(self) -> u64 {
+        self.canister_version
+    }
+
+    /// Return the IC timestamp at which the epoch began.
+    #[must_use]
+    pub const fn started_at_ns(self) -> u64 {
+        self.started_at_ns
+    }
 }
 
 #[cfg(test)]
@@ -482,5 +697,20 @@ mod tests {
         outcomes.record_completion(TimerCompletion::retryable_failure(0), 10);
 
         assert_eq!(outcomes.consecutive_expected_failures(), u64::MAX);
+    }
+
+    #[test]
+    fn invariant_results_are_forced_to_stop() {
+        let ordinary = TimerRunResult::new(
+            TimerCompletion::invariant_failure(2),
+            TimerDirective::ContinueImmediately,
+        );
+        assert_eq!(ordinary.directive(), TimerDirective::Stop);
+
+        let watchdog = WatchdogRunResult::new(
+            TimerCompletion::invariant_failure(3),
+            WatchdogDecision::Continue,
+        );
+        assert_eq!(watchdog.decision(), WatchdogDecision::Stop);
     }
 }

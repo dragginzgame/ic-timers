@@ -62,6 +62,78 @@ cat > "${actual}" <<'EOF'
 
 ## [Unreleased]
 
+## [0.3.0]
+
+### Added
+
+- Add the production timer runtime.
+
+## [0.2.0] - 2026-08-01
+EOF
+
+cp "${actual}" "${original}"
+
+cat > "${expected}" <<'EOF'
+# Changelog
+
+## [Unreleased]
+
+## [0.3.0] - 2026-08-13
+
+### Added
+
+- Add the production timer runtime.
+
+## [0.2.0] - 2026-08-01
+EOF
+
+bash "${finalizer}" --check 0.3.0 2026-08-13 "${actual}"
+diff -u "${original}" "${actual}"
+
+bash "${finalizer}" 0.3.0 2026-08-13 "${actual}" >/dev/null
+diff -u "${expected}" "${actual}"
+
+cat > "${actual}" <<'EOF'
+# Changelog
+
+## [Unreleased]
+
+### Fixed
+
+- A later change.
+
+## [0.3.0]
+
+### Added
+
+- Add the production timer runtime.
+EOF
+
+if bash "${finalizer}" --check 0.3.0 2026-08-13 "${actual}" >/dev/null 2>&1; then
+    echo "error: populated Unreleased was accepted beside a staged release" >&2
+    exit 1
+fi
+
+cat > "${actual}" <<'EOF'
+# Changelog
+
+## [Unreleased]
+
+## [0.3.0]
+
+## [0.2.0] - 2026-08-01
+EOF
+
+if bash "${finalizer}" --check 0.3.0 2026-08-13 "${actual}" >/dev/null 2>&1; then
+    echo "error: empty staged release was accepted" >&2
+    exit 1
+fi
+
+cat > "${actual}" <<'EOF'
+# Changelog
+
+## [Unreleased]
+
 ## [0.1.0] - 2026-08-01
 EOF
 

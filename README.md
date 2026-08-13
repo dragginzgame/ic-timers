@@ -7,8 +7,9 @@ arms and clears the platform timers. This crate is intended to add one place
 for timer identity, scheduling policy, execution arbitration, observability,
 and lifecycle recovery.
 
-This repository is currently a pre-alpha foundation, not a production timer
-runtime.
+The unreleased 0.3 line contains a complete bounded runtime and a PocketIC
+evidence suite for its recovery watchdog contract. The published package is
+still 0.2.0, and neither IcyDB nor Canic has adopted the runtime yet.
 
 ## Why wrap `ic-cdk-timers`?
 
@@ -41,26 +42,60 @@ same interval helper.
 
 ## What exists today
 
-The current crate contains a compiling foundation extracted from Canic's timer
-implementation:
+The current unreleased crate contains:
 
-- deterministic generation, cancellation, reconciliation, and stale-callback
-  arbitration;
-- typed scheduling directives and overflow-safe deadline calculation; and
-- a deliberately thin one-shot boundary over `ic-cdk-timers` 1.0.0; and
-- candidate 0.2 provider-neutral identity, policy, state, outcome, counter,
-  measurement, epoch, and canonical snapshot value types.
+- one volatile, canister-local 64-entry registry with unique structured
+  identity ownership and claim generations;
+- synchronous, idempotent runtime initialization plus callback-owning `Once`,
+  `AfterCompletion`, and synchronous `Watchdog` registrations;
+- one exact private provider handle per scheduled ordinary timer and at most
+  two per watchdog (cadence successor plus dispatched work), including real
+  replacement and cancellation through `ic-cdk-timers`;
+- live policy-specific state transitions, including stale-callback and nested
+  ensure/cancel arbitration;
+- validated positive cadence, typed directives, and checked deadline
+  calculation;
+- live, inert policy-specific snapshots, with split scheduler/work counters,
+  truthful unacknowledged dispatches, functional expected-failure state, and
+  normally completed scheduler/work instruction aggregates;
+- synchronous idempotent reconciliation helpers whose caller-owned volatile
+  registration slot prevents duplicate callback replacement and whose desired
+  state remains derived from consumer durable authority;
+- a private, linear one-shot provider boundary over `ic-cdk-timers` 1.0.0.
 
-The shared canister-wide registry, live snapshot population, measured
-execution, lifecycle reconstruction, pre-armed watchdog recurrence, metrics
-adapters, and PocketIC recovery evidence are not implemented yet.
-Recovery-critical consumers should continue using their proven timer
-implementation until those guarantees exist. See
+The watchdog scheduler arms its successor and queues a separate zero-delay work
+callback before returning. PocketIC 15 evidence on Rust 1.88 covers explicit
+trap, actual 40-billion-instruction exhaustion, insufficient cycles followed
+by top-up, upgrade reconstruction before a downstream-hook observation,
+stop/resume, overdue coalescing, terminal and scheduler/work-gap cancellation,
+duplicate demand, two simultaneous timers, trap isolation, rejection of
+external executor ingress, and subsequent progress. Trapped or exhausted work
+contributes no fabricated completion or instruction sample.
+
+That recovery guarantee applies to the later consumer-work message. It does
+not claim recovery if the small scheduler message itself traps or exhausts its
+instructions; the scheduler is deliberately fixed, bounded, and contains no
+consumer work.
+
+These guarantees apply only to `Watchdog`. Ordinary after-completion recurrence
+arms its successor after normal return and therefore cannot survive a trap or
+instruction exhaustion in consumer work. The remaining release work is
+downstream adapter and adoption feedback, not another timer runtime. See
 [the architecture note](docs/architecture.md) for the intended boundary and
-implementation order, and the proposed
-[observability contract](docs/design/observability.md) for the 0.2 snapshot and
-Canic metrics-parity requirements. [The safety boundary](SAFETY.md) lists the
-guarantees that are and are not currently backed by implementation evidence.
+implementation order, the frozen
+[0.3 Patch 1 contract](docs/design/0.3-patch-1-contract.md) for the decisions
+that preceded implementation, the implemented
+[observability contract](docs/design/observability.md), and the
+[0.3 evidence report](docs/audits/0.3-runtime-evidence-2026-08-13.md).
+[The safety boundary](SAFETY.md) defines the guarantees and their limits.
+
+## Policies
+
+| Policy | Work | Successor timing | Failure boundary |
+| --- | --- | --- | --- |
+| `Once` | asynchronous | only when explicitly requested | no automatic recovery after a trap |
+| `AfterCompletion` | asynchronous | after normal callback completion | no automatic recovery after a trap |
+| `Watchdog` | synchronous | committed by a separate scheduler message before work | successor survives trapped or exhausted consumer work |
 
 ## Intended use
 
@@ -74,6 +109,23 @@ For a canister with one simple callback and no need for shared inventory,
 metrics, or recovery policy, using `ic-cdk-timers` directly remains the simpler
 choice.
 
+The lifecycle owner calls `initialize_runtime` synchronously before any
+registration, then invokes each consumer's reconciliation during `init` and
+`post_upgrade` before downstream hooks. Consumers persist their own desired
+state; `ic-timers` persists no policy, handle, generation, epoch, or application
+authority.
+
+All consumers must resolve to the same `ic-timers` Cargo package ID. Two
+resolved versions contain two independent library statics and do not share a
+registry. The crate exports no lifecycle hook, macro, Candid endpoint, or
+consumer-work executor. The pinned provider's internal executor export rejects
+non-self callers, which the PocketIC suite verifies.
+
+The 64-entry registry and maximum 128 owned handles do not reserve capacity in
+the provider's canister-wide 250 outstanding-dispatch limit. An adoption must
+also inventory or migrate every remaining direct `ic-cdk-timers` user in the
+final canister and prove one resolved `ic-timers` package ID.
+
 ## Development
 
 ```text
@@ -83,8 +135,16 @@ make ci
 
 `make update-dev` installs the pinned Rust toolchain, Clippy, rustfmt, the Wasm
 target, and this repository's single formatting hook. Normal development uses
-Rust 1.97.1; `make msrv` checks the declared Rust 1.91.0 minimum separately.
+Rust 1.97.1; `make msrv` checks the declared Rust 1.88.0 minimum separately.
 `make help` lists the smaller component targets.
+
+The focused real-canister evidence is intentionally separate from the normal
+CI gate. With a PocketIC 15 server available, run:
+
+```text
+POCKET_IC_BIN=/path/to/pocket-ic make pocketic-watchdog
+POCKET_IC_BIN=/path/to/pocket-ic make pocketic-cohorts
+```
 
 ## License
 

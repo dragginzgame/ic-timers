@@ -1,10 +1,10 @@
 .PHONY: \
 	actions-check build bump-x check ci clean clippy docs-check ensure-clean fmt fmt-check help \
-	install-hooks major minor msrv package patch publish release-check release-commit \
+	install-hooks major minor msrv package patch pocketic-cohorts pocketic-watchdog publish release-check release-commit \
 	release-major release-minor release-patch release-push release-stage \
 	release-tag-check release-x shell-check test update-dev version wasm-check
 
-MSRV ?= 1.91.0
+MSRV ?= 1.88.0
 VERSION ?=
 
 CI_TARGETS := actions-check shell-check release-check fmt-check check clippy docs-check test wasm-check package
@@ -18,6 +18,8 @@ help:
 	@echo "  test                Run workspace unit tests"
 	@echo "  wasm-check          Compile the library for wasm32-unknown-unknown"
 	@echo "  package             Verify the publishable crate package"
+	@echo "  pocketic-watchdog   Build and run the focused watchdog canister evidence"
+	@echo "  pocketic-cohorts    Build and run comparable timer policy cohorts"
 	@echo "  publish             Publish the clean, tagged release to crates.io"
 	@echo "  actions-check       Verify external Actions use full commit SHAs"
 	@echo "  shell-check         Check repository shell-script syntax"
@@ -57,6 +59,39 @@ msrv:
 
 package:
 	cargo package --locked --offline --allow-dirty -p ic-timers
+
+pocketic-watchdog:
+	@if [ -z "$(POCKET_IC_BIN)" ]; then \
+		echo "error: POCKET_IC_BIN must name a PocketIC 15 server binary" >&2; \
+		exit 2; \
+	fi
+	cargo +$(MSRV) build --manifest-path testing/Cargo.toml -p ic-timers-runtime-probe \
+		--release --target wasm32-unknown-unknown --locked
+	POCKET_IC_BIN="$(POCKET_IC_BIN)" \
+		IC_TIMERS_PROBE_WASM="$(CURDIR)/testing/target/wasm32-unknown-unknown/release/ic_timers_runtime_probe.wasm" \
+		cargo +$(MSRV) test --manifest-path testing/Cargo.toml -p ic-timers-pocketic --locked tests::
+
+pocketic-cohorts:
+	@if [ -z "$(POCKET_IC_BIN)" ]; then \
+		echo "error: POCKET_IC_BIN must name a PocketIC 15 server binary" >&2; \
+		exit 2; \
+	fi
+	CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-baseline" \
+		cargo +$(MSRV) build --manifest-path testing/Cargo.toml -p ic-timers-size-probe \
+		--release --target wasm32-unknown-unknown --locked
+	CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-once" \
+		cargo +$(MSRV) build --manifest-path testing/Cargo.toml -p ic-timers-size-probe \
+		--release --target wasm32-unknown-unknown --locked --no-default-features --features once
+	CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-after-completion" \
+		cargo +$(MSRV) build --manifest-path testing/Cargo.toml -p ic-timers-size-probe \
+		--release --target wasm32-unknown-unknown --locked --no-default-features --features after-completion
+	CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-watchdog" \
+		cargo +$(MSRV) build --manifest-path testing/Cargo.toml -p ic-timers-size-probe \
+		--release --target wasm32-unknown-unknown --locked --no-default-features --features watchdog
+	POCKET_IC_BIN="$(POCKET_IC_BIN)" \
+		IC_TIMERS_COHORT_ROOT="$(CURDIR)/testing/target" \
+		cargo +$(MSRV) test --manifest-path testing/Cargo.toml -p ic-timers-pocketic --locked \
+			comparable_policy_cohorts_report_size_and_instruction_subjects -- --nocapture
 
 actions-check:
 	bash scripts/ci/check-github-actions-pinned.sh

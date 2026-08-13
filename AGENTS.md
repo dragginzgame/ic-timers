@@ -44,11 +44,16 @@ This file is normative for automated contributors.
 
 ## Delivery
 
-- Update `CHANGELOG.md` and the open release-line note for meaningful changes.
-- When the maintainer asks to prepare a named release, run the matching version
-  bump so the populated `Unreleased` section is automatically promoted to the
-  dated release heading. Do not leave a named release blocked on a manual
-  changelog-heading edit.
+- Update `CHANGELOG.md` and the open release-line note for every meaningful
+  change without waiting for a separate changelog request.
+- Once the maintainer names a target release, immediately create and maintain
+  an undated `## [x.y.z]` section directly below `## [Unreleased]`. Put that
+  release's notes there and keep `Unreleased` empty; do not leave named-release
+  notes only under `Unreleased`.
+- When the maintainer asks for the version bump, run the matching bump target.
+  The release helper must validate the staged section and add its date
+  automatically. Do not require the maintainer to edit a changelog heading by
+  hand.
 - Run targeted checks for changed behavior. Do not run broad external suites
   unless the maintainer requests them.
 - Release targets are maintainer-owned: do not commit, tag, push, or publish

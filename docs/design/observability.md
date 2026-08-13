@@ -1,13 +1,18 @@
 # Observability and Canic parity contract
 
-Status: candidate value types implemented for Canic and IcyDB feedback
+Status: canonical runtime observations live; downstream Canic adapter pending
 
 ## Purpose
 
 `ic-timers` should replace duplicated timer instrumentation, not merely add a
-pleasant inventory beside it. Before the registry or metrics collection is
-implemented, its canonical snapshot must be defined as a semantic superset of
-the timer information Canic exposes today.
+pleasant inventory beside it. Its canonical snapshot is defined as a semantic
+superset of the timer information Canic exposes today.
+
+Ordinary and watchdog state, scheduler dispatch, work, stale,
+unacknowledged, and instruction observations are live. Normally completed
+accepted scheduler and work callbacks record IC call-context instruction
+deltas. Trapped and exhausted work record no sample. The real downstream Canic
+adapter gate remains open.
 
 This contract describes provider-neutral runtime data. `ic-timers` owns the
 identity, counters, measurements, and snapshot semantics. Canic, IcyDB, and
@@ -15,21 +20,34 @@ standalone canisters adapt that snapshot into their own Candid DTOs, status
 responses, or metric rows. This crate must not depend on Canic's Candid types,
 unified metrics DTOs, or presentation conventions.
 
+## Implemented 0.3 decisions
+
+The frozen [0.3 Patch 1 runtime contract](0.3-patch-1-contract.md) replaced two
+candidate 0.2 terms when the values became live registry observations:
+
+- a committed watchdog dispatch without committed completion is
+  `unacknowledged`, not definitely interrupted or trapped; and
+- elapsed callback duration is omitted because IC message time cannot measure
+  synchronous work duration truthfully.
+
+The 0.3 runtime also splits scheduler wake-up arms from watchdog work dispatch
+arms, and scheduler instruction aggregates from consumer-work instruction
+aggregates. Those decisions do not weaken the Canic semantic-superset gate.
+
 ## Canonical snapshot
 
-Every declared timer has one canonical snapshot with the following groups.
-Names below describe required semantics; the 0.2 Rust API may refine the exact
-type and field names.
+Every declared timer has one registry-constructed canonical snapshot with the
+following groups.
 
 | Group | Required content |
 | --- | --- |
 | Identity | Bounded `owner`, `subsystem`, and `name` labels forming one ordered `TimerIdentity`. |
 | Policy | Configured scheduling policy and cadence, plus the latest post-run directive when it differs from the configured policy. |
-| Scheduling | Latest requested delay, latest actually armed delay, next absolute deadline, and any pre-armed successor. |
-| State | Enabled state, registration, process condition, current generation, and whether work is in flight. |
+| Scheduling | Latest requested delay, latest actually armed delay, scheduling mode, next absolute deadline, and any watchdog successor. |
+| State | Closed policy-specific state, registration projection, process condition, current generation, and watchdog attempt status. |
 | Outcome | Latest classified outcome, work count, last success and failure timestamps, and consecutive expected failures. |
-| Counters | Requests, arms, starts, completions, classified outcomes, cancellations, stale callbacks, coalescing, and observed interruptions. |
-| Performance | Total, latest, and maximum instruction consumption and elapsed callback duration. |
+| Counters | Requests, wake-up arms, work dispatch arms, scheduler starts, work starts/completions, classified outcomes, cancellations, stale callbacks, coalescing, and unacknowledged attempts. |
+| Performance | Separate sample count, total, latest, and maximum instructions for schedulers and normally completed work. |
 | Scope | Runtime epoch and start timestamp defining the reset boundary for every counter and aggregate. |
 
 Configured recurrence and callback directives are related but distinct. The
@@ -50,32 +68,30 @@ performed against `ic-cdk-timers` and from callbacks that actually execute.
 
 | Counter | Required meaning |
 | --- | --- |
-| `requested` | Validated schedule or reconciliation requests, including requests later coalesced or satisfied without another platform arm. |
-| `armed` | Actual one-shot arm operations sent to the platform, including replacements and pre-armed watchdog successors. |
-| `started` | Non-stale callbacks that win generation arbitration and enter logical execution. |
-| `completed` | Started callbacks that return and commit completion accounting. |
+| `schedule_requests` | Validated schedule or reconciliation requests, including requests later coalesced or satisfied without another platform arm. |
+| `wakeups_armed` | Actual ordinary-work or watchdog-scheduler one-shots whose handle ownership committed. |
+| `work_dispatched` | Immediate watchdog-work one-shots committed by scheduler messages. |
+| `scheduler_started` | Non-stale watchdog scheduler callbacks accepted by generation arbitration. |
+| `work_started` | Non-stale consumer-work callbacks that enter logical execution. |
+| `work_completed` | Consumer work that returns and commits completion accounting. |
 | `succeeded` | Completed callbacks classified as successful work. |
 | `no_work` | Completed callbacks that validly find no work to perform. |
 | `retryable_failure` | Completed callbacks with an expected failure that permits retry policy. |
 | `invariant_failure` | Completed callbacks reporting an unexpected invariant or terminal failure. |
 | `cancelled` | Logical registrations or runs ended because cancellation wins arbitration; this is not merely the number of cancel API calls. |
-| `stale` | Provider callbacks or completions rejected because their generation no longer owns execution. |
+| `stale_wakeups` | Ordinary or scheduler callbacks rejected because their generation no longer owns execution. |
+| `stale_work` | Watchdog work callbacks rejected because their generation no longer owns execution. |
 | `coalesced` | Scheduling demand merged into existing scheduled or pending work rather than producing another logical run. |
-| `interrupted` | A started generation later observed to be unable to complete, for example during watchdog takeover or lifecycle reconstruction. |
+| `unacknowledged` | An older committed watchdog dispatch retired by its successor without a committed completion. |
 
 Every completed callback has exactly one classified completion outcome, so:
 
 ```text
-completed = succeeded + no_work + retryable_failure + invariant_failure
+work_completed = succeeded + no_work + retryable_failure + invariant_failure
 ```
 
-An actively running callback is not interrupted merely because `started` is
-temporarily greater than `completed`. `interrupted` changes only when the
-runtime can establish that the prior generation will not complete. The design
-must define how reconstruction attributes an interruption that began in a
-previous epoch.
-
-`started` and `completed` must never be collapsed into one execution count.
+`work_started` and `work_completed` must never be collapsed into one execution
+count.
 Canic currently records a callback start before it can record post-run
 instructions. A trap or instruction exhaustion can prevent completion
 instrumentation, so preserving both counters is necessary to expose incomplete
@@ -99,11 +115,12 @@ not infer work count from callback counters.
 
 ## Measurements and scope
 
-Instruction and elapsed-duration aggregates contain total, latest, and
-maximum values. They update only for completed callbacks with a valid end
-measurement. A missing completion remains visible through state and counters;
-the runtime must not synthesize a zero measurement for trapped or exhausted
-work.
+Instruction aggregates contain sample count, total, latest, and maximum values
+for scheduler and work roles. They update only when the measured callback path
+returns with a valid end measurement. A missing work completion remains visible
+through committed dispatch and later `unacknowledged` observation; the runtime
+does not synthesize a zero measurement for trapped or exhausted work. Elapsed
+IC time is absent because message time is not a truthful synchronous duration.
 
 The snapshot carries a runtime epoch identifier and epoch start timestamp.
 Every counter, timestamp, and aggregate must state whether it is scoped to that
@@ -114,27 +131,26 @@ persistent scheduling state used for reconstruction is a separate concern.
 All arithmetic must define overflow behavior. Hot-path counters and aggregates
 must not trap because an operator metric reached its numeric limit.
 
-## Candidate decisions for review
+## Implemented value decisions
 
-The first 0.2 implementation makes the following choices. They remain open to
-Canic and IcyDB feedback until the 0.2 API is accepted:
+The runtime makes the following choices. Canic and IcyDB may still provide
+downstream adapter feedback before 0.3 is released:
 
 - Each identity component is non-empty, limited to 64 UTF-8 bytes, and rejects
   surrounding whitespace and control characters. Exact label text is retained
   and ordered lexicographically by owner, subsystem, then name.
 - Portable process conditions preserve Canic's disabled, idle, active,
-  retrying, failed, and missing-registration states. Completion outcomes
-  preserve success, no-work, retryable-failure, and invariant-failure classes;
-  an interruption is a separate non-completion terminal event with unknown,
-  rather than synthetic zero, work and performance measurements.
+  retrying, and failed states. Completion outcomes preserve success, no-work,
+  retryable-failure, and invariant-failure classes. `Unacknowledged` is a
+  separate non-completion event with unknown, rather than synthetic zero, work
+  and performance measurements.
 - Success, valid no-work, and invariant failure reset
   `consecutive_expected_failures`; a retryable failure increments it and an
   interruption preserves it. This matches current Canic recovery-state
   transitions.
-- An interruption is counted in the epoch where recovery or reconstruction
-  establishes it, even if the interrupted generation started in an earlier
-  epoch. It therefore has no arithmetic invariant with the observing epoch's
-  start counter.
+- An unacknowledged attempt is counted in the epoch and scheduler message that
+  retires its committed dispatch. It has no arithmetic invariant with
+  `work_started`, because a trapping work-message start mutation rolls back.
 - Counts, work, instructions, and nanosecond values use `u64`. Hot-path
   counters, streaks, sample counts, and totals saturate; latest and maximum
   measurements continue to update after total saturation.
@@ -176,13 +192,13 @@ The design slice is not accepted until all of the following are true:
 6. `ic-timers` has no dependency on Canic-specific DTO, Candid, or metric-row
    types.
 
-Trap, instruction-exhaustion, and upgrade cases require later PocketIC
-evidence. The 0.2 types and transition tests must nevertheless reserve and
-define the state needed to represent those cases before runtime wiring starts.
+Trap, instruction-exhaustion, and upgrade behavior now has focused PocketIC
+evidence. The remaining acceptance gap is the real Canic adapter, not missing
+runtime observation state.
 
 Only after the adapters pass may Canic remove its separate `TimerMetrics`,
 timer-specific `PerfKey`, and duplicated workflow counters.
 
-The local 0.2 tests include a Canic-shaped projection fixture proving the
-candidate fields are available. Acceptance criterion 2 remains open until the
+The local tests include a Canic-shaped projection fixture proving the fields
+are available. Acceptance criterion 2 remains open until the
 real downstream Canic adapter tests pass.

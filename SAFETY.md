@@ -6,64 +6,102 @@ actually enforce and test.
 
 ## Current guarantees
 
-The current pre-alpha crate provides:
+The unreleased 0.3 runtime provides:
 
-- a pure generation-based control state machine;
-- rejection of stale callback starts and completions;
-- deterministic arbitration among scheduling, reconciliation, cancellation,
-  and callback completion;
-- checked conversion of relative delays to absolute nanosecond deadlines;
-- an opaque platform timer handle with the direct `ic-cdk-timers` dependency
-  isolated in `platform`; and
-- inert provider-neutral snapshot values with bounded identities and
-  saturating observation counters.
+- a pure fixed-capacity registry with unique bounded identities and
+  deterministic snapshot ordering;
+- checked positive cadence, deadline, generation, and request arithmetic;
+- policy-specific ordinary and watchdog states that cannot express a watchdog
+  successor as ordinary running state;
+- deterministic arbitration among scheduling, cancellation, unregistration,
+  callback completion, and stale generations;
+- saturating completion, stale, coalescing, and unacknowledged-event state;
+- inert snapshots with private construction and read-only accessors;
+- one volatile canister-local owner initialized through a synchronous,
+  idempotent seam;
+- live `Once` and `AfterCompletion` callback execution without retaining a
+  registry borrow across consumer work or an `await`;
+- a live synchronous watchdog whose scheduler arms the next cadence successor
+  before it queues a separate immediate work callback and returns without
+  invoking consumer work;
+- private, non-copyable provider handles owned by canonical entries (one for
+  ordinary timers, at most successor plus work for watchdogs), with terminal
+  cancellation clearing the actual handles and all direct `ic-cdk-timers` use
+  isolated in `platform`;
+- synchronous idempotent reconstruction from a caller-owned volatile claim
+  slot and caller-supplied desired state, without persisted library authority;
+- normally completed scheduler and work instruction samples from IC
+  call-context counter type 1;
+- focused PocketIC evidence that explicit trap and actual instruction
+  exhaustion roll back work completion while the committed successor remains,
+  retires the attempt as unacknowledged, and permits later progress;
+- focused PocketIC evidence for upgrade reconstruction before a downstream
+  hook, stop/resume, insufficient cycles followed by top-up, a 300-second
+  overdue jump without replay, two simultaneous timers, and isolation when one
+  timer traps;
+- terminal cancellation both normally and in the committed scheduler/work gap,
+  leaving later provider delivery unable to invoke consumer work; and
+- external rejection of the provider's internal timer-executor route.
 
 Snapshot values describe runtime observations. They are not authority to arm,
 clear, restore, or mutate a timer and must not become an alternate control
 path.
 
-## Not yet guaranteed
+## Limits and consumer obligations
 
-The crate does not yet provide a live shared registry, measured callback
-execution, lifecycle reconstruction, or a recovery watchdog. In particular:
+- `Once` and `AfterCompletion` do not pre-arm a successor. A trap or
+  instruction exhaustion before their callback returns can leave no future
+  wake-up. Recovery-critical work must use `Watchdog`.
+- Watchdog work is synchronous and must remain one bounded unit. The runtime
+  does not permit it to cross an `await`.
+- Watchdog recovery covers traps and instruction exhaustion in the later
+  consumer-work message, not in the scheduler message that creates the next
+  successor. The scheduler is fixed and bounded, but its normal return remains
+  a protocol assumption.
+- A committed successor provides another attempt, not exactly-once application
+  effects. Consumer work remains idempotent and owns its durable authority.
+- Initialization and reconciliation are explicit lifecycle calls. The single
+  lifecycle export owner must invoke them synchronously before downstream
+  hooks on install and upgrade.
+- Timers are volatile. Consumers derive desired reconstruction from existing
+  durable state; they must not persist provider handles, callback generations,
+  or timer snapshots as mutation authority.
+- All timer consumers must resolve the same `ic-timers` Cargo package ID. Two
+  resolved versions create two independent registries.
+- The provider's 250 outstanding-dispatch limit is canister-wide. The
+  registry's 64-entry and 128-owned-handle bounds do not reserve provider
+  capacity; consumers must inventory remaining direct provider users and
+  tolerate provider deferral as an operational retry condition.
+- The current evidence uses PocketIC 15 and the pinned `ic-cdk-timers` 1.0.0
+  provider. A provider change requires a renewed source and recovery audit.
+- Canic's real metrics adapter and IcyDB/Canic adoption tests remain downstream
+  work. No downstream adoption is claimed here.
 
-- after-completion recurrence cannot recover when the callback traps or
-  exhausts its instruction limit before arming a successor;
-- a watchdog policy and pre-armed-successor snapshot type do not mean watchdog
-  scheduling is implemented;
-- interruption counters are representational until a recovery or lifecycle
-  owner can establish that a started generation will not complete;
-- epoch reset types do not restore scheduling state across upgrade; and
-- no PocketIC evidence yet covers trap recovery, instruction exhaustion,
-  upgrade reconstruction, ingress isolation, independent timers, or
-  insufficient cycles.
-
-Recovery-critical consumers should retain their proven timer runtime until the
-corresponding behavior and evidence exist here.
+The frozen [0.3 Patch 1 contract](docs/design/0.3-patch-1-contract.md) defines
+the protocol and the
+[closeout report](docs/audits/0.3-runtime-evidence-2026-08-13.md) maps every
+promotion case to direct evidence.
 
 ## Failure and measurement semantics
 
 Callback starts and completions are deliberately separate. A trap or
 instruction exhaustion can prevent all post-run code, so the runtime must not
-invent a completion, zero instruction cost, zero duration, or zero work count.
-An interruption becomes observable only when a later watchdog or lifecycle
-step establishes it.
+invent a completion, zero instruction cost, elapsed duration, or zero work
+count.
+The live watchdog records only that an earlier committed dispatch lacks a
+committed completion when a later scheduler retires it. It cannot infer a trap,
+instruction exhaustion, delay, or interruption from that fact alone.
 
 All hot-path observation counters and aggregates saturate rather than trap.
 Saturation protects timer execution; it does not make a saturated metric exact.
 The runtime epoch identifies the reset scope so operators can distinguish a
 reset from a genuine lifetime zero.
 
-## Evidence required before recovery claims
+## Evidence maintenance
 
-A recovery implementation must add focused PocketIC cases for:
-
-1. callback trap after a successor becomes authoritative;
-2. instruction exhaustion at each scheduling boundary;
-3. upgrade while scheduled and while logically running;
-4. stale predecessor callbacks after replacement or reconstruction;
-5. isolation between independent logical timers;
-6. rejection of external ingress to internal callback paths; and
-7. insufficient-cycle behavior without silent loss of the recovery schedule.
-
-Only behavior covered by those tests should be described as recovery-capable.
+The recovery suite is deliberately outside the fast default CI gate. Run
+`make pocketic-watchdog` with PocketIC 15 after changes to provider binding,
+registry transitions, lifecycle reconstruction, or watchdog dispatch. Run
+`make pocketic-cohorts` after changes that can affect linked Wasm, instruction
+cost, or provider-call count. Native mocks remain necessary for exhaustive
+state transitions but are never a substitute for IC commit/rollback evidence.

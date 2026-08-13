@@ -44,17 +44,32 @@ perl -0 -e '
 
     die "error: changelog needs exactly one ## [Unreleased] heading\n"
         if $unreleased_count != 1;
-    die "error: changelog already contains ## [$version]\n"
-        if $text =~ /^## \[\Q$version\E\](?:\s+-\s+\d{4}-\d{2}-\d{2})?$/m;
     die "error: could not read the Unreleased changelog section\n"
         if $text !~ /^## \[Unreleased\]\n(.*?)(?=^## \[|\z)/ms;
 
     my $notes = $1;
-    die "error: the Unreleased changelog section is empty\n"
-        if $notes !~ /\S/;
+    my $target_count = () =
+        $text =~ /^## \[\Q$version\E\](?:\s+-\s+\d{4}-\d{2}-\d{2})?$/mg;
+    die "error: changelog contains multiple ## [$version] headings\n"
+        if $target_count > 1;
+    die "error: changelog already finalized ## [$version]\n"
+        if $text =~ /^## \[\Q$version\E\]\s+-\s+\d{4}-\d{2}-\d{2}$/m;
 
-    my $replacement = "## [Unreleased]\n\n## [$version] - $date\n" . $notes;
-    $text =~ s/^## \[Unreleased\]\n.*?(?=^## \[|\z)/$replacement/ms;
+    if ($text =~ /^## \[\Q$version\E\]\n(.*?)(?=^## \[|\z)/ms) {
+        my $staged_notes = $1;
+        die "error: Unreleased must be empty while ## [$version] is staged\n"
+            if $notes =~ /\S/;
+        die "error: the staged ## [$version] section is empty\n"
+            if $staged_notes !~ /\S/;
+
+        $text =~ s/^## \[\Q$version\E\]$/## [$version] - $date/m;
+    } else {
+        die "error: the Unreleased changelog section is empty\n"
+            if $notes !~ /\S/;
+
+        my $replacement = "## [Unreleased]\n\n## [$version] - $date\n" . $notes;
+        $text =~ s/^## \[Unreleased\]\n.*?(?=^## \[|\z)/$replacement/ms;
+    }
     print $text;
 ' "${changelog}" > "${temporary}"
 

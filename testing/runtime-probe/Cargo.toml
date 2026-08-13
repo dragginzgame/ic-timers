@@ -1,0 +1,19 @@
+[package]
+name = "ic-timers-runtime-probe"
+rust-version.workspace = true
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+candid.workspace = true
+ic-cdk.workspace = true
+ic-timers.workspace = true
+serde = { workspace = true, features = ["derive"] }
+
+[lints]
+workspace = true

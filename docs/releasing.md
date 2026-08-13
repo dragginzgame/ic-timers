@@ -2,11 +2,24 @@
 
 The workspace follows semantic versioning.
 
-Keep completed user-visible changes in the populated `Unreleased` section of
-`CHANGELOG.md`. The release bump automatically moves those notes under the new
-dated version heading and leaves a fresh `Unreleased` section behind. It
-refuses to continue if that section is missing or empty, the target version
-already exists, or the worktree is not clean.
+As soon as a target version is known, keep completed user-visible changes in
+an explicit undated section directly below the empty `Unreleased` heading:
+
+```text
+## [Unreleased]
+
+## [0.3.0]
+```
+
+Automated contributors create and maintain that section as part of the work;
+the maintainer should not need a separate changelog-heading edit. The release
+bump validates that the staged section is populated and automatically adds the
+release date. For work without a named target, populated `Unreleased` notes
+remain supported and are promoted automatically when a version is selected.
+
+The helper refuses to continue if the changelog shape is ambiguous, the
+target notes are empty, the target is already dated, or the worktree is not
+clean.
 
 Use one of the standard release families:
 
@@ -19,7 +32,7 @@ make release-major
 For an exact version, use:
 
 ```text
-make release-x VERSION=0.2.0
+make release-x VERSION=0.3.0
 ```
 
 These maintainer-owned targets run the CI gate, update workspace version and

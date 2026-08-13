@@ -29,6 +29,7 @@ name = "ic-timers"
 version = "0.2.0"
 dependencies = [
  "ic-cdk-timers",
+ "ic0",
  "thiserror",
 ]
 

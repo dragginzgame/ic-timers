@@ -27,9 +27,18 @@ pub enum TimerRegistration {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum PendingCommand {
-    Cancel { sequence: u64 },
-    Reconcile { sequence: u64, deadline_ns: u64 },
-    Schedule { sequence: u64, deadline_ns: u64 },
+    Cancel {
+        sequence: u64,
+    },
+    #[allow(dead_code)] // Lifecycle reconciliation binds this in Patch 5.
+    Reconcile {
+        sequence: u64,
+        deadline_ns: u64,
+    },
+    Schedule {
+        sequence: u64,
+        deadline_ns: u64,
+    },
 }
 
 /// Side effect requested from the timer platform boundary.
@@ -87,6 +96,7 @@ pub struct TimerControl {
 impl TimerControl {
     /// Return the latest allocated callback generation.
     #[must_use]
+    #[allow(dead_code)] // Retained for lifecycle reconciliation in Patch 5.
     pub const fn generation(&self) -> u64 {
         self.generation
     }
@@ -95,6 +105,17 @@ impl TimerControl {
     #[must_use]
     pub const fn registration(&self) -> TimerRegistration {
         self.registration
+    }
+
+    /// Terminate pure control after a checked terminal failure.
+    ///
+    /// Returns whether a scheduled wake-up must be cleared. A running callback
+    /// has already consumed its provider wake-up.
+    pub(crate) const fn terminate(&mut self) -> bool {
+        let clear_wakeup = matches!(self.registration, TimerRegistration::Scheduled { .. });
+        self.registration = TimerRegistration::Unregistered;
+        self.pending = None;
+        clear_wakeup
     }
 
     /// Schedule a deadline, retaining an already scheduled earlier deadline.
@@ -187,6 +208,7 @@ impl TimerControl {
     }
 
     /// Reconcile this timer to one authoritative deadline.
+    #[allow(dead_code)] // Lifecycle reconciliation binds this in Patch 5.
     pub fn reconcile(&mut self, deadline_ns: u64) -> Result<TimerControlAction, TimerControlError> {
         let sequence = self.next_request_sequence()?;
 
