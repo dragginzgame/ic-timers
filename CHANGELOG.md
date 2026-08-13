@@ -4,6 +4,8 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-08-13
+
 ### Added
 
 - Add the candidate 0.2 provider-neutral `snapshot` API, including bounded
