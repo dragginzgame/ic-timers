@@ -23,6 +23,8 @@ All notable changes to this project are recorded here.
 - Add the 0.2 observability and Canic parity contract, an explicit safety
   boundary, and a recurring code-hygiene audit.
 - Add Dependabot coverage for Cargo and GitHub Actions dependencies.
+- Add tested release automation that promotes `Unreleased` notes into a dated
+  version section, plus a guarded crates.io publish target.
 
 ### Changed
 

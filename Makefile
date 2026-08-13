@@ -1,13 +1,13 @@
 .PHONY: \
 	actions-check build bump-x check ci clean clippy docs-check ensure-clean fmt fmt-check help \
-	install-hooks major minor msrv package patch release-commit \
+	install-hooks major minor msrv package patch publish release-check release-commit \
 	release-major release-minor release-patch release-push release-stage \
 	release-tag-check release-x shell-check test update-dev version wasm-check
 
 MSRV ?= 1.91.0
 VERSION ?=
 
-CI_TARGETS := actions-check shell-check fmt-check check clippy docs-check test wasm-check package
+CI_TARGETS := actions-check shell-check release-check fmt-check check clippy docs-check test wasm-check package
 
 help:
 	@echo "Available commands:"
@@ -18,6 +18,7 @@ help:
 	@echo "  test                Run workspace unit tests"
 	@echo "  wasm-check          Compile the library for wasm32-unknown-unknown"
 	@echo "  package             Verify the publishable crate package"
+	@echo "  publish             Publish the clean, tagged release to crates.io"
 	@echo "  actions-check       Verify external Actions use full commit SHAs"
 	@echo "  shell-check         Check repository shell-script syntax"
 	@echo "  msrv                Check with the minimum supported Rust version"
@@ -62,6 +63,9 @@ actions-check:
 
 shell-check:
 	bash -n .githooks/pre-commit scripts/ci/*.sh scripts/dev/*.sh scripts/release/*.sh
+
+release-check:
+	bash scripts/release/test-finalize-changelog.sh
 
 ci:
 	+@set -e; for target in $(CI_TARGETS); do \
@@ -131,3 +135,6 @@ release-tag-check:
 
 release-push: ensure-clean release-tag-check
 	git push --follow-tags
+
+publish: ensure-clean release-tag-check package
+	cargo publish --locked --registry crates-io -p ic-timers

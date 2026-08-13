@@ -20,6 +20,8 @@ primarily unreviewed cross-consumer API semantics, not mechanical hygiene.
   snapshots and timer authority.
 - Added `SAFETY.md` so implemented guarantees, missing recovery behavior, and
   required PocketIC evidence have one canonical boundary.
+- Added a tested changelog finalizer and a guarded crates.io publish target for
+  the requested 0.2 release flow.
 
 ## Audit findings
 
@@ -29,11 +31,6 @@ The candidate 0.2 API still needs Canic and IcyDB review of label bounds,
 policy/mode semantics, failure-streak reset behavior, interruption epoch
 attribution, and adapter ergonomics. This is design work and remains explicitly
 deferred before registry implementation.
-
-The release helpers do not yet have simulated failure-path tests comparable to
-the more mature peer repositories. They are maintainer-owned, small, and do
-not publish packages automatically, so that machinery is deferred until a real
-0.2 release/publish flow is requested.
 
 Compile-fail capability tests and Wasm size budgets were also deferred. The
 crate does not yet expose an authority-bearing registry capability, and a size

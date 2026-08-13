@@ -21,6 +21,8 @@ shared Internet Computer timer runtime.
   state, outcome, counter, performance, epoch, and canonical snapshot values.
 - Basic GitHub CI, one formatting-only pre-commit hook, SemVer release helpers,
   development-tool setup, README, changelog, and architecture docs exist.
+- Version bumps automatically promote populated `Unreleased` notes to a dated
+  release heading; the guarded publish target requires a clean tagged `HEAD`.
 - CI also checks rustdoc, shell syntax, and full-SHA GitHub Actions pins;
   Dependabot covers Cargo and Actions dependencies.
 - `SAFETY.md` is the canonical boundary for implemented guarantees and missing
@@ -50,10 +52,11 @@ guarantees and tests exist.
 
 ## Next action
 
-Review the candidate 0.2 [observability contract](../design/observability.md)
-and public `snapshot` API from Canic and IcyDB. In particular, validate the
-64-byte labels, policy/mode split, no-work failure-streak reset, interruption
-epoch attribution, saturation, and adapter ergonomics. Revise and accept that
-contract before implementing registry storage or runtime instrumentation.
+Publish the 0.2 design slice, then review its
+[observability contract](../design/observability.md) and public `snapshot` API
+from Canic and IcyDB. In particular, validate the 64-byte labels, policy/mode
+split, no-work failure-streak reset, interruption epoch attribution,
+saturation, and adapter ergonomics. Revise and accept that contract before
+implementing registry storage or runtime instrumentation.
 
 The maintainer owns release tags and all package-publication actions.

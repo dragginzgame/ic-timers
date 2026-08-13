@@ -42,13 +42,13 @@ if git rev-parse "v${new_version}" >/dev/null 2>&1; then
     echo "error: tag v${new_version} already exists" >&2
     exit 1
 fi
-if ! grep -Fq "## [${new_version}]" CHANGELOG.md; then
-    echo "error: CHANGELOG.md needs a ## [${new_version}] heading before release" >&2
-    exit 1
-fi
+
+bash scripts/release/finalize-changelog.sh --check "${new_version}"
 
 make --no-print-directory ensure-clean
 make --no-print-directory ci
+
+bash scripts/release/finalize-changelog.sh "${new_version}"
 
 IC_TIMERS_PREVIOUS_VERSION="${previous_version}" \
 IC_TIMERS_NEW_VERSION="${new_version}" \
