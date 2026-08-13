@@ -4,7 +4,7 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
-## [0.3.0]
+## [0.3.0] - 2026-08-13
 
 ### Added
 
