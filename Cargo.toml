@@ -1,0 +1,30 @@
+[workspace]
+members = ["crates/ic-timers"]
+resolver = "2"
+
+[workspace.package]
+rust-version = "1.91.0"
+edition = "2024"
+version = "0.1.0"
+license = "MIT"
+authors = ["borovan <84897664+borovan@users.noreply.github.com>"]
+description = "Observable and recovery-aware timers for Internet Computer canisters"
+repository = "https://github.com/dragginzgame/ic-timers"
+homepage = "https://github.com/dragginzgame/ic-timers"
+keywords = ["internet-computer", "canister", "timer", "dfinity", "icp"]
+categories = ["asynchronous", "wasm"]
+
+[workspace.dependencies]
+ic-cdk-timers = "=1.0.0"
+thiserror = "2.0"
+
+[workspace.lints.rust]
+missing_docs = "warn"
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+doc_markdown = "allow"
+missing_errors_doc = "allow"
+module_name_repetitions = "allow"
