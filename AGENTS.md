@@ -22,6 +22,26 @@ This file is normative for automated contributors.
   inventory, metrics, or failure recovery as implemented until evidence exists.
 - Keep the direct `ic-cdk-timers` dependency behind `platform`.
 
+## Pre-1.0 hard cuts
+
+- Before 1.0, replace superseded APIs and snapshot shapes directly. Do not add
+  deprecated forwarders, compatibility aliases, dual readers, or fallback
+  behavior for an earlier pre-1.0 release.
+- Update current tests, documentation, and downstream adapters in the same
+  change. Historical changelogs may describe removed behavior but do not
+  justify keeping executable compatibility code.
+
+## API and safety hygiene
+
+- Distinguish inert snapshots from runtime authority. Snapshot values may be
+  projected by consumers but must not become an alternate mutation path into
+  timer control or platform handles.
+- Public validation boundaries need negative tests. Production timer paths
+  should return typed errors rather than panic when input or recoverable state
+  can be invalid.
+- Keep safety claims aligned with `SAFETY.md`; reserve recovery claims for
+  behavior backed by the required PocketIC evidence.
+
 ## Delivery
 
 - Update `CHANGELOG.md` and the open release-line note for meaningful changes.

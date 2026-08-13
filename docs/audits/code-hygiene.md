@@ -1,0 +1,48 @@
+# Recurring code-hygiene audit
+
+Use this narrow audit before a minor release or after a substantial public API
+change. It is not a substitute for the recovery/PocketIC evidence in
+`SAFETY.md`.
+
+## Mechanical checks
+
+Run:
+
+```text
+make ci
+make msrv
+git diff --check
+```
+
+Then inspect:
+
+```text
+rg "unwrap\(|expect\(|panic!|todo!|unimplemented!|TODO|FIXME|HACK" \
+  crates/ic-timers/src
+rg "^pub |pub struct|pub enum|pub trait|pub fn|pub const" \
+  crates/ic-timers/src
+rg "ic_cdk_timers|ic-cdk-timers" crates/ic-timers/src Cargo.toml \
+  crates/ic-timers/Cargo.toml
+cargo tree --workspace --duplicates
+cargo package --locked --offline --allow-dirty --list -p ic-timers
+```
+
+## Review questions
+
+- Does production code avoid panics for invalid input or recoverable state?
+- Is every public value inert data, control state, a platform handle, or
+  runtime authority, and is that role clear in its name and rustdoc?
+- Can any public constructor bypass a validation or control invariant?
+- Does every validation boundary have a negative test?
+- Do callback starts, completions, interruptions, and measurements remain
+  distinct?
+- Are counters, totals, deadlines, and generations overflow-safe?
+- Does `platform` remain the only direct `ic-cdk-timers` boundary?
+- Do README, architecture, status, changelog, and `SAFETY.md` make the same
+  implementation and recovery claims?
+- Are external GitHub Actions pinned and dependencies still necessary?
+- Does the package contain only intended public source and metadata?
+
+Classify findings as mechanical, behavioral, or design. Fix mechanical and
+clearly safe behavioral findings in the audit change. Keep recovery semantics,
+wire formats, and cross-consumer API choices in design review.

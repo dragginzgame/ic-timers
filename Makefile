@@ -1,22 +1,25 @@
 .PHONY: \
-	build bump-x check ci clean clippy ensure-clean fmt fmt-check help \
+	actions-check build bump-x check ci clean clippy docs-check ensure-clean fmt fmt-check help \
 	install-hooks major minor msrv package patch release-commit \
 	release-major release-minor release-patch release-push release-stage \
-	release-tag-check release-x test update-dev version wasm-check
+	release-tag-check release-x shell-check test update-dev version wasm-check
 
 MSRV ?= 1.91.0
 VERSION ?=
 
-CI_TARGETS := fmt-check check clippy test wasm-check package
+CI_TARGETS := actions-check shell-check fmt-check check clippy docs-check test wasm-check package
 
 help:
 	@echo "Available commands:"
 	@echo ""
 	@echo "  fmt / fmt-check     Format Rust or verify formatting"
 	@echo "  check / clippy      Compile all targets and lint with warnings denied"
+	@echo "  docs-check          Build public API docs with warnings denied"
 	@echo "  test                Run workspace unit tests"
 	@echo "  wasm-check          Compile the library for wasm32-unknown-unknown"
 	@echo "  package             Verify the publishable crate package"
+	@echo "  actions-check       Verify external Actions use full commit SHAs"
+	@echo "  shell-check         Check repository shell-script syntax"
 	@echo "  msrv                Check with the minimum supported Rust version"
 	@echo "  ci                  Run the local CI gate"
 	@echo "  update-dev          Install the pinned Rust tools, Wasm target, and hook"
@@ -39,6 +42,9 @@ check:
 clippy:
 	cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 
+docs-check:
+	RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps --locked
+
 test:
 	cargo test --workspace --all-targets --all-features --locked
 
@@ -50,6 +56,12 @@ msrv:
 
 package:
 	cargo package --locked --offline --allow-dirty -p ic-timers
+
+actions-check:
+	bash scripts/ci/check-github-actions-pinned.sh
+
+shell-check:
+	bash -n .githooks/pre-commit scripts/ci/*.sh scripts/dev/*.sh scripts/release/*.sh
 
 ci:
 	+@set -e; for target in $(CI_TARGETS); do \

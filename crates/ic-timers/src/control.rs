@@ -61,6 +61,7 @@ pub enum TimerControlAction {
 }
 
 /// Invalid or exhausted timer-control transition.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
 pub enum TimerControlError {
     /// The monotonic request sequence cannot be incremented.

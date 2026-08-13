@@ -19,6 +19,7 @@ pub enum TimerDirective {
 }
 
 /// Failure to represent a requested deadline.
+#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
 pub enum ScheduleError {
     /// The duration cannot be represented as nanoseconds in a `u64`.

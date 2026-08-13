@@ -51,10 +51,10 @@ because recovery decisions consume them. See the
 
 Keep the runtime work in independently testable layers:
 
-1. Review the 0.2 observability contract, then define bounded structured
-   identity, scheduling-policy, execution-state, outcome, counter,
-   measurement, scope, and snapshot value types. Settle their semantics,
-   ordering, and portable shape before storing them.
+1. Review the candidate 0.2 bounded identity, scheduling-policy,
+   execution-state, outcome, counter, measurement, scope, and snapshot value
+   types with Canic and IcyDB. Settle their semantics, ordering, and portable
+   shape before storing them.
 2. Add a pure serial registry above `TimerControl`. It should reject duplicate
    identities, own deterministic snapshot ordering, and translate registry
    commands into platform-neutral effects.

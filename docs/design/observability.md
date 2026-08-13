@@ -1,6 +1,6 @@
 # Observability and Canic parity contract
 
-Status: proposed for the 0.2 design slice
+Status: candidate value types implemented for Canic and IcyDB feedback
 
 ## Purpose
 
@@ -114,20 +114,33 @@ persistent scheduling state used for reconstruction is a separate concern.
 All arithmetic must define overflow behavior. Hot-path counters and aggregates
 must not trap because an operator metric reached its numeric limit.
 
-## Open decisions before type implementation
+## Candidate decisions for review
 
-The 0.2 review must settle these points before public value types are frozen:
+The first 0.2 implementation makes the following choices. They remain open to
+Canic and IcyDB feedback until the 0.2 API is accepted:
 
-- maximum label lengths, byte-versus-character accounting, and validation;
-- the portable process-condition and outcome variants needed for lossless
-  Canic projection;
-- whether a valid no-work outcome resets
-  `consecutive_expected_failures`;
-- attribution of an interruption first observed after an epoch transition;
-- numeric widths and saturation behavior for counts, instructions, work, and
-  durations; and
-- compatibility rules for evolving snapshots without coupling them to a
-  consumer's serialization format.
+- Each identity component is non-empty, limited to 64 UTF-8 bytes, and rejects
+  surrounding whitespace and control characters. Exact label text is retained
+  and ordered lexicographically by owner, subsystem, then name.
+- Portable process conditions preserve Canic's disabled, idle, active,
+  retrying, failed, and missing-registration states. Completion outcomes
+  preserve success, no-work, retryable-failure, and invariant-failure classes;
+  an interruption is a separate non-completion terminal event with unknown,
+  rather than synthetic zero, work and performance measurements.
+- Success, valid no-work, and invariant failure reset
+  `consecutive_expected_failures`; a retryable failure increments it and an
+  interruption preserves it. This matches current Canic recovery-state
+  transitions.
+- An interruption is counted in the epoch where recovery or reconstruction
+  establishes it, even if the interrupted generation started in an earlier
+  epoch. It therefore has no arithmetic invariant with the observing epoch's
+  start counter.
+- Counts, work, instructions, and nanosecond values use `u64`. Hot-path
+  counters, streaks, sample counts, and totals saturate; latest and maximum
+  measurements continue to update after total saturation.
+- The crate exposes provider-neutral Rust values and stable enum labels but no
+  Candid or Serde contract. Consumers own serialization adapters. Public API
+  evolution follows crate SemVer rather than a consumer's wire format.
 
 ## Canic parity baseline
 
@@ -169,3 +182,7 @@ define the state needed to represent those cases before runtime wiring starts.
 
 Only after the adapters pass may Canic remove its separate `TimerMetrics`,
 timer-specific `PerfKey`, and duplicated workflow counters.
+
+The local 0.2 tests include a Canic-shaped projection fixture proving the
+candidate fields are available. Acceptance criterion 2 remains open until the
+real downstream Canic adapter tests pass.

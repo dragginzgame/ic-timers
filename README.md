@@ -47,16 +47,20 @@ implementation:
 - deterministic generation, cancellation, reconciliation, and stale-callback
   arbitration;
 - typed scheduling directives and overflow-safe deadline calculation; and
-- a deliberately thin one-shot boundary over `ic-cdk-timers` 1.0.0.
+- a deliberately thin one-shot boundary over `ic-cdk-timers` 1.0.0; and
+- candidate 0.2 provider-neutral identity, policy, state, outcome, counter,
+  measurement, epoch, and canonical snapshot value types.
 
-The shared canister-wide registry, timer snapshots, measured execution,
-lifecycle reconstruction, pre-armed watchdog recurrence, metrics adapters, and
-PocketIC recovery evidence are not implemented yet. Recovery-critical
-consumers should continue using their proven timer implementation until those
-guarantees exist. See [the architecture note](docs/architecture.md) for the
-intended boundary and implementation order, and the proposed
+The shared canister-wide registry, live snapshot population, measured
+execution, lifecycle reconstruction, pre-armed watchdog recurrence, metrics
+adapters, and PocketIC recovery evidence are not implemented yet.
+Recovery-critical consumers should continue using their proven timer
+implementation until those guarantees exist. See
+[the architecture note](docs/architecture.md) for the intended boundary and
+implementation order, and the proposed
 [observability contract](docs/design/observability.md) for the 0.2 snapshot and
-Canic metrics-parity requirements.
+Canic metrics-parity requirements. [The safety boundary](SAFETY.md) lists the
+guarantees that are and are not currently backed by implementation evidence.
 
 ## Intended use
 
