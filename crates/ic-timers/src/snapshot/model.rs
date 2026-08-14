@@ -662,7 +662,6 @@ pub struct TimerEpoch {
 }
 
 impl TimerEpoch {
-    #[allow(dead_code)] // Constructed from IC system facts in Patch 5.
     pub(crate) const fn new(canister_version: u64, started_at_ns: u64) -> Self {
         Self {
             canister_version,

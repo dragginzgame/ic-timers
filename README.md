@@ -7,9 +7,9 @@ arms and clears the platform timers. This crate is intended to add one place
 for timer identity, scheduling policy, execution arbitration, observability,
 and lifecycle recovery.
 
-Version 0.3.0 contains a complete bounded runtime and a PocketIC evidence suite
-for its recovery watchdog contract. It is published on crates.io; neither
-IcyDB nor Canic has adopted the runtime yet.
+Version 0.3.1 is the current published release. It contains the complete
+bounded runtime, PocketIC recovery-watchdog evidence, and post-0.3 hardening;
+neither IcyDB nor Canic has adopted the runtime yet.
 
 ## Why wrap `ic-cdk-timers`?
 

@@ -10,7 +10,7 @@ IcyDB-shaped watchdog evidence are complete.
 
 ## Current foundation
 
-- Workspace package version: `0.3.0`, tagged, pushed, and published.
+- Workspace package version: `0.3.1`, tagged, pushed, and published.
 - Direct timer provider: exact `ic-cdk-timers` 1.0.0.
 - `control` is the private Canic-derived ordinary generation/registration
   state machine for checked request sequences, stale callbacks, immediate
@@ -51,10 +51,10 @@ IcyDB-shaped watchdog evidence are complete.
   every future bump run `release-verify`: normal CI, Rust 1.88, nested probe
   lint, the watchdog PocketIC matrix, and all policy cohorts. It updates,
   verifies, and stages both root and nested testing lockfiles.
-- Completed post-release hardening is staged under the undated `0.3.1`
-  changelog heading and the dedicated `docs/changelog/0.3.1.md` release-line
-  note. The package version remains 0.3.0 until the maintainer requests the
-  patch bump.
+- Post-0.3 hardening was released as 0.3.1 on 2026-08-14. The next corrections
+  are staged under the undated `0.3.2` changelog heading and the dedicated
+  `docs/changelog/0.3.2.md` release-line note; the package remains 0.3.1 until
+  the maintainer requests the patch bump.
 - CI also checks rustdoc, shell syntax, and full-SHA GitHub Actions pins;
   Dependabot covers Cargo and Actions dependencies. A structural gate keeps
   every direct `ic-cdk-timers` reference inside private `platform` code and
@@ -138,7 +138,7 @@ watchdog rollback semantics. Fault tests cover completion and cleanup paths,
 and the IcyDB-shaped live fixture now executes retryable continuation and
 terminal failure through scheduler/work callbacks. All registration
 capabilities are `must_use`. The nested testing lockfile resolves the local
-package as 0.3.0.
+package as 0.3.1.
 
 PocketIC release evidence is now pinned to `pocket-ic-server 15.0.0` with
 SHA-256
@@ -147,18 +147,30 @@ the gate verifies both before expensive work. When `POCKET_IC_BIN` is unset,
 the release flow installs that exact Linux x86_64 artifact into the ignored
 `target/tools` cache automatically. Explicit overrides remain strict.
 
-The unreleased 0.3.1 candidate now includes a maintained Canic adapter
-contract. It freezes deterministic `TimerKey` identities, the 96-to-64-byte
-application-label hard cut, fallible facade signatures, ordinary policy use,
-metrics projection, and dependency unification. It deliberately rejects a
-global suspend switch: Canic may cancel only its own retained claims and must
-rerun its domain reconcilers on resume, so it cannot suspend IcyDB or another
-owner in the shared registry. No Canic files were changed.
+Released 0.3.1 added the maintained Canic adapter contract, exact ordinary
+reconciliation, one pending-command authority, automatic pinned PocketIC
+provisioning, and release hardening. Its guarded release flow passed the full
+release gate before tagging and publishing.
 
-The current candidate passes `make ci` with 60 native tests, `make msrv`, and
-`make testing-check`. PocketIC and policy cohorts were not rerun for the
-ordinary-only reconciliation and documentation slice; the patch release flow
-will rerun the complete release gate before version mutation.
+The open 0.3.2 correction accepts one bounded Canic-only custody collection of
+opaque claims so authority-snapshot quiescence can enumerate application
+timers without duplicating timer state. It corrects all five dynamic built-ins
+to retained `Once`, identifies root canister-pool maintenance as retained
+`AfterCompletion`, adds lifecycle deferrals to the inventory, and freezes the
+exact legacy metrics projection. Fresh inactive reconciliation now installs
+all three policy declarations so fixed owners appear and reserve capacity
+before application hooks. No Canic files were changed.
+
+The open 0.3.2 tree passes the normal CI gate with 62 native tests, strict
+Clippy, rustdoc, Wasm compilation, packaging, provider-boundary checks, and
+release-script checks. Rust 1.88 workspace compilation and all supported
+nested-probe lint configurations pass. PocketIC and cohort evidence remains a
+mandatory automatic step in the maintainer-owned patch release flow; it was
+not rerun for this provider-neutral reconciliation and documentation patch.
+The follow-up hygiene audit removed blanket dead-code suppression, made pure
+fixture helpers test-only, confirmed no duplicate dependency versions or
+RustSec findings across 13 locked dependencies, and verified the packaged
+source inventory and MIT SPDX metadata.
 
 ## Remaining downstream work
 
@@ -175,13 +187,13 @@ will rerun the complete release gate before version mutation.
   including its fallible public facade, removal of the parallel provider/state
   machine, owner-local lifecycle composition, and focused parity tests.
 
-No downstream adoption has occurred. Version 0.3.0 is published.
+No downstream adoption has occurred. Version 0.3.1 is published.
 
 ## Next action
 
-Review the staged 0.3.1 hardening and Canic-contract notes, then use the
-maintainer-owned patch release flow when approved. Downstream feedback may
-continue against the released 0.3 API; do not mutate downstream repositories
-unless the maintainer explicitly authorizes an exact target.
+Validate the staged 0.3.2 inactive-inventory correction and corrected Canic
+contract, then use the maintainer-owned patch release flow when approved. Do
+not mutate downstream repositories unless the maintainer explicitly
+authorizes an exact target.
 
 The maintainer owns release tags and all package-publication actions.

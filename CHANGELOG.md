@@ -4,6 +4,32 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.3.2]
+
+### Changed
+
+- Correct the Canic adoption contract: all five dynamic built-ins are retained
+  `Once` declarations, root canister-pool maintenance is retained
+  `AfterCompletion`, public/lifecycle timers keep remove-on-stop lifetimes, and
+  no Canic timer uses `Watchdog` yet.
+- Permit one bounded Canic claim-custody collection for quiescence while
+  forbidding it from duplicating scheduling state, counters, provider handles,
+  generations, pending commands, or reconciliation authority.
+- Freeze exact Canic metric projection: schedules use committed
+  `wakeups_armed`, executions use `work_started`, successes combine successful
+  and no-work completions, stale roles combine explicitly, latest delay uses
+  the armed delay, and generation remains optional.
+- Remove blanket dead-code suppression from the private platform and registry;
+  pure registry fixture helpers are now compiled only for tests.
+
+### Fixed
+
+- Retain freshly reconciled inactive `Once`, `AfterCompletion`, and `Watchdog`
+  declarations in the canonical inventory so fixed owners reserve bounded
+  capacity before application hooks.
+- Bring README, status, adoption, and dedicated release notes in line with the
+  tagged and published 0.3.1 release.
+
 ## [0.3.1] - 2026-08-14
 
 ### Added

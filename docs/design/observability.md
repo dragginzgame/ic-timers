@@ -174,6 +174,26 @@ The compatibility requirement is semantic rather than type-level. Canic may
 keep its public DTO shape during migration, but its adapter must be able to
 derive every existing field from `ic-timers` data alone.
 
+The exact existing-field projection is now frozen:
+
+| Canic field | Canonical source |
+| --- | --- |
+| schedules and global `TimerScheduled` | `wakeups_armed` |
+| executions | `work_started` |
+| successes | saturating `succeeded + no_work` |
+| expected failures | `retryable_failure` |
+| invariant failures | `invariant_failure` |
+| stale callbacks | saturating `stale_wakeups + stale_work` |
+| latest delay | `latest_armed_delay_ns` converted to milliseconds |
+| generation | `TimerSnapshot::generation()` as `Option<u64>` |
+| completed instruction count | work-instruction sample count |
+| total/latest/maximum instructions | matching work-instruction aggregate |
+
+`schedule_requests` is intentionally not the legacy schedule count: it also
+includes coalesced demand that did not commit a provider arm. Canic's current
+unconditional `generation: u64` must hard-cut to `Option<u64>` so inactive
+declarations do not fabricate generation zero.
+
 ## Acceptance criteria
 
 The design slice is not accepted until all of the following are true:

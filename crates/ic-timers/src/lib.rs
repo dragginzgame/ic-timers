@@ -14,7 +14,6 @@
 #![deny(rustdoc::broken_intra_doc_links)]
 
 mod control;
-#[allow(dead_code)]
 mod platform;
 pub(crate) mod registry;
 mod runtime;

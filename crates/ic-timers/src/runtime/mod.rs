@@ -314,8 +314,8 @@ where
 /// Reconstruct or reconcile one `Once` declaration synchronously.
 ///
 /// `Some(schedule)` is authoritative and may move an existing deadline in
-/// either direction. `None` cancels a retained declaration; on a fresh heap it
-/// is an idempotent no-op because no callback authority is needed.
+/// either direction. `None` retains an inactive declaration in the canonical
+/// inventory, including on a fresh heap.
 pub fn reconcile_once<F, Fut>(
     registration: &mut Option<OnceRegistration>,
     identity: &TimerIdentity,
@@ -328,9 +328,6 @@ where
     Fut: Future<Output = TimerRunResult> + 'static,
 {
     if registration.is_none() {
-        if desired.is_none() {
-            return Ok(());
-        }
         *registration = Some(register_once(identity.clone(), lifetime, callback)?);
     }
     verify_declaration(
@@ -348,8 +345,9 @@ where
 /// Reconstruct or reconcile one after-completion declaration synchronously.
 ///
 /// The consumer owns `registration` in volatile state. A fresh Wasm heap has
-/// `None`, so this function installs callback authority before scheduling. A
-/// repeated call reuses the exact claim and does not replace its callback.
+/// `None`, so this function installs callback authority before reconciling it
+/// active or inactive. A repeated call reuses the exact claim and does not
+/// replace its callback.
 pub fn reconcile_after_completion<F, Fut>(
     registration: &mut Option<AfterCompletionRegistration>,
     identity: &TimerIdentity,
@@ -363,9 +361,6 @@ where
     Fut: Future<Output = TimerRunResult> + 'static,
 {
     if registration.is_none() {
-        if desired == TimerReconcileState::Inactive {
-            return Ok(());
-        }
         *registration = Some(register_after_completion(
             identity.clone(),
             cadence,
@@ -392,7 +387,8 @@ where
 
 /// Reconstruct or reconcile one watchdog declaration synchronously.
 ///
-/// Durable readiness remains consumer-owned. This helper owns no lifecycle
+/// Durable readiness remains consumer-owned. Fresh inactive authority still
+/// installs an observable retained declaration. This helper owns no lifecycle
 /// export and persists no policy, generation, provider handle, or callback.
 pub fn reconcile_watchdog<F>(
     registration: &mut Option<WatchdogRegistration>,
@@ -406,9 +402,6 @@ where
     F: FnMut(TimerContext) -> WatchdogRunResult + 'static,
 {
     if registration.is_none() {
-        if desired == TimerReconcileState::Inactive {
-            return Ok(());
-        }
         *registration = Some(register_watchdog(
             identity.clone(),
             cadence,

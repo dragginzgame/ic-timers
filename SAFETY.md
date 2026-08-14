@@ -30,6 +30,9 @@ The 0.3 runtime provides:
   isolated in the private, non-re-exported `platform` module;
 - synchronous idempotent reconstruction from a caller-owned volatile claim
   slot and caller-supplied desired state, without persisted library authority;
+- fresh inactive lifecycle reconciliation that retains an observable
+  declaration and consumes no provider handle, allowing fixed owners to reserve
+  bounded inventory capacity before application hooks;
 - exact ordinary reconciliation whose pending command has one canonical owner
   in the registry and can replace a live deadline in either direction;
 - normally completed scheduler and work instruction samples from IC
@@ -76,6 +79,9 @@ path.
 - There is deliberately no global suspend/resume switch. A consumer may cancel
   only claims it owns and must reconstruct them from its own authority; it
   cannot suspend another owner's watchdog through this crate.
+- A consumer may keep a bounded custody collection of its opaque claims for
+  enumeration. That collection must not copy deadlines, generations, pending
+  commands, counters, snapshots, or provider handles into a parallel authority.
 - The provider's 250 outstanding-dispatch limit is canister-wide. The
   registry's 64-entry and 128-owned-handle bounds do not reserve provider
   capacity; consumers must inventory remaining direct provider users and

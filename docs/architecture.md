@@ -123,6 +123,12 @@ The exact hard-cut mapping, including authoritative deadline reconciliation,
 policy choices, and the intentional absence of global suspension, is frozen in
 the [Canic adapter contract](adoption/canic.md).
 
+Canic may keep one bounded collection whose only values are opaque registration
+claims. That custody makes Canic-owned application timers enumerable for its
+authority-snapshot fence without duplicating registry state. Scheduling,
+deadlines, generations, counters, pending commands, provider handles, and
+reconciliation authority remain exclusively in `ic-timers`.
+
 No downstream adoption has occurred. The exact IcyDB and Canic adoption
 handoff is recorded in the
 [0.3 evidence report](audits/0.3-runtime-evidence-2026-08-13.md).

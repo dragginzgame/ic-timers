@@ -124,17 +124,19 @@ struct CanicProjection<'a> {
     registration: &'static str,
     condition: &'static str,
     enabled: bool,
-    generation: u64,
+    generation: Option<u64>,
     next_due_at_ns: Option<u64>,
     last_outcome: Option<&'static str>,
     last_work_count: u64,
     last_failure_at_ns: Option<u64>,
     consecutive_expected_failures: u64,
     schedules_since_runtime_start: u64,
-    arms_since_runtime_start: u64,
     executions_since_runtime_start: u64,
     completed_since_runtime_start: u64,
+    successes_since_runtime_start: u64,
     expected_failures_since_runtime_start: u64,
+    invariant_failures_since_runtime_start: u64,
+    stale_callbacks_since_runtime_start: u64,
     total_instructions: u64,
 }
 
@@ -151,13 +153,13 @@ fn project_to_canic(snapshot: &TimerSnapshot) -> CanicProjection<'_> {
         },
         configured_cadence_ns: snapshot.policy().cadence_ns(),
         latest_delay_ms: snapshot
-            .latest_requested_delay_ns()
+            .latest_armed_delay_ns()
             .map(|nanoseconds| nanoseconds / 1_000_000),
         scheduling_mode: snapshot.scheduling_mode().label(),
         registration: snapshot.registration_status().label(),
         condition: snapshot.process_condition().label(),
         enabled: snapshot.process_condition() != TimerProcessCondition::Disabled,
-        generation: snapshot.generation().unwrap_or_default(),
+        generation: snapshot.generation(),
         next_due_at_ns: snapshot.next_deadline_ns(),
         last_outcome: match outcomes.last_outcome() {
             Some(TimerLastOutcome::Completed(outcome)) => Some(outcome.label()),
@@ -166,11 +168,15 @@ fn project_to_canic(snapshot: &TimerSnapshot) -> CanicProjection<'_> {
         last_work_count: outcomes.last_work_count().unwrap_or_default(),
         last_failure_at_ns: outcomes.last_failure_at_ns(),
         consecutive_expected_failures: outcomes.consecutive_expected_failures(),
-        schedules_since_runtime_start: counters.schedule_requests(),
-        arms_since_runtime_start: counters.provider_arms(),
+        schedules_since_runtime_start: counters.wakeups_armed(),
         executions_since_runtime_start: counters.work_started(),
         completed_since_runtime_start: counters.work_completed(),
+        successes_since_runtime_start: counters.succeeded().saturating_add(counters.no_work()),
         expected_failures_since_runtime_start: counters.retryable_failure(),
+        invariant_failures_since_runtime_start: counters.invariant_failure(),
+        stale_callbacks_since_runtime_start: counters
+            .stale_wakeups()
+            .saturating_add(counters.stale_work()),
         total_instructions: observations.performance().work_instructions().total(),
     }
 }
@@ -210,6 +216,12 @@ fn canonical_registry_snapshot_projects_canic_surface_without_parallel_metrics()
     registry
         .confirm_effect_applied(completion_transition.effect())
         .expect("fixture provider effect should apply");
+    registry
+        .ensure_recurring(&claim, 200)
+        .expect("coalesced demand should succeed");
+    registry
+        .ensure_recurring(&claim, 200)
+        .expect("repeated coalesced demand should succeed");
 
     let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
     assert_eq!(
@@ -224,20 +236,84 @@ fn canonical_registry_snapshot_projects_canic_surface_without_parallel_metrics()
             registration: "scheduled",
             condition: "retrying",
             enabled: true,
-            generation: 2,
+            generation: Some(2),
             next_due_at_ns: Some(2_000_000_200),
             last_outcome: Some("retryable_failure"),
             last_work_count: 2,
             last_failure_at_ns: Some(200),
             consecutive_expected_failures: 1,
-            schedules_since_runtime_start: 1,
-            arms_since_runtime_start: 2,
+            schedules_since_runtime_start: 2,
             executions_since_runtime_start: 1,
             completed_since_runtime_start: 1,
+            successes_since_runtime_start: 0,
             expected_failures_since_runtime_start: 1,
+            invariant_failures_since_runtime_start: 0,
+            stale_callbacks_since_runtime_start: 0,
             total_instructions: 0,
         }
     );
+}
+
+#[test]
+fn canic_projection_combines_completion_and_stale_classes_without_fabrication() {
+    let mut registry = TimerRegistry::new(TimerEpoch::new(6, 0));
+    let timer = identity("canic", "projection", "classes");
+    let claim = registry
+        .register_once(timer.clone(), DeclarationLifetime::Retained)
+        .expect("registration should succeed");
+    let first_transition = registry
+        .ensure_once(&claim, 0, TimerSchedule::At(1))
+        .expect("ensure should succeed");
+    registry
+        .confirm_effect_applied(first_transition.effect())
+        .expect("fixture provider effect should apply");
+    let first = match first_transition.into_effect() {
+        RegistryEffect::ArmWakeup { token, .. } => token,
+        effect => panic!("expected arm effect, got {effect:?}"),
+    };
+    assert_eq!(
+        registry.begin_ordinary(&first),
+        CallbackAcceptance::Accepted
+    );
+    let second_transition = registry
+        .complete_ordinary(
+            &first,
+            2,
+            TimerRunResult::new(
+                TimerCompletion::success(1),
+                TimerDirective::ContinueImmediately,
+            ),
+        )
+        .expect("continuation should succeed");
+    registry
+        .confirm_effect_applied(second_transition.effect())
+        .expect("fixture provider effect should apply");
+    let second = match second_transition.into_effect() {
+        RegistryEffect::ArmWakeup { token, .. } => token,
+        effect => panic!("expected arm effect, got {effect:?}"),
+    };
+    assert_eq!(
+        registry.begin_ordinary(&second),
+        CallbackAcceptance::Accepted
+    );
+    registry
+        .complete_ordinary(
+            &second,
+            3,
+            TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop),
+        )
+        .expect("terminal completion should succeed");
+    assert_eq!(registry.begin_ordinary(&first), CallbackAcceptance::Stale);
+
+    let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
+    let projection = project_to_canic(&snapshot);
+    assert_eq!(projection.schedules_since_runtime_start, 2);
+    assert_eq!(projection.executions_since_runtime_start, 2);
+    assert_eq!(projection.completed_since_runtime_start, 2);
+    assert_eq!(projection.successes_since_runtime_start, 2);
+    assert_eq!(projection.stale_callbacks_since_runtime_start, 1);
+    assert_eq!(projection.latest_delay_ms, Some(0));
+    assert_eq!(projection.generation, None);
 }
 
 #[test]
@@ -272,6 +348,7 @@ fn retryable_terminal_completion_projects_failed_canic_condition() {
     let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
     assert_eq!(snapshot.process_condition(), TimerProcessCondition::Failed);
     assert_eq!(project_to_canic(&snapshot).condition, "failed");
+    assert_eq!(project_to_canic(&snapshot).generation, None);
 }
 
 #[test]

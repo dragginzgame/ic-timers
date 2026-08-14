@@ -1,7 +1,7 @@
 use super::*;
 use crate::{
-    InactiveReason, TimerLastOutcome, TimerRuntimeStateSnapshot, WatchdogDecision,
-    WatchdogRuntimeStateSnapshot,
+    InactiveReason, TimerLastOutcome, TimerPolicy, TimerRegistrationStatus,
+    TimerRuntimeStateSnapshot, WatchdogDecision, WatchdogRuntimeStateSnapshot,
     platform::{advance_instructions, discard_next_due, run_next_due, set_time, timer_count},
 };
 use std::{
@@ -30,6 +30,76 @@ fn initialization_is_required_and_idempotent() {
     assert_eq!(first, second);
     assert_eq!(first.canister_version(), 7);
     assert_eq!(first.started_at_ns(), 10);
+}
+
+#[test]
+fn fresh_inactive_reconciliation_reserves_complete_retained_inventory() {
+    setup();
+    let once_identity = identity("built-in-once");
+    let after_identity = identity("built-in-after");
+    let watchdog_identity = identity("built-in-watchdog");
+    let cadence = TimerCadence::from_nanos(5).expect("fixture cadence should be valid");
+    let mut once = None;
+    let mut after = None;
+    let mut watchdog = None;
+
+    reconcile_once(
+        &mut once,
+        &once_identity,
+        DeclarationLifetime::Retained,
+        None,
+        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+    )
+    .expect("fresh inactive once declaration should be retained");
+    reconcile_after_completion(
+        &mut after,
+        &after_identity,
+        cadence,
+        DeclarationLifetime::Retained,
+        TimerReconcileState::Inactive,
+        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+    )
+    .expect("fresh inactive after-completion declaration should be retained");
+    reconcile_watchdog(
+        &mut watchdog,
+        &watchdog_identity,
+        cadence,
+        DeclarationLifetime::Retained,
+        TimerReconcileState::Inactive,
+        |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
+    )
+    .expect("fresh inactive watchdog declaration should be retained");
+
+    assert!(once.is_some());
+    assert!(after.is_some());
+    assert!(watchdog.is_some());
+    assert_eq!(timer_count(), 0);
+    let snapshots = timer_snapshots().expect("inventory should be available");
+    assert_eq!(snapshots.len(), 3);
+    assert_eq!(
+        snapshots
+            .iter()
+            .map(TimerSnapshot::policy)
+            .collect::<Vec<_>>(),
+        vec![
+            TimerPolicy::AfterCompletion { cadence },
+            TimerPolicy::Once,
+            TimerPolicy::Watchdog { cadence },
+        ]
+    );
+    for snapshot in snapshots {
+        assert_eq!(
+            snapshot.state(),
+            TimerRuntimeStateSnapshot::Inactive {
+                reason: InactiveReason::NeverScheduled,
+            }
+        );
+        assert_eq!(
+            snapshot.registration_status(),
+            TimerRegistrationStatus::Unregistered
+        );
+        assert_eq!(snapshot.generation(), None);
+    }
 }
 
 #[test]

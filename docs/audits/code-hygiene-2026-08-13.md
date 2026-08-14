@@ -76,3 +76,32 @@ The remaining risk is downstream integration: Canic must prove its existing
 operator surfaces project without parallel instrumentation, and IcyDB must run
 its maintained recovery/admission suites against the adapter before either
 removes its current timer authority.
+
+## 0.3.2 candidate addendum — 2026-08-14
+
+No high-severity correctness or hygiene finding was identified in the 0.3.2
+diff or its adjacent runtime paths. The risk score remains 3/10 because the
+remaining uncertainty is downstream integration rather than hidden local
+machinery.
+
+Mechanical findings were fixed:
+
+- module-wide dead-code allowances left from the numbered implementation
+  slices were removed;
+- pure registry helpers that exist only for transition tests are now gated to
+  test builds instead of suppressing production warnings;
+- stale patch-number prose in the live registry module was replaced with its
+  enduring ownership boundary.
+
+No production `unwrap`, `expect`, `todo`, `unimplemented`, explicit `panic`,
+unsafe code, direct provider leak, duplicate dependency version, or RustSec
+advisory was found. Callback invariant failures still deliberately trap through
+the private platform boundary; test-only panics remain fixture assertions.
+The publishable archive contains the expected metadata, README, and source
+tree; its standard MIT SPDX declaration avoids redundant license metadata and
+duplicated license text.
+
+The DRY review retained the policy-specific registration methods and separate
+registry effect arms. They encode different legal operations and exact linear
+handle disposition; merging them would reduce line count while weakening the
+reviewable ownership protocol.

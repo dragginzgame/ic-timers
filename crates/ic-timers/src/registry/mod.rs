@@ -1,10 +1,8 @@
 //! Pure bounded registry and policy-specific transition engine.
 //!
-//! Patch 2 deliberately stops at provider-neutral effects. Patch 3 binds
-//! those effects to linear `ic-cdk-timers` handles without replacing this
-//! ownership or state model.
-
-#![cfg_attr(not(test), allow(dead_code))]
+//! It emits provider-neutral effects; the runtime binds those effects to
+//! linear `ic-cdk-timers` handles without replacing this ownership or state
+//! model.
 
 use crate::{
     DeclarationLifetime, InactiveReason, OrdinaryRuntimeStateSnapshot, ScheduleError, TimerCadence,
@@ -82,6 +80,7 @@ impl CallbackToken {
         &self.identity
     }
 
+    #[cfg(test)]
     pub(crate) const fn callback_generation(&self) -> u64 {
         self.callback_generation
     }
@@ -202,6 +201,7 @@ pub type OrdinaryCallback = Rc<RefCell<Box<dyn FnMut(TimerContext) -> TimerFutur
 pub type WatchdogCallback = Rc<RefCell<Box<dyn FnMut(TimerContext) -> WatchdogRunResult>>>;
 
 enum EntryCallback {
+    #[cfg(test)]
     None,
     Ordinary(OrdinaryCallback),
     Watchdog(WatchdogCallback),
@@ -467,10 +467,12 @@ impl TimerRegistry {
         }
     }
 
+    #[cfg(test)]
     pub(crate) fn len(&self) -> usize {
         self.entries.len()
     }
 
+    #[cfg(test)]
     pub(crate) fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
@@ -479,6 +481,7 @@ impl TimerRegistry {
         self.epoch
     }
 
+    #[cfg(test)]
     pub(crate) fn register_once(
         &mut self,
         identity: TimerIdentity,
@@ -487,6 +490,7 @@ impl TimerRegistry {
         self.register(identity, TimerPolicy::Once, lifetime, EntryCallback::None)
     }
 
+    #[cfg(test)]
     pub(crate) fn register_after_completion(
         &mut self,
         identity: TimerIdentity,
@@ -501,6 +505,7 @@ impl TimerRegistry {
         )
     }
 
+    #[cfg(test)]
     pub(crate) fn register_watchdog(
         &mut self,
         identity: TimerIdentity,
@@ -1625,7 +1630,9 @@ impl TimerRegistry {
         }
         match &entry.callback {
             EntryCallback::Ordinary(callback) => Ok(Rc::clone(callback)),
-            EntryCallback::None | EntryCallback::Watchdog(_) => Err(RegistryError::MissingCallback),
+            EntryCallback::Watchdog(_) => Err(RegistryError::MissingCallback),
+            #[cfg(test)]
+            EntryCallback::None => Err(RegistryError::MissingCallback),
         }
     }
 
@@ -1655,7 +1662,9 @@ impl TimerRegistry {
         }
         match &entry.callback {
             EntryCallback::Watchdog(callback) => Ok(Rc::clone(callback)),
-            EntryCallback::None | EntryCallback::Ordinary(_) => Err(RegistryError::MissingCallback),
+            EntryCallback::Ordinary(_) => Err(RegistryError::MissingCallback),
+            #[cfg(test)]
+            EntryCallback::None => Err(RegistryError::MissingCallback),
         }
     }
 
