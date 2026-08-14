@@ -14,7 +14,10 @@ The current implementation keeps four responsibilities separate:
    provider-neutral effects.
 3. `runtime` owns the one canister-local registry static, erased ordinary
    callbacks, registration claims, provider-effect application, and live
-   `Once`/`AfterCompletion` dispatch and the two-role watchdog protocol.
+   `Once`/`AfterCompletion` dispatch and the two-role watchdog protocol. Its
+   delegated work context is valid only for the exact running callback token.
+   Claim-originated effect failures retire the declaration instead of leaving
+   registry state scheduled without a provider handle.
 4. `platform` is the private direct boundary to `ic-cdk-timers` and required
    IC system facts. Its handle is linear and it owns no recurrence policy.
 
@@ -128,6 +131,11 @@ claims. That custody makes Canic-owned application timers enumerable for its
 authority-snapshot fence without duplicating registry state. Scheduling,
 deadlines, generations, counters, pending commands, provider handles, and
 reconciliation authority remain exclusively in `ic-timers`.
+
+Consumer callbacks may issue nested control through `TimerContext`, but that
+delegation is checked against the exact running generation and work role. A
+stored context expires at callback completion and cannot become another entry
+in a consumer custody collection.
 
 No downstream adoption has occurred. The exact IcyDB and Canic adoption
 handoff is recorded in the

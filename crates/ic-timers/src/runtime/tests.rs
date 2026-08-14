@@ -5,7 +5,7 @@ use crate::{
     platform::{advance_instructions, discard_next_due, run_next_due, set_time, timer_count},
 };
 use std::{
-    cell::Cell,
+    cell::{Cell, RefCell},
     panic::{AssertUnwindSafe, catch_unwind},
     rc::Rc,
 };
@@ -252,6 +252,75 @@ fn nested_cancel_then_ensure_reenables_after_callback_completion() {
 }
 
 #[test]
+fn retained_ordinary_context_expires_after_its_work_attempt() {
+    setup();
+    let timer = identity("ordinary-context-expiry");
+    let calls = Rc::new(Cell::new(0_u64));
+    let callback_calls = Rc::clone(&calls);
+    let retained_context = Rc::new(RefCell::new(None));
+    let callback_context = Rc::clone(&retained_context);
+    let registration = register_once(
+        timer.clone(),
+        DeclarationLifetime::Retained,
+        move |context| {
+            let call = callback_calls.get() + 1;
+            callback_calls.set(call);
+            let directive = if call == 1 {
+                *callback_context.borrow_mut() = Some(context);
+                TimerDirective::ContinueImmediately
+            } else {
+                TimerDirective::Stop
+            };
+            async move { TimerRunResult::new(TimerCompletion::no_work(), directive) }
+        },
+    )
+    .expect("registration should succeed");
+    registration
+        .ensure_scheduled(TimerSchedule::At(15))
+        .expect("initial ensure should succeed");
+
+    set_time(15);
+    assert!(run_next_due());
+    assert_eq!(calls.get(), 1);
+    assert_eq!(
+        timer_count(),
+        1,
+        "completion should arm the next generation"
+    );
+
+    let expired = retained_context
+        .borrow_mut()
+        .take()
+        .expect("first callback should retain its context");
+    assert_eq!(
+        expired.identity(),
+        &timer,
+        "identity remains inert metadata"
+    );
+    assert!(matches!(
+        expired.cancel(),
+        Err(TimerError::RegistrationExpired)
+    ));
+    assert!(matches!(
+        expired.ensure_once(TimerSchedule::At(30)),
+        Err(TimerError::RegistrationExpired)
+    ));
+    assert!(matches!(
+        expired.reconcile_schedule(None),
+        Err(TimerError::RegistrationExpired)
+    ));
+    assert_eq!(
+        timer_count(),
+        1,
+        "expired context must not clear or replace the next generation"
+    );
+
+    assert!(run_next_due());
+    assert_eq!(calls.get(), 2);
+    assert_eq!(timer_count(), 0);
+}
+
+#[test]
 fn replacement_and_cancellation_clear_actual_owned_handles() {
     setup();
     let timer = identity("replace-cancel");
@@ -472,6 +541,73 @@ fn watchdog_nested_cancel_then_ensure_retains_committed_successor() {
 }
 
 #[test]
+fn retained_watchdog_context_expires_without_clearing_successor() {
+    setup();
+    let timer = identity("watchdog-context-expiry");
+    let calls = Rc::new(Cell::new(0_u64));
+    let callback_calls = Rc::clone(&calls);
+    let retained_context = Rc::new(RefCell::new(None));
+    let callback_context = Rc::clone(&retained_context);
+    let registration = register_watchdog(
+        timer.clone(),
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+        DeclarationLifetime::Retained,
+        move |context| {
+            let call = callback_calls.get() + 1;
+            callback_calls.set(call);
+            if call == 1 {
+                *callback_context.borrow_mut() = Some(context);
+            }
+            let decision = if call == 1 {
+                WatchdogDecision::Continue
+            } else {
+                WatchdogDecision::Stop
+            };
+            WatchdogRunResult::new(TimerCompletion::no_work(), decision)
+        },
+    )
+    .expect("watchdog registration should succeed");
+    registration
+        .ensure_scheduled()
+        .expect("initial scheduler should arm");
+
+    set_time(15);
+    assert!(run_next_due());
+    assert!(run_next_due());
+    assert_eq!(calls.get(), 1);
+    assert_eq!(timer_count(), 1, "committed successor should remain armed");
+
+    let expired = retained_context
+        .borrow_mut()
+        .take()
+        .expect("first work callback should retain its context");
+    assert_eq!(
+        expired.identity(),
+        &timer,
+        "identity remains inert metadata"
+    );
+    assert!(matches!(
+        expired.cancel(),
+        Err(TimerError::RegistrationExpired)
+    ));
+    assert!(matches!(
+        expired.ensure_recurring(),
+        Err(TimerError::RegistrationExpired)
+    ));
+    assert_eq!(
+        timer_count(),
+        1,
+        "expired context must not clear or duplicate the successor"
+    );
+
+    set_time(20);
+    assert!(run_next_due());
+    assert!(run_next_due());
+    assert_eq!(calls.get(), 2);
+    assert_eq!(timer_count(), 0);
+}
+
+#[test]
 fn watchdog_successor_retires_an_unacknowledged_dispatched_attempt() {
     setup();
     let timer = identity("watchdog-unacknowledged");
@@ -567,6 +703,59 @@ fn provider_cleanup_borrow_failure_is_returned_instead_of_discarded() {
     registration
         .cancel()
         .expect("cleanup remains possible after the borrow is released");
+    assert_eq!(timer_count(), 0);
+}
+
+#[test]
+fn public_provider_install_failure_retires_false_scheduled_state() {
+    setup();
+    let timer = identity("provider-install-fault");
+    let calls = Rc::new(Cell::new(0_u64));
+    let callback_calls = Rc::clone(&calls);
+    let registration = register_once(
+        timer.clone(),
+        DeclarationLifetime::Retained,
+        move |_context| {
+            callback_calls.set(callback_calls.get() + 1);
+            async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) }
+        },
+    )
+    .expect("registration should succeed");
+
+    registration
+        .ensure_scheduled(TimerSchedule::At(100))
+        .expect("initial provider arm should succeed");
+    assert_eq!(timer_count(), 1);
+    inject_provider_install_fault();
+    assert!(matches!(
+        registration.ensure_scheduled(TimerSchedule::At(15)),
+        Err(TimerError::OwnershipInvariant)
+    ));
+    assert_eq!(
+        timer_count(),
+        0,
+        "failed replacement must clear both old and new provider arms"
+    );
+    let failed = timer_snapshot(&timer)
+        .expect("snapshot lookup should succeed")
+        .expect("retained registration should remain declared");
+    assert_eq!(
+        failed.state(),
+        TimerRuntimeStateSnapshot::Inactive {
+            reason: InactiveReason::ControlFailure(TimerControlFailure::ProviderBindingFailed),
+        }
+    );
+    assert_eq!(failed.generation(), None);
+    assert_eq!(failed.observability().counters().schedule_requests(), 2);
+    assert_eq!(failed.observability().counters().wakeups_armed(), 1);
+
+    registration
+        .ensure_scheduled(TimerSchedule::At(15))
+        .expect("retained registration should recover on a later request");
+    assert_eq!(timer_count(), 1);
+    set_time(15);
+    assert!(run_next_due());
+    assert_eq!(calls.get(), 1);
     assert_eq!(timer_count(), 0);
 }
 

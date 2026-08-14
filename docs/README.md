@@ -14,8 +14,10 @@
   behavior, and required evidence.
 - [Code-hygiene audit](audits/code-hygiene.md): recurring mechanical and API
   review checklist.
-- [Latest hygiene report](audits/code-hygiene-2026-08-13.md): adopted peer
-  practices, evidence, and deliberately deferred machinery.
+- [Latest hygiene report](audits/code-hygiene-2026-08-14.md): callback-authority
+  lifetime and release monotonicity findings, fixes, and evidence.
+- [Initial hygiene report](audits/code-hygiene-2026-08-13.md): adopted peer
+  practices, 0.3 closeout, and the 0.3.2 audit addendum.
 - [0.3 runtime evidence](audits/0.3-runtime-evidence-2026-08-13.md): PocketIC
   matrix, Rust 1.88 verdict, Wasm/instruction/cycle cohorts, complexity, and
   downstream adoption sketch.

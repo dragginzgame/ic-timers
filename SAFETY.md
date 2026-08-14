@@ -35,6 +35,9 @@ The 0.3 runtime provides:
   bounded inventory capacity before application hooks;
 - exact ordinary reconciliation whose pending command has one canonical owner
   in the registry and can replace a live deadline in either direction;
+- work-scoped `TimerContext` delegation validated against the exact callback
+  generation and role, so a context retained after completion cannot mutate a
+  successor or later registration;
 - normally completed scheduler and work instruction samples from IC
   call-context counter type 1;
 - focused PocketIC evidence that explicit trap and actual instruction
@@ -49,7 +52,10 @@ The 0.3 runtime provides:
 - external rejection of the provider's internal timer-executor route; and
 - fail-closed handling of unexpected internal callback completion, provider
   ownership, cleanup, and accounting errors. Watchdog work traps its current
-  message instead of returning after losing the committed successor.
+  message instead of returning after losing the committed successor;
+- fail-closed public and lifecycle effect application: a retained declaration
+  whose provider arm cannot establish canonical ownership becomes inactive
+  with `ProviderBindingFailed` rather than remaining falsely scheduled.
 
 Snapshot values describe runtime observations. They are not authority to arm,
 clear, restore, or mutate a timer and must not become an alternate control
@@ -82,6 +88,9 @@ path.
 - A consumer may keep a bounded custody collection of its opaque claims for
   enumeration. That collection must not copy deadlines, generations, pending
   commands, counters, snapshots, or provider handles into a parallel authority.
+- `TimerContext` may be used for nested ensure, reconciliation, or cancellation
+  only while its exact consumer-work attempt is running. Retaining it provides
+  inert identity metadata, not a second long-lived registration capability.
 - The provider's 250 outstanding-dispatch limit is canister-wide. The
   registry's 64-entry and 128-owned-handle bounds do not reserve provider
   capacity; consumers must inventory remaining direct provider users and

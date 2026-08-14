@@ -32,6 +32,8 @@ cargo package --locked --offline --allow-dirty --list -p ic-timers
 - Does production code avoid panics for invalid input or recoverable state?
 - Is every public value inert data, validated configuration, or documented
   runtime authority, and is that role clear in its name and rustdoc?
+- Does every delegated callback capability expire with its exact work attempt,
+  rather than inheriting the longer lifetime of a registration claim?
 - Can any public constructor bypass a validation or control invariant?
 - Does every validation boundary have a negative test?
 - Do scheduler starts, work dispatches, work starts, completions,
@@ -42,6 +44,8 @@ cargo package --locked --offline --allow-dirty --list -p ic-timers
   implementation and recovery claims?
 - Are external GitHub Actions pinned and dependencies still necessary?
 - Does the package contain only intended public source and metadata?
+- Can an explicit release target only move the package version forward, using
+  canonical SemVer components and an exact tag-name check?
 
 Classify findings as mechanical, behavioral, or design. Fix mechanical and
 clearly safe behavioral findings in the audit change. Keep recovery semantics,

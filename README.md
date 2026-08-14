@@ -7,7 +7,7 @@ arms and clears the platform timers. This crate is intended to add one place
 for timer identity, scheduling policy, execution arbitration, observability,
 and lifecycle recovery.
 
-Version 0.3.1 is the current published release. It contains the complete
+Version 0.3.2 is the current published release. It contains the complete
 bounded runtime, PocketIC recovery-watchdog evidence, and post-0.3 hardening;
 neither IcyDB nor Canic has adopted the runtime yet.
 
@@ -58,6 +58,10 @@ The current crate contains:
   replacement and cancellation through `ic-cdk-timers`;
 - live policy-specific state transitions, including stale-callback and nested
   ensure/cancel arbitration;
+- work-scoped `TimerContext` delegation whose mutation authority expires when
+  the exact callback generation finishes;
+- fail-closed provider-effect binding for public control calls, preventing a
+  failed arm or replacement from leaving a declaration falsely scheduled;
 - validated positive cadence, typed directives, and checked deadline
   calculation;
 - live, inert policy-specific snapshots, with split scheduler/work counters,

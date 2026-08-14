@@ -17,9 +17,10 @@ bump validates that the staged section is populated and automatically adds the
 release date. For work without a named target, populated `Unreleased` notes
 remain supported and are promoted automatically when a version is selected.
 
-The helper refuses to continue if the changelog shape is ambiguous, the
-target notes are empty, the target is already dated, or the worktree is not
-clean.
+The helper refuses to continue if the changelog shape is ambiguous, the target
+notes are empty, the target is already dated, the requested version is not a
+strict canonical-SemVer increase, the exact release tag already exists, or the
+worktree is not clean.
 
 Use one of the standard release families:
 

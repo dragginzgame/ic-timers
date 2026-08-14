@@ -1,7 +1,7 @@
 # Canic adapter contract
 
-Status: downstream contract updated for the unreleased 0.3.2 candidate; Canic
-has not adopted `ic-timers`
+Status: downstream contract for released 0.3.2; Canic has not adopted
+`ic-timers`
 
 ## Boundary
 
@@ -21,6 +21,10 @@ a second timer registry: it contains no scheduling state, counters, provider
 handles, generations, pending commands, reconciliation state, or snapshot
 copies. It exists only so Canic can enumerate and control claims it owns.
 Its capacity cannot exceed `MAX_TIMER_REGISTRATIONS`.
+
+`TimerContext` is not a custody value. It delegates control only while its
+exact callback generation is running and expires on completion, so Canic must
+not retain it as a substitute for the policy-specific registration claim.
 
 ## Identity and policy mapping
 

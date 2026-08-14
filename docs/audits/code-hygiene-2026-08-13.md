@@ -77,7 +77,7 @@ operator surfaces project without parallel instrumentation, and IcyDB must run
 its maintained recovery/admission suites against the adapter before either
 removes its current timer authority.
 
-## 0.3.2 candidate addendum — 2026-08-14
+## 0.3.2 audit addendum — 2026-08-14
 
 No high-severity correctness or hygiene finding was identified in the 0.3.2
 diff or its adjacent runtime paths. The risk score remains 3/10 because the

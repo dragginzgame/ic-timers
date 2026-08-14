@@ -7,3 +7,5 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.2 design slice](0.2.md)
 - [0.3 production runtime slice](0.3.md)
 - [0.3.1 hardening](0.3.1.md)
+- [0.3.2 Canic adoption corrections](0.3.2.md)
+- [0.3.3 runtime and release hardening](0.3.3.md)

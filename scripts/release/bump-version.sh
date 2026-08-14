@@ -5,11 +5,40 @@ usage() {
     echo "Usage: $0 patch|minor|major|x.y.z" >&2
 }
 
+semver_pattern='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
+
+semver_greater_than() {
+    local candidate="${1}"
+    local baseline="${2}"
+    local candidate_parts
+    local baseline_parts
+    local index
+    local candidate_part
+    local baseline_part
+
+    IFS=. read -r -a candidate_parts <<< "${candidate}"
+    IFS=. read -r -a baseline_parts <<< "${baseline}"
+    for index in 0 1 2; do
+        candidate_part="${candidate_parts[${index}]}"
+        baseline_part="${baseline_parts[${index}]}"
+        if [[ "${candidate_part}" == "${baseline_part}" ]]; then
+            continue
+        fi
+        if (( ${#candidate_part} != ${#baseline_part} )); then
+            (( ${#candidate_part} > ${#baseline_part} ))
+            return
+        fi
+        [[ "${candidate_part}" > "${baseline_part}" ]]
+        return
+    done
+    return 1
+}
+
 requested="${1:-}"
 case "${requested}" in
     patch | minor | major) ;;
     *)
-        if [[ ! "${requested}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+        if [[ ! "${requested}" =~ ${semver_pattern} ]]; then
             usage
             exit 2
         fi
@@ -17,7 +46,7 @@ case "${requested}" in
 esac
 
 previous_version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"
-if [[ ! "${previous_version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+if [[ ! "${previous_version}" =~ ${semver_pattern} ]]; then
     echo "error: failed to read a SemVer workspace version" >&2
     exit 1
 fi
@@ -34,11 +63,11 @@ else
     new_version="${major}.${minor}.${patch}"
 fi
 
-if [[ "${new_version}" == "${previous_version}" ]]; then
-    echo "error: target version is already ${new_version}" >&2
+if ! semver_greater_than "${new_version}" "${previous_version}"; then
+    echo "error: target version ${new_version} must be greater than ${previous_version}" >&2
     exit 1
 fi
-if git rev-parse "v${new_version}" >/dev/null 2>&1; then
+if git rev-parse --verify --quiet "refs/tags/v${new_version}" >/dev/null; then
     echo "error: tag v${new_version} already exists" >&2
     exit 1
 fi

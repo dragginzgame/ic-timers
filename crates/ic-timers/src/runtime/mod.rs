@@ -87,51 +87,55 @@ pub fn initialize_runtime() -> Result<TimerEpoch, TimerError> {
     })
 }
 
-/// Delegated exact registration capability passed to consumer work.
+/// Delegated control capability scoped to one exact consumer-work attempt.
+///
+/// Identity remains inspectable after work returns, but mutation methods then
+/// return [`TimerError::RegistrationExpired`]. Retain the policy-specific
+/// registration capability for longer-lived ownership.
 pub struct TimerContext {
-    identity: TimerIdentity,
-    claim_generation: u64,
+    token: CallbackToken,
 }
 
 impl TimerContext {
-    const fn new(identity: TimerIdentity, claim_generation: u64) -> Self {
-        Self {
-            identity,
-            claim_generation,
-        }
+    const fn new(token: CallbackToken) -> Self {
+        Self { token }
     }
 
     fn claim(&self) -> RegistrationClaim {
-        RegistrationClaim::delegated(self.identity.clone(), self.claim_generation)
+        RegistrationClaim::delegated(self.token.identity().clone(), self.token.claim_generation())
     }
 
     /// Return the logical timer identity executing this work.
     #[must_use]
     pub const fn identity(&self) -> &TimerIdentity {
-        &self.identity
+        self.token.identity()
     }
 
-    /// Schedule a `Once` declaration from consumer work.
+    /// Schedule a `Once` declaration while this exact work attempt is active.
+    ///
+    /// A context retained after its callback completes is expired and returns
+    /// [`TimerError::RegistrationExpired`].
     pub fn ensure_once(&self, schedule: TimerSchedule) -> Result<(), TimerError> {
-        ensure_once_claim(&self.claim(), schedule)
+        ensure_once_claim(&self.claim(), Some(&self.token), schedule)
     }
 
     /// Reconcile the executing ordinary declaration to one exact schedule.
     ///
     /// `None` cancels live work while retaining callback authority. Watchdog
-    /// declarations reject this operation.
+    /// declarations reject this operation. A retained context cannot mutate
+    /// the registration after its exact work attempt ends.
     pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
-        reconcile_ordinary_claim(&self.claim(), schedule)
+        reconcile_ordinary_claim(&self.claim(), Some(&self.token), schedule)
     }
 
-    /// Ensure an after-completion or watchdog declaration has one wake-up.
+    /// Ensure recurrence while this exact work attempt is active.
     pub fn ensure_recurring(&self) -> Result<(), TimerError> {
-        ensure_recurring_claim(&self.claim())
+        ensure_recurring_claim(&self.claim(), Some(&self.token))
     }
 
-    /// Request cancellation using the exact executing registration claim.
+    /// Request cancellation while this exact work attempt is active.
     pub fn cancel(&self) -> Result<(), TimerError> {
-        cancel_claim(&self.claim())
+        cancel_claim(&self.claim(), Some(&self.token))
     }
 }
 
@@ -150,19 +154,19 @@ impl OnceRegistration {
 
     /// Synchronously ensure one callback is scheduled.
     pub fn ensure_scheduled(&self, schedule: TimerSchedule) -> Result<(), TimerError> {
-        ensure_once_claim(&self.claim, schedule)
+        ensure_once_claim(&self.claim, None, schedule)
     }
 
     /// Reconcile to one exact desired schedule, replacing a later or earlier
     /// live deadline as necessary. `None` retains the declaration but cancels
     /// its live callback.
     pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
-        reconcile_ordinary_claim(&self.claim, schedule)
+        reconcile_ordinary_claim(&self.claim, None, schedule)
     }
 
     /// Cancel the current schedule while retaining callback authority when configured.
     pub fn cancel(&self) -> Result<(), TimerError> {
-        cancel_claim(&self.claim)
+        cancel_claim(&self.claim, None)
     }
 
     /// Consume the claim and unregister its callback authority.
@@ -201,12 +205,12 @@ impl WatchdogRegistration {
 
     /// Synchronously ensure one watchdog scheduler wake-up is authoritative.
     pub fn ensure_scheduled(&self) -> Result<(), TimerError> {
-        ensure_recurring_claim(&self.claim)
+        ensure_recurring_claim(&self.claim, None)
     }
 
     /// Cancel the scheduler and any dispatched work callback.
     pub fn cancel(&self) -> Result<(), TimerError> {
-        cancel_claim(&self.claim)
+        cancel_claim(&self.claim, None)
     }
 
     /// Consume the claim and unregister its callback authority.
@@ -224,19 +228,19 @@ impl AfterCompletionRegistration {
 
     /// Synchronously ensure one callback is scheduled at the configured cadence.
     pub fn ensure_scheduled(&self) -> Result<(), TimerError> {
-        ensure_recurring_claim(&self.claim)
+        ensure_recurring_claim(&self.claim, None)
     }
 
     /// Reconcile to one exact desired schedule without changing the configured
     /// after-completion cadence. `None` retains the declaration but cancels its
     /// live callback.
     pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
-        reconcile_ordinary_claim(&self.claim, schedule)
+        reconcile_ordinary_claim(&self.claim, None, schedule)
     }
 
     /// Cancel the current schedule while retaining callback authority when configured.
     pub fn cancel(&self) -> Result<(), TimerError> {
-        cancel_claim(&self.claim)
+        cancel_claim(&self.claim, None)
     }
 
     /// Consume the claim and unregister its callback authority.
@@ -455,21 +459,28 @@ pub fn consecutive_expected_failures(identity: &TimerIdentity) -> Result<Option<
     with_registry(|registry| Ok(registry.consecutive_expected_failures(identity)))
 }
 
-fn ensure_once_claim(claim: &RegistrationClaim, schedule: TimerSchedule) -> Result<(), TimerError> {
+fn ensure_once_claim(
+    claim: &RegistrationClaim,
+    context: Option<&CallbackToken>,
+    schedule: TimerSchedule,
+) -> Result<(), TimerError> {
     let transition = with_registry_mut(|registry| {
+        validate_context(registry, context)?;
         registry
             .ensure_once(claim, platform::time_ns(), schedule)
             .map_err(TimerError::from)
     })?;
-    finish_transition(transition, ProviderHandles::default())
+    finish_claim_transition(claim, transition, ProviderHandles::default())
 }
 
 fn reconcile_ordinary_claim(
     claim: &RegistrationClaim,
+    context: Option<&CallbackToken>,
     schedule: Option<TimerSchedule>,
 ) -> Result<(), TimerError> {
     if schedule.is_none() {
         let (handles, transition) = with_registry_mut(|registry| {
+            validate_context(registry, context)?;
             registry
                 .validate_ordinary_claim(claim)
                 .map_err(TimerError::from)?;
@@ -481,37 +492,59 @@ fn reconcile_ordinary_claim(
                 .map_err(TimerError::from)?;
             Ok((handles, transition))
         })?;
-        return finish_transition(transition, handles);
+        return finish_claim_transition(claim, transition, handles);
     }
     let transition = with_registry_mut(|registry| {
+        validate_context(registry, context)?;
         registry
             .reconcile_ordinary(claim, platform::time_ns(), schedule)
             .map_err(TimerError::from)
     })?;
-    finish_transition(transition, ProviderHandles::default())
+    finish_claim_transition(claim, transition, ProviderHandles::default())
 }
 
-fn ensure_recurring_claim(claim: &RegistrationClaim) -> Result<(), TimerError> {
+fn ensure_recurring_claim(
+    claim: &RegistrationClaim,
+    context: Option<&CallbackToken>,
+) -> Result<(), TimerError> {
     let transition = with_registry_mut(|registry| {
+        validate_context(registry, context)?;
         registry
             .ensure_recurring(claim, platform::time_ns())
             .map_err(TimerError::from)
     })?;
-    finish_transition(transition, ProviderHandles::default())
+    finish_claim_transition(claim, transition, ProviderHandles::default())
 }
 
-fn cancel_claim(claim: &RegistrationClaim) -> Result<(), TimerError> {
+fn cancel_claim(
+    claim: &RegistrationClaim,
+    context: Option<&CallbackToken>,
+) -> Result<(), TimerError> {
     let (handles, transition) = with_registry_mut(|registry| {
+        validate_context(registry, context)?;
         let handles = registry
             .take_provider_handles_for_claim(claim)
             .map_err(TimerError::from)?;
         let transition = registry.cancel(claim).map_err(TimerError::from)?;
         Ok((handles, transition))
     })?;
-    finish_transition(transition, handles)
+    finish_claim_transition(claim, transition, handles)
+}
+
+fn validate_context(
+    registry: &TimerRegistry,
+    context: Option<&CallbackToken>,
+) -> Result<(), TimerError> {
+    context.map_or(Ok(()), |token| {
+        registry
+            .validate_running_context(token)
+            .map_err(TimerError::from)
+    })
 }
 
 fn unregister_claim(claim: RegistrationClaim) -> Result<(), TimerError> {
+    let cleanup_claim =
+        RegistrationClaim::delegated(claim.identity().clone(), claim.claim_generation());
     let (handles, transition) = with_registry_mut(|registry| {
         let handles = registry
             .take_provider_handles_for_claim(&claim)
@@ -519,7 +552,21 @@ fn unregister_claim(claim: RegistrationClaim) -> Result<(), TimerError> {
         let transition = registry.unregister(claim).map_err(TimerError::from)?;
         Ok((handles, transition))
     })?;
-    finish_transition(transition, handles)
+    finish_claim_transition(&cleanup_claim, transition, handles)
+}
+
+fn finish_claim_transition(
+    claim: &RegistrationClaim,
+    transition: RegistryTransition,
+    handles: ProviderHandles,
+) -> Result<(), TimerError> {
+    match finish_transition(transition, handles) {
+        result @ (Ok(()) | Err(TimerError::ControlFailure(_))) => result,
+        Err(error) => match fail_claim_provider_binding(claim) {
+            Ok(()) | Err(TimerError::RegistrationExpired) => Err(error),
+            Err(cleanup_error) => Err(cleanup_error),
+        },
+    }
 }
 
 fn finish_transition(
@@ -674,6 +721,10 @@ fn install_provider_handle(
     token: &CallbackToken,
     handle: TimerHandle,
 ) -> Result<(), (TimerError, TimerHandle)> {
+    #[cfg(test)]
+    if take_provider_install_fault() {
+        return Err((TimerError::OwnershipInvariant, handle));
+    }
     RUNTIME.with(|runtime| {
         let Ok(mut runtime) = runtime.try_borrow_mut() else {
             return Err((TimerError::RuntimeBusy, handle));
@@ -770,7 +821,7 @@ async fn dispatch_ordinary(token: CallbackToken) {
         }
         Err(error) => trap_callback_failure("ordinary callback lookup", &error),
     };
-    let context = TimerContext::new(token.identity().clone(), token.claim_generation());
+    let context = TimerContext::new(token.clone());
     let future = {
         let Ok(mut callback) = callback.try_borrow_mut() else {
             fail_ordinary_dispatch(&token);
@@ -846,7 +897,7 @@ fn dispatch_watchdog_work(token: &CallbackToken) {
             Ok(callback) => callback,
             Err(error) => trap_callback_failure("watchdog callback lookup", &error),
         };
-    let context = TimerContext::new(token.identity().clone(), token.claim_generation());
+    let context = TimerContext::new(token.clone());
     let result = {
         let Ok(mut callback) = callback.try_borrow_mut() else {
             trap_callback_failure(
@@ -911,9 +962,13 @@ fn finish_callback_transition(
 
 fn fail_provider_binding(token: &CallbackToken) -> Result<(), TimerError> {
     let claim = RegistrationClaim::delegated(token.identity().clone(), token.claim_generation());
+    fail_claim_provider_binding(&claim)
+}
+
+fn fail_claim_provider_binding(claim: &RegistrationClaim) -> Result<(), TimerError> {
     let failed = with_registry_mut(|registry| {
         registry
-            .fail_registration(&claim, TimerControlFailure::ProviderBindingFailed)
+            .fail_registration(claim, TimerControlFailure::ProviderBindingFailed)
             .map_err(TimerError::from)
     });
     let mut handles = failed?;
@@ -965,6 +1020,7 @@ fn with_registry_mut<T>(
 fn reset_for_test(now_ns: u64, canister_version: u64) {
     platform::reset(now_ns, canister_version);
     WATCHDOG_COMPLETION_FAULT.with(|fault| fault.set(false));
+    PROVIDER_INSTALL_FAULT.with(|fault| fault.set(false));
     RUNTIME.with(|runtime| {
         *runtime.borrow_mut() = None;
     });
@@ -973,6 +1029,7 @@ fn reset_for_test(now_ns: u64, canister_version: u64) {
 #[cfg(test)]
 thread_local! {
     static WATCHDOG_COMPLETION_FAULT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    static PROVIDER_INSTALL_FAULT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
 #[cfg(test)]
@@ -983,6 +1040,16 @@ fn inject_watchdog_completion_fault() {
 #[cfg(test)]
 fn take_watchdog_completion_fault() -> bool {
     WATCHDOG_COMPLETION_FAULT.with(|fault| fault.replace(false))
+}
+
+#[cfg(test)]
+fn inject_provider_install_fault() {
+    PROVIDER_INSTALL_FAULT.with(|fault| fault.set(true));
+}
+
+#[cfg(test)]
+fn take_provider_install_fault() -> bool {
+    PROVIDER_INSTALL_FAULT.with(|fault| fault.replace(false))
 }
 
 #[cfg(test)]

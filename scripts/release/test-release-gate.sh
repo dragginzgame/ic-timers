@@ -6,6 +6,31 @@ makefile="${repository_root}/Makefile"
 bump_script="${repository_root}/scripts/release/bump-version.sh"
 pocketic_check="${repository_root}/scripts/ci/check-pocketic.sh"
 
+if downgrade_output="$(bash "${bump_script}" 0.0.0 2>&1)"; then
+    echo "error: version bump accepted a downgrade" >&2
+    exit 1
+fi
+if [[ "${downgrade_output}" != *"must be greater than"* ]]; then
+    echo "error: version bump did not reject a downgrade before release work" >&2
+    exit 1
+fi
+
+if invalid_output="$(bash "${bump_script}" 00.4.0 2>&1)"; then
+    echo "error: version bump accepted a leading-zero SemVer component" >&2
+    exit 1
+fi
+if [[ "${invalid_output}" != Usage:* ]]; then
+    echo "error: version bump did not reject invalid SemVer before release work" >&2
+    exit 1
+fi
+
+if ! rg --fixed-strings --line-regexp \
+    'if git rev-parse --verify --quiet "refs/tags/v${new_version}" >/dev/null; then' \
+    "${bump_script}" >/dev/null; then
+    echo "error: version bump does not use the exact release-tag namespace" >&2
+    exit 1
+fi
+
 expected_ci_targets="CI_TARGETS := actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package"
 if ! rg --fixed-strings --line-regexp "${expected_ci_targets}" "${makefile}" >/dev/null; then
     echo "error: normal CI does not enforce the complete required target sequence" >&2

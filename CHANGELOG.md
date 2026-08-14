@@ -4,6 +4,25 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.3.3]
+
+### Fixed
+
+- Bind each consumer-work `TimerContext` to its exact callback generation and
+  role. Context mutation remains available during nested work, while a context
+  retained after completion expires and cannot control a successor or later
+  registration.
+- Fail closed when a public registration or lifecycle operation cannot bind
+  its emitted provider effect. Newly armed and replaced handles are cleared,
+  retained declarations become inactive with `ProviderBindingFailed`, and a
+  later explicit ensure can recover without a false scheduled snapshot.
+
+### Changed
+
+- Reject explicit release versions that are equal to or lower than the
+  workspace version, reject leading-zero SemVer components, and resolve tag
+  collisions against the exact tag namespace.
+
 ## [0.3.2] - 2026-08-14
 
 ### Changed

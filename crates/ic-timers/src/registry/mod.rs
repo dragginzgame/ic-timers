@@ -1608,26 +1608,7 @@ impl TimerRegistry {
         &self,
         token: &CallbackToken,
     ) -> Result<OrdinaryCallback, RegistryError> {
-        let entry = self
-            .entries
-            .get(token.identity())
-            .ok_or(RegistryError::StaleCallback)?;
-        if token.role != CallbackRole::OrdinaryWork
-            || token.claim_generation != entry.claim_generation
-            || !matches!(
-                entry.control,
-                EntryControl::Ordinary {
-                    ref control,
-                    ..
-                } if matches!(
-                    control.registration(),
-                    crate::TimerRegistration::Running { generation }
-                        if generation == token.callback_generation
-                )
-            )
-        {
-            return Err(RegistryError::StaleCallback);
-        }
+        let entry = self.running_work_entry(token)?;
         match &entry.callback {
             EntryCallback::Ordinary(callback) => Ok(Rc::clone(callback)),
             EntryCallback::Watchdog(_) => Err(RegistryError::MissingCallback),
@@ -1640,32 +1621,20 @@ impl TimerRegistry {
         &self,
         token: &CallbackToken,
     ) -> Result<WatchdogCallback, RegistryError> {
-        let entry = self
-            .entries
-            .get(token.identity())
-            .ok_or(RegistryError::StaleCallback)?;
-        if token.role != CallbackRole::WatchdogWork
-            || token.claim_generation != entry.claim_generation
-            || !matches!(
-                entry.control,
-                EntryControl::Watchdog(WatchdogControl {
-                    state: WatchdogState::AwaitingWork {
-                        attempt_generation,
-                        attempt_status: WatchdogAttemptStatus::Running,
-                        ..
-                    },
-                    ..
-                }) if attempt_generation == token.callback_generation
-            )
-        {
-            return Err(RegistryError::StaleCallback);
-        }
+        let entry = self.running_work_entry(token)?;
         match &entry.callback {
             EntryCallback::Watchdog(callback) => Ok(Rc::clone(callback)),
             EntryCallback::Ordinary(_) => Err(RegistryError::MissingCallback),
             #[cfg(test)]
             EntryCallback::None => Err(RegistryError::MissingCallback),
         }
+    }
+
+    pub(crate) fn validate_running_context(
+        &self,
+        token: &CallbackToken,
+    ) -> Result<(), RegistryError> {
+        self.running_work_entry(token).map(|_| ())
     }
 
     pub(crate) fn install_provider_handle(
@@ -1910,6 +1879,44 @@ impl TimerRegistry {
             return Err(RegistryError::StaleCallback);
         }
         Ok(entry)
+    }
+
+    fn running_work_entry(&self, token: &CallbackToken) -> Result<&Entry, RegistryError> {
+        let entry = self
+            .entries
+            .get(token.identity())
+            .ok_or(RegistryError::StaleCallback)?;
+        if token.claim_generation != entry.claim_generation {
+            return Err(RegistryError::StaleCallback);
+        }
+        let active = match (&entry.control, token.role) {
+            (EntryControl::Ordinary { control, .. }, CallbackRole::OrdinaryWork) => matches!(
+                control.registration(),
+                crate::TimerRegistration::Running { generation }
+                    if generation == token.callback_generation
+            ),
+            (EntryControl::Watchdog(control), CallbackRole::WatchdogWork) => matches!(
+                control.state,
+                WatchdogState::AwaitingWork {
+                    attempt_generation,
+                    attempt_status: WatchdogAttemptStatus::Running,
+                    ..
+                } if attempt_generation == token.callback_generation
+            ),
+            (
+                EntryControl::Ordinary { .. },
+                CallbackRole::WatchdogScheduler | CallbackRole::WatchdogWork,
+            )
+            | (
+                EntryControl::Watchdog(_),
+                CallbackRole::OrdinaryWork | CallbackRole::WatchdogScheduler,
+            ) => false,
+        };
+        if active {
+            Ok(entry)
+        } else {
+            Err(RegistryError::StaleCallback)
+        }
     }
 }
 
