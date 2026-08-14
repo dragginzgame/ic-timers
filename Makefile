@@ -6,6 +6,10 @@
 
 MSRV ?= 1.88.0
 VERSION ?=
+POCKET_IC_VERSION := 15.0.0
+POCKET_IC_BIN_ORIGIN := $(origin POCKET_IC_BIN)
+POCKET_IC_BIN ?= $(CURDIR)/target/tools/pocket-ic/$(POCKET_IC_VERSION)/pocket-ic
+POCKET_IC_AUTO_INSTALL := $(if $(filter undefined,$(POCKET_IC_BIN_ORIGIN)),1,0)
 
 CI_TARGETS := actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package
 RELEASE_TARGETS := pocketic-check ci msrv testing-check pocketic-watchdog pocketic-cohorts
@@ -21,7 +25,7 @@ help:
 	@echo "  package             Verify the publishable crate package"
 	@echo "  pocketic-watchdog   Build and run the focused watchdog canister evidence"
 	@echo "  pocketic-cohorts    Build and run comparable timer policy cohorts"
-	@echo "  pocketic-check      Verify the exact audited PocketIC evidence binary"
+	@echo "  pocketic-check      Install or verify the audited PocketIC evidence binary"
 	@echo "  provider-check      Enforce the private ic-cdk-timers provider boundary"
 	@echo "  testing-check       Lint every supported nested probe configuration"
 	@echo "  release-verify      Run the complete fail-closed release evidence gate"
@@ -79,7 +83,9 @@ package:
 	cargo package --locked --offline --allow-dirty -p ic-timers
 
 pocketic-check:
-	bash scripts/ci/check-pocketic.sh
+	POCKET_IC_BIN="$(POCKET_IC_BIN)" \
+		POCKET_IC_AUTO_INSTALL="$(POCKET_IC_AUTO_INSTALL)" \
+		bash scripts/ci/check-pocketic.sh
 
 pocketic-watchdog: pocketic-check
 	cargo +$(MSRV) build --manifest-path testing/Cargo.toml -p ic-timers-runtime-probe \

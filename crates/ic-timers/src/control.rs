@@ -25,22 +25,6 @@ pub enum TimerRegistration {
     },
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum PendingCommand {
-    Cancel {
-        sequence: u64,
-    },
-    #[allow(dead_code)] // Lifecycle reconciliation binds this in Patch 5.
-    Reconcile {
-        sequence: u64,
-        deadline_ns: u64,
-    },
-    Schedule {
-        sequence: u64,
-        deadline_ns: u64,
-    },
-}
-
 /// Side effect requested from the timer platform boundary.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TimerControlAction {
@@ -90,13 +74,12 @@ pub struct TimerControl {
     generation: u64,
     request_sequence: u64,
     registration: TimerRegistration,
-    pending: Option<PendingCommand>,
 }
 
 impl TimerControl {
     /// Return the latest allocated callback generation.
     #[must_use]
-    #[allow(dead_code)] // Retained for lifecycle reconciliation in Patch 5.
+    #[cfg(test)]
     pub const fn generation(&self) -> u64 {
         self.generation
     }
@@ -114,7 +97,6 @@ impl TimerControl {
     pub(crate) const fn terminate(&mut self) -> bool {
         let clear_wakeup = matches!(self.registration, TimerRegistration::Scheduled { .. });
         self.registration = TimerRegistration::Unregistered;
-        self.pending = None;
         clear_wakeup
     }
 
@@ -152,31 +134,8 @@ impl TimerControl {
                     deadline_ns,
                 })
             }
-            TimerRegistration::Scheduled { .. } => {
+            TimerRegistration::Scheduled { .. } | TimerRegistration::Running { .. } => {
                 self.request_sequence = sequence;
-                Ok(TimerControlAction::None)
-            }
-            TimerRegistration::Running { .. } => {
-                self.request_sequence = sequence;
-                self.pending = Some(match self.pending {
-                    Some(
-                        PendingCommand::Schedule {
-                            deadline_ns: current_deadline,
-                            ..
-                        }
-                        | PendingCommand::Reconcile {
-                            deadline_ns: current_deadline,
-                            ..
-                        },
-                    ) => PendingCommand::Schedule {
-                        sequence,
-                        deadline_ns: current_deadline.min(deadline_ns),
-                    },
-                    Some(PendingCommand::Cancel { .. }) | None => PendingCommand::Schedule {
-                        sequence,
-                        deadline_ns,
-                    },
-                });
                 Ok(TimerControlAction::None)
             }
         }
@@ -187,28 +146,21 @@ impl TimerControl {
         let sequence = self.next_request_sequence()?;
 
         match self.registration {
-            TimerRegistration::Unregistered => {
-                self.request_sequence = sequence;
-                Ok(TimerControlAction::None)
-            }
             TimerRegistration::Scheduled { .. } => {
                 let generation = self.next_generation()?;
                 self.request_sequence = sequence;
                 self.generation = generation;
                 self.registration = TimerRegistration::Unregistered;
-                self.pending = None;
                 Ok(TimerControlAction::Clear)
             }
-            TimerRegistration::Running { .. } => {
+            TimerRegistration::Unregistered | TimerRegistration::Running { .. } => {
                 self.request_sequence = sequence;
-                self.pending = Some(PendingCommand::Cancel { sequence });
                 Ok(TimerControlAction::None)
             }
         }
     }
 
     /// Reconcile this timer to one authoritative deadline.
-    #[allow(dead_code)] // Lifecycle reconciliation binds this in Patch 5.
     pub fn reconcile(&mut self, deadline_ns: u64) -> Result<TimerControlAction, TimerControlError> {
         let sequence = self.next_request_sequence()?;
 
@@ -248,10 +200,6 @@ impl TimerControl {
             }
             TimerRegistration::Running { .. } => {
                 self.request_sequence = sequence;
-                self.pending = Some(PendingCommand::Reconcile {
-                    sequence,
-                    deadline_ns,
-                });
                 Ok(TimerControlAction::None)
             }
         }
@@ -273,38 +221,25 @@ impl TimerControl {
         }
     }
 
-    /// Complete the running generation and arbitrate its proposed successor
-    /// against commands received during execution.
+    /// Complete the running generation with the registry's already-arbitrated
+    /// successor decision.
     pub fn complete(
         &mut self,
         generation: u64,
-        directive_deadline_ns: Option<u64>,
+        next_deadline_ns: Option<u64>,
+        cancelled: bool,
     ) -> Result<TimerControlAction, TimerControlError> {
         if self.registration != (TimerRegistration::Running { generation }) {
             return Err(TimerControlError::StaleCompletion);
         }
 
-        let (deadline_ns, cancelled) = match self.pending {
-            Some(PendingCommand::Cancel { .. }) => (None, true),
-            Some(PendingCommand::Reconcile { deadline_ns, .. }) => (Some(deadline_ns), false),
-            Some(PendingCommand::Schedule { deadline_ns, .. }) => (
-                Some(
-                    directive_deadline_ns
-                        .map_or(deadline_ns, |directive| directive.min(deadline_ns)),
-                ),
-                false,
-            ),
-            None => (directive_deadline_ns, false),
-        };
-
-        let next_generation = if deadline_ns.is_some() {
+        let next_generation = if next_deadline_ns.is_some() {
             Some(self.next_generation()?)
         } else {
             None
         };
 
-        self.pending = None;
-        if let (Some(deadline_ns), Some(next_generation)) = (deadline_ns, next_generation) {
+        if let (Some(deadline_ns), Some(next_generation)) = (next_deadline_ns, next_generation) {
             self.generation = next_generation;
             self.registration = TimerRegistration::Scheduled {
                 generation: next_generation,
@@ -393,13 +328,13 @@ mod tests {
     }
 
     #[test]
-    fn authoritative_reconciliation_while_running_replaces_callback_deadline() {
+    fn completion_uses_the_registrys_authoritative_deadline() {
         let mut control = TimerControl::default();
         let generation = arm(&mut control, 100);
         assert!(control.begin(generation));
         assert_eq!(control.reconcile(300), Ok(TimerControlAction::None));
         assert_eq!(
-            control.complete(generation, Some(150)),
+            control.complete(generation, Some(300), false),
             Ok(TimerControlAction::Arm {
                 generation: 2,
                 deadline_ns: 300
@@ -408,13 +343,13 @@ mod tests {
     }
 
     #[test]
-    fn schedule_while_running_waits_and_survives_callback_stop() {
+    fn completion_uses_the_registrys_pending_schedule() {
         let mut control = TimerControl::default();
         let generation = arm(&mut control, 100);
         assert!(control.begin(generation));
         assert_eq!(control.schedule(90), Ok(TimerControlAction::None));
         assert_eq!(
-            control.complete(generation, None),
+            control.complete(generation, Some(90), false),
             Ok(TimerControlAction::Arm {
                 generation: 2,
                 deadline_ns: 90
@@ -429,21 +364,19 @@ mod tests {
         assert!(control.begin(generation));
         assert_eq!(control.cancel(), Ok(TimerControlAction::None));
         assert_eq!(
-            control.complete(generation, Some(200)),
+            control.complete(generation, None, true),
             Ok(TimerControlAction::Disarm { cancelled: true })
         );
         assert_eq!(control.registration(), TimerRegistration::Unregistered);
     }
 
     #[test]
-    fn running_schedule_coalesces_to_earliest_deadline() {
+    fn completion_arms_the_registrys_selected_earliest_deadline() {
         let mut control = TimerControl::default();
         let generation = arm(&mut control, 100);
         assert!(control.begin(generation));
-        assert_eq!(control.schedule(300), Ok(TimerControlAction::None));
-        assert_eq!(control.schedule(250), Ok(TimerControlAction::None));
         assert_eq!(
-            control.complete(generation, Some(275)),
+            control.complete(generation, Some(250), false),
             Ok(TimerControlAction::Arm {
                 generation: 2,
                 deadline_ns: 250
@@ -452,27 +385,23 @@ mod tests {
     }
 
     #[test]
-    fn later_cancel_suppresses_callback_rearm() {
+    fn completion_honors_the_registrys_cancellation() {
         let mut control = TimerControl::default();
         let generation = arm(&mut control, 100);
         assert!(control.begin(generation));
-        assert_eq!(control.schedule(80), Ok(TimerControlAction::None));
-        assert_eq!(control.cancel(), Ok(TimerControlAction::None));
         assert_eq!(
-            control.complete(generation, Some(75)),
+            control.complete(generation, None, true),
             Ok(TimerControlAction::Disarm { cancelled: true })
         );
     }
 
     #[test]
-    fn schedule_after_cancel_reenables_only_after_completion() {
+    fn completion_honors_the_registrys_later_schedule() {
         let mut control = TimerControl::default();
         let generation = arm(&mut control, 100);
         assert!(control.begin(generation));
-        assert_eq!(control.cancel(), Ok(TimerControlAction::None));
-        assert_eq!(control.schedule(90), Ok(TimerControlAction::None));
         assert_eq!(
-            control.complete(generation, Some(95)),
+            control.complete(generation, Some(90), false),
             Ok(TimerControlAction::Arm {
                 generation: 2,
                 deadline_ns: 90
@@ -496,7 +425,7 @@ mod tests {
         let generation = arm(&mut control, 100);
         assert!(control.begin(generation));
         assert_eq!(
-            control.complete(generation + 1, None),
+            control.complete(generation + 1, None, false),
             Err(TimerControlError::StaleCompletion)
         );
         assert_eq!(

@@ -4,12 +4,14 @@
 
 The current implementation keeps four responsibilities separate:
 
-1. `control` is the private ordinary-timer state machine. It owns generations,
-   request ordering, cancellation while running, reconciliation, and stale
-   completion rejection.
+1. `control` is the private ordinary generation/registration state machine. It
+   owns checked generations and request sequences, immediate schedule,
+   reconciliation and cancellation transitions, and stale completion
+   rejection. It owns no pending command.
 2. `registry` is the pure fixed-capacity canonical owner for structured
-   identities, claim generations, policy-specific state, nested arbitration,
-   deterministic snapshots, and provider-neutral effects.
+   identities, claim generations, policy-specific state, the sole pending
+   ordinary-command machine, nested arbitration, deterministic snapshots, and
+   provider-neutral effects.
 3. `runtime` owns the one canister-local registry static, erased ordinary
    callbacks, registration claims, provider-effect application, and live
    `Once`/`AfterCompletion` dispatch and the two-role watchdog protocol.
@@ -116,6 +118,10 @@ The provider's 250 outstanding-dispatch limit is canister-wide; the registry's
 128-handle maximum bounds only handles owned by this crate. Canic must also
 make its currently infallible application timer facade return typed capacity
 and identity errors before adopting the shared registry.
+
+The exact hard-cut mapping, including authoritative deadline reconciliation,
+policy choices, and the intentional absence of global suspension, is frozen in
+the [Canic adapter contract](adoption/canic.md).
 
 No downstream adoption has occurred. The exact IcyDB and Canic adoption
 handoff is recorded in the

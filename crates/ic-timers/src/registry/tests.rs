@@ -359,6 +359,78 @@ fn nested_cancel_and_ensure_use_latest_request_order() {
 }
 
 #[test]
+fn ordinary_reconciliation_is_authoritative_and_registry_pending_is_ordered() {
+    let mut registry = registry();
+    let timer = identity("reconcile-ordinary");
+    let claim = registry
+        .register_after_completion(timer.clone(), cadence(5), DeclarationLifetime::Retained)
+        .expect("claim should succeed");
+
+    let (replaced, deadline, replace) = arm(registry
+        .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(100)))
+        .expect("initial reconciliation should arm"));
+    assert_eq!(deadline, 100);
+    assert!(!replace);
+    let (current, deadline, replace) = arm(registry
+        .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(200)))
+        .expect("authoritative reconciliation may move later"));
+    assert_eq!(deadline, 200);
+    assert!(replace);
+    assert_eq!(
+        registry.begin_ordinary(&replaced),
+        CallbackAcceptance::Stale
+    );
+    assert_eq!(
+        registry.begin_ordinary(&current),
+        CallbackAcceptance::Accepted
+    );
+
+    registry
+        .ensure_recurring(&claim, 200)
+        .expect("nested ensure should establish an earlier pending schedule");
+    registry
+        .reconcile_ordinary(&claim, 200, Some(TimerSchedule::At(300)))
+        .expect("later authoritative request should supersede the ensure");
+    let (successor, deadline, _) = arm(registry
+        .complete_ordinary(
+            &current,
+            201,
+            TimerRunResult::new(TimerCompletion::success(1), TimerDirective::ScheduleAt(225)),
+        )
+        .expect("authoritative request should replace the callback directive"));
+    assert_eq!(deadline, 300);
+    assert_eq!(
+        registry.begin_ordinary(&successor),
+        CallbackAcceptance::Accepted
+    );
+
+    registry
+        .reconcile_ordinary(&claim, 300, Some(TimerSchedule::At(400)))
+        .expect("nested reconciliation should succeed");
+    registry
+        .ensure_recurring(&claim, 301)
+        .expect("a later ensure should supersede reconciliation by request order");
+    let (_, deadline, _) = arm(registry
+        .complete_ordinary(
+            &successor,
+            302,
+            TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::ScheduleAt(375)),
+        )
+        .expect("completion should use the ordered pending request"));
+    assert_eq!(deadline, 306);
+
+    registry
+        .reconcile_ordinary(&claim, 400, None)
+        .expect("inactive reconciliation should cancel the retained declaration");
+    assert_eq!(
+        registry.snapshot(&timer).map(|snapshot| snapshot.state()),
+        Some(TimerRuntimeStateSnapshot::Inactive {
+            reason: InactiveReason::Cancelled,
+        })
+    );
+}
+
+#[test]
 fn after_completion_owns_cadence_and_failure_state() {
     let mut registry = registry();
     let timer = identity("after-completion");
@@ -675,6 +747,10 @@ fn watchdog_terminal_cancellation_makes_queued_callbacks_stale() {
     let claim = registry
         .register_watchdog(timer.clone(), cadence(5), DeclarationLifetime::Retained)
         .expect("claim should succeed");
+    assert_eq!(
+        registry.reconcile_ordinary(&claim, 0, None),
+        Err(RegistryError::WrongPolicy { actual: "watchdog" })
+    );
     let (scheduler, _, _) = arm(registry
         .ensure_recurring(&claim, 0)
         .expect("ensure should succeed"));

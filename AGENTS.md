@@ -5,7 +5,8 @@ This file is normative for automated contributors.
 ## Session handoff
 
 - Read `docs/status/current.md` first in a new session. Continue from that
-  compact handoff instead of reconstructing the scaffold from chat history.
+  compact handoff instead of reconstructing repository state from chat
+  history.
 
 ## Scope
 
@@ -46,6 +47,10 @@ This file is normative for automated contributors.
   can be invalid.
 - Keep safety claims aligned with `SAFETY.md`; reserve recovery claims for
   behavior backed by the required PocketIC evidence.
+- A shared-registry adoption is atomic: require one resolved `ic-timers`
+  package ID and remove the consumer's direct provider path, parallel timer
+  registry, pending-command machine, and timer instrumentation in the same
+  pre-1.0 hard cut. Never endorse a staged dual-runtime migration.
 
 ## Delivery
 
@@ -60,10 +65,12 @@ This file is normative for automated contributors.
   and add its date automatically. `release-verify` must retain the normal CI,
   MSRV, nested-probe lint, watchdog PocketIC, and policy-cohort gates; it fails
   closed unless `POCKET_IC_BIN` matches the exact audited PocketIC version and
-  hash. After version mutation, update both root and `testing/` lockfiles,
-  verify both with cheap locked metadata checks, and stage both. Do not require
-  the maintainer to edit a changelog heading by hand or remember a separate
-  evidence command.
+  hash. When no override is supplied, provision that pinned artifact in the
+  ignored repository tool cache automatically; never weaken validation or
+  overwrite an explicit override. After version mutation, update both root and
+  `testing/` lockfiles, verify both with cheap locked metadata checks, and stage
+  both. Do not require the maintainer to edit a changelog heading by hand,
+  prepare a test binary manually, or remember a separate evidence command.
 - Run targeted checks for changed behavior. Do not run broad external suites
   unless the maintainer requests them.
 - Release targets are maintainer-owned: do not commit, tag, push, or publish

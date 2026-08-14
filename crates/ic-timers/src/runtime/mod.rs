@@ -116,6 +116,14 @@ impl TimerContext {
         ensure_once_claim(&self.claim(), schedule)
     }
 
+    /// Reconcile the executing ordinary declaration to one exact schedule.
+    ///
+    /// `None` cancels live work while retaining callback authority. Watchdog
+    /// declarations reject this operation.
+    pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
+        reconcile_ordinary_claim(&self.claim(), schedule)
+    }
+
     /// Ensure an after-completion or watchdog declaration has one wake-up.
     pub fn ensure_recurring(&self) -> Result<(), TimerError> {
         ensure_recurring_claim(&self.claim())
@@ -143,6 +151,13 @@ impl OnceRegistration {
     /// Synchronously ensure one callback is scheduled.
     pub fn ensure_scheduled(&self, schedule: TimerSchedule) -> Result<(), TimerError> {
         ensure_once_claim(&self.claim, schedule)
+    }
+
+    /// Reconcile to one exact desired schedule, replacing a later or earlier
+    /// live deadline as necessary. `None` retains the declaration but cancels
+    /// its live callback.
+    pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
+        reconcile_ordinary_claim(&self.claim, schedule)
     }
 
     /// Cancel the current schedule while retaining callback authority when configured.
@@ -210,6 +225,13 @@ impl AfterCompletionRegistration {
     /// Synchronously ensure one callback is scheduled at the configured cadence.
     pub fn ensure_scheduled(&self) -> Result<(), TimerError> {
         ensure_recurring_claim(&self.claim)
+    }
+
+    /// Reconcile to one exact desired schedule without changing the configured
+    /// after-completion cadence. `None` retains the declaration but cancels its
+    /// live callback.
+    pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
+        reconcile_ordinary_claim(&self.claim, schedule)
     }
 
     /// Cancel the current schedule while retaining callback authority when configured.
@@ -287,6 +309,40 @@ where
             .map_err(TimerError::from)
     })?;
     Ok(WatchdogRegistration { claim })
+}
+
+/// Reconstruct or reconcile one `Once` declaration synchronously.
+///
+/// `Some(schedule)` is authoritative and may move an existing deadline in
+/// either direction. `None` cancels a retained declaration; on a fresh heap it
+/// is an idempotent no-op because no callback authority is needed.
+pub fn reconcile_once<F, Fut>(
+    registration: &mut Option<OnceRegistration>,
+    identity: &TimerIdentity,
+    lifetime: DeclarationLifetime,
+    desired: Option<TimerSchedule>,
+    callback: F,
+) -> Result<(), TimerError>
+where
+    F: FnMut(TimerContext) -> Fut + 'static,
+    Fut: Future<Output = TimerRunResult> + 'static,
+{
+    if registration.is_none() {
+        if desired.is_none() {
+            return Ok(());
+        }
+        *registration = Some(register_once(identity.clone(), lifetime, callback)?);
+    }
+    verify_declaration(
+        registration.as_ref().map(OnceRegistration::identity),
+        identity,
+        crate::TimerPolicy::Once,
+        lifetime,
+    )?;
+    registration
+        .as_ref()
+        .ok_or(TimerError::ReconciliationConflict)?
+        .reconcile_schedule(desired)
 }
 
 /// Reconstruct or reconcile one after-completion declaration synchronously.
@@ -410,6 +466,33 @@ fn ensure_once_claim(claim: &RegistrationClaim, schedule: TimerSchedule) -> Resu
     let transition = with_registry_mut(|registry| {
         registry
             .ensure_once(claim, platform::time_ns(), schedule)
+            .map_err(TimerError::from)
+    })?;
+    finish_transition(transition, ProviderHandles::default())
+}
+
+fn reconcile_ordinary_claim(
+    claim: &RegistrationClaim,
+    schedule: Option<TimerSchedule>,
+) -> Result<(), TimerError> {
+    if schedule.is_none() {
+        let (handles, transition) = with_registry_mut(|registry| {
+            registry
+                .validate_ordinary_claim(claim)
+                .map_err(TimerError::from)?;
+            let handles = registry
+                .take_provider_handles_for_claim(claim)
+                .map_err(TimerError::from)?;
+            let transition = registry
+                .reconcile_ordinary(claim, platform::time_ns(), None)
+                .map_err(TimerError::from)?;
+            Ok((handles, transition))
+        })?;
+        return finish_transition(transition, handles);
+    }
+    let transition = with_registry_mut(|registry| {
+        registry
+            .reconcile_ordinary(claim, platform::time_ns(), schedule)
             .map_err(TimerError::from)
     })?;
     finish_transition(transition, ProviderHandles::default())

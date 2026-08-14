@@ -57,8 +57,21 @@ if ! rg --fixed-strings --line-regexp \
     'expected_version="pocket-ic-server 15.0.0"' "${pocketic_check}" >/dev/null \
     || ! rg --fixed-strings --line-regexp \
         'expected_sha256="29472ea4433b30a280676c4e22e369d79d5ba6ee1b4d48bab32ebe7d0ad2b4bb"' \
+        "${pocketic_check}" >/dev/null \
+    || ! rg --fixed-strings --line-regexp \
+        'expected_url="https://github.com/dfinity/pocketic/releases/download/15.0.0/pocket-ic-x86_64-linux.gz"' \
         "${pocketic_check}" >/dev/null; then
     echo "error: release evidence is not pinned to the audited PocketIC binary" >&2
+    exit 1
+fi
+
+if ! rg --fixed-strings --line-regexp \
+    'POCKET_IC_BIN ?= $(CURDIR)/target/tools/pocket-ic/$(POCKET_IC_VERSION)/pocket-ic' \
+    "${makefile}" >/dev/null \
+    || ! rg --fixed-strings --line-regexp \
+        $'\t\tPOCKET_IC_AUTO_INSTALL="$(POCKET_IC_AUTO_INSTALL)" \\' \
+        "${makefile}" >/dev/null; then
+    echo "error: default release flow does not provision the pinned PocketIC binary" >&2
     exit 1
 fi
 

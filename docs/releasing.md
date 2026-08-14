@@ -46,16 +46,17 @@ Before changing any version file, every bump target runs the complete release
 gate:
 
 ```text
-POCKET_IC_BIN=/path/to/pocket-ic make release-verify
+make release-verify
 ```
 
 That gate includes `make ci`, the Rust 1.88 MSRV check, warning-denied linting
 of every supported nested probe configuration, the six-test watchdog/recovery
-PocketIC suite, and the four policy cohorts. The bump fails before mutation if
-the binary is missing, does not report `pocket-ic-server 15.0.0`, does not
-match the audited SHA-256, or any evidence fails. Supply the same
-`POCKET_IC_BIN` variable to `make minor` or `make release-minor`; the nested
-make calls inherit it.
+PocketIC suite, and the four policy cohorts. If `POCKET_IC_BIN` is unset, the
+gate installs the pinned PocketIC 15.0.0 Linux x86_64 artifact into the ignored
+`target/tools` cache. It verifies the downloaded or cached binary's version
+and audited SHA-256 before use. An explicitly supplied `POCKET_IC_BIN` remains
+a strict override: a missing or mismatched override fails and is never
+replaced automatically.
 
 After the version changes, the helper updates `Cargo.lock` and
 `testing/Cargo.lock`, then runs offline `cargo metadata --locked` against both

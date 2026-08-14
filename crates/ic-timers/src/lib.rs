@@ -26,8 +26,8 @@ pub use registry::{MAX_TIMER_REGISTRATIONS, RegisterError};
 pub use runtime::{
     AfterCompletionRegistration, OnceRegistration, TimerContext, TimerError, TimerFuture,
     TimerReconcileState, WatchdogRegistration, consecutive_expected_failures, initialize_runtime,
-    reconcile_after_completion, reconcile_watchdog, register_after_completion, register_once,
-    register_watchdog, timer_snapshot, timer_snapshots,
+    reconcile_after_completion, reconcile_once, reconcile_watchdog, register_after_completion,
+    register_once, register_watchdog, timer_snapshot, timer_snapshots,
 };
 pub use schedule::{ScheduleError, TimerCadence, TimerDirective, TimerSchedule};
 pub use snapshot::{

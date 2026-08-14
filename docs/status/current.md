@@ -12,11 +12,13 @@ IcyDB-shaped watchdog evidence are complete.
 
 - Workspace package version: `0.3.0`, tagged, pushed, and published.
 - Direct timer provider: exact `ic-cdk-timers` 1.0.0.
-- `control` is the private Canic-derived ordinary state machine for
-  generations, stale callbacks, cancellation, scheduling, and reconciliation.
+- `control` is the private Canic-derived ordinary generation/registration
+  state machine for checked request sequences, stale callbacks, immediate
+  cancellation, scheduling, and reconciliation. It owns no pending command.
 - `registry` is the pure 64-entry canonical state/effect engine. It owns
   unique identity claims, deterministic ordering, policy-specific ordinary and
-  watchdog states, nested request arbitration, and coherent snapshots.
+  watchdog states, the sole pending ordinary command, nested request
+  arbitration, and coherent snapshots.
 - `platform` is the private direct provider/system-fact boundary. Its handle is
   linear, all effects are bound to exact handles owned by registry entries,
   and instruction measurement uses IC call-context counter type 1.
@@ -27,6 +29,10 @@ IcyDB-shaped watchdog evidence are complete.
   and expose exact-claim ensure, cancel, and consuming unregister operations.
   Consumer futures run without a registry borrow and nested ensure/cancel
   arbitration is defined by the pure registry.
+- Ordinary registrations also expose authoritative optional schedule
+  reconciliation, which may move a deadline earlier or later. The public
+  `reconcile_once` helper now complements the existing after-completion and
+  watchdog lifecycle helpers.
 - Public `Watchdog` registrations own synchronous callbacks. Their bounded
   scheduler arms a successor from current dispatch time, queues separate
   zero-delay work, and returns before consumer code. Canonical entries own at
@@ -123,8 +129,8 @@ into the contract: recovery claims explicitly cover consumer work rather than
 the scheduler message, and the IcyDB-shaped fixture freezes progress,
 retryable-failure, Ready, and durable-terminal result mappings.
 
-The current post-release `release-verify` gate passes end to end: 58 native
-tests, Rust 1.88 checks, every supported probe lint configuration, six
+The post-release hardening tree passed `release-verify` end to end with 58
+native tests, Rust 1.88 checks, every supported probe lint configuration, six
 watchdog/recovery PocketIC tests, and the four-cohort comparison. Unexpected
 internal callback completion, provider cleanup, and accounting failures are no
 longer discarded; callback-only failures trap the message, preserving
@@ -137,7 +143,22 @@ package as 0.3.0.
 PocketIC release evidence is now pinned to `pocket-ic-server 15.0.0` with
 SHA-256
 `29472ea4433b30a280676c4e22e369d79d5ba6ee1b4d48bab32ebe7d0ad2b4bb`;
-the gate verifies both before expensive work.
+the gate verifies both before expensive work. When `POCKET_IC_BIN` is unset,
+the release flow installs that exact Linux x86_64 artifact into the ignored
+`target/tools` cache automatically. Explicit overrides remain strict.
+
+The unreleased 0.3.1 candidate now includes a maintained Canic adapter
+contract. It freezes deterministic `TimerKey` identities, the 96-to-64-byte
+application-label hard cut, fallible facade signatures, ordinary policy use,
+metrics projection, and dependency unification. It deliberately rejects a
+global suspend switch: Canic may cancel only its own retained claims and must
+rerun its domain reconcilers on resume, so it cannot suspend IcyDB or another
+owner in the shared registry. No Canic files were changed.
+
+The current candidate passes `make ci` with 60 native tests, `make msrv`, and
+`make testing-check`. PocketIC and policy cohorts were not rerun for the
+ordinary-only reconciliation and documentation slice; the patch release flow
+will rerun the complete release gate before version mutation.
 
 ## Remaining downstream work
 
@@ -150,16 +171,17 @@ the gate verifies both before expensive work.
 - A final-canister inventory that removes production direct `ic-cdk-timers`
   users or names fixture-only exceptions; the provider's 250-call semaphore is
   canister-wide and is not reserved by the 128-handle library bound.
-- A Canic adapter hard cut from its infallible application timer facade to
-  typed capacity/identity errors and 64-byte identity components.
+- The real Canic adapter hard cut described in `docs/adoption/canic.md`,
+  including its fallible public facade, removal of the parallel provider/state
+  machine, owner-local lifecycle composition, and focused parity tests.
 
 No downstream adoption has occurred. Version 0.3.0 is published.
 
 ## Next action
 
-Review the staged 0.3.1 hardening notes, then use the maintainer-owned patch
-release flow when approved. Downstream feedback may continue against the
-released 0.3 API; do not mutate downstream repositories unless the maintainer
-explicitly authorizes an exact target.
+Review the staged 0.3.1 hardening and Canic-contract notes, then use the
+maintainer-owned patch release flow when approved. Downstream feedback may
+continue against the released 0.3 API; do not mutate downstream repositories
+unless the maintainer explicitly authorizes an exact target.
 
 The maintainer owns release tags and all package-publication actions.

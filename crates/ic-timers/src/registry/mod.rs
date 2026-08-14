@@ -256,8 +256,15 @@ struct PendingSchedule {
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum OrdinaryPending {
     Cancel,
+    Reconcile(PendingSchedule),
     Unregister,
     Schedule(PendingSchedule),
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum OrdinaryRequest {
+    Ensure,
+    Reconcile,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -606,6 +613,52 @@ impl TimerRegistry {
         )
     }
 
+    /// Reconcile an ordinary declaration to one exact desired schedule.
+    ///
+    /// Unlike `ensure`, reconciliation may move an existing deadline later.
+    /// `None` retains callback authority while cancelling live work.
+    pub(crate) fn reconcile_ordinary(
+        &mut self,
+        claim: &RegistrationClaim,
+        now_ns: u64,
+        schedule: Option<TimerSchedule>,
+    ) -> Result<RegistryTransition, RegistryError> {
+        self.validate_ordinary_claim(claim)?;
+        let Some(schedule) = schedule else {
+            return self.cancel(claim);
+        };
+        let resolved = schedule.resolve(now_ns)?;
+        let mode = match schedule {
+            TimerSchedule::After(_) => TimerSchedulingMode::Once,
+            TimerSchedule::At(_) => TimerSchedulingMode::Deadline,
+        };
+        self.request_ordinary(
+            claim,
+            now_ns,
+            PendingSchedule {
+                deadline_ns: resolved.deadline_ns,
+                requested_delay_ns: resolved.requested_delay_ns,
+                mode,
+            },
+            false,
+            OrdinaryRequest::Reconcile,
+        )
+    }
+
+    pub(crate) fn validate_ordinary_claim(
+        &self,
+        claim: &RegistrationClaim,
+    ) -> Result<(), RegistryError> {
+        let entry = self.entry(claim)?;
+        if matches!(entry.control, EntryControl::Ordinary { .. }) {
+            Ok(())
+        } else {
+            Err(RegistryError::WrongPolicy {
+                actual: entry.policy.label(),
+            })
+        }
+    }
+
     pub(crate) fn ensure_recurring(
         &mut self,
         claim: &RegistrationClaim,
@@ -669,6 +722,23 @@ impl TimerRegistry {
         requested: PendingSchedule,
         require_once: bool,
     ) -> Result<RegistryTransition, RegistryError> {
+        self.request_ordinary(
+            claim,
+            now_ns,
+            requested,
+            require_once,
+            OrdinaryRequest::Ensure,
+        )
+    }
+
+    fn request_ordinary(
+        &mut self,
+        claim: &RegistrationClaim,
+        now_ns: u64,
+        requested: PendingSchedule,
+        require_once: bool,
+        request: OrdinaryRequest,
+    ) -> Result<RegistryTransition, RegistryError> {
         let entry = self.entry_mut(claim)?;
         if require_once && !matches!(entry.policy, TimerPolicy::Once) {
             return Err(RegistryError::WrongPolicy {
@@ -690,7 +760,11 @@ impl TimerRegistry {
                     control.registration(),
                     crate::TimerRegistration::Running { .. }
                 );
-                (control.schedule(requested.deadline_ns), was_running)
+                let action = match request {
+                    OrdinaryRequest::Ensure => control.schedule(requested.deadline_ns),
+                    OrdinaryRequest::Reconcile => control.reconcile(requested.deadline_ns),
+                };
+                (action, was_running)
             }
             EntryControl::Watchdog(_) => {
                 return Err(RegistryError::WrongPolicy {
@@ -712,17 +786,10 @@ impl TimerRegistry {
                     actual: entry.policy.label(),
                 });
             };
-            *pending = Some(match *pending {
-                Some(OrdinaryPending::Unregister) => OrdinaryPending::Unregister,
-                Some(OrdinaryPending::Schedule(current))
-                    if current.deadline_ns <= requested.deadline_ns =>
-                {
-                    OrdinaryPending::Schedule(current)
-                }
-                Some(OrdinaryPending::Cancel | OrdinaryPending::Schedule(_)) | None => {
-                    OrdinaryPending::Schedule(requested)
-                }
-            });
+            *pending = Some(select_pending_ordinary(*pending, request, requested));
+        }
+        if matches!(request, OrdinaryRequest::Reconcile) {
+            entry.scheduling_mode = requested.mode;
         }
 
         Ok(apply_ordinary_action(
@@ -1121,6 +1188,7 @@ impl TimerRegistry {
                 let action = match control.complete(
                     token.callback_generation,
                     selected_schedule.map(|value| value.deadline_ns),
+                    terminal_pending,
                 ) {
                     Ok(action) => action,
                     Err(TimerControlError::StaleCompletion) => {
@@ -2021,11 +2089,39 @@ const fn select_completion_schedule(
 ) -> Option<PendingSchedule> {
     match pending {
         Some(OrdinaryPending::Cancel | OrdinaryPending::Unregister) => None,
+        Some(OrdinaryPending::Reconcile(pending)) => Some(pending),
         Some(OrdinaryPending::Schedule(pending)) => match callback {
             Some(callback) if callback.deadline_ns < pending.deadline_ns => Some(callback),
             Some(_) | None => Some(pending),
         },
         None => callback,
+    }
+}
+
+const fn select_pending_ordinary(
+    current: Option<OrdinaryPending>,
+    request: OrdinaryRequest,
+    requested: PendingSchedule,
+) -> OrdinaryPending {
+    if matches!(current, Some(OrdinaryPending::Unregister)) {
+        return OrdinaryPending::Unregister;
+    }
+    match request {
+        OrdinaryRequest::Reconcile => OrdinaryPending::Reconcile(requested),
+        OrdinaryRequest::Ensure => match current {
+            Some(OrdinaryPending::Reconcile(current) | OrdinaryPending::Schedule(current))
+                if current.deadline_ns <= requested.deadline_ns =>
+            {
+                OrdinaryPending::Schedule(current)
+            }
+            Some(
+                OrdinaryPending::Cancel
+                | OrdinaryPending::Reconcile(_)
+                | OrdinaryPending::Schedule(_),
+            )
+            | None => OrdinaryPending::Schedule(requested),
+            Some(OrdinaryPending::Unregister) => OrdinaryPending::Unregister,
+        },
     }
 }
 

@@ -6,12 +6,24 @@ All notable changes to this project are recorded here.
 
 ## [0.3.1]
 
+### Added
+
+- Add exact `Once` and `AfterCompletion` schedule reconciliation, including
+  the missing synchronous `reconcile_once` lifecycle helper, with focused
+  deadline replacement and nested-request tests.
+- Freeze a one-page Canic adapter contract covering identity and policy
+  mapping, fallible facade changes, claim-scoped lifecycle composition,
+  metrics projection, dependency unification, and the pre-1.0 hard cut.
+
 ### Changed
 
 - Gate every release bump on normal CI, Rust 1.88, all supported probe lint
   configurations, the full watchdog PocketIC suite, and comparable policy
   cohorts; fail immediately and before version mutation unless PocketIC is the
   exact audited 15.0.0 binary.
+- Automatically install the pinned PocketIC artifact into the ignored
+  repository tool cache when no override is supplied, while retaining strict
+  version/hash validation and never replacing an explicit override.
 - Update and stage the nested `testing/Cargo.lock` during version bumps, then
   perform cheap locked-metadata checks for both workspaces without rerunning
   the already-completed behavioral evidence suite.
@@ -21,6 +33,13 @@ All notable changes to this project are recorded here.
   without deprecated, dual, fallback, or feature-gated legacy paths.
 - Mark all three sole-owner registration capabilities `must_use` so accidental
   loss is diagnosed at compile time.
+- Make the registry the sole owner of pending ordinary commands and scheduling
+  metadata; private `TimerControl` now receives the registry's already
+  arbitrated completion decision instead of maintaining a parallel pending
+  machine.
+- Explicitly keep Canic log-retention and cycle-top-up work on the ordinary
+  after-completion path, reserve `Watchdog` for pre-armed recovery work, and
+  reject a shared global suspend switch in favor of owner-specific claims.
 
 ### Fixed
 

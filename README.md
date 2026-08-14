@@ -66,6 +66,8 @@ The current crate contains:
 - synchronous idempotent reconciliation helpers whose caller-owned volatile
   registration slot prevents duplicate callback replacement and whose desired
   state remains derived from consumer durable authority;
+- exact ordinary reconciliation that can replace an earlier or later deadline,
+  plus a `reconcile_once` lifecycle helper;
 - a private, linear one-shot provider boundary over `ic-cdk-timers` 1.0.0.
 
 The watchdog scheduler arms its successor and queues a separate zero-delay work
@@ -131,6 +133,11 @@ the provider's canister-wide 250 outstanding-dispatch limit. An adoption must
 also inventory or migrate every remaining direct `ic-cdk-timers` user in the
 final canister and prove one resolved `ic-timers` package ID.
 
+Canic has not adopted the crate. Its proposed hard-cut mapping is recorded in
+the [Canic adapter contract](docs/adoption/canic.md); notably, Canic composes
+claim-specific cancellation and domain reconciliation instead of gaining a
+global switch that could suspend other owners in the shared registry.
+
 ## Development
 
 ```text
@@ -144,13 +151,17 @@ Rust 1.97.1; `make msrv` checks the declared Rust 1.88.0 minimum separately.
 `make help` lists the smaller component targets.
 
 The focused real-canister evidence is intentionally separate from the normal
-CI gate. Release evidence requires the exact audited PocketIC 15.0.0 binary
-and verifies both its reported version and SHA-256 before running:
+CI gate. The first run automatically downloads the exact audited PocketIC
+15.0.0 Linux x86_64 binary into the ignored `target/tools` cache, then every
+run verifies its reported version and SHA-256:
 
 ```text
-POCKET_IC_BIN=/path/to/pocket-ic make pocketic-watchdog
-POCKET_IC_BIN=/path/to/pocket-ic make pocketic-cohorts
+make pocketic-watchdog
+make pocketic-cohorts
 ```
+
+Set `POCKET_IC_BIN=/path/to/pocket-ic` only to use an explicitly managed
+binary; overrides are validated strictly and are never replaced automatically.
 
 ## License
 

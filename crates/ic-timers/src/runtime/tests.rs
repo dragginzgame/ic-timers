@@ -808,8 +808,76 @@ fn after_completion_reconstruction_reuses_its_exact_claim() {
         },
     )
     .expect("repeated reconstruction should coalesce");
+    registration
+        .as_ref()
+        .expect("reconstruction should retain its claim")
+        .reconcile_schedule(Some(TimerSchedule::At(25)))
+        .expect("ordinary reconciliation should replace a later deadline exactly");
     assert_eq!(timer_count(), 1);
-    set_time(15);
+    set_time(25);
     assert!(run_next_due());
     assert_eq!(calls.get(), 1);
+}
+
+#[test]
+fn once_reconciliation_owns_one_exact_deadline_and_retains_its_callback() {
+    setup();
+    let timer = identity("once-reconstruct");
+    let calls = Rc::new(Cell::new(0_u64));
+    let callback_calls = Rc::clone(&calls);
+    let mut registration = None;
+
+    reconcile_once(
+        &mut registration,
+        &timer,
+        DeclarationLifetime::Retained,
+        Some(TimerSchedule::At(20)),
+        move |_context| {
+            callback_calls.set(callback_calls.get().saturating_add(1));
+            async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) }
+        },
+    )
+    .expect("fresh reconstruction should register and arm");
+    reconcile_once(
+        &mut registration,
+        &timer,
+        DeclarationLifetime::Retained,
+        Some(TimerSchedule::At(40)),
+        |_context| async {
+            TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop)
+        },
+    )
+    .expect("authoritative reconciliation should move the deadline later");
+    assert_eq!(timer_count(), 1);
+    assert_eq!(
+        timer_snapshot(&timer)
+            .expect("snapshot lookup should succeed")
+            .and_then(|snapshot| snapshot.next_deadline_ns()),
+        Some(40)
+    );
+
+    reconcile_once(
+        &mut registration,
+        &timer,
+        DeclarationLifetime::Retained,
+        None,
+        |_context| async {
+            TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop)
+        },
+    )
+    .expect("inactive reconciliation should clear the exact handle");
+    assert_eq!(timer_count(), 0);
+
+    registration
+        .as_ref()
+        .expect("retained claim should remain available")
+        .reconcile_schedule(Some(TimerSchedule::At(50)))
+        .expect("retained registration should re-arm");
+    set_time(50);
+    assert!(run_next_due());
+    assert_eq!(
+        calls.get(),
+        1,
+        "reconciliation must retain the first callback"
+    );
 }
