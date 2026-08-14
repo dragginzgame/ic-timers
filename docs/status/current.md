@@ -10,7 +10,7 @@ IcyDB-shaped watchdog evidence are complete.
 
 ## Current foundation
 
-- Workspace package version: `0.3.5`.
+- Workspace package version: `0.3.6`.
 - Direct timer provider: exact `ic-cdk-timers` 1.0.0.
 - `control` is the private Canic-derived ordinary generation/registration
   state machine for checked request sequences, stale callbacks, immediate
@@ -61,7 +61,7 @@ IcyDB-shaped watchdog evidence are complete.
 - Post-0.3 hardening was released as 0.3.1, the Canic adoption corrections as
   0.3.2, and the callback-authority/provider-binding fixes as 0.3.3 on
   2026-08-14.
-- Open release line: `0.3.6`; package remains `0.3.5`.
+- Latest release line: `0.3.6`.
 - CI also checks rustdoc, shell syntax, and full-SHA GitHub Actions pins;
   Dependabot covers Cargo and Actions dependencies. A structural gate keeps
   every direct `ic-cdk-timers` reference inside private `platform` code and
@@ -219,9 +219,10 @@ real-canister evidence passes with unchanged instruction samples, byte-identical
 Candid, and a 374-byte raw-Wasm increase over its 0.3.4 subject. That downstream
 worktree was still uncommitted when inspected.
 
-The 0.3.6 candidate corrects that downstream record and extends release-truth
-validation so the compact handoff cannot describe the current package version
-as a candidate or future release. This is documentation and release tooling
+Released 0.3.6 corrects that downstream record and keeps release-truth
+validation structural. Exact Cargo, changelog, release-note, and compact-status
+version markers remain enforced; free-form narrative is not interpreted after
+the finalizer mutates the version. This is documentation and release tooling
 only.
 
 ## Remaining downstream work
@@ -248,9 +249,8 @@ had not landed when inspected. Canic has not adopted the crate. See
 
 ## Next action
 
-Validate the focused 0.3.6 release-truth correction and await the IcyDB-owned
-landing of its already-validated 0.3.5 integration. Canic hard-cut review
-remains pending. Do not mutate downstream repositories unless the maintainer
-explicitly authorizes an exact target.
+Await the IcyDB-owned landing of its already-validated 0.3.5 integration.
+Canic hard-cut review remains pending. Do not mutate downstream repositories
+unless the maintainer explicitly authorizes an exact target.
 
 The maintainer owns release tags and all package-publication actions.

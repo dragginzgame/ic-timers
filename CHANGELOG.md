@@ -4,7 +4,7 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
-## [0.3.6]
+## [0.3.6] - 2026-08-14
 
 ### Changed
 
@@ -12,9 +12,9 @@ All notable changes to this project are recorded here.
   `ic-timers` 0.3.4, while its validated post-tag integration upgrades to
   0.3.5 and uses claim-scoped armed-wakeup observation without check-then-arm
   control flow.
-- Reject compact-status narrative that describes the current released package
-  version as a candidate or future release, with version-specific regression
-  coverage that still permits historical candidate notes.
+- Keep release-truth validation structural: exact Cargo, changelog, release-note,
+  and compact-status version markers remain enforced without interpreting
+  free-form status prose or blocking a finalized version bump.
 
 ## [0.3.5] - 2026-08-14
 
