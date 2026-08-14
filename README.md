@@ -8,8 +8,9 @@ for timer identity, scheduling policy, execution arbitration, observability,
 and lifecycle recovery.
 
 The current release contains the complete bounded runtime, PocketIC
-recovery-watchdog evidence, and post-0.3 hardening; neither IcyDB nor Canic has
-adopted the runtime yet.
+recovery-watchdog evidence, and post-0.3 hardening. IcyDB's accepted 0.226.1
+candidate has hard-cut to exact `ic-timers` 0.3.4; Canic has not adopted the
+runtime yet.
 
 ## Why wrap `ic-cdk-timers`?
 
@@ -62,6 +63,9 @@ The current crate contains:
   the exact callback generation finishes;
 - fail-closed provider-effect binding for public control calls, preventing a
   failed arm or replacement from leaving a declaration falsely scheduled;
+- claim-scoped `has_armed_wakeup` observation on every registration
+  capability, reflecting exact future provider-handle ownership without
+  turning snapshots into control authority;
 - validated positive cadence, typed directives, and checked deadline
   calculation;
 - live, inert policy-specific snapshots, with split scheduler/work counters,
@@ -147,6 +151,11 @@ Canic has not adopted the crate. Its proposed hard-cut mapping is recorded in
 the [Canic adapter contract](docs/adoption/canic.md); notably, Canic composes
 claim-specific cancellation and domain reconciliation instead of gaining a
 global switch that could suspend other owners in the shared registry.
+
+IcyDB's accepted 0.226.1 candidate does use the shared registry and its
+pre-armed watchdog. The exact dependency, removed parallel state, downstream
+PocketIC evidence, and remaining version boundary are recorded in the
+[IcyDB adoption record](docs/adoption/icydb.md).
 
 ## Development
 

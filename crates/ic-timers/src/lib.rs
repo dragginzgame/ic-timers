@@ -9,7 +9,9 @@
 //! synchronous watchdog callbacks through one volatile canister-local registry.
 //! Consumers retain durable application authority and synchronously reconstruct
 //! retained registrations during their existing lifecycle hooks. Transient
-//! remove-on-stop callbacks use direct registration.
+//! remove-on-stop callbacks use direct registration. Registration capabilities
+//! can observe exact future provider-wakeup ownership without making snapshots
+//! or observations into scheduling authority.
 
 #![forbid(unsafe_code)]
 #![deny(rustdoc::broken_intra_doc_links)]

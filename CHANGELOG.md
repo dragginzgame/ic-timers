@@ -4,6 +4,18 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.3.5]
+
+### Added
+
+- Add claim-scoped `has_armed_wakeup` observation to all three registration
+  capabilities. The result reflects ownership of the exact future provider
+  wake-up handle without making snapshots or observations into scheduling
+  authority.
+- Add a maintained IcyDB adoption record for its accepted 0.226.1 candidate,
+  including the exact dependency, shared-registry inventory, recovery
+  evidence, and measured costs.
+
 ## [0.3.4] - 2026-08-14
 
 ### Changed

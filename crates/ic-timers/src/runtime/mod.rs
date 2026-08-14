@@ -152,6 +152,15 @@ impl OnceRegistration {
         self.claim.identity()
     }
 
+    /// Return whether this exact claim currently owns a future provider wake-up.
+    ///
+    /// This is a volatile observation, not durable scheduling authority or a
+    /// delivery guarantee. Call [`Self::ensure_scheduled`] unconditionally when
+    /// a wake-up is required rather than using this value as a scheduling guard.
+    pub fn has_armed_wakeup(&self) -> Result<bool, TimerError> {
+        has_armed_wakeup_claim(&self.claim)
+    }
+
     /// Synchronously ensure one callback is scheduled.
     pub fn ensure_scheduled(&self, schedule: TimerSchedule) -> Result<(), TimerError> {
         ensure_once_claim(&self.claim, None, schedule)
@@ -203,6 +212,16 @@ impl WatchdogRegistration {
         self.claim.identity()
     }
 
+    /// Return whether this exact claim currently owns a future scheduler wake-up.
+    ///
+    /// The separately queued work callback is not itself a wake-up. During
+    /// watchdog work this returns `true` only because the scheduler has already
+    /// committed and installed the cadence successor. This is a volatile
+    /// observation, not a delivery guarantee.
+    pub fn has_armed_wakeup(&self) -> Result<bool, TimerError> {
+        has_armed_wakeup_claim(&self.claim)
+    }
+
     /// Synchronously ensure one watchdog scheduler wake-up is authoritative.
     pub fn ensure_scheduled(&self) -> Result<(), TimerError> {
         ensure_recurring_claim(&self.claim, None)
@@ -224,6 +243,15 @@ impl AfterCompletionRegistration {
     #[must_use]
     pub const fn identity(&self) -> &TimerIdentity {
         self.claim.identity()
+    }
+
+    /// Return whether this exact claim currently owns a future provider wake-up.
+    ///
+    /// A callback currently running without an installed successor returns
+    /// `false`. This is a volatile observation, not durable scheduling authority
+    /// or a delivery guarantee.
+    pub fn has_armed_wakeup(&self) -> Result<bool, TimerError> {
+        has_armed_wakeup_claim(&self.claim)
     }
 
     /// Synchronously ensure one callback is scheduled at the configured cadence.
@@ -459,6 +487,10 @@ pub fn timer_snapshots() -> Result<Vec<TimerSnapshot>, TimerError> {
 /// Return functional expected-failure state by identity without a full inventory.
 pub fn consecutive_expected_failures(identity: &TimerIdentity) -> Result<Option<u64>, TimerError> {
     with_registry(|registry| Ok(registry.consecutive_expected_failures(identity)))
+}
+
+fn has_armed_wakeup_claim(claim: &RegistrationClaim) -> Result<bool, TimerError> {
+    with_registry(|registry| registry.has_armed_wakeup(claim).map_err(TimerError::from))
 }
 
 fn ensure_once_claim(

@@ -31,6 +31,10 @@ IcyDB-shaped watchdog evidence are complete.
   arbitration is defined by the pure registry. Delegated `TimerContext`
   mutation is checked against the exact running callback token and expires at
   completion; a stored context cannot control a successor generation.
+- All three registration capabilities expose claim-scoped
+  `has_armed_wakeup()` observation. It reports exact ownership of the canonical
+  future provider wake-up handle, not snapshot-derived or durable scheduling
+  authority; watchdog work handles do not count.
 - Ordinary registrations also expose authoritative optional schedule
   reconciliation, which may move a deadline earlier or later. The public
   `reconcile_once` helper now complements the existing after-completion and
@@ -57,7 +61,7 @@ IcyDB-shaped watchdog evidence are complete.
 - Post-0.3 hardening was released as 0.3.1, the Canic adoption corrections as
   0.3.2, and the callback-authority/provider-binding fixes as 0.3.3 on
   2026-08-14.
-- Latest release line: `0.3.4`.
+- Open release line: `0.3.5`; package remains `0.3.4`.
 - CI also checks rustdoc, shell syntax, and full-SHA GitHub Actions pins;
   Dependabot covers Cargo and Actions dependencies. A structural gate keeps
   every direct `ic-cdk-timers` reference inside private `platform` code and
@@ -202,14 +206,22 @@ configuration pass. PocketIC was not rerun because this candidate does not
 change the scheduler/work protocol; the version bump retains that complete
 release gate.
 
+The 0.3.5 candidate adds claim-scoped armed-wakeup observation for all three
+registration capabilities and records IcyDB's accepted 0.226.1 candidate
+adoption of exact 0.3.4. Focused native tests cover inactive, armed,
+cancelled, pre-armed watchdog, and expired transient claims. IcyDB's current
+candidate still derives its operator scheduled bit from an inert snapshot; it
+can hard-cut to the new claim method after 0.3.5 is released. No provider
+binding or scheduler/work transition changed.
+
 ## Remaining downstream work
 
 - Canic's real semantic snapshot/metrics projection test and replacement of
   its parallel timer instrumentation.
-- IcyDB's generated watchdog adapter and maintained startup/schema/commit
-  integration suites.
-- Dependency-unification checks proving IcyDB, Canic, and applications resolve
-  one `ic-timers` package ID.
+- IcyDB's direct switch from snapshot-derived scheduled state to
+  `has_armed_wakeup()` after the 0.3.5 API is released and adopted.
+- Dependency-unification checks proving a combined IcyDB, Canic, and
+  application canister resolves one `ic-timers` package ID.
 - A final-canister inventory that removes production direct `ic-cdk-timers`
   users or names fixture-only exceptions; the provider's 250-call semaphore is
   canister-wide and is not reserved by the 128-handle library bound.
@@ -217,13 +229,18 @@ release gate.
   including its fallible public facade, removal of the parallel provider/state
   machine, owner-local lifecycle composition, and focused parity tests.
 
-No downstream adoption has occurred.
+IcyDB's accepted 0.226.1 candidate at
+`4b6e6f7e5ebf164e25709626290e56cb8811f619` hard-cuts to exact `ic-timers`
+0.3.4 and supplies maintained shared-registry evidence. It was ahead of the
+published downstream release when inspected. Canic has not adopted the crate.
+See `docs/adoption/icydb.md` and `docs/adoption/canic.md`.
 
 ## Next action
 
-Validate the focused 0.3.4 adoption-gate fixes, obtain green hosted CI after
-the maintainer-owned release, and then resume Canic hard-cut review. Do not
-mutate downstream repositories unless the maintainer explicitly authorizes an
-exact target.
+Validate the focused 0.3.5 helper and documentation candidate, then expose it
+through the maintainer-owned release flow. IcyDB can replace its snapshot
+derivation after adopting that release; Canic hard-cut review remains pending.
+Do not mutate downstream repositories unless the maintainer explicitly
+authorizes an exact target.
 
 The maintainer owns release tags and all package-publication actions.

@@ -1528,6 +1528,13 @@ impl TimerRegistry {
             .map(|entry| entry.observability.consecutive_expected_failures())
     }
 
+    pub(crate) fn has_armed_wakeup(
+        &self,
+        claim: &RegistrationClaim,
+    ) -> Result<bool, RegistryError> {
+        Ok(self.entry(claim)?.wakeup.is_some())
+    }
+
     pub(crate) fn record_scheduler_instructions(
         &mut self,
         token: &CallbackToken,

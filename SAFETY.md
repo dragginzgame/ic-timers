@@ -58,11 +58,16 @@ The 0.3 runtime provides:
   message instead of returning after losing the committed successor;
 - fail-closed public and lifecycle effect application: a retained declaration
   whose provider arm cannot establish canonical ownership becomes inactive
-  with `ProviderBindingFailed` rather than remaining falsely scheduled.
+  with `ProviderBindingFailed` rather than remaining falsely scheduled; and
+- claim-scoped observation of whether the exact registration currently owns a
+  future provider wake-up handle. For watchdogs this counts the cadence
+  successor, not the separately queued work callback.
 
 Snapshot values describe runtime observations. They are not authority to arm,
 clear, restore, or mutate a timer and must not become an alternate control
-path.
+path. `has_armed_wakeup` has the same observational boundary: it is neither
+durable authority nor a delivery guarantee, and consumers must still invoke
+the idempotent ensure operation whenever their authority requires a wake-up.
 
 ## Limits and consumer obligations
 
@@ -101,13 +106,17 @@ path.
 - The current evidence uses the pinned PocketIC 15.0.0 binary and
   `ic-cdk-timers` 1.0.0 provider. A provider or evidence-binary change requires
   a renewed source and recovery audit.
-- Canic's real metrics adapter and IcyDB/Canic adoption tests remain downstream
-  work. No downstream adoption is claimed here.
+- IcyDB's accepted 0.226.1 candidate supplies maintained downstream
+  shared-registry evidence, recorded separately from this library's owner-local
+  proof. Canic's real metrics adapter and adoption tests remain downstream
+  work.
 
 The frozen [0.3 Patch 1 contract](docs/design/0.3-patch-1-contract.md) defines
 the protocol and the
 [closeout report](docs/audits/0.3-runtime-evidence-2026-08-13.md) maps every
-promotion case to direct evidence.
+promotion case to direct evidence. The
+[IcyDB adoption record](docs/adoption/icydb.md) identifies which additional
+claims come from the downstream candidate.
 
 ## Failure and measurement semantics
 

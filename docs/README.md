@@ -21,6 +21,10 @@
 - [0.3 runtime evidence](audits/0.3-runtime-evidence-2026-08-13.md): PocketIC
   matrix, Rust 1.88 verdict, Wasm/instruction/cycle cohorts, complexity, and
   downstream adoption sketch.
+- [IcyDB adoption record](adoption/icydb.md): accepted shared-registry hard cut,
+  downstream recovery evidence, and measured costs.
+- [Canic adapter contract](adoption/canic.md): required pre-1.0 hard cut,
+  identity/policy mapping, custody boundary, and parity gate.
 - [Releasing](releasing.md): version and release commands.
 - [Changelog lines](changelog/README.md): release-line working notes.
 - [Current status](status/current.md): compact handoff for the next session.

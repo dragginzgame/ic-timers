@@ -123,6 +123,147 @@ fn fresh_inactive_reconciliation_reserves_complete_retained_inventory() {
 }
 
 #[test]
+fn registration_claims_report_exact_provider_wakeup_ownership() {
+    setup();
+    let once = register_once(
+        identity("liveness-once"),
+        DeclarationLifetime::Retained,
+        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+    )
+    .expect("once registration should succeed");
+    let after = register_after_completion(
+        identity("liveness-after"),
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+        DeclarationLifetime::Retained,
+        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+    )
+    .expect("after-completion registration should succeed");
+    let watchdog = register_watchdog(
+        identity("liveness-watchdog"),
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+        DeclarationLifetime::Retained,
+        |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
+    )
+    .expect("watchdog registration should succeed");
+
+    assert!(!once.has_armed_wakeup().expect("claim should be readable"));
+    assert!(!after.has_armed_wakeup().expect("claim should be readable"));
+    assert!(
+        !watchdog
+            .has_armed_wakeup()
+            .expect("claim should be readable")
+    );
+
+    once.ensure_scheduled(TimerSchedule::At(100))
+        .expect("once wake-up should arm");
+    after
+        .ensure_scheduled()
+        .expect("after-completion wake-up should arm");
+    watchdog
+        .ensure_scheduled()
+        .expect("watchdog wake-up should arm");
+    assert!(once.has_armed_wakeup().expect("claim should be readable"));
+    assert!(after.has_armed_wakeup().expect("claim should be readable"));
+    assert!(
+        watchdog
+            .has_armed_wakeup()
+            .expect("claim should be readable")
+    );
+
+    once.cancel().expect("once cancellation should succeed");
+    after
+        .cancel()
+        .expect("after-completion cancellation should succeed");
+    watchdog
+        .cancel()
+        .expect("watchdog cancellation should succeed");
+    assert!(!once.has_armed_wakeup().expect("claim should be readable"));
+    assert!(!after.has_armed_wakeup().expect("claim should be readable"));
+    assert!(
+        !watchdog
+            .has_armed_wakeup()
+            .expect("claim should be readable")
+    );
+    assert_eq!(timer_count(), 0);
+}
+
+#[test]
+fn watchdog_claim_observes_the_prearmed_successor_not_queued_work() {
+    setup();
+    let watchdog = register_watchdog(
+        identity("liveness-watchdog-successor"),
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+        DeclarationLifetime::Retained,
+        |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue),
+    )
+    .expect("watchdog registration should succeed");
+    watchdog
+        .ensure_scheduled()
+        .expect("watchdog wake-up should arm");
+
+    set_time(15);
+    assert!(run_next_due(), "scheduler callback should execute");
+    assert_eq!(timer_count(), 2, "successor and work should both be queued");
+    assert!(
+        watchdog
+            .has_armed_wakeup()
+            .expect("successor ownership should be readable")
+    );
+
+    watchdog
+        .cancel()
+        .expect("cancellation should clear successor and work");
+    assert!(
+        !watchdog
+            .has_armed_wakeup()
+            .expect("retained claim should remain readable")
+    );
+    assert_eq!(timer_count(), 0);
+}
+
+#[test]
+fn removed_transient_claim_cannot_report_wakeup_liveness() {
+    setup();
+    let timer_identity = identity("liveness-transient");
+    let timer = register_once(
+        timer_identity.clone(),
+        DeclarationLifetime::RemoveWhenStopped,
+        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+    )
+    .expect("registration should succeed");
+    timer
+        .ensure_scheduled(TimerSchedule::At(15))
+        .expect("wake-up should arm");
+    assert!(timer.has_armed_wakeup().expect("claim should be readable"));
+
+    set_time(15);
+    assert!(run_next_due());
+    assert!(matches!(
+        timer.has_armed_wakeup(),
+        Err(TimerError::RegistrationExpired)
+    ));
+
+    let replacement = register_once(
+        timer_identity,
+        DeclarationLifetime::Retained,
+        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+    )
+    .expect("replacement registration should succeed");
+    replacement
+        .ensure_scheduled(TimerSchedule::At(25))
+        .expect("replacement wake-up should arm");
+    assert!(
+        replacement
+            .has_armed_wakeup()
+            .expect("replacement claim should be readable")
+    );
+    assert!(matches!(
+        timer.has_armed_wakeup(),
+        Err(TimerError::RegistrationExpired)
+    ));
+}
+
+#[test]
 fn once_owns_one_provider_handle_and_executes_without_registry_borrow() {
     setup();
     let timer = identity("once");

@@ -43,6 +43,8 @@ The runtime provides:
 - synchronous lifecycle restoration followed by deferred application work;
 - runtime-start counters, last outcomes, deadlines, and instruction
   consumption;
+- exact-claim observation of future provider wake-up ownership without a
+  snapshot-derived control path;
 - bounded labels and allocation-conscious hot paths; and
 - portable snapshot DTOs so Canic, IcyDB, and standalone canisters can expose
   the same operator view.
@@ -115,8 +117,8 @@ after-completion recurrence.
 
 - Canic should use the crate for framework timers and register its synchronous
   post-restore lifecycle participant before deferred user hooks.
-- IcyDB can evaluate the watchdog policy for replicated recovery driving
-  against its maintained readiness and recovery tests.
+- IcyDB's accepted 0.226.1 candidate uses the watchdog policy for replicated
+  recovery driving against its maintained readiness and recovery tests.
 - A canister using both should see one inventory. Ownership labels distinguish
   scheduling clients; they do not create separate timer runtimes.
 
@@ -142,6 +144,8 @@ delegation is checked against the exact running generation and work role. A
 stored context expires at callback completion and cannot become another entry
 in a consumer custody collection.
 
-No downstream adoption has occurred. The exact IcyDB and Canic adoption
-handoff is recorded in the
-[0.3 evidence report](audits/0.3-runtime-evidence-2026-08-13.md).
+IcyDB's exact dependency, removed parallel timer state, and downstream
+real-canister evidence are recorded in the
+[IcyDB adoption record](adoption/icydb.md). Canic adoption remains pending
+under the separate adapter contract. A combined application still needs to
+prove that both consumers resolve this same package instance.

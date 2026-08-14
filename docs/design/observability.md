@@ -1,6 +1,6 @@
 # Observability and Canic parity contract
 
-Status: canonical runtime observations live; downstream Canic adapter pending
+Status: canonical runtime observations live; IcyDB candidate adopted; downstream Canic adapter pending
 
 ## Purpose
 
@@ -131,10 +131,26 @@ persistent scheduling state used for reconstruction is a separate concern.
 All arithmetic must define overflow behavior. Hot-path counters and aggregates
 must not trap because an operator metric reached its numeric limit.
 
+## Claim-scoped wake-up observation
+
+Each policy-specific registration capability exposes `has_armed_wakeup()`.
+It returns whether that exact current claim owns the registry's future
+provider wake-up handle. It does not derive liveness from snapshot fields. For
+a watchdog, the separately queued immediate work handle does not count; the
+already committed cadence successor does. For ordinary work running before a
+successor is installed, the result is false.
+
+This helper is an inert volatile observation, not a check-then-arm protocol,
+durable authority, or a guarantee that provider delivery will occur.
+Consumers whose durable authority requires future work must call the
+idempotent ensure operation unconditionally. An expired remove-on-stop claim
+returns `RegistrationExpired` rather than observing a later registration with
+the same identity.
+
 ## Implemented value decisions
 
-The runtime makes the following choices. Canic and IcyDB may still provide
-downstream adapter feedback before 0.3 is released:
+The runtime makes the following choices. Downstream adapters may continue to
+provide feedback as the pre-1.0 API evolves:
 
 - Each identity component is non-empty, limited to 64 UTF-8 bytes, and rejects
   surrounding whitespace and control characters. Exact label text is retained
