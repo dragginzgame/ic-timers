@@ -117,8 +117,9 @@ after-completion recurrence.
 
 - Canic should use the crate for framework timers and register its synchronous
   post-restore lifecycle participant before deferred user hooks.
-- IcyDB's accepted 0.226.1 candidate uses the watchdog policy for replicated
-  recovery driving against its maintained readiness and recovery tests.
+- Tagged IcyDB 0.226.1 uses the watchdog policy for replicated recovery
+  driving; its validated post-tag integration uses claim-scoped armed-wakeup
+  observation on exact `ic-timers` 0.3.5.
 - A canister using both should see one inventory. Ownership labels distinguish
   scheduling clients; they do not create separate timer runtimes.
 

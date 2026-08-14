@@ -1,25 +1,28 @@
 # IcyDB adoption record
 
-Status: adopted by the accepted IcyDB 0.226.1 candidate at commit
-`4b6e6f7e5ebf164e25709626290e56cb8811f619`; that downstream candidate was
-ahead of its published release when inspected on 2026-08-14.
+Status: tagged IcyDB 0.226.1 at commit
+`cd388cad96383f7c4c56054a8f27de608e9371e3` adopted exact `ic-timers` 0.3.4.
+A validated post-tag IcyDB worktree upgrades to exact 0.3.5 and completes
+claim-scoped armed-wakeup observation; that downstream worktree was uncommitted
+when inspected on 2026-08-14.
 
 ## Dependency and ownership
 
-IcyDB pins `ic-timers = "=0.3.4"` and resolves one `ic-timers` package. Its
-generated database actor owns one retained `WatchdogRegistration` with the
-fixed identity `icydb/startup/recovery` and a one-second cadence. The lifecycle
-owner initializes and reconciles that registration before application
-post-upgrade work.
+The tagged release resolves one `ic-timers` 0.3.4 package. The validated
+post-tag integration pins `ic-timers = "=0.3.5"` and still resolves exactly one
+package. In both subjects, the generated database actor owns one retained
+`WatchdogRegistration` with the fixed identity `icydb/startup/recovery` and a
+one-second cadence. The lifecycle owner initializes and reconciles that
+registration before application post-upgrade work.
 
 The hard cut removed IcyDB's startup `TimerId`, active flag, cadence guard,
 serial interval, and zero-delay cleanup path. The inspected workspace and
-generated probe subjects contained no direct production `ic-cdk-timers` use;
-the provider remained a private transitive dependency below `ic-timers`.
-IcyDB persists readiness and terminal database failure, not timer handles,
+generated probe subjects contain no direct production `ic-cdk-timers` use;
+the provider remains a private transitive dependency below `ic-timers`. IcyDB
+persists readiness and terminal database failure, not timer handles,
 generations, snapshots, or library policy.
 
-The result mapping is:
+The result mapping remains:
 
 | IcyDB result | Timer completion | Watchdog decision |
 | --- | --- | --- |
@@ -45,23 +48,40 @@ IcyDB's maintained 0.225 status and integration suite record:
 - one coalesced attempt after a 300-second overdue jump; and
 - independent application-timer progress while the recovery watchdog traps.
 
-The accepted measurements report 1,163 instructions for the watchdog sample,
-1,986 instructions across two application callbacks, and a final optimized raw
-Wasm size of 4,164,071 bytes. The exact 0.3.4 substitution added 3 raw bytes
-over the 0.3.3 subject; the broader direct-provider-to-shared-runtime candidate
-delta was 38,576 raw bytes. The Candid surface remained unchanged. The public
-IcyDB facade and its `ic-timers` surface compiled to Wasm on Rust 1.88.
+The tagged 0.3.4 subject reports 4,164,071 optimized raw Wasm bytes. The
+validated 0.3.5 integration reports 4,164,445 bytes, an increase of 374 bytes.
+Its compiler-emitted artifact is 4,767,744 bytes and deterministic gzip is
+1,606,653 bytes. Relative to the 4,125,495-byte direct-provider subject, the
+shared runtime adds 38,950 raw bytes and remains within IcyDB's 65,536-byte
+owner budget.
+
+The normally completed watchdog sample remains 1,163 instructions and two
+application callbacks remain 1,986 instructions total. Candid is byte-identical
+at 60,348 bytes with SHA-256
+`a3a396639a0b809cf8865fc838ec9f69ada7ee291b3fdbdedd4c3f55525e97e5`.
+The public IcyDB facade and `ic-timers` compile to Wasm on Rust 1.88. The
+validated graph contains exactly one `ic-timers` 0.3.5 package, with
+`ic-cdk-timers` private and transitive.
 
 These are maintained downstream results inspected read-only; this repository
-did not rerun or modify IcyDB's suite.
+did not modify IcyDB. IcyDB reran the focused real-canister recovery evidence
+for its 0.3.5 integration. Full downstream repository validation remains
+IcyDB-owner work.
 
-## Follow-up boundary
+## Claim-scoped integration
 
-The 0.226.1 candidate currently derives its operator-facing scheduled bit from
-`TimerSnapshot::next_deadline_ns()`. Starting with the 0.3.5 candidate, a
-retained registration can instead call `has_armed_wakeup()` to observe exact
-future provider-handle ownership. That is a downstream hard cut after 0.3.5 is
-released; it is not required for the established watchdog safety protocol.
+The tagged 0.226.1 source derives its reporting bit from
+`TimerSnapshot::next_deadline_ns()`. The validated post-tag integration instead
+calls `WatchdogRegistration::has_armed_wakeup()`, correctly distinguishing an
+unarmed live claim from an expired or invalid claim. The observation counts
+the pre-armed watchdog successor and excludes the separately queued work
+callback.
+
+Durable recovery demand still invokes `ensure_scheduled()` unconditionally.
+The observation is therefore reporting only and does not introduce a
+check-then-arm race. No public IcyDB API, Candid surface, persisted format, or
+compatibility path changes. The remaining downstream step is to land that
+already-validated post-tag worktree.
 
 Canic has not adopted `ic-timers`. A combined IcyDB/Canic application must
 still prove dependency unification and a canister-wide provider inventory.

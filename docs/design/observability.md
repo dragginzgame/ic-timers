@@ -1,6 +1,6 @@
 # Observability and Canic parity contract
 
-Status: canonical runtime observations live; IcyDB candidate adopted; downstream Canic adapter pending
+Status: canonical observations live; IcyDB adoption validated; downstream Canic adapter pending
 
 ## Purpose
 

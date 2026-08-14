@@ -11,3 +11,4 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.3.3 runtime and release hardening](0.3.3.md)
 - [0.3.4 adoption-gate hardening](0.3.4.md)
 - [0.3.5 liveness and IcyDB adoption](0.3.5.md)
+- [0.3.6 downstream and release truth](0.3.6.md)

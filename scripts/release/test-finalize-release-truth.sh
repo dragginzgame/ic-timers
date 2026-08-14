@@ -68,6 +68,45 @@ grep -Fqx -- '- Latest release line: `0.3.4`.' \
 grep -Fqx -- 'Status: released 0.3.4.' \
     "${temporary_root}/docs/changelog/0.3.4.md"
 
+cp "${temporary_root}/docs/status/current.md" \
+    "${temporary_root}/docs/status/current.clean.md"
+cat >> "${temporary_root}/docs/status/current.md" <<'EOF'
+
+The 0.3.3 candidate is retained as historical context.
+EOF
+(
+    cd "${temporary_root}"
+    bash "${repository_root}/scripts/release/check-release-truth.sh"
+)
+
+cat >> "${temporary_root}/docs/status/current.md" <<'EOF'
+
+The 0.3.4 candidate still needs publication.
+EOF
+if (
+    cd "${temporary_root}"
+    bash "${repository_root}/scripts/release/check-release-truth.sh"
+) >/dev/null 2>&1; then
+    echo "error: current-version candidate narrative passed release-truth checks" >&2
+    exit 1
+fi
+
+cp "${temporary_root}/docs/status/current.clean.md" \
+    "${temporary_root}/docs/status/current.md"
+cat >> "${temporary_root}/docs/status/current.md" <<'EOF'
+
+Expose 0.3.4 through the release flow next.
+EOF
+if (
+    cd "${temporary_root}"
+    bash "${repository_root}/scripts/release/check-release-truth.sh"
+) >/dev/null 2>&1; then
+    echo "error: current-version future-release narrative passed release-truth checks" >&2
+    exit 1
+fi
+
+cp "${temporary_root}/docs/status/current.clean.md" \
+    "${temporary_root}/docs/status/current.md"
 if (
     cd "${temporary_root}"
     bash "${repository_root}/scripts/release/finalize-release-truth.sh" --check 0.3.3 0.3.4

@@ -28,6 +28,27 @@ if ! grep -Fqx -- "- Workspace package version: \`${version}\`." docs/status/cur
     echo "error: current status does not match workspace version ${version}" >&2
     exit 1
 fi
+if IC_TIMERS_CURRENT_VERSION="${version}" perl -0 -e '
+    use strict;
+    use warnings;
+
+    my $version = $ENV{IC_TIMERS_CURRENT_VERSION};
+    my $status = do { local $/; <> };
+    for my $paragraph (split /\n[[:space:]]*\n/, $status) {
+        my $mentions_current = $paragraph =~ /\Q$version\E/;
+        next if !$mentions_current;
+        exit 0 if $paragraph =~ /\bcandidate\b/i;
+        exit 0 if $paragraph =~ /\brelease[ -]next\b/i;
+        exit 0 if $paragraph =~ /\bnext release\b/i;
+        exit 0 if $paragraph =~ /\b(?:expose|publish|tag)\b.{0,80}\brelease flow\b/is;
+        exit 0 if $paragraph =~ /\brelease flow\b.{0,80}\b(?:later|next|pending)\b/is;
+        exit 0 if $paragraph =~ /\b(?:after|before|once|when)\b.{0,80}\breleased\b/is;
+    }
+    exit 1;
+' docs/status/current.md; then
+    echo "error: current status describes released ${version} as a candidate or future release" >&2
+    exit 1
+fi
 if grep -Eq -- '^Version [0-9]+\.[0-9]+\.[0-9]+ is the current published release\.' README.md; then
     echo "error: README.md duplicates mutable release-version truth" >&2
     exit 1

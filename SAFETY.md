@@ -106,17 +106,17 @@ the idempotent ensure operation whenever their authority requires a wake-up.
 - The current evidence uses the pinned PocketIC 15.0.0 binary and
   `ic-cdk-timers` 1.0.0 provider. A provider or evidence-binary change requires
   a renewed source and recovery audit.
-- IcyDB's accepted 0.226.1 candidate supplies maintained downstream
-  shared-registry evidence, recorded separately from this library's owner-local
-  proof. Canic's real metrics adapter and adoption tests remain downstream
-  work.
+- Tagged IcyDB 0.226.1 and its validated post-tag exact-0.3.5 integration
+  supply maintained downstream shared-registry evidence, recorded separately
+  from this library's owner-local proof. Canic's real metrics adapter and
+  adoption tests remain downstream work.
 
 The frozen [0.3 Patch 1 contract](docs/design/0.3-patch-1-contract.md) defines
 the protocol and the
 [closeout report](docs/audits/0.3-runtime-evidence-2026-08-13.md) maps every
 promotion case to direct evidence. The
 [IcyDB adoption record](docs/adoption/icydb.md) identifies which additional
-claims come from the downstream candidate.
+claims come from the tagged release and validated post-tag integration.
 
 ## Failure and measurement semantics
 

@@ -8,9 +8,9 @@ for timer identity, scheduling policy, execution arbitration, observability,
 and lifecycle recovery.
 
 The current release contains the complete bounded runtime, PocketIC
-recovery-watchdog evidence, and post-0.3 hardening. IcyDB's accepted 0.226.1
-candidate has hard-cut to exact `ic-timers` 0.3.4; Canic has not adopted the
-runtime yet.
+recovery-watchdog evidence, and post-0.3 hardening. Tagged IcyDB 0.226.1
+hard-cuts to exact `ic-timers` 0.3.4, and its validated post-tag integration
+upgrades to exact 0.3.5; Canic has not adopted the runtime yet.
 
 ## Why wrap `ic-cdk-timers`?
 
@@ -152,9 +152,10 @@ the [Canic adapter contract](docs/adoption/canic.md); notably, Canic composes
 claim-specific cancellation and domain reconciliation instead of gaining a
 global switch that could suspend other owners in the shared registry.
 
-IcyDB's accepted 0.226.1 candidate does use the shared registry and its
-pre-armed watchdog. The exact dependency, removed parallel state, downstream
-PocketIC evidence, and remaining version boundary are recorded in the
+Tagged IcyDB 0.226.1 uses the shared registry and its pre-armed watchdog. A
+validated post-tag integration upgrades to `has_armed_wakeup()` on exact
+0.3.5. The dependencies, removed parallel state, downstream PocketIC evidence,
+measurements, and remaining landing boundary are recorded in the
 [IcyDB adoption record](docs/adoption/icydb.md).
 
 ## Development
