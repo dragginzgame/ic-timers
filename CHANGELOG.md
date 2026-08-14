@@ -4,6 +4,35 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.3.1]
+
+### Changed
+
+- Gate every release bump on normal CI, Rust 1.88, all supported probe lint
+  configurations, the full watchdog PocketIC suite, and comparable policy
+  cohorts; fail immediately and before version mutation unless PocketIC is the
+  exact audited 15.0.0 binary.
+- Update and stage the nested `testing/Cargo.lock` during version bumps, then
+  perform cheap locked-metadata checks for both workspaces without rerunning
+  the already-completed behavioral evidence suite.
+- Enforce in normal CI that `ic-cdk-timers` remains used only inside the
+  private `platform` module and is wrapped rather than publicly re-exported.
+- Treat every superseding pre-1.0 contract change as a hard cut by default,
+  without deprecated, dual, fallback, or feature-gated legacy paths.
+- Mark all three sole-owner registration capabilities `must_use` so accidental
+  loss is diagnosed at compile time.
+
+### Fixed
+
+- Trap callback messages on unexpected internal completion, accounting, or
+  cleanup failures instead of silently discarding them; watchdog work thereby
+  relies on message rollback and retains its earlier committed successor.
+- Drive IcyDB-shaped retryable and terminal results through real scheduler and
+  work callbacks, verifying continuation, successor ownership, truthful
+  counters, and terminal clearing.
+- Describe the published runtime as 0.3 rather than "unreleased 0.3" in crate
+  documentation.
+
 ## [0.3.0] - 2026-08-13
 
 ### Added

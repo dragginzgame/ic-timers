@@ -4,7 +4,11 @@ use crate::{
     WatchdogRuntimeStateSnapshot,
     platform::{advance_instructions, discard_next_due, run_next_due, set_time, timer_count},
 };
-use std::{cell::Cell, rc::Rc};
+use std::{
+    cell::Cell,
+    panic::{AssertUnwindSafe, catch_unwind},
+    rc::Rc,
+};
 
 fn identity(name: &str) -> TimerIdentity {
     TimerIdentity::try_new("test", "runtime", name).expect("fixture identity should be valid")
@@ -435,6 +439,68 @@ fn watchdog_successor_retires_an_unacknowledged_dispatched_attempt() {
 }
 
 #[test]
+fn unexpected_watchdog_completion_failure_traps_and_leaves_successor_armed() {
+    setup();
+    let timer = identity("watchdog-completion-fault");
+    let registration = register_watchdog(
+        timer.clone(),
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+        DeclarationLifetime::Retained,
+        |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue),
+    )
+    .expect("watchdog registration should succeed");
+    registration
+        .ensure_scheduled()
+        .expect("initial scheduler should arm");
+
+    set_time(15);
+    assert!(run_next_due());
+    assert_eq!(timer_count(), 2);
+    inject_watchdog_completion_fault();
+    let trapped = catch_unwind(AssertUnwindSafe(run_next_due));
+    assert!(trapped.is_err(), "an internal completion failure must trap");
+    assert_eq!(
+        timer_count(),
+        1,
+        "the cadence successor was committed by the earlier scheduler message"
+    );
+    let counters = timer_snapshot(&timer)
+        .expect("snapshot lookup should succeed")
+        .expect("retained watchdog should remain declared")
+        .observability()
+        .counters();
+    assert_eq!(counters.work_started(), 1);
+    assert_eq!(counters.work_completed(), 0);
+}
+
+#[test]
+fn provider_cleanup_borrow_failure_is_returned_instead_of_discarded() {
+    setup();
+    let timer = identity("provider-cleanup-fault");
+    let registration = register_watchdog(
+        timer.clone(),
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+        DeclarationLifetime::Retained,
+        |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
+    )
+    .expect("watchdog registration should succeed");
+    registration
+        .ensure_scheduled()
+        .expect("initial scheduler should arm");
+
+    let failure = RUNTIME.with(|runtime| {
+        let _borrow = runtime.borrow();
+        clear_entry_provider_handles(&timer)
+    });
+    assert!(matches!(failure, Err(TimerError::RuntimeBusy)));
+    assert_eq!(timer_count(), 1, "failed cleanup must not lose the handle");
+    registration
+        .cancel()
+        .expect("cleanup remains possible after the borrow is released");
+    assert_eq!(timer_count(), 0);
+}
+
+#[test]
 fn overdue_watchdog_coalesces_to_one_dispatch_and_schedules_from_now() {
     setup();
     let timer = identity("watchdog-overdue");
@@ -606,8 +672,25 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
     assert_eq!(pages.get(), 1);
     assert_eq!(timer_count(), 1);
 
-    readiness.set(StartupReadiness::Ready);
+    readiness.set(StartupReadiness::RetryableFailure);
     set_time(20);
+    assert!(run_next_due());
+    assert!(run_next_due());
+    assert_eq!(pages.get(), 1);
+    assert_eq!(timer_count(), 1);
+    let retrying = timer_snapshot(&timer)
+        .expect("snapshot lookup should succeed")
+        .expect("retryable failure must retain the watchdog");
+    assert!(matches!(
+        retrying.state(),
+        TimerRuntimeStateSnapshot::Watchdog(WatchdogRuntimeStateSnapshot::Scheduled { .. })
+    ));
+    let retrying_counters = retrying.observability().counters();
+    assert_eq!(retrying_counters.work_completed(), 2);
+    assert_eq!(retrying_counters.retryable_failure(), 1);
+
+    readiness.set(StartupReadiness::Ready);
+    set_time(25);
     assert!(run_next_due());
     assert!(run_next_due());
     assert_eq!(pages.get(), 1);
@@ -616,9 +699,9 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         .expect("snapshot lookup should succeed")
         .expect("retained watchdog should remain declared");
     let performance = stopped.observability().performance();
-    assert_eq!(performance.scheduler_instructions().samples(), 2);
+    assert_eq!(performance.scheduler_instructions().samples(), 3);
     assert_eq!(performance.scheduler_instructions().latest(), Some(10));
-    assert_eq!(performance.work_instructions().samples(), 2);
+    assert_eq!(performance.work_instructions().samples(), 3);
     assert!(
         performance
             .work_instructions()
@@ -626,7 +709,7 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
             .is_some_and(|value| value >= 13)
     );
 
-    readiness.set(StartupReadiness::Recovering);
+    readiness.set(StartupReadiness::RetryableFailure);
     reconcile_watchdog(
         &mut registration,
         &timer,
@@ -638,10 +721,40 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
     .expect("returned-error commit guard should synchronously restore a wake-up");
     assert_eq!(timer_count(), 1);
 
-    set_time(25);
+    set_time(30);
     assert!(run_next_due());
     assert_eq!(timer_count(), 2);
     readiness.set(StartupReadiness::TerminalFailure);
+    assert!(run_next_due());
+    assert_eq!(timer_count(), 0);
+    let terminal = timer_snapshot(&timer)
+        .expect("snapshot lookup should succeed")
+        .expect("retained watchdog should remain declared");
+    assert_eq!(
+        terminal.state(),
+        TimerRuntimeStateSnapshot::Inactive {
+            reason: InactiveReason::InvariantFailure,
+        }
+    );
+    let terminal_counters = terminal.observability().counters();
+    assert_eq!(terminal_counters.work_completed(), 4);
+    assert_eq!(terminal_counters.invariant_failure(), 1);
+    assert!(terminal_counters.completion_partition_is_valid());
+
+    readiness.set(StartupReadiness::Recovering);
+    reconcile_watchdog(
+        &mut registration,
+        &timer,
+        cadence,
+        DeclarationLifetime::Retained,
+        TimerReconcileState::Scheduled,
+        |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
+    )
+    .expect("retained terminal declaration can be reconstructed from durable demand");
+    assert_eq!(timer_count(), 1);
+    set_time(35);
+    assert!(run_next_due());
+    assert_eq!(timer_count(), 2);
     reconcile_watchdog(
         &mut registration,
         &timer,

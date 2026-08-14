@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repository_root="$(git rev-parse --show-toplevel)"
+makefile="${repository_root}/Makefile"
+bump_script="${repository_root}/scripts/release/bump-version.sh"
+pocketic_check="${repository_root}/scripts/ci/check-pocketic.sh"
+
+expected_ci_targets="CI_TARGETS := actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package"
+if ! rg --fixed-strings --line-regexp "${expected_ci_targets}" "${makefile}" >/dev/null; then
+    echo "error: normal CI does not enforce the complete required target sequence" >&2
+    exit 1
+fi
+
+expected_targets="RELEASE_TARGETS := pocketic-check ci msrv testing-check pocketic-watchdog pocketic-cohorts"
+if ! rg --fixed-strings --line-regexp "${expected_targets}" "${makefile}" >/dev/null; then
+    echo "error: release gate does not contain the complete required target sequence" >&2
+    exit 1
+fi
+
+if ! rg --fixed-strings --line-regexp 'make --no-print-directory release-verify' "${bump_script}" >/dev/null; then
+    echo "error: version bump does not invoke the complete release gate" >&2
+    exit 1
+fi
+
+if ! rg --fixed-strings --line-regexp 'pocketic-watchdog: pocketic-check' "${makefile}" >/dev/null \
+    || ! rg --fixed-strings --line-regexp 'pocketic-cohorts: pocketic-check' "${makefile}" >/dev/null; then
+    echo "error: PocketIC suites do not verify the evidence binary first" >&2
+    exit 1
+fi
+
+if rg --fixed-strings --line-regexp 'make --no-print-directory ci' "${bump_script}" >/dev/null; then
+    echo "error: version bump bypasses release-verify with the narrower CI gate" >&2
+    exit 1
+fi
+
+if ! rg --fixed-strings --line-regexp \
+    'cargo update --manifest-path testing/Cargo.toml --offline -p ic-timers' \
+    "${bump_script}" >/dev/null; then
+    echo "error: version bump does not update the nested testing lockfile" >&2
+    exit 1
+fi
+
+if ! rg --fixed-strings --line-regexp \
+    'cargo metadata --locked --offline --no-deps --format-version 1 >/dev/null' \
+    "${bump_script}" >/dev/null \
+    || ! rg --fixed-strings 'cargo metadata --manifest-path testing/Cargo.toml' \
+    "${bump_script}" >/dev/null \
+    || ! rg --fixed-strings --line-regexp \
+        '    --locked --offline --no-deps --format-version 1 >/dev/null' \
+        "${bump_script}" >/dev/null; then
+    echo "error: version bump does not verify nested locked metadata after mutation" >&2
+    exit 1
+fi
+
+if ! rg --fixed-strings --line-regexp \
+    'expected_version="pocket-ic-server 15.0.0"' "${pocketic_check}" >/dev/null \
+    || ! rg --fixed-strings --line-regexp \
+        'expected_sha256="29472ea4433b30a280676c4e22e369d79d5ba6ee1b4d48bab32ebe7d0ad2b4bb"' \
+        "${pocketic_check}" >/dev/null; then
+    echo "error: release evidence is not pinned to the audited PocketIC binary" >&2
+    exit 1
+fi
+
+if ! rg --fixed-strings --line-regexp \
+    $'\tgit add Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md crates/ic-timers/Cargo.toml' \
+    "${makefile}" >/dev/null; then
+    echo "error: release staging omits the nested testing lockfile" >&2
+    exit 1
+fi
+
+echo "Release gate wiring checks passed"

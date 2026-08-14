@@ -46,10 +46,16 @@ pub fn instruction_counter() -> u64 {
     ic0::performance_counter(1)
 }
 
+/// Abort the current message when an internal callback invariant is violated.
+#[cfg(not(test))]
+pub fn trap(message: &str) -> ! {
+    ic0::trap(message.as_bytes())
+}
+
 #[cfg(test)]
 pub use fake::{
     TimerHandle, advance_instructions, canister_version, clear_timer, discard_next_due,
-    instruction_counter, reset, run_next_due, set_time, set_timer, time_ns, timer_count,
+    instruction_counter, reset, run_next_due, set_time, set_timer, time_ns, timer_count, trap,
 };
 
 #[cfg(test)]
@@ -121,6 +127,10 @@ mod fake {
 
     pub fn instruction_counter() -> u64 {
         INSTRUCTIONS.with(Cell::get)
+    }
+
+    pub fn trap(message: &str) -> ! {
+        panic!("{message}")
     }
 
     pub fn advance_instructions(amount: u64) {

@@ -6,7 +6,7 @@ actually enforce and test.
 
 ## Current guarantees
 
-The unreleased 0.3 runtime provides:
+The 0.3 runtime provides:
 
 - a pure fixed-capacity registry with unique bounded identities and
   deterministic snapshot ordering;
@@ -27,7 +27,7 @@ The unreleased 0.3 runtime provides:
 - private, non-copyable provider handles owned by canonical entries (one for
   ordinary timers, at most successor plus work for watchdogs), with terminal
   cancellation clearing the actual handles and all direct `ic-cdk-timers` use
-  isolated in `platform`;
+  isolated in the private, non-re-exported `platform` module;
 - synchronous idempotent reconstruction from a caller-owned volatile claim
   slot and caller-supplied desired state, without persisted library authority;
 - normally completed scheduler and work instruction samples from IC
@@ -40,8 +40,11 @@ The unreleased 0.3 runtime provides:
   overdue jump without replay, two simultaneous timers, and isolation when one
   timer traps;
 - terminal cancellation both normally and in the committed scheduler/work gap,
-  leaving later provider delivery unable to invoke consumer work; and
-- external rejection of the provider's internal timer-executor route.
+  leaving later provider delivery unable to invoke consumer work;
+- external rejection of the provider's internal timer-executor route; and
+- fail-closed handling of unexpected internal callback completion, provider
+  ownership, cleanup, and accounting errors. Watchdog work traps its current
+  message instead of returning after losing the committed successor.
 
 Snapshot values describe runtime observations. They are not authority to arm,
 clear, restore, or mutate a timer and must not become an alternate control
@@ -72,8 +75,9 @@ path.
   registry's 64-entry and 128-owned-handle bounds do not reserve provider
   capacity; consumers must inventory remaining direct provider users and
   tolerate provider deferral as an operational retry condition.
-- The current evidence uses PocketIC 15 and the pinned `ic-cdk-timers` 1.0.0
-  provider. A provider change requires a renewed source and recovery audit.
+- The current evidence uses the pinned PocketIC 15.0.0 binary and
+  `ic-cdk-timers` 1.0.0 provider. A provider or evidence-binary change requires
+  a renewed source and recovery audit.
 - Canic's real metrics adapter and IcyDB/Canic adoption tests remain downstream
   work. No downstream adoption is claimed here.
 
@@ -100,8 +104,9 @@ reset from a genuine lifetime zero.
 ## Evidence maintenance
 
 The recovery suite is deliberately outside the fast default CI gate. Run
-`make pocketic-watchdog` with PocketIC 15 after changes to provider binding,
-registry transitions, lifecycle reconstruction, or watchdog dispatch. Run
-`make pocketic-cohorts` after changes that can affect linked Wasm, instruction
-cost, or provider-call count. Native mocks remain necessary for exhaustive
-state transitions but are never a substitute for IC commit/rollback evidence.
+`make pocketic-watchdog` with the audited PocketIC 15.0.0 binary after changes
+to provider binding, registry transitions, lifecycle reconstruction, or
+watchdog dispatch. Run `make pocketic-cohorts` after changes that can affect
+linked Wasm, instruction cost, or provider-call count. Native mocks remain
+necessary for exhaustive state transitions but are never a substitute for IC
+commit/rollback evidence.

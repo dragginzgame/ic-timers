@@ -17,16 +17,21 @@ This file is normative for automated contributors.
 
 ## Status
 
-- This is a pre-alpha timer-runtime scaffold.
-- Do not describe watchdog pre-arming, lifecycle reconstruction, shared
-  inventory, metrics, or failure recovery as implemented until evidence exists.
-- Keep the direct `ic-cdk-timers` dependency behind `platform`.
+- This is a pre-1.0 timer runtime. Describe only behavior backed by maintained
+  native or PocketIC evidence, at the level of guarantee that evidence proves.
+- Keep the direct `ic-cdk-timers` dependency solely behind the private
+  `platform` module. Wrap it; never publicly re-export the provider crate,
+  provider module, provider handles, or provider functions.
 
 ## Pre-1.0 hard cuts
 
-- Before 1.0, replace superseded APIs and snapshot shapes directly. Do not add
-  deprecated forwarders, compatibility aliases, dual readers, or fallback
-  behavior for an earlier pre-1.0 release.
+- Every superseding change before 1.0 is a hard cut by default. Delete the
+  replaced API, behavior, snapshot shape, storage path, and tests in the same
+  change; do not preserve a pre-1.0 contract merely because it was released.
+- Do not add deprecated forwarders, compatibility aliases, dual readers,
+  migrations, feature-gated legacy paths, or fallback behavior for an earlier
+  pre-1.0 release unless the maintainer explicitly authorizes that one
+  compatibility exception.
 - Update current tests, documentation, and downstream adapters in the same
   change. Historical changelogs may describe removed behavior but do not
   justify keeping executable compatibility code.
@@ -51,9 +56,14 @@ This file is normative for automated contributors.
   release's notes there and keep `Unreleased` empty; do not leave named-release
   notes only under `Unreleased`.
 - When the maintainer asks for the version bump, run the matching bump target.
-  The release helper must validate the staged section and add its date
-  automatically. Do not require the maintainer to edit a changelog heading by
-  hand.
+  The release helper must validate the staged section, run `release-verify`,
+  and add its date automatically. `release-verify` must retain the normal CI,
+  MSRV, nested-probe lint, watchdog PocketIC, and policy-cohort gates; it fails
+  closed unless `POCKET_IC_BIN` matches the exact audited PocketIC version and
+  hash. After version mutation, update both root and `testing/` lockfiles,
+  verify both with cheap locked metadata checks, and stage both. Do not require
+  the maintainer to edit a changelog heading by hand or remember a separate
+  evidence command.
 - Run targeted checks for changed behavior. Do not run broad external suites
   unless the maintainer requests them.
 - Release targets are maintainer-owned: do not commit, tag, push, or publish

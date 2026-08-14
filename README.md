@@ -7,9 +7,9 @@ arms and clears the platform timers. This crate is intended to add one place
 for timer identity, scheduling policy, execution arbitration, observability,
 and lifecycle recovery.
 
-The unreleased 0.3 line contains a complete bounded runtime and a PocketIC
-evidence suite for its recovery watchdog contract. The published package is
-still 0.2.0, and neither IcyDB nor Canic has adopted the runtime yet.
+Version 0.3.0 contains a complete bounded runtime and a PocketIC evidence suite
+for its recovery watchdog contract. It is published on crates.io; neither
+IcyDB nor Canic has adopted the runtime yet.
 
 ## Why wrap `ic-cdk-timers`?
 
@@ -40,9 +40,14 @@ ordinary recurrence, or before fallible work for a recovery watchdog. Those
 policies have different failure guarantees and should not be hidden behind the
 same interval helper.
 
+`ic-cdk-timers` is an implementation dependency, not part of this crate's
+public API. Repository CI enforces that direct provider references remain in
+the private `platform` module and that neither the provider nor that module is
+re-exported.
+
 ## What exists today
 
-The current unreleased crate contains:
+The current crate contains:
 
 - one volatile, canister-local 64-entry registry with unique structured
   identity ownership and claim generations;
@@ -139,7 +144,8 @@ Rust 1.97.1; `make msrv` checks the declared Rust 1.88.0 minimum separately.
 `make help` lists the smaller component targets.
 
 The focused real-canister evidence is intentionally separate from the normal
-CI gate. With a PocketIC 15 server available, run:
+CI gate. Release evidence requires the exact audited PocketIC 15.0.0 binary
+and verifies both its reported version and SHA-256 before running:
 
 ```text
 POCKET_IC_BIN=/path/to/pocket-ic make pocketic-watchdog

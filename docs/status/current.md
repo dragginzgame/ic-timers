@@ -1,16 +1,16 @@
 # Current status
 
-Last updated: 2026-08-13
+Last updated: 2026-08-14
 
 ## Purpose
 
 This is the compact handoff for a new session. The repository is a higher-level
-wrapper around `ic-cdk-timers`; the unreleased 0.3 bounded runtime and its
+wrapper around `ic-cdk-timers`; the released 0.3 bounded runtime and its
 IcyDB-shaped watchdog evidence are complete.
 
 ## Current foundation
 
-- Workspace package version: `0.2.0`.
+- Workspace package version: `0.3.0`, tagged, pushed, and published.
 - Direct timer provider: exact `ic-cdk-timers` 1.0.0.
 - `control` is the private Canic-derived ordinary state machine for
   generations, stale callbacks, cancellation, scheduling, and reconciliation.
@@ -38,12 +38,21 @@ IcyDB-shaped watchdog evidence are complete.
   their only constructor.
 - Basic GitHub CI, one formatting-only pre-commit hook, SemVer release helpers,
   development-tool setup, README, changelog, and architecture docs exist.
-- The complete 0.3 notes are staged under an undated `0.3.0` heading. Version
+- The 0.3 notes are finalized under the dated `0.3.0` heading. Future version
   bumps automatically date a staged named section, while still supporting
   promotion from `Unreleased` when no target was known earlier. The guarded
-  publish target requires a clean tagged `HEAD`.
+  publish target requires a clean tagged `HEAD`. Post-release hardening makes
+  every future bump run `release-verify`: normal CI, Rust 1.88, nested probe
+  lint, the watchdog PocketIC matrix, and all policy cohorts. It updates,
+  verifies, and stages both root and nested testing lockfiles.
+- Completed post-release hardening is staged under the undated `0.3.1`
+  changelog heading and the dedicated `docs/changelog/0.3.1.md` release-line
+  note. The package version remains 0.3.0 until the maintainer requests the
+  patch bump.
 - CI also checks rustdoc, shell syntax, and full-SHA GitHub Actions pins;
-  Dependabot covers Cargo and Actions dependencies.
+  Dependabot covers Cargo and Actions dependencies. A structural gate keeps
+  every direct `ic-cdk-timers` reference inside private `platform` code and
+  forbids re-exporting the provider boundary.
 - `SAFETY.md` is the canonical boundary for implemented guarantees and consumer
   obligations; a recurring code-hygiene checklist and initial
   audit report exist under `docs/audits`.
@@ -104,7 +113,7 @@ instructions; its observed dispatch charge is 15,364,624 PocketIC cycles over
 after-completion. Exact hashes and method are in
 `docs/audits/0.3-runtime-evidence-2026-08-13.md`.
 
-The final targeted checks pass formatting, strict Clippy, rustdoc, and 56
+The released 0.3 evidence passed formatting, strict Clippy, rustdoc, and 56
 native tests on Rust 1.97.1 and Rust 1.88.0, plus native and Wasm compilation
 on Rust 1.88.0, offline package verification, six recovery/inventory PocketIC
 tests, and the four-cohort comparison.
@@ -113,6 +122,22 @@ IcyDB's design review found no correctness blocker. Its feedback is now folded
 into the contract: recovery claims explicitly cover consumer work rather than
 the scheduler message, and the IcyDB-shaped fixture freezes progress,
 retryable-failure, Ready, and durable-terminal result mappings.
+
+The current post-release `release-verify` gate passes end to end: 58 native
+tests, Rust 1.88 checks, every supported probe lint configuration, six
+watchdog/recovery PocketIC tests, and the four-cohort comparison. Unexpected
+internal callback completion, provider cleanup, and accounting failures are no
+longer discarded; callback-only failures trap the message, preserving
+watchdog rollback semantics. Fault tests cover completion and cleanup paths,
+and the IcyDB-shaped live fixture now executes retryable continuation and
+terminal failure through scheduler/work callbacks. All registration
+capabilities are `must_use`. The nested testing lockfile resolves the local
+package as 0.3.0.
+
+PocketIC release evidence is now pinned to `pocket-ic-server 15.0.0` with
+SHA-256
+`29472ea4433b30a280676c4e22e369d79d5ba6ee1b4d48bab32ebe7d0ad2b4bb`;
+the gate verifies both before expensive work.
 
 ## Remaining downstream work
 
@@ -127,16 +152,14 @@ retryable-failure, Ready, and durable-terminal result mappings.
   canister-wide and is not reserved by the 128-handle library bound.
 - A Canic adapter hard cut from its infallible application timer facade to
   typed capacity/identity errors and 64-byte identity components.
-- Publication of 0.3.0 before either downstream claims adoption.
 
-No downstream adoption has occurred. The workspace package remains 0.2.0.
+No downstream adoption has occurred. Version 0.3.0 is published.
 
 ## Next action
 
-Hand the revised unreleased 0.3 API and
-[evidence report](../audits/0.3-runtime-evidence-2026-08-13.md) to Canic for
-feedback, then prepare the maintainer-owned 0.3.0 release boundary. Do not
-mutate downstream repositories unless the maintainer explicitly authorizes an
-exact target.
+Review the staged 0.3.1 hardening notes, then use the maintainer-owned patch
+release flow when approved. Downstream feedback may continue against the
+released 0.3 API; do not mutate downstream repositories unless the maintainer
+explicitly authorizes an exact target.
 
 The maintainer owns release tags and all package-publication actions.

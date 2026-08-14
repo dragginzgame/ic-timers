@@ -128,6 +128,7 @@ impl TimerContext {
 }
 
 /// Opaque non-clone claim for one registered `Once` callback.
+#[must_use = "retain the registration claim so the timer remains controllable"]
 pub struct OnceRegistration {
     claim: RegistrationClaim,
 }
@@ -156,11 +157,13 @@ impl OnceRegistration {
 }
 
 /// Opaque non-clone claim for one after-completion callback.
+#[must_use = "retain the registration claim so the timer remains controllable"]
 pub struct AfterCompletionRegistration {
     claim: RegistrationClaim,
 }
 
 /// Opaque non-clone claim for one pre-armed watchdog callback.
+#[must_use = "retain the registration claim so the timer remains controllable"]
 pub struct WatchdogRegistration {
     claim: RegistrationClaim,
 }
@@ -548,11 +551,12 @@ fn arm_wakeup(
         return Err(error);
     }
     if let Err(error) = confirm_effect(effect) {
-        if let Ok(Some(handle)) =
-            with_registry_mut(|registry| Ok(registry.take_wakeup_handle(token.identity())))
-        {
-            clear_provider_handle(handle);
-        }
+        let handle = with_registry_mut(|registry| {
+            registry
+                .take_wakeup_handle(token.identity())
+                .ok_or(TimerError::OwnershipInvariant)
+        })?;
+        clear_provider_handle(handle);
         return Err(error);
     }
     Ok(())
@@ -580,11 +584,11 @@ fn dispatch_watchdog_effect(
     });
     if let Err((error, handle)) = install_provider_handle(work, work_handle) {
         platform::clear_timer(handle);
-        clear_entry_provider_handles(successor.identity());
+        clear_entry_provider_handles(successor.identity())?;
         return Err(error);
     }
     if let Err(error) = confirm_effect(effect) {
-        clear_entry_provider_handles(successor.identity());
+        clear_entry_provider_handles(successor.identity())?;
         return Err(error);
     }
     Ok(())
@@ -642,21 +646,20 @@ fn clear_provider_handle(handle: ProviderHandle) {
     platform::clear_timer(handle);
 }
 
-fn clear_entry_provider_handles(identity: &TimerIdentity) {
-    let handles = with_registry_mut(|registry| {
+fn clear_entry_provider_handles(identity: &TimerIdentity) -> Result<(), TimerError> {
+    let mut handles = with_registry_mut(|registry| {
         Ok(ProviderHandles::from_parts(
             registry.take_wakeup_handle(identity),
             registry.take_work_handle(identity),
         ))
-    });
-    if let Ok(mut handles) = handles {
-        if let Some(wakeup) = handles.take_wakeup() {
-            clear_provider_handle(wakeup);
-        }
-        if let Some(work) = handles.take_work() {
-            clear_provider_handle(work);
-        }
+    })?;
+    if let Some(wakeup) = handles.take_wakeup() {
+        clear_provider_handle(wakeup);
     }
+    if let Some(work) = handles.take_work() {
+        clear_provider_handle(work);
+    }
+    Ok(())
 }
 
 #[allow(clippy::future_not_send)] // IC callbacks and canister-local state are single-threaded.
@@ -675,15 +678,21 @@ async fn dispatch_ordinary(token: CallbackToken) {
         registry.consume_provider_handle(&token);
         Ok(registry.begin_ordinary(&token))
     });
-    if !matches!(accepted, Ok(CallbackAcceptance::Accepted)) {
-        return;
+    match accepted {
+        Ok(CallbackAcceptance::Accepted) => {}
+        Ok(CallbackAcceptance::Stale) => return,
+        Err(error) => trap_callback_failure("ordinary callback acceptance", &error),
     }
 
-    let Ok(callback) =
-        with_registry(|registry| registry.ordinary_callback(&token).map_err(TimerError::from))
-    else {
-        fail_ordinary_dispatch(&token);
-        return;
+    let callback = match with_registry(|registry| {
+        registry.ordinary_callback(&token).map_err(TimerError::from)
+    }) {
+        Ok(callback) => callback,
+        Err(TimerError::OwnershipInvariant) => {
+            fail_ordinary_dispatch(&token);
+            return;
+        }
+        Err(error) => trap_callback_failure("ordinary callback lookup", &error),
     };
     let context = TimerContext::new(token.identity().clone(), token.claim_generation());
     let future = {
@@ -699,10 +708,10 @@ async fn dispatch_ordinary(token: CallbackToken) {
             .complete_ordinary(&token, platform::time_ns(), result)
             .map_err(TimerError::from)
     });
-    if let Ok(transition) = transition {
-        finish_callback_transition(&token, transition, ProviderHandles::default());
-        record_work_instructions(&token, instructions_before);
-    }
+    let transition = transition
+        .unwrap_or_else(|error| trap_callback_failure("ordinary callback completion", &error));
+    finish_callback_transition(&token, transition, ProviderHandles::default());
+    record_work_instructions(&token, instructions_before);
 }
 
 fn fail_ordinary_dispatch(token: &CallbackToken) {
@@ -715,9 +724,10 @@ fn fail_ordinary_dispatch(token: &CallbackToken) {
             )
             .map_err(TimerError::from)
     });
-    if let Ok(transition) = transition {
-        finish_callback_transition(token, transition, ProviderHandles::default());
-    }
+    let transition = transition.unwrap_or_else(|error| {
+        trap_callback_failure("ordinary invariant-failure completion", &error)
+    });
+    finish_callback_transition(token, transition, ProviderHandles::default());
 }
 
 fn dispatch_watchdog_scheduler(token: &CallbackToken) {
@@ -726,16 +736,19 @@ fn dispatch_watchdog_scheduler(token: &CallbackToken) {
         registry.consume_provider_handle(token);
         Ok(registry.begin_watchdog_scheduler(token, platform::time_ns()))
     });
-    if let Ok(transition) = transition {
-        let accepted = !matches!(transition.effect(), RegistryEffect::None);
-        finish_callback_transition(token, transition, ProviderHandles::default());
-        if accepted {
-            let instructions = platform::instruction_counter().saturating_sub(instructions_before);
-            let _recorded = with_registry_mut(|registry| {
-                registry.record_scheduler_instructions(token, instructions);
-                Ok(())
-            });
-        }
+    let transition = transition
+        .unwrap_or_else(|error| trap_callback_failure("watchdog scheduler transition", &error));
+    let accepted = !matches!(transition.effect(), RegistryEffect::None);
+    finish_callback_transition(token, transition, ProviderHandles::default());
+    if accepted {
+        let instructions = platform::instruction_counter().saturating_sub(instructions_before);
+        with_registry_mut(|registry| {
+            registry.record_scheduler_instructions(token, instructions);
+            Ok(())
+        })
+        .unwrap_or_else(|error| {
+            trap_callback_failure("watchdog scheduler instruction accounting", &error)
+        });
     }
 }
 
@@ -745,36 +758,30 @@ fn dispatch_watchdog_work(token: &CallbackToken) {
         registry.consume_provider_handle(token);
         Ok(registry.begin_watchdog_work(token))
     });
-    if !matches!(accepted, Ok(CallbackAcceptance::Accepted)) {
-        return;
+    match accepted {
+        Ok(CallbackAcceptance::Accepted) => {}
+        Ok(CallbackAcceptance::Stale) => return,
+        Err(error) => trap_callback_failure("watchdog work acceptance", &error),
     }
 
-    let Ok(callback) =
-        with_registry(|registry| registry.watchdog_callback(token).map_err(TimerError::from))
-    else {
-        fail_watchdog_dispatch(token);
-        return;
-    };
+    let callback =
+        match with_registry(|registry| registry.watchdog_callback(token).map_err(TimerError::from))
+        {
+            Ok(callback) => callback,
+            Err(error) => trap_callback_failure("watchdog callback lookup", &error),
+        };
     let context = TimerContext::new(token.identity().clone(), token.claim_generation());
     let result = {
         let Ok(mut callback) = callback.try_borrow_mut() else {
-            fail_watchdog_dispatch(token);
-            return;
+            trap_callback_failure(
+                "watchdog callback ownership",
+                &TimerError::OwnershipInvariant,
+            );
         };
         callback(context)
     };
     finish_watchdog_dispatch(token, result);
     record_work_instructions(token, instructions_before);
-}
-
-fn fail_watchdog_dispatch(token: &CallbackToken) {
-    finish_watchdog_dispatch(
-        token,
-        WatchdogRunResult::new(
-            TimerCompletion::invariant_failure(0),
-            crate::WatchdogDecision::Stop,
-        ),
-    );
 }
 
 fn finish_watchdog_dispatch(token: &CallbackToken, result: WatchdogRunResult) {
@@ -783,14 +790,20 @@ fn finish_watchdog_dispatch(token: &CallbackToken, result: WatchdogRunResult) {
         let handles = registry
             .take_provider_handles_for_claim(&claim)
             .map_err(TimerError::from)?;
+        #[cfg(test)]
+        {
+            if take_watchdog_completion_fault() {
+                return Err(TimerError::OwnershipInvariant);
+            }
+        }
         let transition = registry
             .complete_watchdog_work(token, platform::time_ns(), result)
             .map_err(TimerError::from)?;
         Ok((transition, handles))
     });
-    if let Ok((transition, handles)) = completed {
-        finish_callback_transition(token, transition, handles);
-    }
+    let (transition, handles) =
+        completed.unwrap_or_else(|error| trap_callback_failure("watchdog work completion", &error));
+    finish_callback_transition(token, transition, handles);
 }
 
 fn finish_callback_transition(
@@ -801,41 +814,53 @@ fn finish_callback_transition(
     match finish_transition(transition, handles) {
         Ok(()) | Err(TimerError::ControlFailure(_)) => {}
         Err(
-            TimerError::NotInitialized
+            error @ (TimerError::NotInitialized
             | TimerError::RuntimeBusy
             | TimerError::Register(_)
             | TimerError::Schedule(_)
             | TimerError::RegistrationExpired
             | TimerError::WrongPolicy
             | TimerError::OwnershipInvariant
-            | TimerError::ReconciliationConflict,
-        ) => fail_provider_binding(token),
+            | TimerError::ReconciliationConflict),
+        ) => {
+            if token.role() == CallbackRole::WatchdogWork {
+                trap_callback_failure("watchdog provider-handle completion", &error);
+            }
+            fail_provider_binding(token).unwrap_or_else(|binding_error| {
+                trap_callback_failure("provider-binding failure cleanup", &binding_error)
+            });
+        }
     }
 }
 
-fn fail_provider_binding(token: &CallbackToken) {
+fn fail_provider_binding(token: &CallbackToken) -> Result<(), TimerError> {
     let claim = RegistrationClaim::delegated(token.identity().clone(), token.claim_generation());
     let failed = with_registry_mut(|registry| {
         registry
             .fail_registration(&claim, TimerControlFailure::ProviderBindingFailed)
             .map_err(TimerError::from)
     });
-    if let Ok(mut handles) = failed {
-        if let Some(wakeup) = handles.take_wakeup() {
-            clear_provider_handle(wakeup);
-        }
-        if let Some(work) = handles.take_work() {
-            clear_provider_handle(work);
-        }
+    let mut handles = failed?;
+    if let Some(wakeup) = handles.take_wakeup() {
+        clear_provider_handle(wakeup);
     }
+    if let Some(work) = handles.take_work() {
+        clear_provider_handle(work);
+    }
+    Ok(())
 }
 
 fn record_work_instructions(token: &CallbackToken, instructions_before: u64) {
     let instructions = platform::instruction_counter().saturating_sub(instructions_before);
-    let _recorded = with_registry_mut(|registry| {
+    with_registry_mut(|registry| {
         registry.record_work_instructions(token, instructions);
         Ok(())
-    });
+    })
+    .unwrap_or_else(|error| trap_callback_failure("work instruction accounting", &error));
+}
+
+fn trap_callback_failure(context: &str, error: &TimerError) -> ! {
+    platform::trap(&format!("ic-timers {context} failed: {error}"))
 }
 
 fn with_registry<T>(
@@ -863,9 +888,25 @@ fn with_registry_mut<T>(
 #[cfg(test)]
 fn reset_for_test(now_ns: u64, canister_version: u64) {
     platform::reset(now_ns, canister_version);
+    WATCHDOG_COMPLETION_FAULT.with(|fault| fault.set(false));
     RUNTIME.with(|runtime| {
         *runtime.borrow_mut() = None;
     });
+}
+
+#[cfg(test)]
+thread_local! {
+    static WATCHDOG_COMPLETION_FAULT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+#[cfg(test)]
+fn inject_watchdog_completion_fault() {
+    WATCHDOG_COMPLETION_FAULT.with(|fault| fault.set(true));
+}
+
+#[cfg(test)]
+fn take_watchdog_completion_fault() -> bool {
+    WATCHDOG_COMPLETION_FAULT.with(|fault| fault.replace(false))
 }
 
 #[cfg(test)]

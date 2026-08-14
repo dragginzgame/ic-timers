@@ -35,11 +35,33 @@ For an exact version, use:
 make release-x VERSION=0.3.0
 ```
 
-These maintainer-owned targets run the CI gate, update workspace version and
-lock files, commit, create an annotated `vX.Y.Z` tag, and push with tags. The
-non-release `make patch`, `make minor`, `make major`, and
+These maintainer-owned targets run the complete release gate, update the
+workspace version plus both the root and nested testing lockfiles, commit,
+create an annotated `vX.Y.Z` tag, and push with tags. The non-release `make
+patch`, `make minor`, `make major`, and
 `make bump-x VERSION=...` targets stop after the version-file update for
 review.
+
+Before changing any version file, every bump target runs the complete release
+gate:
+
+```text
+POCKET_IC_BIN=/path/to/pocket-ic make release-verify
+```
+
+That gate includes `make ci`, the Rust 1.88 MSRV check, warning-denied linting
+of every supported nested probe configuration, the six-test watchdog/recovery
+PocketIC suite, and the four policy cohorts. The bump fails before mutation if
+the binary is missing, does not report `pocket-ic-server 15.0.0`, does not
+match the audited SHA-256, or any evidence fails. Supply the same
+`POCKET_IC_BIN` variable to `make minor` or `make release-minor`; the nested
+make calls inherit it.
+
+After the version changes, the helper updates `Cargo.lock` and
+`testing/Cargo.lock`, then runs offline `cargo metadata --locked` against both
+manifests. This cheap structural check catches stale path-package versions
+without repeating the expensive evidence suite. `release-stage` stages both
+lockfiles automatically.
 
 After the release tag is pushed, publish the crate with:
 

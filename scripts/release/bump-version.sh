@@ -46,7 +46,7 @@ fi
 bash scripts/release/finalize-changelog.sh --check "${new_version}"
 
 make --no-print-directory ensure-clean
-make --no-print-directory ci
+make --no-print-directory release-verify
 
 bash scripts/release/finalize-changelog.sh "${new_version}"
 
@@ -56,6 +56,13 @@ perl -0pi -e '
     s/^version = "\Q$ENV{IC_TIMERS_PREVIOUS_VERSION}\E"$/version = "$ENV{IC_TIMERS_NEW_VERSION}"/m
 ' Cargo.toml
 cargo update --offline -p ic-timers
+cargo update --manifest-path testing/Cargo.toml --offline -p ic-timers
+
+# Version mutation must leave both independently locked workspaces coherent.
+# The expensive behavioral evidence ran before mutation and is not repeated.
+cargo metadata --locked --offline --no-deps --format-version 1 >/dev/null
+cargo metadata --manifest-path testing/Cargo.toml \
+    --locked --offline --no-deps --format-version 1 >/dev/null
 
 echo "Bumped: ${previous_version} -> ${new_version}"
 echo "Review with git diff, then use release-stage, release-commit, and release-push."

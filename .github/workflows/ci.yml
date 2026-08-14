@@ -1,7 +1,7 @@
 name: CI
 
 env:
-  IC_TIMERS_MSRV: 1.91.0
+  IC_TIMERS_MSRV: 1.88.0
   IC_TIMERS_INTERNAL_TOOLCHAIN: 1.97.1
 
 permissions:
@@ -21,7 +21,7 @@ on:
 
 jobs:
   msrv:
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       # actions/checkout v6

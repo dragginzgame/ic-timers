@@ -1,13 +1,14 @@
 .PHONY: \
 	actions-check build bump-x check ci clean clippy docs-check ensure-clean fmt fmt-check help \
 	install-hooks major minor msrv package patch pocketic-cohorts pocketic-watchdog publish release-check release-commit \
-	release-major release-minor release-patch release-push release-stage \
-	release-tag-check release-x shell-check test update-dev version wasm-check
+	pocketic-check provider-check release-major release-minor release-patch release-push release-stage \
+	release-tag-check release-verify release-x shell-check test testing-check update-dev version wasm-check
 
 MSRV ?= 1.88.0
 VERSION ?=
 
-CI_TARGETS := actions-check shell-check release-check fmt-check check clippy docs-check test wasm-check package
+CI_TARGETS := actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package
+RELEASE_TARGETS := pocketic-check ci msrv testing-check pocketic-watchdog pocketic-cohorts
 
 help:
 	@echo "Available commands:"
@@ -20,6 +21,10 @@ help:
 	@echo "  package             Verify the publishable crate package"
 	@echo "  pocketic-watchdog   Build and run the focused watchdog canister evidence"
 	@echo "  pocketic-cohorts    Build and run comparable timer policy cohorts"
+	@echo "  pocketic-check      Verify the exact audited PocketIC evidence binary"
+	@echo "  provider-check      Enforce the private ic-cdk-timers provider boundary"
+	@echo "  testing-check       Lint every supported nested probe configuration"
+	@echo "  release-verify      Run the complete fail-closed release evidence gate"
 	@echo "  publish             Publish the clean, tagged release to crates.io"
 	@echo "  actions-check       Verify external Actions use full commit SHAs"
 	@echo "  shell-check         Check repository shell-script syntax"
@@ -57,25 +62,33 @@ wasm-check:
 msrv:
 	cargo +$(MSRV) check --workspace --all-targets --all-features --locked
 
+testing-check:
+	cargo fmt --manifest-path testing/Cargo.toml --all -- --check
+	cargo +$(MSRV) clippy --manifest-path testing/Cargo.toml \
+		-p ic-timers-runtime-probe -p ic-timers-pocketic --all-targets --locked -- -D warnings
+	cargo +$(MSRV) clippy --manifest-path testing/Cargo.toml \
+		-p ic-timers-size-probe --no-default-features --features baseline --all-targets --locked -- -D warnings
+	cargo +$(MSRV) clippy --manifest-path testing/Cargo.toml \
+		-p ic-timers-size-probe --no-default-features --features once --all-targets --locked -- -D warnings
+	cargo +$(MSRV) clippy --manifest-path testing/Cargo.toml \
+		-p ic-timers-size-probe --no-default-features --features after-completion --all-targets --locked -- -D warnings
+	cargo +$(MSRV) clippy --manifest-path testing/Cargo.toml \
+		-p ic-timers-size-probe --no-default-features --features watchdog --all-targets --locked -- -D warnings
+
 package:
 	cargo package --locked --offline --allow-dirty -p ic-timers
 
-pocketic-watchdog:
-	@if [ -z "$(POCKET_IC_BIN)" ]; then \
-		echo "error: POCKET_IC_BIN must name a PocketIC 15 server binary" >&2; \
-		exit 2; \
-	fi
+pocketic-check:
+	bash scripts/ci/check-pocketic.sh
+
+pocketic-watchdog: pocketic-check
 	cargo +$(MSRV) build --manifest-path testing/Cargo.toml -p ic-timers-runtime-probe \
 		--release --target wasm32-unknown-unknown --locked
 	POCKET_IC_BIN="$(POCKET_IC_BIN)" \
 		IC_TIMERS_PROBE_WASM="$(CURDIR)/testing/target/wasm32-unknown-unknown/release/ic_timers_runtime_probe.wasm" \
 		cargo +$(MSRV) test --manifest-path testing/Cargo.toml -p ic-timers-pocketic --locked tests::
 
-pocketic-cohorts:
-	@if [ -z "$(POCKET_IC_BIN)" ]; then \
-		echo "error: POCKET_IC_BIN must name a PocketIC 15 server binary" >&2; \
-		exit 2; \
-	fi
+pocketic-cohorts: pocketic-check
 	CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-baseline" \
 		cargo +$(MSRV) build --manifest-path testing/Cargo.toml -p ic-timers-size-probe \
 		--release --target wasm32-unknown-unknown --locked
@@ -101,9 +114,18 @@ shell-check:
 
 release-check:
 	bash scripts/release/test-finalize-changelog.sh
+	bash scripts/release/test-release-gate.sh
+
+provider-check:
+	bash scripts/ci/check-provider-boundary.sh
 
 ci:
 	+@set -e; for target in $(CI_TARGETS); do \
+		$(MAKE) --no-print-directory "$$target"; \
+	done
+
+release-verify:
+	+@set -e; for target in $(RELEASE_TARGETS); do \
 		$(MAKE) --no-print-directory "$$target"; \
 	done
 
@@ -160,7 +182,7 @@ release-x:
 	+$(MAKE) --no-print-directory release-push
 
 release-stage:
-	git add Cargo.toml Cargo.lock CHANGELOG.md README.md crates/ic-timers/Cargo.toml
+	git add Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md crates/ic-timers/Cargo.toml
 
 release-commit:
 	@bash scripts/release/commit-release.sh
