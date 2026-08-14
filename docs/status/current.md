@@ -10,7 +10,7 @@ IcyDB-shaped watchdog evidence are complete.
 
 ## Current foundation
 
-- Workspace package version: `0.3.2`, tagged, pushed, and published.
+- Workspace package version: `0.3.3`.
 - Direct timer provider: exact `ic-cdk-timers` 1.0.0.
 - `control` is the private Canic-derived ordinary generation/registration
   state machine for checked request sequences, stale callbacks, immediate
@@ -34,7 +34,8 @@ IcyDB-shaped watchdog evidence are complete.
 - Ordinary registrations also expose authoritative optional schedule
   reconciliation, which may move a deadline earlier or later. The public
   `reconcile_once` helper now complements the existing after-completion and
-  watchdog lifecycle helpers.
+  watchdog lifecycle helpers. All lifecycle helpers hard-code retained
+  declarations; transient remove-on-stop callbacks use direct registration.
 - Public `Watchdog` registrations own synchronous callbacks. Their bounded
   scheduler arms a successor from current dispatch time, queues separate
   zero-delay work, and returns before consumer code. Canonical entries own at
@@ -53,10 +54,10 @@ IcyDB-shaped watchdog evidence are complete.
   every future bump run `release-verify`: normal CI, Rust 1.88, nested probe
   lint, the watchdog PocketIC matrix, and all policy cohorts. It updates,
   verifies, and stages both root and nested testing lockfiles.
-- Post-0.3 hardening was released as 0.3.1 and the Canic adoption corrections
-  as 0.3.2 on 2026-08-14. New audit fixes target 0.3.3 under the undated
-  `CHANGELOG.md` section and dedicated `docs/changelog/0.3.3.md` note; the
-  package remains 0.3.2 until the maintainer requests the patch bump.
+- Post-0.3 hardening was released as 0.3.1, the Canic adoption corrections as
+  0.3.2, and the callback-authority/provider-binding fixes as 0.3.3 on
+  2026-08-14.
+- Open release line: `0.3.4`; package remains `0.3.3`.
 - CI also checks rustdoc, shell syntax, and full-SHA GitHub Actions pins;
   Dependabot covers Cargo and Actions dependencies. A structural gate keeps
   every direct `ic-cdk-timers` reference inside private `platform` code and
@@ -139,8 +140,8 @@ longer discarded; callback-only failures trap the message, preserving
 watchdog rollback semantics. Fault tests cover completion and cleanup paths,
 and the IcyDB-shaped live fixture now executes retryable continuation and
 terminal failure through scheduler/work callbacks. All registration
-capabilities are `must_use`. The nested testing lockfile resolves the local
-package as 0.3.2.
+capabilities are `must_use`. The release flow keeps the root and nested testing
+lockfiles on the same local package version.
 
 PocketIC release evidence is now pinned to `pocket-ic-server 15.0.0` with
 SHA-256
@@ -170,22 +171,36 @@ pure fixture helpers test-only, confirmed no duplicate dependency versions or
 RustSec findings across 13 locked dependencies, and verified the packaged
 source inventory and MIT SPDX metadata.
 
-The current audit found that a consumer could retain `TimerContext` after a
-callback and reuse its longer-lived registration claim generation. The
-context now carries and validates the exact callback generation, work role,
-and running state. Ordinary and watchdog regression tests prove expired
-contexts cannot clear or replace an already-scheduled successor. A second
+Released 0.3.3 fixed an audit finding where a consumer could retain
+`TimerContext` after a callback and reuse its longer-lived registration claim
+generation. The context now carries and validates the exact callback
+generation, work role, and running state. Ordinary and watchdog regression
+tests prove expired contexts cannot clear or replace an already-scheduled
+successor. A second
 finding closes the public provider-effect failure path: failed installation or
 confirmation now clears owned handles and retires a retained declaration as
 `ProviderBindingFailed`, rather than leaving a false scheduled state. Release
 tooling also rejects non-increasing explicit versions and non-canonical
 leading-zero numeric components before expensive gates or mutation. The
 maintained contract's stale Canic schedule-count sentence now correctly uses
-committed `wakeups_armed`. These changes remain unreleased and do not alter the
-provider protocol. Normal CI passes with 65 native tests, strict
+committed `wakeups_armed`. These changes do not alter the provider protocol.
+The local release gate passed with 65 native tests, strict
 Clippy/rustdoc, Wasm compilation, offline packaging, and provider/release
 checks; Rust 1.88 and every supported nested-probe lint configuration also
 pass.
+
+The 0.3.4 changes remove runner dependence on `rg`, hard-cut lifecycle
+reconciliation to retained declarations, and add provider-binding fault
+coverage for initial and replacement arms, after-completion, partial watchdog
+binding, effect confirmation, and remove-on-stop cleanup. Release truth is now
+mechanically finalized and checked across Cargo, the changelog, compact status,
+and dedicated release note; README and the Canic contract no longer duplicate
+the current release number. Normal CI passes with 70 native tests,
+warning-denied Clippy, rustdoc, Wasm compilation, offline packaging, and the
+portable release/provider checks. Rust 1.88 and every supported nested-probe
+configuration pass. PocketIC was not rerun because this candidate does not
+change the scheduler/work protocol; the version bump retains that complete
+release gate.
 
 ## Remaining downstream work
 
@@ -202,13 +217,13 @@ pass.
   including its fallible public facade, removal of the parallel provider/state
   machine, owner-local lifecycle composition, and focused parity tests.
 
-No downstream adoption has occurred. Version 0.3.2 is published.
+No downstream adoption has occurred.
 
 ## Next action
 
-Continue focused review of the unreleased context-authority and release-helper
-hardening, then incorporate the next downstream feedback. Do not mutate
-downstream repositories unless the maintainer explicitly authorizes an exact
-target.
+Validate the focused 0.3.4 adoption-gate fixes, obtain green hosted CI after
+the maintainer-owned release, and then resume Canic hard-cut review. Do not
+mutate downstream repositories unless the maintainer explicitly authorizes an
+exact target.
 
 The maintainer owns release tags and all package-publication actions.

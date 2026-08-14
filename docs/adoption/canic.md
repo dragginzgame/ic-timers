@@ -1,7 +1,6 @@
 # Canic adapter contract
 
-Status: downstream contract for released 0.3.2; Canic has not adopted
-`ic-timers`
+Status: downstream contract; Canic has not adopted `ic-timers`.
 
 ## Boundary
 
@@ -69,9 +68,10 @@ successor before consumer work.
 Canic initializes the runtime once from its existing lifecycle owner before
 framework and application hooks. It declares every fixed retained timer before
 application hooks, even when its durable authority currently selects inactive.
-The 0.3.2 reconciliation helpers install fresh inactive declarations, making
-the inventory complete and reserving critical registry capacity. Canic retains
-one policy-specific registration claim per timer and delegates as follows:
+The retained-only lifecycle reconciliation helpers install fresh inactive
+declarations, making the inventory complete and reserving critical registry
+capacity. Canic retains one policy-specific registration claim per timer and
+delegates as follows:
 
 | Current Canic operation | `ic-timers` operation |
 | --- | --- |
@@ -85,6 +85,9 @@ one policy-specific registration claim per timer and delegates as follows:
 
 `ensure_scheduled` retains an already scheduled earlier deadline;
 `reconcile_schedule` is authoritative and may move it in either direction.
+Lifecycle reconciliation always creates `Retained` declarations. Public and
+lifecycle timers mapped to `RemoveWhenStopped` use direct registration and must
+not be stored in a reconciliation slot after removal.
 The canonical registry is the only pending-command machine. Canic must not
 port its `TimerControl` or pending reconciliation state into the adapter.
 
@@ -138,9 +141,9 @@ must iterate its bounded claim-custody collection:
 This custody collection is composition, not a second timer state machine.
 Canic must not restore provider handles, generations, deadlines, counters,
 pending commands, or snapshot values as mutation authority. A typed
-owner/group capability is therefore unnecessary for 0.3.2; if later required,
-it is new public functionality for a 0.4.0 design, not a patch addition or
-permission to retain Canic's parallel registry.
+owner/group capability is therefore unnecessary for this contract; if later
+required, it is new public functionality for a 0.4.0 design, not a patch
+addition or permission to retain Canic's parallel registry.
 
 ## Adoption gate
 

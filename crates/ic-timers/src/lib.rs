@@ -8,7 +8,8 @@
 //! The 0.3 runtime executes `Once`, after-completion, and pre-armed
 //! synchronous watchdog callbacks through one volatile canister-local registry.
 //! Consumers retain durable application authority and synchronously reconstruct
-//! desired registrations during their existing lifecycle hooks.
+//! retained registrations during their existing lifecycle hooks. Transient
+//! remove-on-stop callbacks use direct registration.
 
 #![forbid(unsafe_code)]
 #![deny(rustdoc::broken_intra_doc_links)]

@@ -319,11 +319,12 @@ where
 ///
 /// `Some(schedule)` is authoritative and may move an existing deadline in
 /// either direction. `None` retains an inactive declaration in the canonical
-/// inventory, including on a fresh heap.
+/// inventory, including on a fresh heap. Lifecycle reconciliation always owns
+/// a [`DeclarationLifetime::Retained`] declaration; transient
+/// `RemoveWhenStopped` callbacks use [`register_once`] directly.
 pub fn reconcile_once<F, Fut>(
     registration: &mut Option<OnceRegistration>,
     identity: &TimerIdentity,
-    lifetime: DeclarationLifetime,
     desired: Option<TimerSchedule>,
     callback: F,
 ) -> Result<(), TimerError>
@@ -332,13 +333,16 @@ where
     Fut: Future<Output = TimerRunResult> + 'static,
 {
     if registration.is_none() {
-        *registration = Some(register_once(identity.clone(), lifetime, callback)?);
+        *registration = Some(register_once(
+            identity.clone(),
+            DeclarationLifetime::Retained,
+            callback,
+        )?);
     }
     verify_declaration(
         registration.as_ref().map(OnceRegistration::identity),
         identity,
         crate::TimerPolicy::Once,
-        lifetime,
     )?;
     registration
         .as_ref()
@@ -351,12 +355,13 @@ where
 /// The consumer owns `registration` in volatile state. A fresh Wasm heap has
 /// `None`, so this function installs callback authority before reconciling it
 /// active or inactive. A repeated call reuses the exact claim and does not
-/// replace its callback.
+/// replace its callback. The installed declaration is always retained;
+/// transient `RemoveWhenStopped` recurrence uses
+/// [`register_after_completion`] directly.
 pub fn reconcile_after_completion<F, Fut>(
     registration: &mut Option<AfterCompletionRegistration>,
     identity: &TimerIdentity,
     cadence: TimerCadence,
-    lifetime: DeclarationLifetime,
     desired: TimerReconcileState,
     callback: F,
 ) -> Result<(), TimerError>
@@ -368,7 +373,7 @@ where
         *registration = Some(register_after_completion(
             identity.clone(),
             cadence,
-            lifetime,
+            DeclarationLifetime::Retained,
             callback,
         )?);
     }
@@ -378,7 +383,6 @@ where
             .map(AfterCompletionRegistration::identity),
         identity,
         crate::TimerPolicy::AfterCompletion { cadence },
-        lifetime,
     )?;
     let registration = registration
         .as_ref()
@@ -394,11 +398,11 @@ where
 /// Durable readiness remains consumer-owned. Fresh inactive authority still
 /// installs an observable retained declaration. This helper owns no lifecycle
 /// export and persists no policy, generation, provider handle, or callback.
+/// Transient `RemoveWhenStopped` watchdogs use [`register_watchdog`] directly.
 pub fn reconcile_watchdog<F>(
     registration: &mut Option<WatchdogRegistration>,
     identity: &TimerIdentity,
     cadence: TimerCadence,
-    lifetime: DeclarationLifetime,
     desired: TimerReconcileState,
     callback: F,
 ) -> Result<(), TimerError>
@@ -409,7 +413,7 @@ where
         *registration = Some(register_watchdog(
             identity.clone(),
             cadence,
-            lifetime,
+            DeclarationLifetime::Retained,
             callback,
         )?);
     }
@@ -417,7 +421,6 @@ where
         registration.as_ref().map(WatchdogRegistration::identity),
         identity,
         crate::TimerPolicy::Watchdog { cadence },
-        lifetime,
     )?;
     let registration = registration
         .as_ref()
@@ -432,13 +435,12 @@ fn verify_declaration(
     claimed_identity: Option<&TimerIdentity>,
     identity: &TimerIdentity,
     policy: crate::TimerPolicy,
-    lifetime: DeclarationLifetime,
 ) -> Result<(), TimerError> {
     if claimed_identity != Some(identity) {
         return Err(TimerError::ReconciliationConflict);
     }
     let snapshot = timer_snapshot(identity)?.ok_or(TimerError::RegistrationExpired)?;
-    if snapshot.policy() != policy || snapshot.lifetime() != lifetime {
+    if snapshot.policy() != policy || snapshot.lifetime() != DeclarationLifetime::Retained {
         return Err(TimerError::ReconciliationConflict);
     }
     Ok(())
@@ -740,6 +742,10 @@ fn install_provider_handle(
 }
 
 fn confirm_effect(effect: &RegistryEffect) -> Result<(), TimerError> {
+    #[cfg(test)]
+    if take_provider_confirmation_fault() {
+        return Err(TimerError::OwnershipInvariant);
+    }
     with_registry_mut(|registry| {
         registry
             .confirm_effect_applied(effect)
@@ -1020,7 +1026,8 @@ fn with_registry_mut<T>(
 fn reset_for_test(now_ns: u64, canister_version: u64) {
     platform::reset(now_ns, canister_version);
     WATCHDOG_COMPLETION_FAULT.with(|fault| fault.set(false));
-    PROVIDER_INSTALL_FAULT.with(|fault| fault.set(false));
+    PROVIDER_INSTALL_FAULT_AFTER.with(|fault| fault.set(None));
+    PROVIDER_CONFIRMATION_FAULT.with(|fault| fault.set(false));
     RUNTIME.with(|runtime| {
         *runtime.borrow_mut() = None;
     });
@@ -1029,7 +1036,8 @@ fn reset_for_test(now_ns: u64, canister_version: u64) {
 #[cfg(test)]
 thread_local! {
     static WATCHDOG_COMPLETION_FAULT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
-    static PROVIDER_INSTALL_FAULT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    static PROVIDER_INSTALL_FAULT_AFTER: std::cell::Cell<Option<u64>> = const { std::cell::Cell::new(None) };
+    static PROVIDER_CONFIRMATION_FAULT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
 #[cfg(test)]
@@ -1044,12 +1052,37 @@ fn take_watchdog_completion_fault() -> bool {
 
 #[cfg(test)]
 fn inject_provider_install_fault() {
-    PROVIDER_INSTALL_FAULT.with(|fault| fault.set(true));
+    inject_provider_install_fault_after(0);
+}
+
+#[cfg(test)]
+fn inject_provider_install_fault_after(successful_installs: u64) {
+    PROVIDER_INSTALL_FAULT_AFTER.with(|fault| fault.set(Some(successful_installs)));
 }
 
 #[cfg(test)]
 fn take_provider_install_fault() -> bool {
-    PROVIDER_INSTALL_FAULT.with(|fault| fault.replace(false))
+    PROVIDER_INSTALL_FAULT_AFTER.with(|fault| match fault.get() {
+        Some(0) => {
+            fault.set(None);
+            true
+        }
+        Some(remaining) => {
+            fault.set(Some(remaining - 1));
+            false
+        }
+        None => false,
+    })
+}
+
+#[cfg(test)]
+fn inject_provider_confirmation_fault() {
+    PROVIDER_CONFIRMATION_FAULT.with(|fault| fault.set(true));
+}
+
+#[cfg(test)]
+fn take_provider_confirmation_fault() -> bool {
+    PROVIDER_CONFIRMATION_FAULT.with(|fault| fault.replace(false))
 }
 
 #[cfg(test)]

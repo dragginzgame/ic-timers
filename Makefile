@@ -120,7 +120,9 @@ shell-check:
 
 release-check:
 	bash scripts/release/test-finalize-changelog.sh
+	bash scripts/release/test-finalize-release-truth.sh
 	bash scripts/release/test-release-gate.sh
+	bash scripts/release/check-release-truth.sh
 
 provider-check:
 	bash scripts/ci/check-provider-boundary.sh
@@ -188,7 +190,10 @@ release-x:
 	+$(MAKE) --no-print-directory release-push
 
 release-stage:
-	git add Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md crates/ic-timers/Cargo.toml
+	@version="$$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"; \
+		git add Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md \
+			crates/ic-timers/Cargo.toml docs/status/current.md docs/adoption/canic.md \
+			"docs/changelog/$${version}.md"
 
 release-commit:
 	@bash scripts/release/commit-release.sh

@@ -7,9 +7,9 @@ arms and clears the platform timers. This crate is intended to add one place
 for timer identity, scheduling policy, execution arbitration, observability,
 and lifecycle recovery.
 
-Version 0.3.2 is the current published release. It contains the complete
-bounded runtime, PocketIC recovery-watchdog evidence, and post-0.3 hardening;
-neither IcyDB nor Canic has adopted the runtime yet.
+The current release contains the complete bounded runtime, PocketIC
+recovery-watchdog evidence, and post-0.3 hardening; neither IcyDB nor Canic has
+adopted the runtime yet.
 
 ## Why wrap `ic-cdk-timers`?
 
@@ -67,9 +67,10 @@ The current crate contains:
 - live, inert policy-specific snapshots, with split scheduler/work counters,
   truthful unacknowledged dispatches, functional expected-failure state, and
   normally completed scheduler/work instruction aggregates;
-- synchronous idempotent reconciliation helpers whose caller-owned volatile
-  registration slot prevents duplicate callback replacement and whose desired
-  state remains derived from consumer durable authority;
+- synchronous idempotent reconciliation helpers that always retain fixed
+  lifecycle declarations, whose caller-owned volatile registration slot
+  prevents duplicate callback replacement, and whose desired state remains
+  derived from consumer durable authority;
 - exact ordinary reconciliation that can replace an earlier or later deadline,
   plus a `reconcile_once` lifecycle helper;
 - a private, linear one-shot provider boundary over `ic-cdk-timers` 1.0.0.
@@ -125,6 +126,11 @@ registration, then invokes each consumer's reconciliation during `init` and
 `post_upgrade` before downstream hooks. Consumers persist their own desired
 state; `ic-timers` persists no policy, handle, generation, epoch, or application
 authority.
+
+Lifecycle reconciliation is intentionally retained-only so an inactive fixed
+owner remains observable and keeps its capacity reservation. Transient
+`RemoveWhenStopped` callbacks use the direct registration functions and are
+registered again by their owner if later desired.
 
 All consumers must resolve to the same `ic-timers` Cargo package ID. Two
 resolved versions contain two independent library statics and do not share a

@@ -4,6 +4,25 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.3.4]
+
+### Changed
+
+- Hard-cut lifecycle reconciliation to retained declarations. The three
+  reconciliation helpers no longer accept a declaration lifetime;
+  `RemoveWhenStopped` callbacks remain available through direct registration.
+- Make runner-executed release and provider-boundary checks portable without
+  requiring `rg` on GitHub-hosted runners.
+
+### Fixed
+
+- Add policy-wide provider-binding fault evidence for initial and replacement
+  arms, after-completion, partial watchdog binding, effect confirmation, and
+  remove-on-stop cleanup.
+- Finalize and validate mutable release truth mechanically, including the
+  workspace status and version-specific release note, while keeping README and
+  the Canic contract version-neutral.
+
 ## [0.3.3] - 2026-08-14
 
 ### Fixed

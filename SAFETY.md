@@ -28,11 +28,14 @@ The 0.3 runtime provides:
   ordinary timers, at most successor plus work for watchdogs), with terminal
   cancellation clearing the actual handles and all direct `ic-cdk-timers` use
   isolated in the private, non-re-exported `platform` module;
-- synchronous idempotent reconstruction from a caller-owned volatile claim
-  slot and caller-supplied desired state, without persisted library authority;
+- synchronous idempotent reconstruction of retained declarations from a
+  caller-owned volatile claim slot and caller-supplied desired state, without
+  persisted library authority;
 - fresh inactive lifecycle reconciliation that retains an observable
   declaration and consumes no provider handle, allowing fixed owners to reserve
   bounded inventory capacity before application hooks;
+- direct registration, rather than lifecycle reconciliation, for transient
+  `RemoveWhenStopped` declarations whose capability expires on removal;
 - exact ordinary reconciliation whose pending command has one canonical owner
   in the registry and can replace a live deadline in either direction;
 - work-scoped `TimerContext` delegation validated against the exact callback

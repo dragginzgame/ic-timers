@@ -94,6 +94,11 @@ Each layer lands with its owner-local correctness tests. Cross-owner
 real-canister evidence closes the final patch rather than substituting for
 pure transition coverage.
 
+Lifecycle reconciliation always installs retained declarations so a
+caller-owned `Option<Registration>` cannot outlive a remove-on-stop canonical
+entry. Transient `RemoveWhenStopped` timers use direct registration and are
+recreated explicitly by their owner if later desired.
+
 ## Safety boundary
 
 An after-completion interval is not a watchdog: if its callback traps or runs

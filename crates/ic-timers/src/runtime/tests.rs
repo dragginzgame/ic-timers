@@ -19,6 +19,31 @@ fn setup() -> TimerEpoch {
     initialize_runtime().expect("runtime initialization should succeed")
 }
 
+fn assert_retained_provider_binding_failure(
+    timer: &TimerIdentity,
+    schedule_requests: u64,
+    wakeups_armed: u64,
+) {
+    let failed = timer_snapshot(timer)
+        .expect("snapshot lookup should succeed")
+        .expect("retained registration should remain declared");
+    assert_eq!(
+        failed.state(),
+        TimerRuntimeStateSnapshot::Inactive {
+            reason: InactiveReason::ControlFailure(TimerControlFailure::ProviderBindingFailed),
+        }
+    );
+    assert_eq!(failed.generation(), None);
+    assert_eq!(
+        failed.observability().counters().schedule_requests(),
+        schedule_requests
+    );
+    assert_eq!(
+        failed.observability().counters().wakeups_armed(),
+        wakeups_armed
+    );
+}
+
 #[test]
 fn initialization_is_required_and_idempotent() {
     reset_for_test(10, 7);
@@ -43,19 +68,14 @@ fn fresh_inactive_reconciliation_reserves_complete_retained_inventory() {
     let mut after = None;
     let mut watchdog = None;
 
-    reconcile_once(
-        &mut once,
-        &once_identity,
-        DeclarationLifetime::Retained,
-        None,
-        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
-    )
+    reconcile_once(&mut once, &once_identity, None, |_context| async {
+        TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop)
+    })
     .expect("fresh inactive once declaration should be retained");
     reconcile_after_completion(
         &mut after,
         &after_identity,
         cadence,
-        DeclarationLifetime::Retained,
         TimerReconcileState::Inactive,
         |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
     )
@@ -64,7 +84,6 @@ fn fresh_inactive_reconciliation_reserves_complete_retained_inventory() {
         &mut watchdog,
         &watchdog_identity,
         cadence,
-        DeclarationLifetime::Retained,
         TimerReconcileState::Inactive,
         |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
     )
@@ -88,6 +107,7 @@ fn fresh_inactive_reconciliation_reserves_complete_retained_inventory() {
         ]
     );
     for snapshot in snapshots {
+        assert_eq!(snapshot.lifetime(), DeclarationLifetime::Retained);
         assert_eq!(
             snapshot.state(),
             TimerRuntimeStateSnapshot::Inactive {
@@ -736,18 +756,7 @@ fn public_provider_install_failure_retires_false_scheduled_state() {
         0,
         "failed replacement must clear both old and new provider arms"
     );
-    let failed = timer_snapshot(&timer)
-        .expect("snapshot lookup should succeed")
-        .expect("retained registration should remain declared");
-    assert_eq!(
-        failed.state(),
-        TimerRuntimeStateSnapshot::Inactive {
-            reason: InactiveReason::ControlFailure(TimerControlFailure::ProviderBindingFailed),
-        }
-    );
-    assert_eq!(failed.generation(), None);
-    assert_eq!(failed.observability().counters().schedule_requests(), 2);
-    assert_eq!(failed.observability().counters().wakeups_armed(), 1);
+    assert_retained_provider_binding_failure(&timer, 2, 1);
 
     registration
         .ensure_scheduled(TimerSchedule::At(15))
@@ -757,6 +766,118 @@ fn public_provider_install_failure_retires_false_scheduled_state() {
     assert!(run_next_due());
     assert_eq!(calls.get(), 1);
     assert_eq!(timer_count(), 0);
+}
+
+#[test]
+fn initial_once_provider_install_failure_retires_false_scheduled_state() {
+    setup();
+    let timer = identity("provider-initial-once-fault");
+    let registration = register_once(
+        timer.clone(),
+        DeclarationLifetime::Retained,
+        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+    )
+    .expect("registration should succeed");
+
+    inject_provider_install_fault();
+    assert!(matches!(
+        registration.ensure_scheduled(TimerSchedule::At(15)),
+        Err(TimerError::OwnershipInvariant)
+    ));
+    assert_eq!(timer_count(), 0);
+    assert_retained_provider_binding_failure(&timer, 1, 0);
+}
+
+#[test]
+fn after_completion_provider_install_failure_retires_false_scheduled_state() {
+    setup();
+    let timer = identity("provider-after-completion-fault");
+    let registration = register_after_completion(
+        timer.clone(),
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+        DeclarationLifetime::Retained,
+        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+    )
+    .expect("registration should succeed");
+
+    inject_provider_install_fault();
+    assert!(matches!(
+        registration.ensure_scheduled(),
+        Err(TimerError::OwnershipInvariant)
+    ));
+    assert_eq!(timer_count(), 0);
+    assert_retained_provider_binding_failure(&timer, 1, 0);
+}
+
+#[test]
+fn watchdog_partial_provider_binding_clears_its_committed_successor() {
+    setup();
+    let timer = identity("provider-watchdog-partial-fault");
+    let registration = register_watchdog(
+        timer.clone(),
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+        DeclarationLifetime::Retained,
+        |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue),
+    )
+    .expect("registration should succeed");
+    registration
+        .ensure_scheduled()
+        .expect("initial scheduler should arm");
+
+    inject_provider_install_fault_after(1);
+    set_time(15);
+    assert!(run_next_due(), "scheduler callback should execute");
+    assert_eq!(timer_count(), 0, "partial binding must clear its successor");
+    assert_retained_provider_binding_failure(&timer, 1, 1);
+}
+
+#[test]
+fn provider_confirmation_failure_clears_the_installed_handle() {
+    setup();
+    let timer = identity("provider-confirmation-fault");
+    let registration = register_once(
+        timer.clone(),
+        DeclarationLifetime::Retained,
+        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+    )
+    .expect("registration should succeed");
+
+    inject_provider_confirmation_fault();
+    assert!(matches!(
+        registration.ensure_scheduled(TimerSchedule::At(15)),
+        Err(TimerError::OwnershipInvariant)
+    ));
+    assert_eq!(timer_count(), 0);
+    assert_retained_provider_binding_failure(&timer, 1, 0);
+}
+
+#[test]
+fn remove_on_stop_provider_failure_removes_the_expired_claim() {
+    setup();
+    let timer = identity("provider-remove-on-stop-fault");
+    let registration = register_once(
+        timer.clone(),
+        DeclarationLifetime::RemoveWhenStopped,
+        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+    )
+    .expect("registration should succeed");
+
+    inject_provider_install_fault();
+    assert!(matches!(
+        registration.ensure_scheduled(TimerSchedule::At(15)),
+        Err(TimerError::OwnershipInvariant)
+    ));
+    assert_eq!(timer_count(), 0);
+    assert!(
+        timer_snapshot(&timer)
+            .expect("snapshot lookup should succeed")
+            .is_none(),
+        "remove-on-stop failure must not retain a false declaration"
+    );
+    assert!(matches!(
+        registration.ensure_scheduled(TimerSchedule::At(20)),
+        Err(TimerError::RegistrationExpired)
+    ));
 }
 
 #[test]
@@ -891,7 +1012,6 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         &mut registration,
         &timer,
         cadence,
-        DeclarationLifetime::Retained,
         TimerReconcileState::Scheduled,
         move |_context| {
             advance_instructions(13);
@@ -913,7 +1033,6 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         &mut registration,
         &timer,
         cadence,
-        DeclarationLifetime::Retained,
         TimerReconcileState::Scheduled,
         |_context| {
             WatchdogRunResult::new(
@@ -973,7 +1092,6 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         &mut registration,
         &timer,
         cadence,
-        DeclarationLifetime::Retained,
         TimerReconcileState::Scheduled,
         |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
     )
@@ -1005,7 +1123,6 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         &mut registration,
         &timer,
         cadence,
-        DeclarationLifetime::Retained,
         TimerReconcileState::Scheduled,
         |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
     )
@@ -1018,7 +1135,6 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         &mut registration,
         &timer,
         cadence,
-        DeclarationLifetime::Retained,
         TimerReconcileState::Inactive,
         |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue),
     )
@@ -1029,7 +1145,6 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         &mut registration,
         &timer,
         TimerCadence::from_nanos(6).expect("fixture cadence should be valid"),
-        DeclarationLifetime::Retained,
         TimerReconcileState::Inactive,
         |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
     );
@@ -1048,7 +1163,6 @@ fn after_completion_reconstruction_reuses_its_exact_claim() {
         &mut registration,
         &timer,
         cadence,
-        DeclarationLifetime::Retained,
         TimerReconcileState::Scheduled,
         move |_context| {
             callback_calls.set(callback_calls.get().saturating_add(1));
@@ -1060,7 +1174,6 @@ fn after_completion_reconstruction_reuses_its_exact_claim() {
         &mut registration,
         &timer,
         cadence,
-        DeclarationLifetime::Retained,
         TimerReconcileState::Scheduled,
         |_context| async {
             TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop)
@@ -1089,7 +1202,6 @@ fn once_reconciliation_owns_one_exact_deadline_and_retains_its_callback() {
     reconcile_once(
         &mut registration,
         &timer,
-        DeclarationLifetime::Retained,
         Some(TimerSchedule::At(20)),
         move |_context| {
             callback_calls.set(callback_calls.get().saturating_add(1));
@@ -1100,7 +1212,6 @@ fn once_reconciliation_owns_one_exact_deadline_and_retains_its_callback() {
     reconcile_once(
         &mut registration,
         &timer,
-        DeclarationLifetime::Retained,
         Some(TimerSchedule::At(40)),
         |_context| async {
             TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop)
@@ -1115,15 +1226,9 @@ fn once_reconciliation_owns_one_exact_deadline_and_retains_its_callback() {
         Some(40)
     );
 
-    reconcile_once(
-        &mut registration,
-        &timer,
-        DeclarationLifetime::Retained,
-        None,
-        |_context| async {
-            TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop)
-        },
-    )
+    reconcile_once(&mut registration, &timer, None, |_context| async {
+        TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop)
+    })
     .expect("inactive reconciliation should clear the exact handle");
     assert_eq!(timer_count(), 0);
 

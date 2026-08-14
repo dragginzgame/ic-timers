@@ -72,12 +72,15 @@ if git rev-parse --verify --quiet "refs/tags/v${new_version}" >/dev/null; then
     exit 1
 fi
 
-bash scripts/release/finalize-changelog.sh --check "${new_version}"
+release_date="$(date +%F)"
+bash scripts/release/finalize-changelog.sh --check "${new_version}" "${release_date}"
+bash scripts/release/finalize-release-truth.sh --check "${previous_version}" "${new_version}"
 
 make --no-print-directory ensure-clean
 make --no-print-directory release-verify
 
-bash scripts/release/finalize-changelog.sh "${new_version}"
+bash scripts/release/finalize-changelog.sh "${new_version}" "${release_date}"
+bash scripts/release/finalize-release-truth.sh "${previous_version}" "${new_version}"
 
 IC_TIMERS_PREVIOUS_VERSION="${previous_version}" \
 IC_TIMERS_NEW_VERSION="${new_version}" \
@@ -92,6 +95,7 @@ cargo update --manifest-path testing/Cargo.toml --offline -p ic-timers
 cargo metadata --locked --offline --no-deps --format-version 1 >/dev/null
 cargo metadata --manifest-path testing/Cargo.toml \
     --locked --offline --no-deps --format-version 1 >/dev/null
+bash scripts/release/check-release-truth.sh
 
 echo "Bumped: ${previous_version} -> ${new_version}"
 echo "Review with git diff, then use release-stage, release-commit, and release-push."
