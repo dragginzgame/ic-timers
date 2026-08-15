@@ -121,6 +121,7 @@ shell-check:
 release-check:
 	bash scripts/release/test-finalize-changelog.sh
 	bash scripts/release/test-finalize-release-truth.sh
+	bash scripts/release/test-release-prose-warning.sh
 	bash scripts/release/test-release-gate.sh
 	bash scripts/release/check-release-truth.sh
 

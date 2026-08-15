@@ -152,7 +152,7 @@ const fn checked_deadline_after(now_ns: u64, delay_ns: u64) -> Result<u64, Sched
     }
 }
 
-fn duration_ns(duration: Duration) -> Result<u64, ScheduleError> {
+pub(crate) fn duration_ns(duration: Duration) -> Result<u64, ScheduleError> {
     u64::try_from(duration.as_nanos()).map_err(|_| ScheduleError::DelayOutOfRange)
 }
 

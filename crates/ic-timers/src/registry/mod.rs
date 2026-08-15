@@ -1,20 +1,23 @@
-//! Pure bounded registry and policy-specific transition engine.
+//! Bounded canonical registry and provider-neutral policy transition engine.
 //!
-//! It emits provider-neutral effects; the runtime binds those effects to
-//! linear `ic-cdk-timers` handles without replacing this ownership or state
-//! model.
+//! The registry emits provider-neutral effects. The runtime binds them to
+//! linear provider handles while the registry remains the sole logical state
+//! authority.
 
 use crate::{
-    DeclarationLifetime, InactiveReason, OrdinaryRuntimeStateSnapshot, ScheduleError, TimerCadence,
-    TimerCompletion, TimerCompletionOutcome, TimerControl, TimerControlAction, TimerControlError,
-    TimerControlFailure, TimerDirective, TimerDirectiveSnapshot, TimerEpoch, TimerIdentity,
-    TimerObservabilitySnapshot, TimerPolicy, TimerRunResult, TimerRuntimeStateSnapshot,
-    TimerSchedule, TimerSchedulingMode, TimerSnapshot, WatchdogAttemptSnapshot,
-    WatchdogAttemptStatus, WatchdogDecision, WatchdogRunResult, WatchdogRuntimeStateSnapshot,
+    control::{TimerControl, TimerControlAction, TimerControlError, TimerRegistration},
     platform::TimerHandle,
-    runtime::{TimerContext, TimerFuture},
+    runtime::TimerContext,
+    schedule::{ScheduleError, TimerCadence, TimerDirective, TimerSchedule},
+    snapshot::{
+        DeclarationLifetime, InactiveReason, OrdinaryRuntimeStateSnapshot, TimerCompletion,
+        TimerCompletionOutcome, TimerControlFailure, TimerDirectiveSnapshot, TimerEpoch,
+        TimerIdentity, TimerObservabilitySnapshot, TimerPolicy, TimerRunResult,
+        TimerRuntimeStateSnapshot, TimerSchedulingMode, TimerSnapshot, WatchdogAttemptSnapshot,
+        WatchdogAttemptStatus, WatchdogDecision, WatchdogRunResult, WatchdogRuntimeStateSnapshot,
+    },
 };
-use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
+use std::{cell::RefCell, collections::BTreeMap, future::Future, pin::Pin, rc::Rc};
 use thiserror::Error;
 
 /// Maximum declarations owned by one canonical registry.
@@ -197,7 +200,8 @@ pub enum RegistryError {
     Schedule(#[from] ScheduleError),
 }
 
-pub type OrdinaryCallback = Rc<RefCell<Box<dyn FnMut(TimerContext) -> TimerFuture>>>;
+type OrdinaryFuture = Pin<Box<dyn Future<Output = TimerRunResult>>>;
+pub type OrdinaryCallback = Rc<RefCell<Box<dyn FnMut(TimerContext) -> OrdinaryFuture>>>;
 pub type WatchdogCallback = Rc<RefCell<Box<dyn FnMut(TimerContext) -> WatchdogRunResult>>>;
 
 enum EntryCallback {
@@ -220,7 +224,7 @@ pub struct ProviderHandle {
 }
 
 impl ProviderHandle {
-    pub fn into_parts(self) -> (CallbackToken, TimerHandle) {
+    pub(crate) fn into_parts(self) -> (CallbackToken, TimerHandle) {
         (self.token, self.handle)
     }
 }
@@ -233,15 +237,18 @@ pub struct ProviderHandles {
 }
 
 impl ProviderHandles {
-    pub const fn from_parts(wakeup: Option<ProviderHandle>, work: Option<ProviderHandle>) -> Self {
+    pub(crate) const fn from_parts(
+        wakeup: Option<ProviderHandle>,
+        work: Option<ProviderHandle>,
+    ) -> Self {
         Self { wakeup, work }
     }
 
-    pub const fn take_wakeup(&mut self) -> Option<ProviderHandle> {
+    pub(crate) const fn take_wakeup(&mut self) -> Option<ProviderHandle> {
         self.wakeup.take()
     }
 
-    pub const fn take_work(&mut self) -> Option<ProviderHandle> {
+    pub(crate) const fn take_work(&mut self) -> Option<ProviderHandle> {
         self.work.take()
     }
 }
@@ -395,17 +402,17 @@ impl Entry {
                 inactive_reason,
                 ..
             } => match control.registration() {
-                crate::TimerRegistration::Unregistered => TimerRuntimeStateSnapshot::Inactive {
+                TimerRegistration::Unregistered => TimerRuntimeStateSnapshot::Inactive {
                     reason: *inactive_reason,
                 },
-                crate::TimerRegistration::Scheduled {
+                TimerRegistration::Scheduled {
                     generation,
                     deadline_ns,
                 } => TimerRuntimeStateSnapshot::Ordinary(OrdinaryRuntimeStateSnapshot::Scheduled {
                     generation,
                     deadline_ns,
                 }),
-                crate::TimerRegistration::Running { generation } => {
+                TimerRegistration::Running { generation } => {
                     TimerRuntimeStateSnapshot::Ordinary(OrdinaryRuntimeStateSnapshot::Running {
                         generation,
                     })
@@ -621,7 +628,8 @@ impl TimerRegistry {
     /// Reconcile an ordinary declaration to one exact desired schedule.
     ///
     /// Unlike `ensure`, reconciliation may move an existing deadline later.
-    /// `None` retains callback authority while cancelling live work.
+    /// `None` cancels live work; declaration lifetime determines whether the
+    /// callback authority remains registered.
     pub(crate) fn reconcile_ordinary(
         &mut self,
         claim: &RegistrationClaim,
@@ -682,7 +690,7 @@ impl TimerRegistry {
                         ..
                     } if matches!(
                         control.registration(),
-                        crate::TimerRegistration::Scheduled { .. }
+                        TimerRegistration::Scheduled { .. }
                     )
                 );
                 (
@@ -761,10 +769,8 @@ impl TimerRegistry {
 
         let (action, was_running) = match &mut entry.control {
             EntryControl::Ordinary { control, .. } => {
-                let was_running = matches!(
-                    control.registration(),
-                    crate::TimerRegistration::Running { .. }
-                );
+                let was_running =
+                    matches!(control.registration(), TimerRegistration::Running { .. });
                 let action = match request {
                     OrdinaryRequest::Ensure => control.schedule(requested.deadline_ns),
                     OrdinaryRequest::Reconcile => control.reconcile(requested.deadline_ns),
@@ -905,10 +911,10 @@ impl TimerRegistry {
                     };
                     let mut remove = false;
                     let transition = match (before, action) {
-                        (crate::TimerRegistration::Unregistered, TimerControlAction::None) => {
+                        (TimerRegistration::Unregistered, TimerControlAction::None) => {
                             RegistryTransition::normal(RegistryEffect::None)
                         }
-                        (crate::TimerRegistration::Running { .. }, TimerControlAction::None) => {
+                        (TimerRegistration::Running { .. }, TimerControlAction::None) => {
                             if !matches!(*pending, Some(OrdinaryPending::Unregister)) {
                                 *pending = Some(OrdinaryPending::Cancel);
                             }
@@ -925,7 +931,7 @@ impl TimerRegistry {
                                 false,
                             ))
                         }
-                        (crate::TimerRegistration::Scheduled { .. }, TimerControlAction::None)
+                        (TimerRegistration::Scheduled { .. }, TimerControlAction::None)
                         | (
                             _,
                             TimerControlAction::Arm { .. }
@@ -980,10 +986,7 @@ impl TimerRegistry {
             let entry = self.entry(&claim)?;
             match &entry.control {
                 EntryControl::Ordinary { control, .. }
-                    if matches!(
-                        control.registration(),
-                        crate::TimerRegistration::Running { .. }
-                    ) =>
+                    if matches!(control.registration(), TimerRegistration::Running { .. }) =>
                 {
                     Some(CallbackRole::OrdinaryWork)
                 }
@@ -1114,7 +1117,7 @@ impl TimerRegistry {
                 return Err(RegistryError::StaleCallback);
             };
             if control.registration()
-                != (crate::TimerRegistration::Running {
+                != (TimerRegistration::Running {
                     generation: token.callback_generation,
                 })
             {
@@ -1656,7 +1659,7 @@ impl TimerRegistry {
         let valid = match (&entry.control, token.role) {
             (EntryControl::Ordinary { control, .. }, CallbackRole::OrdinaryWork) => matches!(
                 control.registration(),
-                crate::TimerRegistration::Scheduled { generation, .. }
+                TimerRegistration::Scheduled { generation, .. }
                     if generation == token.callback_generation
             ),
             (EntryControl::Watchdog(control), CallbackRole::WatchdogScheduler) => {
@@ -1765,7 +1768,7 @@ impl TimerRegistry {
 
     /// Confirm that the platform successfully applied one emitted arm effect.
     ///
-    /// Patch 3 calls this synchronously after owning the returned provider
+    /// The runtime calls this synchronously after binding the returned provider
     /// handles. Pure tests use it to distinguish requested effects from actual
     /// provider operations.
     pub(crate) fn confirm_effect_applied(
@@ -1782,7 +1785,7 @@ impl TimerRegistry {
                     (EntryControl::Ordinary { control, .. }, CallbackRole::OrdinaryWork) => {
                         matches!(
                             control.registration(),
-                            crate::TimerRegistration::Scheduled { generation, .. }
+                            TimerRegistration::Scheduled { generation, .. }
                                 if generation == token.callback_generation
                         )
                     }
@@ -1899,7 +1902,7 @@ impl TimerRegistry {
         let active = match (&entry.control, token.role) {
             (EntryControl::Ordinary { control, .. }, CallbackRole::OrdinaryWork) => matches!(
                 control.registration(),
-                crate::TimerRegistration::Running { generation }
+                TimerRegistration::Running { generation }
                     if generation == token.callback_generation
             ),
             (EntryControl::Watchdog(control), CallbackRole::WatchdogWork) => matches!(
@@ -2050,7 +2053,7 @@ fn terminal_completion(
     else {
         return RegistryTransition::terminal(RegistryEffect::None, failure);
     };
-    if control.registration() == (crate::TimerRegistration::Running { generation }) {
+    if control.registration() == (TimerRegistration::Running { generation }) {
         control.terminate();
     }
     *pending = None;
@@ -2076,7 +2079,7 @@ fn invariant_completion(
     else {
         return RegistryTransition::normal(RegistryEffect::None);
     };
-    if control.registration() == (crate::TimerRegistration::Running { generation }) {
+    if control.registration() == (TimerRegistration::Running { generation }) {
         control.terminate();
     }
     *pending = None;

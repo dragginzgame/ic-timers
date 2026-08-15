@@ -64,7 +64,7 @@ The current crate contains:
 - fail-closed provider-effect binding for public control calls, preventing a
   failed arm or replacement from leaving a declaration falsely scheduled;
 - claim-scoped `has_armed_wakeup` observation on every registration
-  capability, reflecting exact future provider-handle ownership without
+  capability, reflecting exact armed provider-handle ownership without
   turning snapshots into control authority;
 - validated positive cadence, typed directives, and checked deadline
   calculation;
@@ -95,7 +95,7 @@ consumer work.
 
 These guarantees apply only to `Watchdog`. Ordinary after-completion recurrence
 arms its successor after normal return and therefore cannot survive a trap or
-instruction exhaustion in consumer work. The remaining release work is
+instruction exhaustion in consumer work. The remaining project work is
 downstream adapter and adoption feedback, not another timer runtime. See
 [the architecture note](docs/architecture.md) for the intended boundary and
 implementation order, the frozen

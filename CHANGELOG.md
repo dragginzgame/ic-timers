@@ -4,6 +4,32 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.3.7]
+
+### Changed
+
+- Make the crate hierarchy explicit: the crate root remains the convenience
+  facade, `schedule` and `snapshot` remain public value groupings, and the
+  control, registry, runtime implementation, and provider boundary remain
+  private.
+- Use defining-module imports internally, share ordinary callback erasure and
+  duration validation, and document why atomic registry/runtime transitions
+  remain cohesive.
+- Correct lifetime, scheduling-mode, provider-arm, and work-count comments so
+  observations do not overstate retained authority or delivery guarantees.
+- Run full hosted Rust/MSRV validation once on pull requests and `main`; tag
+  pushes now run only release-truth, exact-tag, and main-ancestry checks instead
+  of duplicating the same builds at one commit.
+- Add a pre-bump compact-status prose advisory for wording likely to become
+  stale at release. It warns before expensive validation and always fails open;
+  structural post-mutation release truth remains the only enforced boundary.
+
+### Removed
+
+- Hard-cut the accidental public `TimerFuture` erasure alias. Ordinary
+  registration APIs continue to accept any compatible future; callback
+  erasure is now entirely internal.
+
 ## [0.3.6] - 2026-08-14
 
 ### Changed

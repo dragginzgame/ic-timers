@@ -32,6 +32,13 @@ cargo package --locked --offline --allow-dirty --list -p ic-timers
 - Does production code avoid panics for invalid input or recoverable state?
 - Is every public value inert data, validated configuration, or documented
   runtime authority, and is that role clear in its name and rustdoc?
+- Does the crate root expose only the intended facade, with provider, registry,
+  control, and dispatch modules still private?
+- Do implementation modules import from the defining module rather than
+  depending on accidental crate-root re-exports?
+- Are long registry/runtime functions still one atomic transition or binding
+  path? Split by responsibility, but do not fragment rollback-sensitive state
+  merely to reduce line counts.
 - Does every delegated callback capability expire with its exact work attempt,
   rather than inheriting the longer lifetime of a registration claim?
 - Can any public constructor bypass a validation or control invariant?

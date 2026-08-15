@@ -87,7 +87,11 @@ impl TimerSnapshot {
         self.state
     }
 
-    /// Return the reason for the current authoritative schedule.
+    /// Return the effective scheduling mode.
+    ///
+    /// A new declaration starts with its configured policy mode. Later
+    /// requests and completed directives update this value, including after
+    /// the declaration becomes inactive.
     #[must_use]
     pub const fn scheduling_mode(&self) -> TimerSchedulingMode {
         self.scheduling_mode
@@ -105,7 +109,7 @@ impl TimerSnapshot {
         self.latest_requested_delay_ns
     }
 
-    /// Return the latest relative delay represented by an arm effect.
+    /// Return the latest relative delay whose provider arm committed.
     #[must_use]
     pub const fn latest_armed_delay_ns(&self) -> Option<u64> {
         self.latest_armed_delay_ns

@@ -64,6 +64,13 @@ if ! grep -Fqx -- \
     exit 1
 fi
 
+if ! grep -Fqx -- \
+    'if ! bash scripts/release/warn-release-prose.sh "${new_version}"; then' \
+    "${bump_script}" >/dev/null; then
+    echo "error: version bump does not run the fail-open prose advisory" >&2
+    exit 1
+fi
+
 if ! grep -Fqx -- 'pocketic-watchdog: pocketic-check' "${makefile}" >/dev/null \
     || ! grep -Fqx -- 'pocketic-cohorts: pocketic-check' "${makefile}" >/dev/null; then
     echo "error: PocketIC suites do not verify the evidence binary first" >&2

@@ -22,6 +22,13 @@ notes are empty, the target is already dated, the requested version is not a
 strict canonical-SemVer increase, the exact release tag already exists, or the
 worktree is not clean.
 
+Before the clean-worktree and expensive evidence gates, the helper also scans
+the compact status for target-version wording likely to become stale, such as
+`candidate`, `unreleased`, or a next action to publish after release. This is
+advisory: it prints a warning and always continues. Free-form prose is never a
+post-mutation release blocker; exact Cargo, changelog, release-note, status
+marker, and tag structure remain the enforced truth.
+
 Use one of the standard release families:
 
 ```text
@@ -73,3 +80,11 @@ make publish
 
 The publish target requires a clean worktree with the current version tag at
 `HEAD`, verifies the package, and then publishes `ic-timers` to crates.io.
+
+Hosted full CI and MSRV validation run on pull requests and `main`. A tag push
+at the same commit does not repeat those Rust builds. Its small tag-only job
+instead verifies that the event tag exactly matches the Cargo version, the
+tagged commit is reachable from `main`, release truth is coherent, and the
+annotated version tag points to `HEAD`. This preserves protection against an
+independently pushed tag from an unmerged commit without running identical
+validation twice at one SHA.

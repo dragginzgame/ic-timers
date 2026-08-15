@@ -1,6 +1,6 @@
 //! Closed policy, state, outcome, and epoch values.
 
-use crate::{ScheduleError, TimerCadence, TimerDirective};
+use crate::schedule::{ScheduleError, TimerCadence, TimerDirective, duration_ns};
 use std::time::Duration;
 
 /// Configured recurrence policy for one logical timer.
@@ -59,7 +59,10 @@ pub enum DeclarationLifetime {
     RemoveWhenStopped,
 }
 
-/// Effective reason for the currently authoritative ordinary schedule.
+/// Latest effective scheduling reason for a declaration.
+///
+/// The value remains observable while inactive and is not itself evidence of
+/// an armed callback.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum TimerSchedulingMode {
     /// Initial or explicitly requested one-shot work.
@@ -156,10 +159,6 @@ impl From<TimerDirectiveSnapshot> for TimerDirective {
     }
 }
 
-fn duration_ns(duration: Duration) -> Result<u64, ScheduleError> {
-    u64::try_from(duration.as_nanos()).map_err(|_| ScheduleError::DelayOutOfRange)
-}
-
 /// Typed terminal failure in pure timer control.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum TimerControlFailure {
@@ -192,7 +191,7 @@ impl TimerControlFailure {
     }
 }
 
-/// Why a retained declaration currently has no authoritative callback.
+/// Why a declaration currently has no authoritative callback.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum InactiveReason {
     /// The declaration has not yet been scheduled.
@@ -282,7 +281,7 @@ pub enum WatchdogRuntimeStateSnapshot {
 /// Closed policy-specific runtime state.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum TimerRuntimeStateSnapshot {
-    /// The retained declaration has no authoritative callback.
+    /// The declaration has no authoritative callback.
     Inactive {
         /// Reason scheduling is inactive.
         reason: InactiveReason,
@@ -317,7 +316,7 @@ impl TimerRuntimeStateSnapshot {
 pub enum TimerRegistrationStatus {
     /// No callback is authoritative.
     Unregistered,
-    /// At least one provider callback is scheduled.
+    /// A wake-up generation is authoritative and consumer work is not running.
     Scheduled,
     /// Consumer work currently owns logical execution.
     Running,
@@ -377,7 +376,7 @@ pub enum TimerProcessCondition {
     Active,
     /// Waiting for an expected retry.
     Retrying,
-    /// Stopped by an invariant or control failure.
+    /// Stopped by a reported failure or invalid control state.
     Failed,
 }
 
@@ -480,14 +479,17 @@ impl TimerCompletion {
         self.outcome
     }
 
-    /// Return bounded application work units reported by the consumer.
+    /// Return application work units reported by the consumer.
     #[must_use]
     pub const fn work_count(self) -> u64 {
         self.work_count
     }
 }
 
-/// Ordinary callback result with one legal scheduling proposal.
+/// Ordinary callback result with one scheduling proposal.
+///
+/// The registry validates that the proposal is legal for the configured
+/// policy.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TimerRunResult {
     completion: TimerCompletion,

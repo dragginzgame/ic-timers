@@ -80,13 +80,13 @@ impl TimerControl {
     /// Return the latest allocated callback generation.
     #[must_use]
     #[cfg(test)]
-    pub const fn generation(&self) -> u64 {
+    pub(crate) const fn generation(&self) -> u64 {
         self.generation
     }
 
     /// Return the current logical registration.
     #[must_use]
-    pub const fn registration(&self) -> TimerRegistration {
+    pub(crate) const fn registration(&self) -> TimerRegistration {
         self.registration
     }
 
@@ -101,7 +101,10 @@ impl TimerControl {
     }
 
     /// Schedule a deadline, retaining an already scheduled earlier deadline.
-    pub fn schedule(&mut self, deadline_ns: u64) -> Result<TimerControlAction, TimerControlError> {
+    pub(crate) fn schedule(
+        &mut self,
+        deadline_ns: u64,
+    ) -> Result<TimerControlAction, TimerControlError> {
         let sequence = self.next_request_sequence()?;
 
         match self.registration {
@@ -141,8 +144,11 @@ impl TimerControl {
         }
     }
 
-    /// Cancel this timer, deferring cancellation safely when a callback runs.
-    pub fn cancel(&mut self) -> Result<TimerControlAction, TimerControlError> {
+    /// Cancel scheduled state immediately.
+    ///
+    /// Running work returns no direct action so the canonical registry can
+    /// arbitrate its pending command without a second pending-state machine.
+    pub(crate) fn cancel(&mut self) -> Result<TimerControlAction, TimerControlError> {
         let sequence = self.next_request_sequence()?;
 
         match self.registration {
@@ -161,7 +167,10 @@ impl TimerControl {
     }
 
     /// Reconcile this timer to one authoritative deadline.
-    pub fn reconcile(&mut self, deadline_ns: u64) -> Result<TimerControlAction, TimerControlError> {
+    pub(crate) fn reconcile(
+        &mut self,
+        deadline_ns: u64,
+    ) -> Result<TimerControlAction, TimerControlError> {
         let sequence = self.next_request_sequence()?;
 
         match self.registration {
@@ -206,7 +215,7 @@ impl TimerControl {
     }
 
     /// Begin the scheduled generation, rejecting stale callbacks.
-    pub const fn begin(&mut self, generation: u64) -> bool {
+    pub(crate) const fn begin(&mut self, generation: u64) -> bool {
         match self.registration {
             TimerRegistration::Scheduled {
                 generation: scheduled_generation,
@@ -223,7 +232,7 @@ impl TimerControl {
 
     /// Complete the running generation with the registry's already-arbitrated
     /// successor decision.
-    pub fn complete(
+    pub(crate) fn complete(
         &mut self,
         generation: u64,
         next_deadline_ns: Option<u64>,

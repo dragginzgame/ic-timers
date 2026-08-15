@@ -1,6 +1,6 @@
 # Current status
 
-Last updated: 2026-08-14
+Last updated: 2026-08-15
 
 ## Purpose
 
@@ -15,10 +15,10 @@ IcyDB-shaped watchdog evidence are complete.
 - `control` is the private Canic-derived ordinary generation/registration
   state machine for checked request sequences, stale callbacks, immediate
   cancellation, scheduling, and reconciliation. It owns no pending command.
-- `registry` is the pure 64-entry canonical state/effect engine. It owns
-  unique identity claims, deterministic ordering, policy-specific ordinary and
-  watchdog states, the sole pending ordinary command, nested request
-  arbitration, and coherent snapshots.
+- `registry` is the provider-call-free 64-entry canonical state/effect engine.
+  It owns unique identity claims, deterministic ordering, policy-specific
+  ordinary and watchdog states, the sole pending ordinary command, nested
+  request arbitration, and coherent snapshots.
 - `platform` is the private direct provider/system-fact boundary. Its handle is
   linear, all effects are bound to exact handles owned by registry entries,
   and instruction measurement uses IC call-context counter type 1.
@@ -28,12 +28,12 @@ IcyDB-shaped watchdog evidence are complete.
 - Public `Once` and `AfterCompletion` registrations own erased async callbacks
   and expose exact-claim ensure, cancel, and consuming unregister operations.
   Consumer futures run without a registry borrow and nested ensure/cancel
-  arbitration is defined by the pure registry. Delegated `TimerContext`
+  arbitration is defined by the canonical registry. Delegated `TimerContext`
   mutation is checked against the exact running callback token and expires at
   completion; a stored context cannot control a successor generation.
 - All three registration capabilities expose claim-scoped
   `has_armed_wakeup()` observation. It reports exact ownership of the canonical
-  future provider wake-up handle, not snapshot-derived or durable scheduling
+  armed provider wake-up handle, not snapshot-derived or durable scheduling
   authority; watchdog work handles do not count.
 - Ordinary registrations also expose authoritative optional schedule
   reconciliation, which may move a deadline earlier or later. The public
@@ -61,7 +61,7 @@ IcyDB-shaped watchdog evidence are complete.
 - Post-0.3 hardening was released as 0.3.1, the Canic adoption corrections as
   0.3.2, and the callback-authority/provider-binding fixes as 0.3.3 on
   2026-08-14.
-- Latest release line: `0.3.6`.
+- Open release line: `0.3.7`; package remains `0.3.6`.
 - CI also checks rustdoc, shell syntax, and full-SHA GitHub Actions pins;
   Dependabot covers Cargo and Actions dependencies. A structural gate keeps
   every direct `ic-cdk-timers` reference inside private `platform` code and
@@ -225,6 +225,17 @@ version markers remain enforced; free-form narrative is not interpreted after
 the finalizer mutates the version. This is documentation and release tooling
 only.
 
+The open 0.3.7 hygiene slice keeps the public facade and module ownership
+explicit, removes the unused public `TimerFuture` erasure alias, consolidates
+ordinary callback erasure and duration validation, and corrects comments about
+declaration lifetime, scheduling mode, and armed provider ownership. It does
+not change registry transitions, provider binding, the watchdog message
+protocol, snapshot shape, counters, or persisted state. It also stops
+duplicating full hosted Rust/MSRV validation on a main push and its same-SHA tag
+push: tags now verify exact version identity, main ancestry, and release truth.
+A pre-bump compact-status prose advisory warns about likely stale release
+wording but always continues, so free-form prose cannot strand a release.
+
 ## Remaining downstream work
 
 - Canic's real semantic snapshot/metrics projection test and replacement of
@@ -249,8 +260,9 @@ had not landed when inspected. Canic has not adopted the crate. See
 
 ## Next action
 
-Await the IcyDB-owned landing of its already-validated 0.3.5 integration.
-Canic hard-cut review remains pending. Do not mutate downstream repositories
-unless the maintainer explicitly authorizes an exact target.
+Review the bounded 0.3.7 hygiene patch. The IcyDB-owned landing of its
+already-validated 0.3.5 integration and the Canic hard cut remain downstream
+work. Do not mutate downstream repositories unless the maintainer explicitly
+authorizes an exact target.
 
 The maintainer owns release tags and all package-publication actions.

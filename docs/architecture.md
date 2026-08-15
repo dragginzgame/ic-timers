@@ -2,34 +2,49 @@
 
 ## Current runtime
 
-The current implementation keeps four responsibilities separate:
+The crate root is the public convenience facade. It re-exports the runtime
+operations and the provider-neutral values that also remain grouped under the
+public `schedule` and `snapshot` modules. Implementation modules are private;
+in particular, neither `platform` nor `registry` is a consumer API.
 
-1. `control` is the private ordinary generation/registration state machine. It
+The module hierarchy keeps six responsibilities separate:
+
+1. `schedule` owns validated cadence, requested schedules, post-run
+   directives, and checked nanosecond/deadline conversion.
+2. `snapshot` owns inert public identity and observation values. Its private
+   `identity`, `model`, and `metrics` children separate validation, closed
+   state/outcome types, and saturating measurements.
+3. `control` is the private ordinary generation/registration state machine. It
    owns checked generations and request sequences, immediate schedule,
    reconciliation and cancellation transitions, and stale completion
    rejection. It owns no pending command.
-2. `registry` is the pure fixed-capacity canonical owner for structured
-   identities, claim generations, policy-specific state, the sole pending
-   ordinary-command machine, nested arbitration, deterministic snapshots, and
-   provider-neutral effects.
-3. `runtime` owns the one canister-local registry static, erased ordinary
-   callbacks, registration claims, provider-effect application, and live
-   `Once`/`AfterCompletion` dispatch and the two-role watchdog protocol. Its
+4. `registry` is the provider-call-free fixed-capacity canonical owner for
+   structured identities, callback closures, claim generations,
+   policy-specific state, the sole pending ordinary-command machine, nested
+   arbitration, deterministic snapshots, and provider-neutral effects. It also
+   owns every bound provider handle; only `runtime` invokes `platform` to
+   create or clear those handles.
+5. `platform` is the private direct boundary to `ic-cdk-timers` and required
+   IC system facts. Its handle is linear and it owns no recurrence policy.
+6. `runtime` owns the one canister-local registry static, erases consumer
+   callbacks for registry storage, exposes registration claims, applies
+   provider effects, and drives live `Once`/`AfterCompletion` dispatch and the
+   two-role watchdog protocol. Its
    delegated work context is valid only for the exact running callback token.
    Claim-originated effect failures retire the declaration instead of leaving
    registry state scheduled without a provider handle.
-4. `platform` is the private direct boundary to `ic-cdk-timers` and required
-   IC system facts. Its handle is linear and it owns no recurrence policy.
 
-`schedule` contains typed post-run directives and checked conversion from a
-delay to an absolute nanosecond deadline.
+The registry and runtime transition functions remain cohesive even where they
+are long: each audited function owns one atomic transition or one provider
+binding path. Their tests live in directory-local `tests.rs` files so test
+volume does not obscure production flow.
 
 The copied Canic code was adapted into generic library types; Canic-specific
 domain work, storage, and metrics were intentionally not copied.
 
 ## Canonical runtime
 
-One canister-local owner wraps the pure registry and its structured
+One canister-local runtime owns the bounded registry and its structured
 identity (`owner`, `subsystem`, `name`). Framework and application schedulers
 must contribute to that same live registry rather than building private
 inventories. All three policies, lifecycle reconstruction, measurements, and
@@ -43,7 +58,7 @@ The runtime provides:
 - synchronous lifecycle restoration followed by deferred application work;
 - runtime-start counters, last outcomes, deadlines, and instruction
   consumption;
-- exact-claim observation of future provider wake-up ownership without a
+- exact-claim observation of armed provider wake-up ownership without a
   snapshot-derived control path;
 - bounded labels and allocation-conscious hot paths; and
 - portable snapshot DTOs so Canic, IcyDB, and standalone canisters can expose

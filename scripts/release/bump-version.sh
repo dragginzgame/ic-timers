@@ -75,6 +75,9 @@ fi
 release_date="$(date +%F)"
 bash scripts/release/finalize-changelog.sh --check "${new_version}" "${release_date}"
 bash scripts/release/finalize-release-truth.sh --check "${previous_version}" "${new_version}"
+if ! bash scripts/release/warn-release-prose.sh "${new_version}"; then
+    echo "warning: advisory release-prose check could not run; continuing" >&2
+fi
 
 make --no-print-directory ensure-clean
 make --no-print-directory release-verify

@@ -8,8 +8,8 @@ actually enforce and test.
 
 The 0.3 runtime provides:
 
-- a pure fixed-capacity registry with unique bounded identities and
-  deterministic snapshot ordering;
+- a provider-call-free fixed-capacity registry with unique bounded identities
+  and deterministic snapshot ordering;
 - checked positive cadence, deadline, generation, and request arithmetic;
 - policy-specific ordinary and watchdog states that cannot express a watchdog
   successor as ordinary running state;
@@ -59,9 +59,9 @@ The 0.3 runtime provides:
 - fail-closed public and lifecycle effect application: a retained declaration
   whose provider arm cannot establish canonical ownership becomes inactive
   with `ProviderBindingFailed` rather than remaining falsely scheduled; and
-- claim-scoped observation of whether the exact registration currently owns a
-  future provider wake-up handle. For watchdogs this counts the cadence
-  successor, not the separately queued work callback.
+- claim-scoped observation of whether the exact registration owns an armed
+  provider wake-up handle. For watchdogs this counts the cadence successor,
+  not the separately queued work callback.
 
 Snapshot values describe runtime observations. They are not authority to arm,
 clear, restore, or mutate a timer and must not become an alternate control

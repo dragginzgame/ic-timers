@@ -1,21 +1,20 @@
 //! Canister-local owner and live timer execution.
 
 use crate::{
-    DeclarationLifetime, RegisterError, ScheduleError, TimerCadence, TimerCompletion,
-    TimerControlFailure, TimerDirective, TimerEpoch, TimerIdentity, TimerRunResult, TimerSchedule,
-    TimerSnapshot, WatchdogRunResult,
     platform::{self, TimerHandle},
     registry::{
         CallbackAcceptance, CallbackRole, CallbackToken, OrdinaryCallback, ProviderHandle,
-        ProviderHandles, RegistrationClaim, RegistryEffect, RegistryError, RegistryTransition,
-        TimerRegistry, WatchdogCallback,
+        ProviderHandles, RegisterError, RegistrationClaim, RegistryEffect, RegistryError,
+        RegistryTransition, TimerRegistry, WatchdogCallback,
+    },
+    schedule::{ScheduleError, TimerCadence, TimerDirective, TimerSchedule},
+    snapshot::{
+        DeclarationLifetime, TimerCompletion, TimerControlFailure, TimerEpoch, TimerIdentity,
+        TimerPolicy, TimerRunResult, TimerSnapshot, WatchdogRunResult,
     },
 };
-use std::{cell::RefCell, future::Future, pin::Pin, rc::Rc, time::Duration};
+use std::{cell::RefCell, future::Future, rc::Rc, time::Duration};
 use thiserror::Error;
-
-/// Erased future returned by an ordinary timer callback.
-pub type TimerFuture = Pin<Box<dyn Future<Output = TimerRunResult>>>;
 
 thread_local! {
     static RUNTIME: RefCell<Option<TimerRegistry>> = const { RefCell::new(None) };
@@ -31,7 +30,7 @@ pub enum TimerError {
     /// A nested internal borrow indicates unsupported re-entrancy.
     #[error("timer runtime is already borrowed")]
     RuntimeBusy,
-    /// Registration failed before any provider callback was armed.
+    /// Claiming one canonical timer identity failed.
     #[error(transparent)]
     Register(#[from] RegisterError),
     /// Cadence or deadline validation failed.
@@ -121,9 +120,10 @@ impl TimerContext {
 
     /// Reconcile the executing ordinary declaration to one exact schedule.
     ///
-    /// `None` cancels live work while retaining callback authority. Watchdog
-    /// declarations reject this operation. A retained context cannot mutate
-    /// the registration after its exact work attempt ends.
+    /// `None` leaves retained callback authority inactive, or removes a
+    /// remove-on-stop declaration when cancellation wins arbitration.
+    /// Watchdog declarations reject this operation. A stored context cannot
+    /// mutate the registration after its exact work attempt ends.
     pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
         reconcile_ordinary_claim(&self.claim(), Some(&self.token), schedule)
     }
@@ -134,6 +134,9 @@ impl TimerContext {
     }
 
     /// Request cancellation while this exact work attempt is active.
+    ///
+    /// A retained declaration becomes inactive. A remove-on-stop declaration
+    /// is removed when cancellation wins arbitration.
     pub fn cancel(&self) -> Result<(), TimerError> {
         cancel_claim(&self.claim(), Some(&self.token))
     }
@@ -152,7 +155,7 @@ impl OnceRegistration {
         self.claim.identity()
     }
 
-    /// Return whether this exact claim currently owns a future provider wake-up.
+    /// Return whether this exact claim currently owns an armed provider wake-up.
     ///
     /// This is a volatile observation, not durable scheduling authority or a
     /// delivery guarantee. Call [`Self::ensure_scheduled`] unconditionally when
@@ -167,13 +170,18 @@ impl OnceRegistration {
     }
 
     /// Reconcile to one exact desired schedule, replacing a later or earlier
-    /// live deadline as necessary. `None` retains the declaration but cancels
-    /// its live callback.
+    /// live deadline as necessary.
+    ///
+    /// `None` leaves a retained declaration inactive. A remove-on-stop
+    /// declaration is removed and this claim expires.
     pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
         reconcile_ordinary_claim(&self.claim, None, schedule)
     }
 
-    /// Cancel the current schedule while retaining callback authority when configured.
+    /// Cancel the current schedule.
+    ///
+    /// A retained declaration keeps callback authority. A remove-on-stop
+    /// declaration is removed and this claim expires.
     pub fn cancel(&self) -> Result<(), TimerError> {
         cancel_claim(&self.claim, None)
     }
@@ -199,7 +207,7 @@ pub struct WatchdogRegistration {
 /// Desired volatile scheduling state during synchronous lifecycle reconciliation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TimerReconcileState {
-    /// Retain an existing declaration but clear its live callbacks.
+    /// Keep the retained declaration inactive and clear its live callbacks.
     Inactive,
     /// Ensure one authoritative wake-up exists.
     Scheduled,
@@ -212,7 +220,7 @@ impl WatchdogRegistration {
         self.claim.identity()
     }
 
-    /// Return whether this exact claim currently owns a future scheduler wake-up.
+    /// Return whether this exact claim currently owns an armed scheduler wake-up.
     ///
     /// The separately queued work callback is not itself a wake-up. During
     /// watchdog work this returns `true` only because the scheduler has already
@@ -228,6 +236,9 @@ impl WatchdogRegistration {
     }
 
     /// Cancel the scheduler and any dispatched work callback.
+    ///
+    /// A retained declaration keeps callback authority. A remove-on-stop
+    /// declaration is removed and this claim expires.
     pub fn cancel(&self) -> Result<(), TimerError> {
         cancel_claim(&self.claim, None)
     }
@@ -245,7 +256,7 @@ impl AfterCompletionRegistration {
         self.claim.identity()
     }
 
-    /// Return whether this exact claim currently owns a future provider wake-up.
+    /// Return whether this exact claim currently owns an armed provider wake-up.
     ///
     /// A callback currently running without an installed successor returns
     /// `false`. This is a volatile observation, not durable scheduling authority
@@ -260,13 +271,16 @@ impl AfterCompletionRegistration {
     }
 
     /// Reconcile to one exact desired schedule without changing the configured
-    /// after-completion cadence. `None` retains the declaration but cancels its
-    /// live callback.
+    /// after-completion cadence. `None` makes a retained declaration inactive;
+    /// it removes a remove-on-stop declaration and expires this claim.
     pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
         reconcile_ordinary_claim(&self.claim, None, schedule)
     }
 
-    /// Cancel the current schedule while retaining callback authority when configured.
+    /// Cancel the current schedule.
+    ///
+    /// A retained declaration keeps callback authority. A remove-on-stop
+    /// declaration is removed and this claim expires.
     pub fn cancel(&self) -> Result<(), TimerError> {
         cancel_claim(&self.claim, None)
     }
@@ -281,15 +295,13 @@ impl AfterCompletionRegistration {
 pub fn register_once<F, Fut>(
     identity: TimerIdentity,
     lifetime: DeclarationLifetime,
-    mut callback: F,
+    callback: F,
 ) -> Result<OnceRegistration, TimerError>
 where
     F: FnMut(TimerContext) -> Fut + 'static,
     Fut: Future<Output = TimerRunResult> + 'static,
 {
-    let callback: OrdinaryCallback = Rc::new(RefCell::new(Box::new(move |context| {
-        Box::pin(callback(context))
-    })));
+    let callback = erase_ordinary_callback(callback);
     let claim = with_registry_mut(|registry| {
         registry
             .register_once_with_callback(identity, lifetime, callback)
@@ -303,15 +315,13 @@ pub fn register_after_completion<F, Fut>(
     identity: TimerIdentity,
     cadence: TimerCadence,
     lifetime: DeclarationLifetime,
-    mut callback: F,
+    callback: F,
 ) -> Result<AfterCompletionRegistration, TimerError>
 where
     F: FnMut(TimerContext) -> Fut + 'static,
     Fut: Future<Output = TimerRunResult> + 'static,
 {
-    let callback: OrdinaryCallback = Rc::new(RefCell::new(Box::new(move |context| {
-        Box::pin(callback(context))
-    })));
+    let callback = erase_ordinary_callback(callback);
     let claim = with_registry_mut(|registry| {
         registry
             .register_after_completion_with_callback(identity, cadence, lifetime, callback)
@@ -370,7 +380,7 @@ where
     verify_declaration(
         registration.as_ref().map(OnceRegistration::identity),
         identity,
-        crate::TimerPolicy::Once,
+        TimerPolicy::Once,
     )?;
     registration
         .as_ref()
@@ -410,7 +420,7 @@ where
             .as_ref()
             .map(AfterCompletionRegistration::identity),
         identity,
-        crate::TimerPolicy::AfterCompletion { cadence },
+        TimerPolicy::AfterCompletion { cadence },
     )?;
     let registration = registration
         .as_ref()
@@ -448,7 +458,7 @@ where
     verify_declaration(
         registration.as_ref().map(WatchdogRegistration::identity),
         identity,
-        crate::TimerPolicy::Watchdog { cadence },
+        TimerPolicy::Watchdog { cadence },
     )?;
     let registration = registration
         .as_ref()
@@ -462,7 +472,7 @@ where
 fn verify_declaration(
     claimed_identity: Option<&TimerIdentity>,
     identity: &TimerIdentity,
-    policy: crate::TimerPolicy,
+    policy: TimerPolicy,
 ) -> Result<(), TimerError> {
     if claimed_identity != Some(identity) {
         return Err(TimerError::ReconciliationConflict);
@@ -491,6 +501,16 @@ pub fn consecutive_expected_failures(identity: &TimerIdentity) -> Result<Option<
 
 fn has_armed_wakeup_claim(claim: &RegistrationClaim) -> Result<bool, TimerError> {
     with_registry(|registry| registry.has_armed_wakeup(claim).map_err(TimerError::from))
+}
+
+fn erase_ordinary_callback<F, Fut>(mut callback: F) -> OrdinaryCallback
+where
+    F: FnMut(TimerContext) -> Fut + 'static,
+    Fut: Future<Output = TimerRunResult> + 'static,
+{
+    Rc::new(RefCell::new(Box::new(move |context| {
+        Box::pin(callback(context))
+    })))
 }
 
 fn ensure_once_claim(

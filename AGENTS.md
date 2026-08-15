@@ -71,6 +71,13 @@ This file is normative for automated contributors.
   `testing/` lockfiles, verify both with cheap locked metadata checks, and stage
   both. Do not require the maintainer to edit a changelog heading by hand,
   prepare a test binary manually, or remember a separate evidence command.
+- A pre-bump check may warn about free-form release prose that is likely to
+  become stale, but it must remain advisory and run before version mutation.
+  Never make interpreted prose a post-mutation release blocker.
+- Run full hosted Rust and MSRV validation on pull requests and `main`. A tag
+  push may use a smaller release-truth job only when it also verifies the exact
+  version tag and that the tagged commit is reachable from `main`; do not
+  duplicate identical full builds for a same-SHA main-and-tag push.
 - Run targeted checks for changed behavior. Do not run broad external suites
   unless the maintainer requests them.
 - Release targets are maintainer-owned: do not commit, tag, push, or publish
