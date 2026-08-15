@@ -10,7 +10,7 @@ IcyDB-shaped watchdog evidence are complete.
 
 ## Current foundation
 
-- Workspace package version: `0.4.0`.
+- Workspace package version: `0.4.1`.
 - Direct timer provider: exact `ic-cdk-timers` 1.0.0.
 - `control` is the private Canic-derived ordinary generation/registration
   state machine for checked request sequences, stale callbacks, immediate
@@ -75,7 +75,7 @@ IcyDB-shaped watchdog evidence are complete.
   share one pending-clearing path with atomic paired generation allocation,
   and illegal missing-cadence recurrence is private rather than an unreachable
   public schedule error.
-- Open release line: `0.4.1`; package remains `0.4.0`.
+- Latest release line: `0.4.1`.
 - The current patch fixes fresh `RemoveWhenStopped` cancellation for all three
   policies, shares ordinary schedule resolution and retained lifecycle
   verification, removes the extra Watchdog cancellation-result boolean, binds
