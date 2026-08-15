@@ -1,6 +1,6 @@
 # Observability and Canic parity contract
 
-Status: canonical observations live; IcyDB adoption validated; downstream Canic adapter pending
+Status: canonical observations live; IcyDB and downstream Canic adapters validated
 
 ## Purpose
 
@@ -11,8 +11,9 @@ superset of the timer information Canic exposes today.
 Ordinary and watchdog state, scheduler dispatch, work, stale,
 unacknowledged, and instruction observations are live. Normally completed
 accepted scheduler and work callbacks record IC call-context instruction
-deltas. Trapped and exhausted work record no sample. The real downstream Canic
-adapter gate remains open.
+deltas. Trapped and exhausted work record no sample. A downstream Canic
+worktree now validates the real adapter without parallel instrumentation;
+landing and cross-framework exact-version alignment remain external gates.
 
 This contract describes provider-neutral runtime data. `ic-timers` owns the
 identity, counters, measurements, and snapshot semantics. Canic, IcyDB, and
@@ -176,25 +177,25 @@ provide feedback as the pre-1.0 API evolves:
 
 ## Canic parity baseline
 
-The 0.2 contract must cover the following Canic operator information without
-parallel timer instrumentation:
+The contract covers the following Canic operator information without parallel
+timer instrumentation:
 
 | Current Canic surface | Required projection from `ic-timers` |
 | --- | --- |
 | Timer executions and latest delay in `crates/canic-core/src/ops/runtime/metrics/timer.rs` | Started count, configured cadence, latest requested and armed delays, and next deadline. |
 | Completed count and total instructions in `crates/canic-core/src/ops/runtime/perf.rs` | Completed count and total, latest, and maximum instructions. |
 | Detailed state in `crates/canic-core/src/dto/runtime.rs` | One canonical snapshot containing semantically equivalent identity, policy, state, outcome, and timing fields. |
-| Global `TimerScheduled` count | Separate requested and actually armed counters, so coalescing and replacement are visible. |
+| Former test-only global `TimerScheduled` count | No public projection requirement; remove it rather than retain parallel instrumentation. Canonical requested and armed counters remain separately observable. |
 
-The compatibility requirement is semantic rather than type-level. Canic may
-keep its public DTO shape during migration, but its adapter must be able to
-derive every existing field from `ic-timers` data alone.
+The compatibility requirement is semantic rather than type-level. The
+validated Canic worktree advances its runtime introspection schema to version
+2 and derives the maintained fields from `ic-timers` data alone.
 
 The exact existing-field projection is now frozen:
 
 | Canic field | Canonical source |
 | --- | --- |
-| schedules and global `TimerScheduled` | `wakeups_armed` |
+| schedules | `wakeups_armed` |
 | executions | `work_started` |
 | successes | saturating `succeeded + no_work` |
 | expected failures | `retryable_failure` |
@@ -206,13 +207,18 @@ The exact existing-field projection is now frozen:
 | total/latest/maximum instructions | matching work-instruction aggregate |
 
 `schedule_requests` is intentionally not the legacy schedule count: it also
-includes coalesced demand that did not commit a provider arm. Canic's current
-unconditional `generation: u64` must hard-cut to `Option<u64>` so inactive
-declarations do not fabricate generation zero.
+includes coalesced demand that did not commit a provider arm. The validated
+Canic worktree hard-cuts its unconditional `generation: u64` to `Option<u64>`
+so inactive declarations do not fabricate generation zero.
+
+The removed global `TimerScheduled` counter was a test-only implementation
+detail, not a public Canic metric or status field. Keeping it would have
+created misleading duplicate instrumentation. The per-timer `schedules` field
+is the operator surface that retains the committed-arm meaning.
 
 ## Acceptance criteria
 
-The design slice is not accepted until all of the following are true:
+The accepted contract requires all of the following:
 
 1. For every Canic timer, the `ic-timers` snapshot is a semantic superset of
    the existing timer status, timer counter, scheduling counter, and timer
@@ -228,13 +234,13 @@ The design slice is not accepted until all of the following are true:
 6. `ic-timers` has no dependency on Canic-specific DTO, Candid, or metric-row
    types.
 
-Trap, instruction-exhaustion, and upgrade behavior now has focused PocketIC
-evidence. The remaining acceptance gap is the real Canic adapter, not missing
-runtime observation state.
-
-Only after the adapters pass may Canic remove its separate `TimerMetrics`,
-timer-specific `PerfKey`, and duplicated workflow counters.
+Trap, instruction-exhaustion, and upgrade behavior has focused PocketIC
+evidence. The inspected downstream Canic worktree satisfies the real-adapter
+criterion and removes its separate `TimerMetrics`, timer-specific performance
+storage, duplicated workflow counters, and direct provider path.
 
 The local tests include a Canic-shaped projection fixture proving the fields
-are available. Acceptance criterion 2 remains open until the
-real downstream Canic adapter tests pass.
+are available. Canic's maintained downstream status reports focused adapter,
+lifecycle, inventory, protocol, and PocketIC timer evidence passing. That
+worktree is still uncommitted, and combined Canic+IcyDB qualification remains
+blocked until both frameworks resolve the same exact `ic-timers` patch.

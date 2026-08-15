@@ -10,7 +10,9 @@ and lifecycle recovery.
 The current release contains the complete bounded runtime, PocketIC
 recovery-watchdog evidence, and post-0.3 hardening. Tagged IcyDB 0.226.1
 hard-cuts to exact `ic-timers` 0.3.4, and its validated post-tag integration
-upgrades to exact 0.3.5; Canic has not adopted the runtime yet.
+upgrades to exact 0.3.5. A validated uncommitted Canic worktree hard-cuts to
+exact 0.3.6. Combined qualification still requires both frameworks to resolve
+one exact patch.
 
 ## Why wrap `ic-cdk-timers`?
 
@@ -96,7 +98,7 @@ consumer work.
 These guarantees apply only to `Watchdog`. Ordinary after-completion recurrence
 arms its successor after normal return and therefore cannot survive a trap or
 instruction exhaustion in consumer work. The remaining project work is
-downstream adapter and adoption feedback, not another timer runtime. See
+downstream landing and exact-version alignment, not another timer runtime. See
 [the architecture note](docs/architecture.md) for the intended boundary and
 implementation order, the frozen
 [0.3 Patch 1 contract](docs/design/0.3-patch-1-contract.md) for the decisions
@@ -147,16 +149,22 @@ the provider's canister-wide 250 outstanding-dispatch limit. An adoption must
 also inventory or migrate every remaining direct `ic-cdk-timers` user in the
 final canister and prove one resolved `ic-timers` package ID.
 
-Canic has not adopted the crate. Its proposed hard-cut mapping is recorded in
-the [Canic adapter contract](docs/adoption/canic.md); notably, Canic composes
+Canic's validated uncommitted adoption worktree implements the hard-cut mapping
+recorded in the [Canic adapter contract](docs/adoption/canic.md). It composes
 claim-specific cancellation and domain reconciliation instead of gaining a
-global switch that could suspend other owners in the shared registry.
+global switch that could suspend other owners in the shared registry, and it
+derives status plus timer/performance metrics from one shared inventory scan.
 
 Tagged IcyDB 0.226.1 uses the shared registry and its pre-armed watchdog. A
 validated post-tag integration upgrades to `has_armed_wakeup()` on exact
 0.3.5. The dependencies, removed parallel state, downstream PocketIC evidence,
 measurements, and remaining landing boundary are recorded in the
 [IcyDB adoption record](docs/adoption/icydb.md).
+
+Canic currently pins exact 0.3.6, while released IcyDB pins 0.3.4 and its
+validated post-tag worktree pins 0.3.5. Those are safe standalone subjects but
+cannot share one registry in a combined Wasm until their exact dependency is
+aligned.
 
 ## Development
 

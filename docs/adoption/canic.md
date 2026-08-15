@@ -1,13 +1,39 @@
 # Canic adapter contract
 
-Status: downstream contract; Canic has not adopted `ic-timers`.
+Status: validated downstream adoption worktree; Canic release remains pending.
+
+## Inspected downstream adoption
+
+The uncommitted Canic worktree inspected read-only on 2026-08-15 is based on
+tagged `v0.102.1` commit
+`86763c5f16478e2e548e2059e5efaa963bf9a966` and resolves exact
+`ic-timers = "=0.3.6"`. It implements the hard cut described below:
+
+- Canic's direct `ic-cdk-timers` dependency, provider wrapper, `TIMERS` map,
+  `TimerControl`, timer metrics table, and timer-specific performance storage
+  are removed;
+- runtime status and metrics project the complete shared `ic-timers`
+  inventory, including other framework and application owners;
+- application timer creation and consuming cancellation are fallible, and
+  macro callers must propagate or explicitly handle failure;
+- runtime introspection advances to schema version 2;
+- one bounded Canic custody collection retains only opaque registration
+  capabilities; and
+- runtime metrics obtain the inventory once per request and derive both timer
+  and timer-performance rows from that same snapshot vector.
+
+Canic's maintained status reports focused lifecycle, inventory, protocol,
+host-adapter, and PocketIC timer evidence passing after one fixture input-race
+retry. This repository did not rerun those downstream suites, and the adoption
+batch has no numerical before/after performance benchmark. Landing, versioning,
+and release remain Canic-owned.
 
 ## Boundary
 
-Canic must replace its timer provider, `TIMERS` map, `TimerControl`, provider
-handles, timer counters, and timer-specific performance accounting in one
-pre-1.0 hard cut. It must not leave those paths beside `ic-timers` as a
-fallback or compatibility facade.
+The inspected worktree replaces Canic's timer provider, `TIMERS` map,
+`TimerControl`, provider handles, timer counters, and timer-specific
+performance accounting in one pre-1.0 hard cut. Landing must not restore those
+paths beside `ic-timers` as a fallback or compatibility facade.
 
 The final canister must resolve exactly one `ic-timers` Cargo package ID. Two
 resolved versions create two library statics and therefore two registries.
@@ -65,13 +91,19 @@ successor before consumer work.
 
 ## Operation mapping
 
-Canic initializes the runtime once from its existing lifecycle owner before
-framework and application hooks. It declares every fixed retained timer before
-application hooks, even when its durable authority currently selects inactive.
-The retained-only lifecycle reconciliation helpers install fresh inactive
-declarations, making the inventory complete and reserving critical registry
-capacity. Canic retains one policy-specific registration claim per timer and
-delegates as follows:
+Shared-registry initialization and declaration of Canic-owned work are distinct
+operations. Every participating canister initializes the runtime once from its
+existing lifecycle owner before framework and application hooks. A canister
+declares only fixed retained timers it genuinely owns, even when durable
+authority currently selects them inactive. The root control plane also declares
+canister-pool maintenance before application hooks. Fleet Coordinator
+initializes the empty shared registry but does not invent unrelated inactive
+Canic jobs.
+
+Retained-only lifecycle reconciliation installs fresh inactive declarations
+for genuine owners, making their inventory complete and reserving critical
+capacity. Canic retains one policy-specific registration claim per declared
+timer and delegates as follows:
 
 | Current Canic operation | `ic-timers` operation |
 | --- | --- |
@@ -117,11 +149,14 @@ must not be substituted for these established meanings.
 | completed instruction count | work-instruction sample count |
 | total/latest/maximum instructions | matching work-instruction aggregate |
 
-Canic's global `TimerScheduled` counter likewise projects actual committed
-ordinary/scheduler arms, not `schedule_requests`. The latter includes
-coalesced demand and remains a distinct, additional operator signal. The Canic
-DTO must hard-cut `generation: u64` to `generation: Option<u64>`; an inactive
-timer has no generation and must not invent zero.
+Canic's former global `TimerScheduled` counter was test-only and was not part of
+its public status or metric projection. The adoption correctly removes it
+instead of preserving parallel instrumentation. The public per-timer
+`schedules` field maps to actual committed `wakeups_armed`, not
+`schedule_requests`; the latter includes coalesced demand and remains a
+distinct canonical signal. The Canic DTO hard-cuts `generation: u64` to
+`generation: Option<u64>`; an inactive timer has no generation and must not
+invent zero.
 
 ## Suspension and lifecycle composition
 
@@ -147,11 +182,18 @@ addition or permission to retain Canic's parallel registry.
 
 ## Adoption gate
 
-Adoption is complete only when focused Canic tests prove the existing status
-and metric rows derive from `ic-timers` snapshots without parallel timer
-instrumentation; every configured fixed built-in, including canister-pool
-maintenance, appears in the canonical inventory before its first schedule;
-authority-snapshot quiescence cancels or unregisters every Canic-owned claim
-without affecting another owner; lifecycle order is preserved; capacity,
-identity, and provider errors are typed; direct provider use is removed from
-production; and `cargo tree -d` shows one resolved `ic-timers` package ID.
+The inspected worktree satisfies the Canic-side adapter gate: status and metric
+rows derive from one shared snapshot scan without parallel timer
+instrumentation; genuine fixed owners appear before their first schedule;
+authority-snapshot quiescence acts only on Canic-owned claims; lifecycle order
+is preserved; timer errors are typed; direct provider use is removed; and the
+workspace resolves one exact `ic-timers` 0.3.6 package.
+
+Two gates remain. First, Canic must land and release the validated worktree.
+Second, combined Canic+IcyDB qualification must resolve one exact patch. The
+released IcyDB subject remains on 0.3.4 and its validated post-tag worktree is
+on 0.3.5, so either combined today with Canic's 0.3.6 worktree would contain
+two independent registries. Runtime correctness does not require IcyDB alone
+to move from 0.3.5, but combined qualification requires either aligning IcyDB
+to the validated Canic 0.3.6 subject or advancing both frameworks together to
+one later exact patch.

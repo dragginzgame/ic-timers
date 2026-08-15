@@ -83,5 +83,9 @@ check-then-arm race. No public IcyDB API, Candid surface, persisted format, or
 compatibility path changes. The remaining downstream step is to land that
 already-validated post-tag worktree.
 
-Canic has not adopted `ic-timers`. A combined IcyDB/Canic application must
-still prove dependency unification and a canister-wide provider inventory.
+A validated uncommitted Canic worktree adopts exact `ic-timers` 0.3.6 and
+removes its parallel timer runtime. Released IcyDB remains on 0.3.4 and this
+validated post-tag IcyDB subject is on 0.3.5, so neither can currently combine
+with that Canic worktree as one registry. Combined qualification must align
+both frameworks to one exact patch and prove a canister-wide provider
+inventory.

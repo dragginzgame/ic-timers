@@ -61,7 +61,7 @@ IcyDB-shaped watchdog evidence are complete.
 - Post-0.3 hardening was released as 0.3.1, the Canic adoption corrections as
   0.3.2, and the callback-authority/provider-binding fixes as 0.3.3 on
   2026-08-14.
-- Latest release line: `0.3.7`.
+- Open release line: `0.3.8`; package remains `0.3.7`.
 - CI also checks rustdoc, shell syntax, and full-SHA GitHub Actions pins;
   Dependabot covers Cargo and Actions dependencies. A structural gate keeps
   every direct `ic-cdk-timers` reference inside private `platform` code and
@@ -72,7 +72,8 @@ IcyDB-shaped watchdog evidence are complete.
 - The 0.2 observability contract and a local Canic-shaped projection test
   require the canonical snapshot to preserve Canic's timer status, counters,
   scheduling, and performance information without importing Canic-specific
-  DTOs. A real downstream Canic adapter test remains required.
+  DTOs. A validated uncommitted Canic worktree now supplies the real adapter
+  and focused downstream evidence.
 - The 0.3 production-runtime design freezes IcyDB's watchdog
   invariants around a one-shot two-message protocol: a bounded scheduler
   arms the next successor and a separate immediate work callback, then returns
@@ -225,7 +226,7 @@ version markers remain enforced; free-form narrative is not interpreted after
 the finalizer mutates the version. This is documentation and release tooling
 only.
 
-The open 0.3.7 hygiene slice keeps the public facade and module ownership
+Released 0.3.7 keeps the public facade and module ownership
 explicit, removes the unused public `TimerFuture` erasure alias, consolidates
 ordinary callback erasure and duration validation, and corrects comments about
 declaration lifetime, scheduling mode, and armed provider ownership. It does
@@ -236,33 +237,46 @@ push: tags now verify exact version identity, main ancestry, and release truth.
 A pre-bump compact-status prose advisory warns about likely stale release
 wording but always continues, so free-form prose cannot strand a release.
 
+The open 0.3.8 documentation slice records the read-only Canic adoption
+inspection. On tagged v0.102.1 baseline commit
+`86763c5f16478e2e548e2059e5efaa963bf9a966`, an uncommitted Canic worktree
+resolves exact `ic-timers` 0.3.6, removes its direct provider, parallel
+registry/control/counters and timer-specific performance storage, makes public
+timer control fallible, advances runtime introspection to schema version 2,
+and derives status plus timer/performance metrics from one shared inventory
+scan. Canic's maintained status reports targeted lifecycle, inventory,
+protocol, host-adapter, and PocketIC timer evidence passing; this repository
+did not rerun those downstream suites or collect a numerical performance
+comparison.
+
 ## Remaining downstream work
 
-- Canic's real semantic snapshot/metrics projection test and replacement of
-  its parallel timer instrumentation.
-- Landing IcyDB's validated post-tag exact-0.3.5 integration; its generated
-  adapter and focused evidence are complete in the inspected dirty worktree.
-- Dependency-unification checks proving a combined IcyDB, Canic, and
-  application canister resolves one `ic-timers` package ID.
-- A final-canister inventory that removes production direct `ic-cdk-timers`
-  users or names fixture-only exceptions; the provider's 250-call semaphore is
-  canister-wide and is not reserved by the 128-handle library bound.
-- The real Canic adapter hard cut described in `docs/adoption/canic.md`,
-  including its fallible public facade, removal of the parallel provider/state
-  machine, owner-local lifecycle composition, and focused parity tests.
+- Land and release Canic's validated exact-0.3.6 adoption worktree.
+- Land IcyDB's validated claim-scoped integration and align its exact
+  dependency with Canic before combined qualification. Released IcyDB is on
+  0.3.4 and its validated post-tag worktree is on 0.3.5; either combined with
+  Canic 0.3.6 would create two registries.
+- Prove the combined Canic, IcyDB, and application canister resolves one exact
+  `ic-timers` package ID and inventory any remaining direct provider users.
+  The provider's 250-call semaphore is canister-wide and is not reserved by
+  the 128-handle library bound.
+- Optionally collect a numerical Canic before/after metrics-request benchmark;
+  the adapter already scans the registry only once per request, so this is not
+  an adoption correctness gate.
 
 Tagged IcyDB 0.226.1 at
 `cd388cad96383f7c4c56054a8f27de608e9371e3` hard-cuts to exact `ic-timers`
 0.3.4 and supplies maintained shared-registry evidence. Its validated post-tag
 worktree completes the exact-0.3.5 claim-scoped observation integration but
-had not landed when inspected. Canic has not adopted the crate. See
-`docs/adoption/icydb.md` and `docs/adoption/canic.md`.
+had not landed when inspected. Canic's validated uncommitted adoption uses
+exact 0.3.6. See `docs/adoption/icydb.md` and `docs/adoption/canic.md`.
 
 ## Next action
 
-Review the bounded 0.3.7 hygiene patch. The IcyDB-owned landing of its
-already-validated 0.3.5 integration and the Canic hard cut remain downstream
-work. Do not mutate downstream repositories unless the maintainer explicitly
-authorizes an exact target.
+Review the bounded 0.3.8 Canic evidence patch. The IcyDB-owned landing of its
+already-validated integration, the Canic-owned landing of its validated hard
+cut, and exact dependency alignment remain downstream work. Do not mutate
+downstream repositories unless the maintainer explicitly authorizes an exact
+target.
 
 The maintainer owns release tags and all package-publication actions.

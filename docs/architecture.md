@@ -130,24 +130,27 @@ after-completion recurrence.
 
 ## Consumer integration
 
-- Canic should use the crate for framework timers and register its synchronous
-  post-restore lifecycle participant before deferred user hooks.
+- A validated uncommitted Canic worktree uses the crate for framework and
+  application timers, with synchronous restoration before deferred user hooks.
+  Canisters initialize the shared registry independently of declaring jobs:
+  Fleet Coordinator initializes an empty registry, while genuine owners reserve
+  their fixed declarations before application hooks.
 - Tagged IcyDB 0.226.1 uses the watchdog policy for replicated recovery
   driving; its validated post-tag integration uses claim-scoped armed-wakeup
   observation on exact `ic-timers` 0.3.5.
 - A canister using both should see one inventory. Ownership labels distinguish
   scheduling clients; they do not create separate timer runtimes.
 
-The downstream gate must prove one resolved `ic-timers` package ID and
+The combined downstream gate must prove one resolved `ic-timers` package ID and
 inventory remaining direct `ic-cdk-timers` calls across the complete canister.
 The provider's 250 outstanding-dispatch limit is canister-wide; the registry's
 128-handle maximum bounds only handles owned by this crate. Canic must also
-make its currently infallible application timer facade return typed capacity
-and identity errors before adopting the shared registry.
+retain the validated hard cut that makes its application timer facade return
+typed capacity and identity errors.
 
-The exact hard-cut mapping, including authoritative deadline reconciliation,
-policy choices, and the intentional absence of global suspension, is frozen in
-the [Canic adapter contract](adoption/canic.md).
+The exact implemented hard-cut mapping, including authoritative deadline
+reconciliation, policy choices, and the intentional absence of global
+suspension, is maintained in the [Canic adapter contract](adoption/canic.md).
 
 Canic may keep one bounded collection whose only values are opaque registration
 claims. That custody makes Canic-owned application timers enumerable for its
@@ -162,6 +165,7 @@ in a consumer custody collection.
 
 IcyDB's exact dependency, removed parallel timer state, and downstream
 real-canister evidence are recorded in the
-[IcyDB adoption record](adoption/icydb.md). Canic adoption remains pending
-under the separate adapter contract. A combined application still needs to
-prove that both consumers resolve this same package instance.
+[IcyDB adoption record](adoption/icydb.md). The Canic adapter is validated but
+uncommitted, so its landing and release remain downstream-owned. A combined
+application still needs both consumers to resolve the same exact package
+instance.

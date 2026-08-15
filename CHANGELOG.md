@@ -4,6 +4,24 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.3.8]
+
+### Changed
+
+- Record Canic's validated uncommitted exact-0.3.6 hard cut: one shared
+  inventory now replaces its provider, registry/control state, timer counters,
+  and timer-specific performance storage, while combined Canic+IcyDB
+  qualification remains blocked on exact patch alignment.
+- Clarify that Canic's removed global `TimerScheduled` counter was test-only,
+  not a public parity surface; the maintained per-timer `schedules` field maps
+  to committed `wakeups_armed`.
+- Distinguish initializing an empty shared registry from declaring
+  framework-owned jobs, allowing Fleet Coordinator to participate without
+  inventing inactive Canic timers.
+- Stop freezing Canic's maintained adoption status to one lifecycle state;
+  release truth now requires only one structural status marker and does not
+  interpret its prose.
+
 ## [0.3.7] - 2026-08-15
 
 ### Changed

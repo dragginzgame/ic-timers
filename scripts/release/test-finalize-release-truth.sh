@@ -49,7 +49,7 @@ EOF
 cat > "${temporary_root}/docs/adoption/canic.md" <<'EOF'
 # Canic adapter contract
 
-Status: downstream contract; Canic has not adopted `ic-timers`.
+Status: validated downstream adoption worktree; Canic release remains pending.
 EOF
 
 (

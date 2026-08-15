@@ -5,8 +5,8 @@
 The runtime hierarchy is coherent and does not need a safety-sensitive module
 split. The audit found one accidental public implementation alias, two small
 duplications, and several comments that described retained lifetime or
-provider delivery too broadly. The open 0.3.7 patch fixes those issues without
-changing timer behavior.
+provider delivery too broadly. The released 0.3.7 patch fixes those issues
+without changing timer behavior.
 
 ## Module hierarchy
 

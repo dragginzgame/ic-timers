@@ -108,8 +108,10 @@ the idempotent ensure operation whenever their authority requires a wake-up.
   a renewed source and recovery audit.
 - Tagged IcyDB 0.226.1 and its validated post-tag exact-0.3.5 integration
   supply maintained downstream shared-registry evidence, recorded separately
-  from this library's owner-local proof. Canic's real metrics adapter and
-  adoption tests remain downstream work.
+  from this library's owner-local proof. A validated uncommitted Canic
+  exact-0.3.6 worktree supplies the real metrics/status adapter and removes its
+  parallel timer runtime. Combined evidence remains invalid until both
+  frameworks resolve one exact patch.
 
 The frozen [0.3 Patch 1 contract](docs/design/0.3-patch-1-contract.md) defines
 the protocol and the
