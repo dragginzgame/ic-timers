@@ -7,7 +7,7 @@ Status: validated downstream adoption worktree; Canic release remains pending.
 The uncommitted Canic worktree inspected read-only on 2026-08-15 is based on
 tagged `v0.102.1` commit
 `86763c5f16478e2e548e2059e5efaa963bf9a966` and resolves exact
-`ic-timers = "=0.3.6"`. It implements the hard cut described below:
+`ic-timers = "=0.3.8"`. It implements the hard cut described below:
 
 - Canic's direct `ic-cdk-timers` dependency, provider wrapper, `TIMERS` map,
   `TimerControl`, timer metrics table, and timer-specific performance storage
@@ -22,11 +22,14 @@ tagged `v0.102.1` commit
 - runtime metrics obtain the inventory once per request and derive both timer
   and timer-performance rows from that same snapshot vector.
 
-Canic's maintained status reports focused lifecycle, inventory, protocol,
-host-adapter, and PocketIC timer evidence passing after one fixture input-race
-retry. This repository did not rerun those downstream suites, and the adoption
-batch has no numerical before/after performance benchmark. Landing, versioning,
-and release remain Canic-owned.
+The move from exact 0.3.6 to 0.3.8 required no adapter change. Canic's
+maintained status reports affected package checks, strict targeted Clippy,
+inventory and lifecycle guards, three adapter unit tests, and PocketIC
+cancellation, recurrence, and upgrade reconstruction passing. It also reports
+one resolved 0.3.8 package and no direct provider edge. This repository did not
+rerun those downstream suites, and the adoption batch has no numerical
+before/after performance benchmark. Landing, versioning, and release remain
+Canic-owned.
 
 ## Boundary
 
@@ -187,13 +190,11 @@ rows derive from one shared snapshot scan without parallel timer
 instrumentation; genuine fixed owners appear before their first schedule;
 authority-snapshot quiescence acts only on Canic-owned claims; lifecycle order
 is preserved; timer errors are typed; direct provider use is removed; and the
-workspace resolves one exact `ic-timers` 0.3.6 package.
+workspace resolves one exact `ic-timers` 0.3.8 package.
 
 Two gates remain. First, Canic must land and release the validated worktree.
-Second, combined Canic+IcyDB qualification must resolve one exact patch. The
-released IcyDB subject remains on 0.3.4 and its validated post-tag worktree is
-on 0.3.5, so either combined today with Canic's 0.3.6 worktree would contain
-two independent registries. Runtime correctness does not require IcyDB alone
-to move from 0.3.5, but combined qualification requires either aligning IcyDB
-to the validated Canic 0.3.6 subject or advancing both frameworks together to
-one later exact patch.
+Second, tagged combined Canic+IcyDB qualification must prove one exact package
+in the final Wasm. The current uncommitted Canic and IcyDB worktrees both pin
+0.3.8, so development-time alignment is complete. Their tagged releases do not
+yet provide a combined one-package subject, and no released-composition claim
+is made.

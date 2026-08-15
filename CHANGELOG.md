@@ -4,6 +4,22 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+### Changed
+
+- Correct the pre-1.0 release policy: hard cuts still remove superseded APIs
+  without compatibility shims, but any public removal or incompatible public
+  semantic change advances the minor compatibility line rather than a patch.
+  The `TimerFuture` removal in 0.3.7 is retained and explicitly acknowledged
+  as a SemVer mistake.
+- Classify changes since the current version tag as crate-impacting,
+  repository-only, or absent. Version bumps now reject repository-only
+  publication before expensive validation, while `repository-check` provides
+  the focused non-publishing validation path.
+- Record that the current uncommitted Canic and IcyDB adoption worktrees both
+  exact-pin 0.3.8. Development-time package alignment is complete; released
+  combined composition still requires one-package qualification from tagged
+  downstream subjects.
+
 ## [0.3.8] - 2026-08-15
 
 ### Changed

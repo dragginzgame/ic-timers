@@ -53,6 +53,10 @@ cargo package --locked --offline --allow-dirty --list -p ic-timers
 - Does the package contain only intended public source and metadata?
 - Can an explicit release target only move the package version forward, using
   canonical SemVer components and an exact tag-name check?
+- Does a public removal or incompatible semantic change advance the pre-1.0
+  minor compatibility line while still deleting the superseded path outright?
+- Is repository-only documentation, evidence, or tooling work kept out of a
+  new crate identity and validated through `repository-check` instead?
 
 Classify findings as mechanical, behavioral, or design. Fix mechanical and
 clearly safe behavioral findings in the audit change. Keep recovery semantics,

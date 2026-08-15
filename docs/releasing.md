@@ -2,6 +2,48 @@
 
 The workspace follows semantic versioning.
 
+## Pre-1.0 compatibility
+
+The implementation policy and the version boundary are separate decisions.
+Superseded pre-1.0 APIs are still removed as hard cuts without deprecated
+aliases, forwarding shims, dual behavior, or compatibility features. A public
+removal, signature change, or incompatible public semantic change must
+nevertheless advance the minor compatibility line. For example, a breaking
+change after 0.3.8 targets 0.4.0, not 0.3.9. Backwards-compatible fixes may use
+a patch release.
+
+Version 0.3.7 removed the public `TimerFuture` alias in a patch release. That
+was a SemVer mistake because Cargo requirements compatible with 0.3.6 may
+select 0.3.7 automatically. The alias remains removed under the hard-cut
+policy; the correction is to use a minor version for future public removals,
+not to restore a compatibility shim.
+
+## Repository updates versus crate releases
+
+Run this before selecting a version:
+
+```text
+make release-impact
+```
+
+The classifier compares the worktree with the tag matching the current
+workspace version and reports:
+
+- `crate` when the publishable crate's source or manifests changed;
+- `repository` when only paths outside the publishable crate source and
+  manifests changed, such as documentation, evidence, external tests, CI, or
+  release tooling; or
+- `none` when no path differs.
+
+This is a conservative mechanical boundary, not an API compatibility oracle.
+For `crate`, review the public API and semantic contract and choose patch or
+minor according to the rule above. For `repository`, do not change the package
+version, tag, or publish. Keep noteworthy changes under `Unreleased`, validate
+the update with `make repository-check` plus any focused owner-local evidence,
+and bundle the notes into the next code-bearing release. Every version-bump
+helper rejects a repository-only subject before expensive validation or
+version mutation.
+
 As soon as a target version is known, keep completed user-visible changes in
 an explicit undated section directly below the empty `Unreleased` heading:
 
@@ -19,8 +61,8 @@ remain supported and are promoted automatically when a version is selected.
 
 The helper refuses to continue if the changelog shape is ambiguous, the target
 notes are empty, the target is already dated, the requested version is not a
-strict canonical-SemVer increase, the exact release tag already exists, or the
-worktree is not clean.
+strict canonical-SemVer increase, the exact release tag already exists, the
+subject is repository-only, or the worktree is not clean.
 
 Before the clean-worktree and expensive evidence gates, the helper also scans
 the compact status for target-version wording likely to become stale, such as

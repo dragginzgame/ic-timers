@@ -34,6 +34,10 @@ future now lives beside the private registry callback type. This is a direct
 pre-1.0 hard cut: no deprecated alias or compatibility forwarding path is
 retained.
 
+Post-release review found that publishing this removal as 0.3.7 was a SemVer
+mistake: Cargo-compatible 0.3 requirements may select that patch. The hard cut
+remains sound, but a future public removal advances the minor line.
+
 The review found no public provider type, provider function, provider module,
 registry mutation path, compatibility shim, deprecated forwarder, or second
 timer runtime.

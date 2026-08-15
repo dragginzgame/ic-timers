@@ -137,7 +137,7 @@ after-completion recurrence.
   their fixed declarations before application hooks.
 - Tagged IcyDB 0.226.1 uses the watchdog policy for replicated recovery
   driving; its validated post-tag integration uses claim-scoped armed-wakeup
-  observation on exact `ic-timers` 0.3.5.
+  observation on exact `ic-timers` 0.3.8.
 - A canister using both should see one inventory. Ownership labels distinguish
   scheduling clients; they do not create separate timer runtimes.
 
@@ -166,6 +166,6 @@ in a consumer custody collection.
 IcyDB's exact dependency, removed parallel timer state, and downstream
 real-canister evidence are recorded in the
 [IcyDB adoption record](adoption/icydb.md). The Canic adapter is validated but
-uncommitted, so its landing and release remain downstream-owned. A combined
-application still needs both consumers to resolve the same exact package
-instance.
+uncommitted, so its landing and release remain downstream-owned. Both current
+development worktrees resolve exact 0.3.8; a tagged combined application still
+needs to prove the same single package instance.

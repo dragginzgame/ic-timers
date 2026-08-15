@@ -13,7 +13,7 @@ unacknowledged, and instruction observations are live. Normally completed
 accepted scheduler and work callbacks record IC call-context instruction
 deltas. Trapped and exhausted work record no sample. A downstream Canic
 worktree now validates the real adapter without parallel instrumentation;
-landing and cross-framework exact-version alignment remain external gates.
+landing and tagged combined qualification remain external gates.
 
 This contract describes provider-neutral runtime data. `ic-timers` owns the
 identity, counters, measurements, and snapshot semantics. Canic, IcyDB, and
@@ -242,5 +242,6 @@ storage, duplicated workflow counters, and direct provider path.
 The local tests include a Canic-shaped projection fixture proving the fields
 are available. Canic's maintained downstream status reports focused adapter,
 lifecycle, inventory, protocol, and PocketIC timer evidence passing. That
-worktree is still uncommitted, and combined Canic+IcyDB qualification remains
-blocked until both frameworks resolve the same exact `ic-timers` patch.
+worktree is still uncommitted. The current Canic and IcyDB development
+worktrees both resolve exact 0.3.8; tagged combined qualification must still
+prove one package in the final Wasm.

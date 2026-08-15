@@ -3,7 +3,7 @@
 - [Architecture](architecture.md): current boundary, intended runtime, and
   consumer integration.
 - [Observability contract](design/observability.md): implemented canonical
-  timer snapshot, counter semantics, and remaining Canic adapter gate.
+  timer snapshot, counter semantics, and validated Canic adapter mapping.
 - [0.3 production runtime design](design/0.3-production-timer-runtime.md):
   bounded registry, two-message watchdog protocol, lifecycle seam, and
   completed recovery evidence gate.
@@ -27,6 +27,7 @@
   downstream recovery evidence, and measured costs.
 - [Canic adapter contract](adoption/canic.md): required pre-1.0 hard cut,
   identity/policy mapping, custody boundary, and parity gate.
-- [Releasing](releasing.md): version and release commands.
+- [Releasing](releasing.md): crate-impact classification, pre-1.0 SemVer, and
+  version/release commands.
 - [Changelog lines](changelog/README.md): release-line working notes.
 - [Current status](status/current.md): compact handoff for the next session.

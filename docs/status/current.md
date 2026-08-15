@@ -62,6 +62,8 @@ IcyDB-shaped watchdog evidence are complete.
   0.3.2, and the callback-authority/provider-binding fixes as 0.3.3 on
   2026-08-14.
 - Latest release line: `0.3.8`.
+- Current `Unreleased` work is repository-only release-policy and adoption
+  evidence maintenance; no new crate version or release line is staged.
 - CI also checks rustdoc, shell syntax, and full-SHA GitHub Actions pins;
   Dependabot covers Cargo and Actions dependencies. A structural gate keeps
   every direct `ic-cdk-timers` reference inside private `platform` code and
@@ -236,8 +238,11 @@ duplicating full hosted Rust/MSRV validation on a main push and its same-SHA tag
 push: tags now verify exact version identity, main ancestry, and release truth.
 A pre-bump compact-status prose advisory warns about likely stale release
 wording but always continues, so free-form prose cannot strand a release.
+Removing the public alias in a patch was a SemVer mistake because compatible
+0.3 requirements may select 0.3.7 automatically. The hard cut remains; future
+public removals advance the minor compatibility line.
 
-The open 0.3.8 documentation slice records the read-only Canic adoption
+Released 0.3.8 records the read-only Canic adoption
 inspection. On tagged v0.102.1 baseline commit
 `86763c5f16478e2e548e2059e5efaa963bf9a966`, an uncommitted Canic worktree
 resolves exact `ic-timers` 0.3.6, removes its direct provider, parallel
@@ -249,15 +254,29 @@ protocol, host-adapter, and PocketIC timer evidence passing; this repository
 did not rerun those downstream suites or collect a numerical performance
 comparison.
 
+After that release, the same Canic worktree advanced its exact dependency from
+0.3.6 to 0.3.8 without adapter changes. Its maintained status reports affected
+package checks, strict targeted Clippy, inventory/lifecycle guards, three timer
+adapter unit tests, and PocketIC cancellation, recurrence, and reconstruction
+passing. The current IcyDB post-tag worktree also exact-pins 0.3.8 and retains
+its focused real-canister recovery evidence. Both development graphs now align
+to one package version; tagged combined qualification remains downstream work.
+
+The current repository-only update separates implementation hard cuts from
+SemVer: an incompatible public pre-1.0 change requires a minor bump. A release
+impact classifier distinguishes crate source/manifest changes from repository
+documentation, evidence, external-test, CI, and tooling changes. Version bumps
+reject a repository-only subject before expensive validation or mutation; such
+work is validated with `repository-check`, committed without a package tag,
+and bundled into the next code-bearing release.
+
 ## Remaining downstream work
 
-- Land and release Canic's validated exact-0.3.6 adoption worktree.
-- Land IcyDB's validated claim-scoped integration and align its exact
-  dependency with Canic before combined qualification. Released IcyDB is on
-  0.3.4 and its validated post-tag worktree is on 0.3.5; either combined with
-  Canic 0.3.6 would create two registries.
-- Prove the combined Canic, IcyDB, and application canister resolves one exact
-  `ic-timers` package ID and inventory any remaining direct provider users.
+- Land and release Canic's validated exact-0.3.8 adoption worktree.
+- Land IcyDB's validated exact-0.3.8 claim-scoped integration worktree.
+- Prove a tagged combined Canic, IcyDB, and application canister resolves one
+  exact `ic-timers` package ID and inventory any remaining direct provider
+  users.
   The provider's 250-call semaphore is canister-wide and is not reserved by
   the 128-handle library bound.
 - Optionally collect a numerical Canic before/after metrics-request benchmark;
@@ -267,16 +286,16 @@ comparison.
 Tagged IcyDB 0.226.1 at
 `cd388cad96383f7c4c56054a8f27de608e9371e3` hard-cuts to exact `ic-timers`
 0.3.4 and supplies maintained shared-registry evidence. Its validated post-tag
-worktree completes the exact-0.3.5 claim-scoped observation integration but
-had not landed when inspected. Canic's validated uncommitted adoption uses
-exact 0.3.6. See `docs/adoption/icydb.md` and `docs/adoption/canic.md`.
+worktree completes the exact-0.3.8 claim-scoped observation integration but
+had not landed when inspected. Canic's validated uncommitted adoption also
+uses exact 0.3.8. See `docs/adoption/icydb.md` and `docs/adoption/canic.md`.
 
 ## Next action
 
-Review the bounded 0.3.8 Canic evidence patch. The IcyDB-owned landing of its
-already-validated integration, the Canic-owned landing of its validated hard
-cut, and exact dependency alignment remain downstream work. Do not mutate
-downstream repositories unless the maintainer explicitly authorizes an exact
-target.
+Review the repository-only SemVer/release-impact policy and aligned downstream
+evidence update without creating another crate release. The IcyDB-owned and
+Canic-owned landings plus tagged combined qualification remain downstream
+work. Do not mutate downstream repositories unless the maintainer explicitly
+authorizes an exact target.
 
 The maintainer owns release tags and all package-publication actions.

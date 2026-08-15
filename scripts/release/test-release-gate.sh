@@ -38,6 +38,15 @@ if ! grep -Fqx -- \
     exit 1
 fi
 
+if ! grep -Fq -- \
+    'bash scripts/release/classify-release-impact.sh "v${previous_version}"' \
+    "${bump_script}" >/dev/null \
+    || ! grep -Fqx -- 'if [[ "${release_impact}" != "crate" ]]; then' \
+        "${bump_script}" >/dev/null; then
+    echo "error: version bump does not reject repository-only publication" >&2
+    exit 1
+fi
+
 expected_ci_targets="CI_TARGETS := actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package"
 if ! grep -Fqx -- "${expected_ci_targets}" "${makefile}" >/dev/null; then
     echo "error: normal CI does not enforce the complete required target sequence" >&2

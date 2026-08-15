@@ -10,9 +10,9 @@ and lifecycle recovery.
 The current release contains the complete bounded runtime, PocketIC
 recovery-watchdog evidence, and post-0.3 hardening. Tagged IcyDB 0.226.1
 hard-cuts to exact `ic-timers` 0.3.4, and its validated post-tag integration
-upgrades to exact 0.3.5. A validated uncommitted Canic worktree hard-cuts to
-exact 0.3.6. Combined qualification still requires both frameworks to resolve
-one exact patch.
+upgrades to exact 0.3.8. A validated uncommitted Canic worktree also hard-cuts
+to exact 0.3.8. The development subjects are aligned; tagged downstream
+releases still need combined one-package qualification.
 
 ## Why wrap `ic-cdk-timers`?
 
@@ -157,14 +157,14 @@ derives status plus timer/performance metrics from one shared inventory scan.
 
 Tagged IcyDB 0.226.1 uses the shared registry and its pre-armed watchdog. A
 validated post-tag integration upgrades to `has_armed_wakeup()` on exact
-0.3.5. The dependencies, removed parallel state, downstream PocketIC evidence,
+0.3.8. The dependencies, removed parallel state, downstream PocketIC evidence,
 measurements, and remaining landing boundary are recorded in the
 [IcyDB adoption record](docs/adoption/icydb.md).
 
-Canic currently pins exact 0.3.6, while released IcyDB pins 0.3.4 and its
-validated post-tag worktree pins 0.3.5. Those are safe standalone subjects but
-cannot share one registry in a combined Wasm until their exact dependency is
-aligned.
+The current Canic and IcyDB worktrees both pin exact 0.3.8. Their development
+graphs are aligned, but a tagged combined Wasm must still prove that it resolves
+one package and has no remaining direct provider user before released
+composition is claimed.
 
 ## Development
 
@@ -177,6 +177,12 @@ make ci
 target, and this repository's single formatting hook. Normal development uses
 Rust 1.97.1; `make msrv` checks the declared Rust 1.88.0 minimum separately.
 `make help` lists the smaller component targets.
+
+`make release-impact` distinguishes crate-impacting work from a repository-only
+documentation, evidence, or tooling update. Validate the latter with
+`make repository-check`; it does not change the crate version or create a
+publishable release identity. Public removals before 1.0 remain hard cuts but
+advance the minor compatibility line rather than a patch.
 
 The focused real-canister evidence is intentionally separate from the normal
 CI gate. The first run automatically downloads the exact audited PocketIC

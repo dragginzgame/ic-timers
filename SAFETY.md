@@ -106,12 +106,12 @@ the idempotent ensure operation whenever their authority requires a wake-up.
 - The current evidence uses the pinned PocketIC 15.0.0 binary and
   `ic-cdk-timers` 1.0.0 provider. A provider or evidence-binary change requires
   a renewed source and recovery audit.
-- Tagged IcyDB 0.226.1 and its validated post-tag exact-0.3.5 integration
+- Tagged IcyDB 0.226.1 and its validated post-tag exact-0.3.8 integration
   supply maintained downstream shared-registry evidence, recorded separately
   from this library's owner-local proof. A validated uncommitted Canic
-  exact-0.3.6 worktree supplies the real metrics/status adapter and removes its
-  parallel timer runtime. Combined evidence remains invalid until both
-  frameworks resolve one exact patch.
+  exact-0.3.8 worktree supplies the real metrics/status adapter and removes its
+  parallel timer runtime. The development graphs align; released composition
+  still requires one-package qualification from tagged downstream subjects.
 
 The frozen [0.3 Patch 1 contract](docs/design/0.3-patch-1-contract.md) defines
 the protocol and the

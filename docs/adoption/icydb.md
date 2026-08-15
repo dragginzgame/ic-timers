@@ -2,14 +2,14 @@
 
 Status: tagged IcyDB 0.226.1 at commit
 `cd388cad96383f7c4c56054a8f27de608e9371e3` adopted exact `ic-timers` 0.3.4.
-A validated post-tag IcyDB worktree upgrades to exact 0.3.5 and completes
+A validated post-tag IcyDB worktree upgrades to exact 0.3.8 and completes
 claim-scoped armed-wakeup observation; that downstream worktree was uncommitted
-when inspected on 2026-08-14.
+when inspected on 2026-08-15.
 
 ## Dependency and ownership
 
 The tagged release resolves one `ic-timers` 0.3.4 package. The validated
-post-tag integration pins `ic-timers = "=0.3.5"` and still resolves exactly one
+post-tag integration pins `ic-timers = "=0.3.8"` and still resolves exactly one
 package. In both subjects, the generated database actor owns one retained
 `WatchdogRegistration` with the fixed identity `icydb/startup/recovery` and a
 one-second cadence. The lifecycle owner initializes and reconciles that
@@ -49,10 +49,10 @@ IcyDB's maintained 0.225 status and integration suite record:
 - independent application-timer progress while the recovery watchdog traps.
 
 The tagged 0.3.4 subject reports 4,164,071 optimized raw Wasm bytes. The
-validated 0.3.5 integration reports 4,164,445 bytes, an increase of 374 bytes.
-Its compiler-emitted artifact is 4,767,744 bytes and deterministic gzip is
-1,606,653 bytes. Relative to the 4,125,495-byte direct-provider subject, the
-shared runtime adds 38,950 raw bytes and remains within IcyDB's 65,536-byte
+validated 0.3.8 integration reports 4,164,625 bytes, an increase of 554 bytes.
+Its compiler-emitted artifact is 4,767,940 bytes and deterministic gzip is
+1,606,620 bytes. Relative to the 4,125,495-byte direct-provider subject, the
+shared runtime adds 39,130 raw bytes and remains within IcyDB's 65,536-byte
 owner budget.
 
 The normally completed watchdog sample remains 1,163 instructions and two
@@ -60,12 +60,12 @@ application callbacks remain 1,986 instructions total. Candid is byte-identical
 at 60,348 bytes with SHA-256
 `a3a396639a0b809cf8865fc838ec9f69ada7ee291b3fdbdedd4c3f55525e97e5`.
 The public IcyDB facade and `ic-timers` compile to Wasm on Rust 1.88. The
-validated graph contains exactly one `ic-timers` 0.3.5 package, with
+validated graph contains exactly one `ic-timers` 0.3.8 package, with
 `ic-cdk-timers` private and transitive.
 
 These are maintained downstream results inspected read-only; this repository
 did not modify IcyDB. IcyDB reran the focused real-canister recovery evidence
-for its 0.3.5 integration. Full downstream repository validation remains
+for its 0.3.8 integration. Full downstream repository validation remains
 IcyDB-owner work.
 
 ## Claim-scoped integration
@@ -83,9 +83,8 @@ check-then-arm race. No public IcyDB API, Candid surface, persisted format, or
 compatibility path changes. The remaining downstream step is to land that
 already-validated post-tag worktree.
 
-A validated uncommitted Canic worktree adopts exact `ic-timers` 0.3.6 and
-removes its parallel timer runtime. Released IcyDB remains on 0.3.4 and this
-validated post-tag IcyDB subject is on 0.3.5, so neither can currently combine
-with that Canic worktree as one registry. Combined qualification must align
-both frameworks to one exact patch and prove a canister-wide provider
-inventory.
+A validated uncommitted Canic worktree adopts exact `ic-timers` 0.3.8 and
+removes its parallel timer runtime. The two current development worktrees are
+therefore aligned to one exact patch. Their tagged releases still need a
+combined single-package qualification and canister-wide provider inventory
+before claiming released composition.

@@ -2,7 +2,8 @@
 	actions-check build bump-x check ci clean clippy docs-check ensure-clean fmt fmt-check help \
 	install-hooks major minor msrv package patch pocketic-cohorts pocketic-watchdog publish release-check release-commit \
 	pocketic-check provider-check release-major release-minor release-patch release-push release-stage \
-	release-tag-check release-verify release-x shell-check test testing-check update-dev version wasm-check
+	release-impact release-tag-check release-verify release-x repository-check shell-check test testing-check update-dev \
+	version wasm-check
 
 MSRV ?= 1.88.0
 VERSION ?=
@@ -13,6 +14,7 @@ POCKET_IC_AUTO_INSTALL := $(if $(filter undefined,$(POCKET_IC_BIN_ORIGIN)),1,0)
 
 CI_TARGETS := actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package
 RELEASE_TARGETS := pocketic-check ci msrv testing-check pocketic-watchdog pocketic-cohorts
+REPOSITORY_TARGETS := actions-check shell-check release-check provider-check fmt-check
 
 help:
 	@echo "Available commands:"
@@ -29,6 +31,8 @@ help:
 	@echo "  provider-check      Enforce the private ic-cdk-timers provider boundary"
 	@echo "  testing-check       Lint every supported nested probe configuration"
 	@echo "  release-verify      Run the complete fail-closed release evidence gate"
+	@echo "  release-impact      Classify changes since the current version tag"
+	@echo "  repository-check    Validate a non-published repository-only update"
 	@echo "  publish             Publish the clean, tagged release to crates.io"
 	@echo "  actions-check       Verify external Actions use full commit SHAs"
 	@echo "  shell-check         Check repository shell-script syntax"
@@ -121,6 +125,7 @@ shell-check:
 release-check:
 	bash scripts/release/test-finalize-changelog.sh
 	bash scripts/release/test-finalize-release-truth.sh
+	bash scripts/release/test-release-impact.sh
 	bash scripts/release/test-release-prose-warning.sh
 	bash scripts/release/test-release-gate.sh
 	bash scripts/release/check-release-truth.sh
@@ -137,6 +142,21 @@ release-verify:
 	+@set -e; for target in $(RELEASE_TARGETS); do \
 		$(MAKE) --no-print-directory "$$target"; \
 	done
+
+release-impact:
+	@impact="$$(bash scripts/release/classify-release-impact.sh)"; \
+		echo "Release impact: $$impact"
+
+repository-check:
+	+@impact="$$(bash scripts/release/classify-release-impact.sh)"; \
+		if [ "$$impact" = "crate" ]; then \
+			echo "error: crate-impacting changes require the release validation path" >&2; \
+			exit 1; \
+		fi; \
+		echo "Repository impact: $$impact"; \
+		for target in $(REPOSITORY_TARGETS); do \
+			$(MAKE) --no-print-directory "$$target"; \
+		done
 
 build:
 	cargo build --workspace --all-targets --all-features --locked

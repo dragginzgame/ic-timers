@@ -72,6 +72,16 @@ if git rev-parse --verify --quiet "refs/tags/v${new_version}" >/dev/null; then
     exit 1
 fi
 
+release_impact="$(
+    bash scripts/release/classify-release-impact.sh "v${previous_version}"
+)"
+if [[ "${release_impact}" != "crate" ]]; then
+    echo "error: changes since v${previous_version} are ${release_impact};" >&2
+    echo "       do not publish a repository-only crate release" >&2
+    echo "hint: use make repository-check and commit the repository update without a version tag" >&2
+    exit 1
+fi
+
 release_date="$(date +%F)"
 bash scripts/release/finalize-changelog.sh --check "${new_version}" "${release_date}"
 bash scripts/release/finalize-release-truth.sh --check "${previous_version}" "${new_version}"

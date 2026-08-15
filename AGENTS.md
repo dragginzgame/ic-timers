@@ -36,6 +36,11 @@ This file is normative for automated contributors.
 - Update current tests, documentation, and downstream adapters in the same
   change. Historical changelogs may describe removed behavior but do not
   justify keeping executable compatibility code.
+- A hard cut governs implementation, not version selection. Within pre-1.0
+  Cargo compatibility, removing or incompatibly changing a public item or
+  public semantic contract requires the next minor line (`0.x` to `0.(x+1)`),
+  never a patch. Do not restore a shim to repair an already-published version;
+  record the mistake and apply the correct boundary to future changes.
 
 ## API and safety hygiene
 
@@ -56,6 +61,13 @@ This file is normative for automated contributors.
 
 - Update `CHANGELOG.md` and the open release-line note for every meaningful
   change without waiting for a separate changelog request.
+- Distinguish crate-impacting work from repository-only documentation,
+  evidence, CI, and release-tooling updates. Repository-only work is committed
+  without changing the package version, creating a tag, or publishing; keep
+  its notes under `Unreleased` and bundle them into the next code-bearing
+  release. `make release-impact` reports the mechanical classification and
+  every bump refuses a repository-only subject. Do not manufacture crate
+  impact merely to bypass that guard.
 - Once the maintainer names a target release, immediately create and maintain
   an undated `## [x.y.z]` section directly below `## [Unreleased]`. Put that
   release's notes there and keep `Unreleased` empty; do not leave named-release
