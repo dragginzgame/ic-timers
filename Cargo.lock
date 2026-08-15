@@ -26,7 +26,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers"
-version = "0.3.6"
+version = "0.3.7"
 dependencies = [
  "ic-cdk-timers",
  "ic0",
