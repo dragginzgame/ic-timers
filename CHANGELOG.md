@@ -6,6 +6,13 @@ All notable changes to this project are recorded here.
 
 ## [0.6.1]
 
+### Changed
+
+- Treat repository-only release impact as an advisory when the maintainer
+  explicitly invokes a version-bump or release target. Empty release subjects
+  still fail, and repository-only releases retain the complete validation
+  gate.
+
 ### Documentation
 
 - Clarify that callback instruction aggregates cover the accepted

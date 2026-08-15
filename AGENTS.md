@@ -62,12 +62,13 @@ This file is normative for automated contributors.
 - Update `CHANGELOG.md` and the open release-line note for every meaningful
   change without waiting for a separate changelog request.
 - Distinguish crate-impacting work from repository-only documentation,
-  evidence, CI, and release-tooling updates. Repository-only work is committed
-  without changing the package version, creating a tag, or publishing; keep
-  its notes under `Unreleased` and bundle them into the next code-bearing
-  release. `make release-impact` reports the mechanical classification and
-  every bump refuses a repository-only subject. Do not manufacture crate
-  impact merely to bypass that guard.
+  evidence, CI, and release-tooling updates. Repository-only work normally
+  remains untagged and is bundled into the next code-bearing release because
+  exact-pinned consumers must coordinate every package identity. However, an
+  explicit maintainer-owned version-bump or release target is sufficient
+  authority to publish a repository-only patch: warn clearly, run the complete
+  release gate, and continue. Reject a subject with no changes. Do not
+  manufacture crate impact merely to silence the advisory.
 - Once the maintainer names a target release, immediately create and maintain
   an undated `## [x.y.z]` section directly below `## [Unreleased]`. Put that
   release's notes there and keep `Unreleased` empty; do not leave named-release

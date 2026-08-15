@@ -113,6 +113,9 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
   provider binding or the two-message protocol.
 - Release truth, the root and testing lockfiles, and each dedicated release
   note are mechanically checked for agreement.
+- Explicit maintainer-owned bumps may release a repository-only patch after a
+  clear advisory. Empty subjects remain rejected, and the complete CI, MSRV,
+  nested-probe, and PocketIC release gates still run.
 
 ## Downstream state
 

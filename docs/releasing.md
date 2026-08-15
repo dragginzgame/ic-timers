@@ -37,12 +37,16 @@ workspace version and reports:
 
 This is a conservative mechanical boundary, not an API compatibility oracle.
 For `crate`, review the public API and semantic contract and choose patch or
-minor according to the rule above. For `repository`, do not change the package
-version, tag, or publish. Keep noteworthy changes under `Unreleased`, validate
-the update with `make repository-check` plus any focused owner-local evidence,
-and bundle the notes into the next code-bearing release. Every version-bump
-helper rejects a repository-only subject before expensive validation or
-version mutation.
+minor according to the rule above. Repository-only work normally stays
+untagged: validate it with `make repository-check` plus any focused owner-local
+evidence and bundle it into the next code-bearing release. This avoids forcing
+exact-pinned shared-registry consumers to coordinate a package identity that
+does not change runtime behavior.
+
+An explicit maintainer-owned version-bump or release target overrides that
+default. For a `repository` subject, the helper prints an advisory and then
+runs the same complete release gate before continuing. It never invents crate
+impact or silently weakens validation. A `none` subject is still rejected.
 
 As soon as a target version is known, keep completed user-visible changes in
 an explicit undated section directly below the empty `Unreleased` heading:
@@ -61,8 +65,10 @@ remain supported and are promoted automatically when a version is selected.
 
 The helper refuses to continue if the changelog shape is ambiguous, the target
 notes are empty, the target is already dated, the requested version is not a
-strict canonical-SemVer increase, the exact release tag already exists, the
-subject is repository-only, or the worktree is not clean.
+strict canonical-SemVer increase, the exact release tag already exists, no
+changes exist since the current version tag, or the worktree is not clean. A
+repository-only subject emits an advisory but may proceed when the maintainer
+has explicitly invoked the bump or release target.
 
 Before the clean-worktree and expensive evidence gates, the helper also scans
 the compact status for target-version wording likely to become stale, such as

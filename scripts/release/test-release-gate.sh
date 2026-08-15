@@ -4,6 +4,7 @@ set -euo pipefail
 repository_root="$(git rev-parse --show-toplevel)"
 makefile="${repository_root}/Makefile"
 bump_script="${repository_root}/scripts/release/bump-version.sh"
+impact_checker="${repository_root}/scripts/release/check-bump-impact.sh"
 pocketic_check="${repository_root}/scripts/ci/check-pocketic.sh"
 
 if grep -RE --include='*.sh' \
@@ -41,9 +42,36 @@ fi
 if ! grep -Fq -- \
     'bash scripts/release/classify-release-impact.sh "v${previous_version}"' \
     "${bump_script}" >/dev/null \
-    || ! grep -Fqx -- 'if [[ "${release_impact}" != "crate" ]]; then' \
+    || ! grep -Fqx -- \
+        'bash scripts/release/check-bump-impact.sh "${release_impact}" "${previous_version}"' \
         "${bump_script}" >/dev/null; then
-    echo "error: version bump does not reject repository-only publication" >&2
+    echo "error: version bump does not validate the classified release impact" >&2
+    exit 1
+fi
+
+if ! bash "${impact_checker}" crate 0.6.0 >/dev/null 2>&1; then
+    echo "error: crate-impacting release subject was rejected" >&2
+    exit 1
+fi
+if ! repository_output="$(bash "${impact_checker}" repository 0.6.0 2>&1)"; then
+    echo "error: repository-only release subject was rejected" >&2
+    exit 1
+fi
+repository_advisory="continuing because the maintainer invoked an explicit version bump"
+if [[ "${repository_output}" != *"${repository_advisory}"* ]]; then
+    echo "error: repository-only release subject did not emit its advisory" >&2
+    exit 1
+fi
+if none_output="$(bash "${impact_checker}" none 0.6.0 2>&1)"; then
+    echo "error: empty release subject was accepted" >&2
+    exit 1
+fi
+if [[ "${none_output}" != *"no changes exist since v0.6.0"* ]]; then
+    echo "error: empty release subject did not explain its rejection" >&2
+    exit 1
+fi
+if bash "${impact_checker}" unexpected 0.6.0 >/dev/null 2>&1; then
+    echo "error: unknown release-impact classification was accepted" >&2
     exit 1
 fi
 
