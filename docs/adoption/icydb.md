@@ -1,104 +1,115 @@
 # IcyDB adoption record
 
-Status: tagged IcyDB 0.226.1 at commit
-`cd388cad96383f7c4c56054a8f27de608e9371e3` adopted exact `ic-timers` 0.3.4.
-A validated post-tag IcyDB worktree upgrades to exact 0.3.8 and completes
-claim-scoped armed-wakeup observation; that downstream worktree was uncommitted
-when inspected on 2026-08-15.
+Status: IcyDB has completed a hard-cut adoption of exact `ic-timers` 0.5.0.
+This is maintained downstream evidence supplied by the IcyDB owner; this
+repository did not modify IcyDB. Historical tagged and intermediate evidence
+is retained separately below.
 
-## Dependency and ownership
+## Current exact-0.5.0 integration
 
-The tagged release resolves one `ic-timers` 0.3.4 package. The validated
-post-tag integration pins `ic-timers = "=0.3.8"` and still resolves exactly one
-package. In both subjects, the generated database actor owns one retained
-`WatchdogRegistration` with the fixed identity `icydb/startup/recovery` and a
-one-second cadence. The lifecycle owner initializes and reconciles that
-registration before application post-upgrade work.
+The current IcyDB dependency graph resolves exactly one `ic-timers` 0.5.0
+package. `ic-cdk-timers` 1.0.0 is private and transitive beneath it; IcyDB has
+no direct provider dependency or alternate provider path.
 
-The hard cut removed IcyDB's startup `TimerId`, active flag, cadence guard,
-serial interval, and zero-delay cleanup path. The inspected workspace and
-generated probe subjects contain no direct production `ic-cdk-timers` use;
-the provider remains a private transitive dependency below `ic-timers`. IcyDB
-persists readiness and terminal database failure, not timer handles,
-generations, snapshots, or library policy.
+The generated database actor owns one retained `WatchdogRegistration` with
+the fixed identity `icydb/startup/recovery` and a one-second cadence. The
+lifecycle owner initializes and reconciles it before application
+post-upgrade work. IcyDB continues to own durable readiness and terminal
+database-failure authority; it does not persist timer handles, generations,
+snapshots, epochs, or library policy.
+
+The 0.5 hard cut replaced IcyDB's sole explicit `TimerContext` use directly
+with `WatchdogContext`. It retained no alias, compatibility shim, policy
+probe, dual version, fallback registry, or parallel timer state machine. The
+SQL-performance timer consumer also compiles against exact 0.5.0.
 
 The result mapping remains:
 
 | IcyDB result | Timer completion | Watchdog decision |
 | --- | --- | --- |
-| recovery page made progress | success | continue |
-| returned retryable recovery failure | retryable failure | continue |
-| database is ready | no work | stop |
-| durable terminal database failure | invariant failure | stop |
+| Recovery page made progress | success | continue |
+| Returned retryable recovery failure | retryable failure | continue |
+| Database is ready | no work | stop |
+| Durable terminal database failure | invariant failure | stop |
 
 A normally returned mutation error that retains recovery controls invokes the
-synchronous idempotent ensure seam before returning. Application timer probes
-also use the same `ic-timers` registry, so this evidence is not based on an
-IcyDB-only fallback runtime.
+synchronous idempotent ensure seam before returning. Durable demand always
+calls `ensure_scheduled()` unconditionally; `has_armed_wakeup()` remains a
+reporting observation and does not create a check-then-arm race.
 
-## Accepted downstream evidence
+## Current downstream validation
 
-IcyDB's maintained 0.225 status and integration suite record:
+IcyDB reports the following checks passing against exact 0.5.0:
 
-- successor survival and later progress after an explicit work trap and
-  40-billion-instruction exhaustion;
-- rejection of external timer-executor ingress;
-- synchronous upgrade reconstruction before downstream hooks;
-- terminal watchdog unregistration;
-- one coalesced attempt after a 300-second overdue jump; and
-- independent application-timer progress while the recovery watchdog traps.
+- current Rust and Rust 1.88 compilation;
+- warning-denied Clippy;
+- one resolved `ic-timers` package and a private transitive provider;
+- explicit Watchdog work-trap recovery and later progress;
+- actual 40-billion-instruction exhaustion with successor survival;
+- overdue cadence coalescing;
+- synchronous upgrade reconstruction and lifecycle composition;
+- retry after a trapped upgrade;
+- rejection of external timer-executor ingress; and
+- compilation of the SQL-performance timer consumer.
 
-The tagged 0.3.4 subject reports 4,164,071 optimized raw Wasm bytes. The
-validated 0.3.8 integration reports 4,164,625 bytes, an increase of 554 bytes.
-Its compiler-emitted artifact is 4,767,940 bytes and deterministic gzip is
-1,606,620 bytes. Relative to the 4,125,495-byte direct-provider subject, the
-shared runtime adds 39,130 raw bytes and remains within IcyDB's 65,536-byte
-owner budget.
+IcyDB's Candid remains byte-identical. No public IcyDB API, persisted format,
+compatibility path, or recovery-authority boundary changed during the 0.5
+adoption.
 
-The normally completed watchdog sample remains 1,163 instructions and two
-application callbacks remain 1,986 instructions total. Candid is byte-identical
-at 60,348 bytes with SHA-256
+These are owner-maintained downstream results, not a claim that the
+`ic-timers` repository reran IcyDB's suite. Combined Canic/IcyDB/application
+qualification must still resolve one exact `ic-timers` package in the final
+Wasm and inventory every remaining direct provider user canister-wide.
+
+## Historical tagged evidence
+
+Tagged IcyDB 0.226.1 at commit
+`cd388cad96383f7c4c56054a8f27de608e9371e3` first adopted exact `ic-timers`
+0.3.4. That hard cut removed IcyDB's startup `TimerId`, active flag, cadence
+guard, serial interval, and zero-delay cleanup path.
+
+The tagged subject demonstrated successor survival and later progress after
+an explicit trap and 40-billion-instruction exhaustion, external-ingress
+rejection, synchronous upgrade reconstruction before downstream hooks,
+terminal unregistration, overdue coalescing, and independent application
+timer progress while recovery work trapped. Its optimized raw Wasm was
+4,164,071 bytes.
+
+Its normally completed Watchdog sample was 1,163 instructions and two
+application callbacks were 1,986 instructions total. Candid was 60,348 bytes
+with SHA-256
 `a3a396639a0b809cf8865fc838ec9f69ada7ee291b3fdbdedd4c3f55525e97e5`.
-The public IcyDB facade and `ic-timers` compile to Wasm on Rust 1.88. The
-validated graph contains exactly one `ic-timers` 0.3.8 package, with
-`ic-cdk-timers` private and transitive.
 
-These are maintained downstream results inspected read-only; this repository
-did not modify IcyDB. IcyDB reran the focused real-canister recovery evidence
-for its 0.3.8 integration. Full downstream repository validation remains
-IcyDB-owner work.
+## Historical post-tag 0.3.8 evidence
 
-## Claim-scoped integration
+A validated post-tag IcyDB worktree advanced from snapshot-derived wake-up
+reporting to `WatchdogRegistration::has_armed_wakeup()` and exact
+`ic-timers` 0.3.8. It resolved one package, kept `ic-cdk-timers` private and
+transitive, compiled to Wasm on Rust 1.88, and reran the focused real-canister
+recovery evidence.
 
-The tagged 0.226.1 source derives its reporting bit from
-`TimerSnapshot::next_deadline_ns()`. The validated post-tag integration instead
-calls `WatchdogRegistration::has_armed_wakeup()`, correctly distinguishing an
-unarmed live claim from an expired or invalid claim. The observation counts
-the pre-armed watchdog successor and excludes the separately queued work
-callback.
+That subject reported 4,164,625 optimized raw Wasm bytes, 4,767,940 compiler
+artifact bytes, and 1,606,620 deterministic gzip bytes. Relative to the
+4,125,495-byte direct-provider subject, the shared runtime added 39,130 raw
+bytes and remained within IcyDB's 65,536-byte owner budget. These numbers are
+historical 0.3.8 measurements and are not relabeled as 0.5 results.
 
-Durable recovery demand still invokes `ensure_scheduled()` unconditionally.
-The observation is therefore reporting only and does not introduce a
-check-then-arm race. No public IcyDB API, Candid surface, persisted format, or
-compatibility path changes. The remaining downstream step is to land that
-already-validated post-tag worktree.
+## Memory-observation boundary
 
-A validated uncommitted Canic worktree adopts exact `ic-timers` 0.3.8 and
-removes its parallel timer runtime. The two current development worktrees are
-therefore aligned to one exact patch. Their tagged releases still need a
-combined single-package qualification and canister-wide provider inventory
-before claiming released composition.
+The exact-0.5.0 runtime records allocation-free start/end Wasm and stable
+memory page extents for normally completed scheduler and work callbacks. The
+bounded summaries retain the latest extents and maximum observed non-negative
+growth; they do not total absolute page counts or fabricate samples for
+trapped or instruction-exhausted work.
 
-## 0.5 memory-observation feedback
+Page extent is a runtime-epoch-local high-water observation, not exact live
+bytes. IcyDB still owns any allocator-derived sub-page byte bound and its
+maximum 64-index fanout probe. Watchdog scheduler and work are synchronous, so
+their extent intervals avoid the interleaved-await qualification that applies
+to ordinary async callbacks.
 
-IcyDB's 0.228 design feedback requested allocation-free start/end Wasm and
-stable memory page observations for normally completed scheduler and work
-callbacks. The open `ic-timers` 0.5 candidate implements that owner-local
-surface as bounded latest extents and maximum observed start-to-end growth. It
-does not total absolute pages, fabricate a trapped-work sample, or describe
-page extent as exact live bytes. IcyDB's Watchdog work is synchronous, avoiding
-the interleaved-await qualification that applies to ordinary async callbacks.
-
-IcyDB still owns any allocator-derived sub-page byte bound and its maximum
-64-index fanout probe. Those downstream measurements have not yet qualified an
-exact 0.5 package and are not claimed as `ic-timers` evidence here.
+The focused [0.5 overhead probe](../audits/0.5-memory-sampling-overhead-2026-08-15.md)
+reports the page-read cost separately from callback instruction aggregates.
+In PocketIC 15.0.0, the empty and sampled brackets both measured 200
+call-context instructions, for an observed four-read delta of zero. This is a
+local regression subject rather than a promise about future IC metering.

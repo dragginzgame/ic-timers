@@ -11,10 +11,10 @@ use crate::{
     snapshot::{
         DeclarationLifetime, InactiveReason, MemoryPageExtent, MemoryPageSample,
         OrdinaryRuntimeStateSnapshot, TimerCompletion, TimerCompletionOutcome, TimerControlFailure,
-        TimerDirectiveSnapshot, TimerEpoch, TimerIdentity, TimerObservabilitySnapshot, TimerPolicy,
-        TimerRunResult, TimerRuntimeStateSnapshot, TimerSchedulingMode, TimerSnapshot,
-        WatchdogAttemptSnapshot, WatchdogAttemptStatus, WatchdogDecision, WatchdogRunResult,
-        WatchdogRuntimeStateSnapshot,
+        TimerDirectiveSnapshot, TimerEpoch, TimerIdentity, TimerInventorySnapshot,
+        TimerObservabilitySnapshot, TimerPolicy, TimerRunResult, TimerRuntimeStateSnapshot,
+        TimerSchedulingMode, TimerSnapshot, WatchdogAttemptSnapshot, WatchdogAttemptStatus,
+        WatchdogDecision, WatchdogRunResult, WatchdogRuntimeStateSnapshot,
     },
 };
 use std::{cell::RefCell, collections::BTreeMap, future::Future, pin::Pin, rc::Rc};
@@ -1523,11 +1523,14 @@ impl TimerRegistry {
             .map(|entry| entry.snapshot(identity.clone()))
     }
 
-    pub(crate) fn snapshots(&self) -> Vec<TimerSnapshot> {
-        self.entries
-            .iter()
-            .map(|(identity, entry)| entry.snapshot(identity.clone()))
-            .collect()
+    pub(crate) fn inventory(&self) -> TimerInventorySnapshot {
+        TimerInventorySnapshot::new(
+            self.epoch,
+            self.entries
+                .iter()
+                .map(|(identity, entry)| entry.snapshot(identity.clone()))
+                .collect(),
+        )
     }
 
     pub(crate) fn consecutive_expected_failures(&self, identity: &TimerIdentity) -> Option<u64> {

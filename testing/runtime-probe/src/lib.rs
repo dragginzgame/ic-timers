@@ -2,7 +2,7 @@ use candid::CandidType;
 use ic_timers::{
     DeclarationLifetime, MAX_TIMER_REGISTRATIONS, MemoryPageSummary, TimerCadence, TimerCompletion,
     TimerIdentity, TimerLastOutcome, WatchdogDecision, WatchdogRegistration, WatchdogRunResult,
-    initialize_runtime, register_watchdog, timer_snapshot, timer_snapshots,
+    initialize_runtime, register_watchdog, timer_inventory, timer_snapshot,
 };
 use serde::Deserialize;
 use std::cell::{Cell, RefCell};
@@ -273,8 +273,8 @@ fn burn_to_below_timer_call_cost() -> (u128, u128) {
 #[ic_cdk::update]
 fn fill_inventory() -> u64 {
     loop {
-        let current = match timer_snapshots() {
-            Ok(snapshots) => snapshots.len(),
+        let current = match timer_inventory() {
+            Ok(inventory) => inventory.len(),
             Err(_) => ic_cdk::trap("inventory lookup failed"),
         };
         if current >= MAX_TIMER_REGISTRATIONS {
@@ -306,15 +306,16 @@ fn fill_inventory() -> u64 {
 #[ic_cdk::query]
 fn inventory_measurement() -> (u64, u64, bool) {
     let before = ic_cdk::api::performance_counter(1);
-    let snapshots = match timer_snapshots() {
-        Ok(snapshots) => snapshots,
+    let inventory = match timer_inventory() {
+        Ok(inventory) => inventory,
         Err(_) => ic_cdk::trap("inventory snapshot failed"),
     };
     let instructions = ic_cdk::api::performance_counter(1).saturating_sub(before);
-    let ordered = snapshots
+    let ordered = inventory
+        .timers()
         .windows(2)
         .all(|pair| pair[0].identity() < pair[1].identity());
-    (snapshots.len() as u64, instructions, ordered)
+    (inventory.len() as u64, instructions, ordered)
 }
 
 #[inline(never)]

@@ -1,5 +1,5 @@
 use candid::CandidType;
-use ic_timers::{TimerIdentity, initialize_runtime, timer_snapshot, timer_snapshots};
+use ic_timers::{TimerIdentity, initialize_runtime, timer_inventory, timer_snapshot};
 use std::cell::Cell;
 
 #[cfg(not(feature = "baseline"))]
@@ -65,6 +65,13 @@ struct OperationMeasurement {
 }
 
 #[derive(CandidType, Debug)]
+struct MemorySamplingMeasurement {
+    empty_bracket_instructions: u64,
+    sampled_bracket_instructions: u64,
+    overhead_instructions: u64,
+}
+
+#[derive(CandidType, Debug)]
 struct CohortObservation {
     cohort: &'static str,
     registered: bool,
@@ -108,6 +115,27 @@ fn cancel() -> OperationMeasurement {
     measure(cancel_inner)
 }
 
+/// Isolate the raw instruction cost of the start/end page reads used by one
+/// normally completed callback. This probe-only endpoint does not alter the
+/// runtime's callback instruction aggregate.
+#[ic_cdk::update]
+fn memory_sampling_overhead() -> MemorySamplingMeasurement {
+    let empty_bracket_instructions = measure_interval(|| {
+        std::hint::black_box((0_u64, 0_u64));
+        std::hint::black_box((0_u64, 0_u64));
+    });
+    let sampled_bracket_instructions = measure_interval(|| {
+        std::hint::black_box(memory_page_extents());
+        std::hint::black_box(memory_page_extents());
+    });
+    MemorySamplingMeasurement {
+        empty_bracket_instructions,
+        sampled_bracket_instructions,
+        overhead_instructions: sampled_bracket_instructions
+            .saturating_sub(empty_bracket_instructions),
+    }
+}
+
 #[ic_cdk::query]
 fn observe() -> CohortObservation {
     let snapshot_before = ic_cdk::api::performance_counter(1);
@@ -117,7 +145,7 @@ fn observe() -> CohortObservation {
     };
     let snapshot_instructions = ic_cdk::api::performance_counter(1).saturating_sub(snapshot_before);
     let inventory_before = ic_cdk::api::performance_counter(1);
-    let inventory = match timer_snapshots() {
+    let inventory = match timer_inventory() {
         Ok(inventory) => inventory,
         Err(_) => ic_cdk::trap("size-probe inventory failed"),
     };
@@ -178,6 +206,22 @@ fn measure(operation: impl FnOnce() -> bool) -> OperationMeasurement {
         changed,
         instructions: ic_cdk::api::performance_counter(1).saturating_sub(before),
     }
+}
+
+fn measure_interval(operation: impl FnOnce()) -> u64 {
+    let before = ic_cdk::api::performance_counter(1);
+    operation();
+    ic_cdk::api::performance_counter(1).saturating_sub(before)
+}
+
+#[inline(always)]
+fn memory_page_extents() -> (u64, u64) {
+    #[cfg(target_arch = "wasm32")]
+    let wasm = core::arch::wasm32::memory_size::<0>() as u64;
+    #[cfg(not(target_arch = "wasm32"))]
+    let wasm = 0;
+
+    (wasm, ic_cdk::api::stable_size())
 }
 
 #[cfg(feature = "baseline")]

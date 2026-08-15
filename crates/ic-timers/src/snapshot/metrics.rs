@@ -408,6 +408,15 @@ const fn max_u64(left: u64, right: u64) -> u64 {
 }
 
 /// Completed instruction and memory-page measurements split by callback role.
+///
+/// Each interval covers the accepted `ic-timers` callback envelope: it starts
+/// before callback acceptance and ends after completion processing and any
+/// successor binding. It is not an exclusive measurement of consumer code.
+/// Start/end page reads bracket the instruction interval from outside.
+///
+/// A terminal [`DeclarationLifetime::RemoveWhenStopped`](crate::DeclarationLifetime::RemoveWhenStopped)
+/// callback can remove its declaration before this final record is retained;
+/// no timer then remains in the inventory to expose that sample.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TimerPerformance {
     scheduler_instructions: MeasurementSummary,
@@ -434,25 +443,25 @@ impl TimerPerformance {
         self.work_memory_pages.record(memory);
     }
 
-    /// Return normally completed scheduler instruction measurements.
+    /// Return normally completed accepted scheduler-envelope measurements.
     #[must_use]
     pub const fn scheduler_instructions(self) -> MeasurementSummary {
         self.scheduler_instructions
     }
 
-    /// Return normally completed consumer-work instruction measurements.
+    /// Return normally completed accepted work-envelope measurements.
     #[must_use]
     pub const fn work_instructions(self) -> MeasurementSummary {
         self.work_instructions
     }
 
-    /// Return normally completed scheduler memory-page observations.
+    /// Return normally completed accepted scheduler-envelope page observations.
     #[must_use]
     pub const fn scheduler_memory_pages(self) -> MemoryPageSummary {
         self.scheduler_memory_pages
     }
 
-    /// Return normally completed consumer-work memory-page observations.
+    /// Return normally completed accepted work-envelope page observations.
     #[must_use]
     pub const fn work_memory_pages(self) -> MemoryPageSummary {
         self.work_memory_pages

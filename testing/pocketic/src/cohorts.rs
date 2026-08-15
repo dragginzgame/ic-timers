@@ -12,6 +12,13 @@ struct OperationMeasurement {
 }
 
 #[derive(CandidType, Debug, Deserialize)]
+struct MemorySamplingMeasurement {
+    empty_bracket_instructions: u64,
+    sampled_bracket_instructions: u64,
+    overhead_instructions: u64,
+}
+
+#[derive(CandidType, Debug, Deserialize)]
 struct CohortObservation {
     cohort: String,
     registered: bool,
@@ -118,8 +125,30 @@ fn run_cohort(cohort: &str) {
     );
     assert_eq!(observe(&pic, canister_id).next_deadline_ns, None);
 
+    let memory_sampling = if cohort == "watchdog" {
+        let measurement = memory_sampling_measurement(&pic, canister_id);
+        assert!(measurement.sampled_bracket_instructions >= measurement.empty_bracket_instructions);
+        assert_eq!(
+            measurement.overhead_instructions,
+            measurement
+                .sampled_bracket_instructions
+                .saturating_sub(measurement.empty_bracket_instructions)
+        );
+        Some(measurement)
+    } else {
+        None
+    };
+    let (memory_sampling_empty, memory_sampling_sampled, memory_sampling_overhead) =
+        memory_sampling.map_or((0, 0, 0), |measurement| {
+            (
+                measurement.empty_bracket_instructions,
+                measurement.sampled_bracket_instructions,
+                measurement.overhead_instructions,
+            )
+        });
+
     println!(
-        "ic_timers_cohort cohort={} start={} duplicate={} cancel={} snapshot={} inventory={} scheduler={} work={} dispatch_cycles={}",
+        "ic_timers_cohort cohort={} start={} duplicate={} cancel={} snapshot={} inventory={} scheduler={} work={} memory_sampling_empty={} memory_sampling_sampled={} memory_sampling_overhead={} dispatch_cycles={}",
         cohort,
         start.instructions,
         duplicate.instructions,
@@ -128,6 +157,9 @@ fn run_cohort(cohort: &str) {
         completed.inventory_instructions,
         completed.scheduler_instruction_total,
         completed.work_instruction_total,
+        memory_sampling_empty,
+        memory_sampling_sampled,
+        memory_sampling_overhead,
         dispatch_cycles,
     );
 }
@@ -162,6 +194,22 @@ fn update_measurement(
         )
         .unwrap_or_else(|error| panic!("update {method}: {error:?}"));
     Decode!(&bytes, OperationMeasurement).unwrap_or_else(|error| panic!("decode {method}: {error}"))
+}
+
+fn memory_sampling_measurement(
+    pic: &PocketIc,
+    canister_id: Principal,
+) -> MemorySamplingMeasurement {
+    let bytes = pic
+        .update_call(
+            canister_id,
+            Principal::anonymous(),
+            "memory_sampling_overhead",
+            Encode!().expect("encode memory-sampling update"),
+        )
+        .unwrap_or_else(|error| panic!("measure memory sampling: {error:?}"));
+    Decode!(&bytes, MemorySamplingMeasurement)
+        .unwrap_or_else(|error| panic!("decode memory-sampling measurement: {error}"))
 }
 
 fn observe(pic: &PocketIc, canister_id: Principal) -> CohortObservation {

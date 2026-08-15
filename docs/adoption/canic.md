@@ -1,13 +1,14 @@
 # Canic adapter contract
 
-Status: validated downstream adoption worktree; Canic release remains pending.
+Status: Canic has completed a hard-cut adoption of exact `ic-timers` 0.5.0
+with runtime introspection schema 3. Combined Canic/IcyDB qualification remains
+open.
 
-## Inspected downstream adoption
+## Current exact-0.5.0 adoption
 
-The uncommitted Canic worktree inspected read-only on 2026-08-15 is based on
-tagged `v0.102.1` commit
-`86763c5f16478e2e548e2059e5efaa963bf9a966` and resolves exact
-`ic-timers = "=0.3.8"`. It implements the hard cut described below:
+Canic's maintained downstream evidence reports exactly one resolved
+`ic-timers` 0.5.0 package and no direct `ic-cdk-timers` dependency. The
+provider is private and transitive beneath the shared runtime. The hard cut:
 
 - Canic's direct `ic-cdk-timers` dependency, provider wrapper, `TIMERS` map,
   `TimerControl`, timer metrics table, and timer-specific performance storage
@@ -16,24 +17,35 @@ tagged `v0.102.1` commit
   inventory, including other framework and application owners;
 - application timer creation and consuming cancellation are fallible, and
   macro callers must propagate or explicitly handle failure;
-- runtime introspection advances to schema version 2;
+- runtime introspection advances to schema version 3 and exports the bounded
+  scheduler/work memory-page observations;
 - one bounded Canic custody collection retains only opaque registration
   capabilities; and
-- runtime metrics obtain the inventory once per request and derive both timer
-  and timer-performance rows from that same snapshot vector.
+- runtime metrics obtain the inventory once per request and derive timer,
+  instruction-performance, and memory-observation rows from that same atomic
+  subject.
 
-The move from exact 0.3.6 to 0.3.8 required no adapter change. Canic's
-maintained status reports affected package checks, strict targeted Clippy,
-inventory and lifecycle guards, three adapter unit tests, and PocketIC
-cancellation, recurrence, and upgrade reconstruction passing. It also reports
-one resolved 0.3.8 package and no direct provider edge. This repository did not
-rerun those downstream suites, and the adoption batch has no numerical
-before/after performance benchmark. Landing, versioning, and release remain
-Canic-owned.
+Canic reports its affected checks, warning-denied Clippy, inventory and
+lifecycle guards, adapter tests, and PocketIC cancellation, recurrence,
+upgrade reconstruction, and paired instruction/memory observations passing.
+It found no scheduler correctness blocker and retained no compatibility
+facade, second scheduler, fallback registry, or duplicate timer
+instrumentation. This repository did not rerun those downstream suites.
+
+## Historical 0.3.8 adoption subject
+
+The earlier uncommitted worktree inspected read-only on 2026-08-15 was based
+on tagged `v0.102.1` commit
+`86763c5f16478e2e548e2059e5efaa963bf9a966` and resolved exact
+`ic-timers = "=0.3.8"`. It first proved the hard-cut mapping, schema 2,
+one-package graph, shared inventory projection, and removal of Canic's direct
+provider path. The move from exact 0.3.6 to that subject required no adapter
+change. These details are historical evidence, not the current dependency or
+schema contract.
 
 ## Boundary
 
-The inspected worktree replaces Canic's timer provider, `TIMERS` map,
+The current adoption replaces Canic's timer provider, `TIMERS` map,
 `TimerControl`, provider handles, timer counters, and timer-specific
 performance accounting in one pre-1.0 hard cut. Landing must not restore those
 paths beside `ic-timers` as a fallback or compatibility facade.
@@ -118,7 +130,7 @@ timer and delegates as follows:
 | lifecycle reconstruction of one-shot work | `reconcile_once` |
 | lifecycle reconstruction of recurrence | `reconcile_after_completion` |
 | cancel and forget application handle | remove its custody entry and consume the claim with `unregister` |
-| status, metrics, instruction totals, failure streak | project `timer_snapshot(s)` and `consecutive_expected_failures` |
+| status, metrics, instruction totals, failure streak | project `timer_snapshot` / `timer_inventory` and `consecutive_expected_failures` |
 
 `ensure_scheduled` retains an already scheduled earlier deadline;
 `reconcile_schedule` is authoritative and may move it in either direction.
@@ -163,11 +175,11 @@ distinct canonical signal. The Canic DTO hard-cuts `generation: u64` to
 `generation: Option<u64>`; an inactive timer has no generation and must not
 invent zero.
 
-The open 0.5 snapshot adds scheduler/work memory-page summaries without
-changing this legacy projection. If Canic exposes them as new rows, it must
-label start/end extents and observed growth in 64 KiB pages. It must not sum
-absolute extents, convert them into an exact live-byte claim, or attribute an
-async ordinary interval exclusively to timer work.
+The released 0.5 snapshot adds scheduler/work memory-page summaries without
+changing this legacy projection. Canic exports them in schema 3 as start/end
+extents and observed growth in 64 KiB pages. It does not sum absolute extents,
+convert them into an exact live-byte claim, or attribute an async ordinary
+interval exclusively to application timer work.
 
 ## Suspension and lifecycle composition
 
@@ -188,21 +200,21 @@ This custody collection is composition, not a second timer state machine.
 Canic must not restore provider handles, generations, deadlines, counters,
 pending commands, or snapshot values as mutation authority. A typed
 owner/group capability is therefore unnecessary for this contract; if later
-required, it is new public functionality for a 0.4.0 design, not a patch
-addition or permission to retain Canic's parallel registry.
+required, it belongs in a future minor design, not a patch addition or
+permission to retain Canic's parallel registry.
 
 ## Adoption gate
 
-The inspected worktree satisfies the Canic-side adapter gate: status and metric
-rows derive from one shared snapshot scan without parallel timer
+Canic satisfies its individual exact-0.5.0 adapter gate: status and schema-3
+metric rows derive from one shared inventory scan without parallel timer
 instrumentation; genuine fixed owners appear before their first schedule;
 authority-snapshot quiescence acts only on Canic-owned claims; lifecycle order
-is preserved; timer errors are typed; direct provider use is removed; and the
-workspace resolves one exact `ic-timers` 0.3.8 package.
+is preserved; timer errors are typed; direct provider use is removed; and its
+graph resolves one exact package.
 
-Two gates remain. First, Canic must land and release the validated worktree.
-Second, tagged combined Canic+IcyDB qualification must prove one exact package
-in the final Wasm. The current uncommitted Canic and IcyDB worktrees both pin
-0.3.8, so development-time alignment is complete. Their tagged releases do not
-yet provide a combined one-package subject, and no released-composition claim
-is made.
+Combined Canic+IcyDB qualification remains open. One final Wasm must prove one
+resolved registry, both owners in one inventory, synchronous lifecycle
+reconstruction, IcyDB Watchdog recovery, and continued Canic timer progress.
+The current blocker is Canic's lifecycle-composition seam, not an `ic-timers`
+scheduler defect. No combined-composition claim is made before that evidence
+exists.

@@ -76,7 +76,8 @@ fn duplicate_registration_and_capacity_fail_without_partial_state() {
     assert_eq!(registry.len(), MAX_TIMER_REGISTRATIONS);
 
     let names = registry
-        .snapshots()
+        .inventory()
+        .into_timers()
         .into_iter()
         .map(|snapshot| snapshot.identity().name().to_owned())
         .collect::<Vec<_>>();
@@ -1180,12 +1181,13 @@ fn initial_snapshots_are_policy_specific_and_coherent() {
         )
         .expect("watchdog registration should succeed");
 
-    let snapshots = registry.snapshots();
-    assert_eq!(snapshots.len(), 3);
-    assert_eq!(snapshots[0].identity(), &once_id);
-    assert_eq!(snapshots[1].identity(), &after_id);
-    assert_eq!(snapshots[2].identity(), &watchdog_id);
-    for snapshot in snapshots {
+    let inventory = registry.inventory();
+    assert_eq!(inventory.epoch(), TimerEpoch::new(7, 10));
+    assert_eq!(inventory.len(), 3);
+    assert_eq!(inventory.timers()[0].identity(), &once_id);
+    assert_eq!(inventory.timers()[1].identity(), &after_id);
+    assert_eq!(inventory.timers()[2].identity(), &watchdog_id);
+    for snapshot in inventory.timers() {
         assert_eq!(
             snapshot.state(),
             TimerRuntimeStateSnapshot::Inactive {

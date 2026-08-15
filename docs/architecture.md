@@ -14,8 +14,9 @@ The module hierarchy keeps six responsibilities separate:
 2. `snapshot` owns inert public identity and observation values. Its private
    `identity`, `model`, and `metrics` children separate validation, closed
    state/outcome types, and saturating measurements. Only the registry builds
-   the top-level coherent snapshot or initializes its observation fragments;
-   nested values expose no alternate construction or control path.
+   the top-level timer and atomic inventory snapshots or initializes their
+   observation fragments; nested values expose no alternate construction or
+   control path.
 3. `control` is the private ordinary generation/registration state machine. It
    owns checked callback generations, immediate schedule, reconciliation and
    cancellation transitions, and stale completion rejection. It owns no
@@ -76,13 +77,15 @@ The runtime provides:
   and bounded memory-page extent/growth observations;
 - exact-claim observation of armed provider wake-up ownership without a
   snapshot-derived control path;
-- bounded identity components and allocation-conscious hot paths; and
-- portable snapshot DTOs so Canic, IcyDB, and standalone canisters can expose
-  the same operator view.
+- bounded identity components and allocation-conscious hot paths;
+- one atomic inventory snapshot carrying the runtime epoch even when empty;
+  and
+- portable snapshot DTOs so Canic, IcyDB, and standalone canisters can
+  expose the same operator view.
 
 Metrics are collected once at the registry boundary. Consumers may adapt
-the snapshot to their own status endpoint or metrics encoder without wrapping
-every callback independently.
+the atomic inventory to their own status endpoint or metrics encoder without
+wrapping every callback independently.
 
 The canonical snapshot is designed as a semantic superset of Canic's current
 timer status, scheduling counters, and instruction metrics. In particular,
@@ -149,19 +152,21 @@ after-completion recurrence.
 
 ## Consumer integration
 
-- A validated uncommitted Canic worktree uses the crate for framework and
-  application timers, with synchronous restoration before deferred user hooks.
-  Canisters initialize the shared registry independently of declaring jobs:
-  Fleet Coordinator initializes an empty registry, while genuine owners reserve
+- Canic uses exact `ic-timers` 0.5.0 for framework and application timers and
+  exposes schema-3 timer, instruction, and memory observations. Canisters
+  initialize the shared registry independently of declaring jobs: Fleet
+  Coordinator initializes an empty registry, while genuine owners reserve
   their fixed declarations before application hooks.
-- Tagged IcyDB 0.226.1 uses the watchdog policy for replicated recovery
-  driving; its validated post-tag integration uses claim-scoped armed-wakeup
-  observation on exact `ic-timers` 0.3.8.
+- IcyDB uses exact `ic-timers` 0.5.0 and the watchdog policy for replicated
+  recovery driving with claim-scoped armed-wakeup observation.
 - A canister using both should see one inventory. Ownership labels distinguish
   scheduling clients; they do not create separate timer runtimes.
 
-The combined downstream gate must prove one resolved `ic-timers` package ID and
-inventory remaining direct `ic-cdk-timers` calls across the complete canister.
+The combined downstream gate must prove one resolved `ic-timers` package ID,
+both owners in one inventory, synchronous lifecycle reconstruction, IcyDB
+Watchdog recovery, continued Canic timer progress, and no remaining direct
+`ic-cdk-timers` calls across the complete canister. That evidence is currently
+blocked on Canic's lifecycle-composition seam, not the timer scheduler.
 The provider's 250 outstanding-dispatch limit is canister-wide; the registry's
 128-handle maximum bounds only handles owned by this crate. Canic must also
 retain the validated hard cut that makes its application timer facade return
@@ -186,7 +191,8 @@ custody collection.
 
 IcyDB's exact dependency, removed parallel timer state, and downstream
 real-canister evidence are recorded in the
-[IcyDB adoption record](adoption/icydb.md). The Canic adapter is validated but
-uncommitted, so its landing and release remain downstream-owned. Both current
-development worktrees resolve exact 0.3.8; a tagged combined application still
-needs to prove the same single package instance.
+[IcyDB adoption record](adoption/icydb.md). The
+[Canic adapter contract](adoption/canic.md) records its exact-0.5.0/schema-3
+adoption. Both owners independently resolve 0.5.0; combined qualification
+remains open until Canic's lifecycle-composition seam can host one final
+single-registry Wasm subject.

@@ -10,7 +10,7 @@ use crate::{
     schedule::{ScheduleError, TimerCadence, TimerDirective, TimerSchedule},
     snapshot::{
         DeclarationLifetime, TimerCompletion, TimerControlFailure, TimerEpoch, TimerIdentity,
-        TimerPolicy, TimerRunResult, TimerSnapshot, WatchdogRunResult,
+        TimerInventorySnapshot, TimerPolicy, TimerRunResult, TimerSnapshot, WatchdogRunResult,
     },
 };
 use std::{cell::RefCell, future::Future, rc::Rc, time::Duration};
@@ -647,9 +647,12 @@ pub fn timer_snapshot(identity: &TimerIdentity) -> Result<Option<TimerSnapshot>,
     with_registry(|registry| Ok(registry.snapshot(identity)))
 }
 
-/// Return the complete bounded inventory in deterministic identity order.
-pub fn timer_snapshots() -> Result<Vec<TimerSnapshot>, TimerError> {
-    with_registry(|registry| Ok(registry.snapshots()))
+/// Return one atomic bounded inventory with its volatile runtime epoch.
+///
+/// Timer snapshots are ordered deterministically by identity. An initialized
+/// empty registry still returns its epoch and an empty timer slice.
+pub fn timer_inventory() -> Result<TimerInventorySnapshot, TimerError> {
+    with_registry(|registry| Ok(registry.inventory()))
 }
 
 /// Return functional expected-failure state by identity without a full inventory.

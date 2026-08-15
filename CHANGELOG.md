@@ -4,6 +4,53 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.6.0]
+
+### Added
+
+- Add `TimerInventorySnapshot` and `timer_inventory()` so one atomic bounded
+  observation carries the runtime epoch even when the initialized registry has
+  no timer declarations.
+
+### Changed
+
+- Define instruction and memory observations as the complete accepted
+  `ic-timers` callback envelope, including acceptance, completion processing,
+  and any successor binding rather than application code alone.
+- Document that terminal `RemoveWhenStopped` completion may remove its timer
+  before the final measurement can be retained.
+
+### Removed
+
+- Remove the bare-vector `timer_snapshots()` inventory function. Consumers use
+  `timer_inventory()` and read or consume its ordered timer vector; no alias or
+  deprecated forwarding surface is retained.
+
+### Documentation
+
+- Refresh the README and compact handoff for the 0.6 API with a
+  minimal registration example, scannable policy, ownership, observability,
+  safety, development, and documentation tables, and clearer shared-registry
+  guidance.
+- Record IcyDB's completed exact-0.5.0 hard-cut adoption while preserving its
+  tagged 0.3.4 and post-tag 0.3.8 evidence as historical subjects.
+- Record Canic's completed exact-0.5.0/schema-3 adoption, including its memory
+  projection and one-package graph, while preserving 0.3.8/schema 2 as
+  historical evidence and keeping combined-framework qualification open.
+- Add a public memory-summary projection example that distinguishes no
+  completed sample from an observed zero-growth sample.
+
+### Evidence
+
+- Add a probe-only PocketIC cohort measurement for the start/end page reads
+  excluded from callback instruction aggregates. PocketIC 15.0.0 reports an
+  empty bracket and the four-read sampled bracket at 200 call-context
+  instructions each, an observed delta of zero without changing the runtime
+  API or measurement interval.
+- Rerun the complete PocketIC watchdog matrix and policy cohorts against the
+  hard-cut inventory API; recovery, isolation, capacity, ordering, and policy
+  behavior remain green.
+
 ## [0.5.0] - 2026-08-15
 
 ### Changed

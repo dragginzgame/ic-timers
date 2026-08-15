@@ -121,19 +121,21 @@ the idempotent ensure operation whenever their authority requires a wake-up.
 - The current evidence uses the pinned PocketIC 15.0.0 binary and
   `ic-cdk-timers` 1.0.0 provider. A provider or evidence-binary change requires
   a renewed source and recovery audit.
-- Tagged IcyDB 0.226.1 and its validated post-tag exact-0.3.8 integration
-  supply maintained downstream shared-registry evidence, recorded separately
-  from this library's owner-local proof. A validated uncommitted Canic
-  exact-0.3.8 worktree supplies the real metrics/status adapter and removes its
-  parallel timer runtime. The development graphs align; released composition
-  still requires one-package qualification from tagged downstream subjects.
+- IcyDB and Canic independently supply maintained exact-0.5.0
+  shared-registry evidence, recorded separately from this library's
+  owner-local proof. Canic's schema-3 adapter exports timer, instruction, and
+  memory observations without a parallel runtime. Combined composition still
+  requires one final Wasm proving one registry, both owners in one inventory,
+  synchronous lifecycle reconstruction, IcyDB Watchdog recovery, and
+  continued Canic timer progress.
 
 The frozen [0.3 Patch 1 contract](docs/design/0.3-patch-1-contract.md) defines
 the protocol and the
 [closeout report](docs/audits/0.3-runtime-evidence-2026-08-13.md) maps every
 promotion case to direct evidence. The
-[IcyDB adoption record](docs/adoption/icydb.md) identifies which additional
-claims come from the tagged release and validated post-tag integration.
+[IcyDB adoption record](docs/adoption/icydb.md) and
+[Canic adapter contract](docs/adoption/canic.md) identify which additional
+claims come from maintained downstream evidence.
 
 ## Failure and measurement semantics
 
@@ -143,8 +145,13 @@ invent a completion, zero instruction cost, memory-page sample, elapsed
 duration, or zero work count. Memory observations report runtime-epoch-local
 monotonic Wasm and stable page extents plus observed start-to-end growth, not
 exact live bytes, sub-page allocator liveness, or exclusive work attribution.
-An async ordinary callback's interval may include canister activity interleaved
-while its future is awaiting.
+The accepted measurement envelope starts before callback acceptance and ends
+after completion processing and any successor binding, so it includes
+`ic-timers` runtime work and is not exclusive application-code attribution. An
+async ordinary callback's interval may also include canister activity
+interleaved while its future is awaiting. A terminal `RemoveWhenStopped`
+callback can remove its declaration before the final measurement is retained;
+no timer remains from which to observe that sample.
 
 The live watchdog records only that an earlier committed dispatch lacks a
 committed completion when a later scheduler retires it. It cannot infer a trap,

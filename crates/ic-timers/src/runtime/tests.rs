@@ -51,7 +51,7 @@ fn assert_retained_provider_binding_failure(
 #[test]
 fn initialization_is_required_and_idempotent() {
     reset_for_test(10, 7);
-    assert!(matches!(timer_snapshots(), Err(TimerError::NotInitialized)));
+    assert!(matches!(timer_inventory(), Err(TimerError::NotInitialized)));
 
     let first = initialize_runtime().expect("first initialization should succeed");
     set_time(20);
@@ -59,6 +59,11 @@ fn initialization_is_required_and_idempotent() {
     assert_eq!(first, second);
     assert_eq!(first.canister_version(), 7);
     assert_eq!(first.started_at_ns(), 10);
+    let inventory = timer_inventory().expect("initialized inventory should be available");
+    assert_eq!(inventory.epoch(), first);
+    assert!(inventory.is_empty());
+    assert!(inventory.timers().is_empty());
+    assert!(inventory.into_timers().is_empty());
 }
 
 #[test]
@@ -97,8 +102,10 @@ fn fresh_inactive_reconciliation_reserves_complete_retained_inventory() {
     assert!(after.is_some());
     assert!(watchdog.is_some());
     assert_eq!(timer_count(), 0);
-    let snapshots = timer_snapshots().expect("inventory should be available");
-    assert_eq!(snapshots.len(), 3);
+    let inventory = timer_inventory().expect("inventory should be available");
+    assert_eq!(inventory.epoch(), TimerEpoch::new(7, 10));
+    assert_eq!(inventory.len(), 3);
+    let snapshots = inventory.timers();
     assert_eq!(
         snapshots
             .iter()
@@ -738,7 +745,7 @@ fn duplicate_registration_does_not_replace_callback_and_remove_on_stop_releases_
             .is_none()
     );
     assert!(
-        timer_snapshots()
+        timer_inventory()
             .expect("inventory should succeed")
             .is_empty()
     );

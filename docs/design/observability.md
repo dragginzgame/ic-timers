@@ -10,11 +10,12 @@ superset of the timer information Canic exposes today.
 
 Ordinary and watchdog state, scheduler dispatch, work, stale,
 unacknowledged, instruction, and memory-page observations are live. Normally
-completed accepted scheduler and work callbacks record IC call-context
-instruction deltas plus start/end Wasm and stable memory extents. Trapped and
-exhausted work record no sample. A downstream Canic worktree now validates the
-real adapter without parallel instrumentation; landing and tagged combined
-qualification remain external gates.
+completed accepted scheduler and work callbacks record their complete
+`ic-timers` callback envelope, from before acceptance through completion
+processing and any successor binding. They do not isolate application code.
+Trapped and exhausted work record no sample. Canic validates the real adapter
+without parallel instrumentation; combined qualification remains an external
+gate.
 
 This contract describes provider-neutral runtime data. `ic-timers` owns the
 identity, counters, measurements, and snapshot semantics. Canic, IcyDB, and
@@ -33,8 +34,9 @@ candidate 0.2 terms when the values became live registry observations:
   synchronous work duration truthfully.
 
 The 0.3 runtime also splits scheduler wake-up arms from watchdog work dispatch
-arms, and scheduler instruction aggregates from consumer-work instruction
-aggregates. Those decisions do not weaken the Canic semantic-superset gate.
+arms, and scheduler instruction aggregates from accepted work-envelope
+instruction aggregates. Those decisions do not weaken the Canic
+semantic-superset gate.
 
 ## Canonical snapshot
 
@@ -49,7 +51,7 @@ following groups.
 | State | Closed policy-specific state, registration projection, process condition, current generation, and watchdog attempt status. |
 | Outcome | Latest classified outcome, work count, last success and failure timestamps, and consecutive expected failures. |
 | Counters | Requests, wake-up arms, work dispatch arms, scheduler starts, work starts/completions, classified outcomes, cancellations, stale callbacks, coalescing, and unacknowledged attempts. |
-| Performance | Separate sample count, total, latest, and maximum instructions for schedulers and normally completed work; per role, bounded latest start/end Wasm/stable page extents and maximum per-callback growth. |
+| Performance | Separate sample count, total, latest, and maximum instructions for normally completed accepted scheduler/work envelopes; per role, bounded latest start/end Wasm/stable page extents and maximum per-callback growth. |
 | Scope | Runtime epoch and start timestamp defining the reset boundary for every counter and aggregate. |
 
 Configured recurrence and callback directives are related but distinct. The
@@ -62,6 +64,19 @@ All identities and enum values must have deterministic ordering. Labels must
 be bounded before they enter registry storage or metric labels. The snapshot
 must remain portable, but portability does not require a dependency on a
 consumer's serialization model.
+
+## Atomic inventory scope
+
+`timer_inventory()` returns one `TimerInventorySnapshot` containing the
+runtime epoch and the complete bounded timer vector in deterministic identity
+order. The epoch is therefore observable even when the initialized registry is
+empty; consumers do not derive the counter-reset boundary from the first timer
+or issue separate epoch and inventory reads. `timer_snapshot()` remains the
+focused lookup for one known identity.
+
+The former bare-vector `timer_snapshots()` function is removed in the 0.6 hard
+cut. Keeping both would preserve two public inventory shapes for the same
+canonical observation without adding authority or information.
 
 ## Counter semantics
 
@@ -118,9 +133,13 @@ not infer work count from callback counters.
 ## Measurements and scope
 
 Instruction aggregates contain sample count, total, latest, and maximum values
-for scheduler and work roles. The corresponding memory summaries contain a
-saturating sample count, the latest start/end Wasm and stable extents in 64 KiB
-pages, and maximum non-negative observed start-to-end growth for each memory.
+for scheduler and work roles. Each accepted interval begins before callback
+acceptance and ends after completion processing plus any successor binding, so
+it includes `ic-timers` arbitration and provider binding as well as consumer
+work. It is not an application-only measurement. The corresponding memory
+summaries contain a saturating sample count, the latest start/end Wasm and
+stable extents in 64 KiB pages, and maximum non-negative observed start-to-end
+growth for each memory.
 They never total absolute page counts. Ordinary callbacks may await, so their
 sample interval can include interleaved canister activity and is not exclusive
 allocation attribution; Watchdog work and scheduler paths are synchronous.
@@ -131,9 +150,21 @@ Both measurement kinds update only when the measured callback path returns
 with a valid end measurement. A missing work completion remains visible through
 committed dispatch and later `unacknowledged` observation; the runtime does not
 synthesize zero instructions or a memory sample for trapped or exhausted work.
+If a terminal `RemoveWhenStopped` callback removes its declaration during
+normal completion, the post-transition measurement has no remaining timer on
+which to commit and is discarded. This is intentionally different from
+fabricating a zero sample: the transient timer itself is absent from the final
+inventory.
+
 Elapsed IC time is absent because message time is not a truthful synchronous
 duration. Page reads bracket the instruction-delta interval from outside, so
 memory observation does not change which instructions that aggregate covers.
+The focused [0.5 sampling-overhead probe](../audits/0.5-memory-sampling-overhead-2026-08-15.md)
+keeps those costs separate: PocketIC 15.0.0 reported 200 call-context
+instructions for both an empty counter bracket and the matching start/end
+page-read bracket, an observed delta of zero for the four reads. This is a
+regression subject, not a future IC metering guarantee, and it does not claim
+to isolate the bounded summary update performed after the interval.
 
 Within one runtime epoch, Wasm and stable page counts are monotonic
 extent/high-water observations. They are not exact live bytes: allocator
@@ -206,9 +237,10 @@ timer instrumentation:
 | Detailed state in `crates/canic-core/src/dto/runtime.rs` | One canonical snapshot containing semantically equivalent identity, policy, state, outcome, and timing fields. |
 | Former test-only global `TimerScheduled` count | No public projection requirement; remove it rather than retain parallel instrumentation. Canonical requested and armed counters remain separately observable. |
 
-The compatibility requirement is semantic rather than type-level. The
-validated Canic worktree advances its runtime introspection schema to version
-2 and derives the maintained fields from `ic-timers` data alone.
+The compatibility requirement is semantic rather than type-level. Canic's
+exact-0.5.0 adoption advances runtime introspection to schema 3, derives the
+maintained fields from `ic-timers` alone, and exports the bounded memory-page
+observations.
 
 The exact existing-field projection is now frozen:
 
@@ -254,13 +286,14 @@ The accepted contract requires all of the following:
    types.
 
 Trap, instruction-exhaustion, and upgrade behavior has focused PocketIC
-evidence. The inspected downstream Canic worktree satisfies the real-adapter
-criterion and removes its separate `TimerMetrics`, timer-specific performance
-storage, duplicated workflow counters, and direct provider path.
+evidence. Canic's exact-0.5.0 adoption satisfies the real-adapter criterion and
+removes its separate `TimerMetrics`, timer-specific performance storage,
+duplicated workflow counters, and direct provider path.
 
 The local tests include a Canic-shaped projection fixture proving the fields
 are available. Canic's maintained downstream status reports focused adapter,
-lifecycle, inventory, protocol, and PocketIC timer evidence passing. That
-worktree is still uncommitted. The current Canic and IcyDB development
-worktrees both resolve exact 0.3.8; tagged combined qualification must still
-prove one package in the final Wasm.
+lifecycle, inventory, protocol, and PocketIC paired instruction/memory
+evidence passing with schema 3. IcyDB independently resolves exact 0.5.0.
+Combined qualification remains open until one final Wasm proves one registry,
+both owners in one inventory, lifecycle reconstruction, IcyDB Watchdog
+recovery, and continued Canic timer progress.

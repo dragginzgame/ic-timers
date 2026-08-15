@@ -23,6 +23,53 @@ pub use model::{
     WatchdogRuntimeStateSnapshot,
 };
 
+/// Atomic provider-neutral snapshot of one complete canister-local inventory.
+///
+/// The epoch remains observable even when no timer is declared. Timer order is
+/// deterministic by [`TimerIdentity`], every contained timer belongs to the
+/// returned epoch, and the bounded registry is the only constructor.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TimerInventorySnapshot {
+    epoch: TimerEpoch,
+    timers: Vec<TimerSnapshot>,
+}
+
+impl TimerInventorySnapshot {
+    pub(crate) const fn new(epoch: TimerEpoch, timers: Vec<TimerSnapshot>) -> Self {
+        Self { epoch, timers }
+    }
+
+    /// Return the volatile runtime epoch shared by the complete inventory.
+    #[must_use]
+    pub const fn epoch(&self) -> TimerEpoch {
+        self.epoch
+    }
+
+    /// Return all timer snapshots in deterministic identity order.
+    #[must_use]
+    pub fn timers(&self) -> &[TimerSnapshot] {
+        &self.timers
+    }
+
+    /// Consume the inventory and return its ordered timer snapshots.
+    #[must_use]
+    pub fn into_timers(self) -> Vec<TimerSnapshot> {
+        self.timers
+    }
+
+    /// Return the number of declared logical timers.
+    #[must_use]
+    pub const fn len(&self) -> usize {
+        self.timers.len()
+    }
+
+    /// Return whether the initialized registry has no declarations.
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.timers.is_empty()
+    }
+}
+
 /// Canonical provider-neutral operator snapshot for one logical timer.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TimerSnapshot {

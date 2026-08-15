@@ -1,214 +1,301 @@
-# ic-timers
+# ⏱️ ic-timers
 
-`ic-timers` is a higher-level wrapper around
-[`ic-cdk-timers`](https://crates.io/crates/ic-cdk-timers) for Internet Computer
-canisters. It does not replace the CDK timer provider: `ic-cdk-timers` still
-arms and clears the platform timers. This crate is intended to add one place
-for timer identity, scheduling policy, execution arbitration, observability,
-and lifecycle recovery.
+> A bounded, observable timer runtime for Internet Computer canisters, built on
+> top of [`ic-cdk-timers`](https://crates.io/crates/ic-cdk-timers).
 
-The released 0.3 line contains the complete bounded runtime and PocketIC
-recovery-watchdog evidence; released 0.4 hard-cuts and consolidates its public
-and private ownership surfaces. The open 0.5 line makes callback mutation
-authority policy-specific rather than exposing runtime policy probes. Tagged
-IcyDB 0.226.1 hard-cuts to exact `ic-timers` 0.3.4, and its validated post-tag
-integration upgrades to exact 0.3.8. A validated uncommitted Canic worktree
-also hard-cuts to exact 0.3.8. Those development subjects are aligned; a 0.5
-upgrade must move both to one exact package before combined qualification.
+`ic-timers` wraps the CDK timer provider; it does not replace it.
+`ic-cdk-timers` still arms and clears platform timers, while `ic-timers` adds
+logical identity, scheduling policy, callback arbitration, lifecycle
+reconstruction, and one coherent operational snapshot.
 
-## Why wrap `ic-cdk-timers`?
+The provider is a private implementation dependency. It is kept behind the
+crate's `platform` module and is never re-exported.
 
-`ic-cdk-timers` provides the low-level mechanism a canister needs to schedule
-callbacks. That is the right boundary for a simple timer. The abstraction gets
-harder to operate when a framework, a database, and application code all
-schedule recurring work independently.
+## 🌟 At a glance
 
-Direct, scattered use gives each subsystem its own private answers to
-questions such as:
+| | Current contract |
+| --- | --- |
+| 🧩 API line | `0.6` atomic-inventory hard cut |
+| 🦀 Rust | Edition 2024; MSRV 1.88.0 |
+| ⚙️ Provider | Exact `ic-cdk-timers` 1.0.0, private and wrapped |
+| 🗂️ Capacity | 64 logical timers; at most 128 owned provider handles |
+| 🔄 Policies | `Once`, `AfterCompletion`, and pre-armed `Watchdog` |
+| 💾 Persistence | None; consumers retain durable application authority |
+| 🔎 Observation | Bounded snapshots, counters, instructions, and memory-page extents |
 
-- Which logical timers exist in this canister, and who owns them?
-- Is a callback scheduled, running, overdue, cancelled, or stale?
-- When did it last run, what happened, and how expensive was it?
-- What should happen after an upgrade or a trapped callback?
-- Does “recurring” mean after-completion scheduling or a recovery watchdog?
+## 💡 Why wrap `ic-cdk-timers`?
 
-We thought a wrapper was worthwhile because those are canister-wide concerns.
-If every consumer builds its own registry, recurrence loop, metrics, and
-upgrade restoration, operators still cannot obtain one reliable inventory and
-the most failure-sensitive logic is duplicated. `ic-timers` is intended to put
-that coordination above the proven CDK provider while keeping the provider
-dependency behind a small platform boundary.
+`ic-cdk-timers` is the right low-level mechanism for scheduling a simple
+callback. The operational problem changes when a framework, a database, and
+application code all schedule work independently.
 
-The wrapper deliberately uses one-shot provider timers. A higher layer can
-then decide when a successor becomes authoritative: after successful work for
-ordinary recurrence, or before fallible work for a recovery watchdog. Those
-policies have different failure guarantees and should not be hidden behind the
-same interval helper.
+| Concern | Scattered direct timers | `ic-timers` |
+| --- | --- | --- |
+| Identity | Private names and handles | Structured `owner / subsystem / name` identity |
+| Ownership | Distributed across subsystems | One bounded canister-local registry |
+| Recurrence | Usually an interval or local loop | Explicit policy with a documented failure boundary |
+| Upgrades | Each owner invents restoration | Synchronous, idempotent lifecycle reconciliation |
+| Cancellation | Provider handle knowledge leaks outward | Claim-scoped cancellation with exact handle ownership |
+| Metrics | Parallel counters and partial inventories | One inert, policy-specific snapshot |
+| Stale callbacks | Consumer-specific handling | Generation-checked harmless no-ops |
 
-`ic-cdk-timers` is an implementation dependency, not part of this crate's
-public API. Repository CI enforces that direct provider references remain in
-the private `platform` module and that neither the provider nor that module is
-re-exported.
+We thought this wrapper was worthwhile because these are canister-wide
+questions:
 
-## What exists today
+- Which logical timers exist, and who owns each one?
+- Is a timer inactive, armed, running, overdue, cancelled, or stale?
+- What happened on its last run, and what did that run cost?
+- What should be reconstructed after an upgrade?
+- Must recurrence wait for normal completion, or survive failed work?
 
-The current crate contains:
+If every consumer builds a registry, recurrence loop, metrics table, and
+upgrade protocol, operators still lack one reliable inventory and the most
+failure-sensitive logic is duplicated. `ic-timers` puts that coordination
+above the CDK provider without creating another provider.
 
-- one volatile, canister-local 64-entry registry with unique structured
-  identity ownership and claim generations;
-- synchronous, idempotent runtime initialization plus callback-owning `Once`,
-  `AfterCompletion`, and synchronous `Watchdog` registrations;
-- one exact private provider handle per scheduled ordinary timer and at most
-  two per watchdog (cadence successor plus dispatched work), including real
-  replacement and cancellation through `ic-cdk-timers`;
-- live policy-specific state transitions, including stale-callback and nested
-  ensure/cancel arbitration;
-- policy-specific `OnceContext`, `AfterCompletionContext`, and
-  `WatchdogContext` work delegation whose mutation authority expires when the
-  exact callback generation finishes;
-- fail-closed provider-effect binding for public control calls, preventing a
-  failed arm or replacement from leaving a declaration falsely scheduled;
-- claim-scoped `has_armed_wakeup` observation on every registration
-  capability, reflecting exact armed provider-handle ownership without
-  turning snapshots into control authority;
-- validated positive cadence, typed directives, and checked deadline
-  calculation;
-- live, inert policy-specific snapshots, with split scheduler/work counters,
-  truthful unacknowledged dispatches, functional expected-failure state,
-  normally completed instruction aggregates, and bounded latest/maximum-growth
-  Wasm/stable memory-page observations;
-- synchronous idempotent reconciliation helpers that always retain fixed
-  lifecycle declarations, whose caller-owned volatile registration slot
-  prevents duplicate callback replacement, and whose desired state remains
-  derived from consumer durable authority;
-- exact ordinary reconciliation that can replace an earlier or later deadline,
-  plus a `reconcile_once` lifecycle helper;
-- a private, linear one-shot provider boundary over `ic-cdk-timers` 1.0.0.
+## 🧩 Choose the policy that matches the failure boundary
 
-The watchdog scheduler arms its successor and queues a separate zero-delay work
-callback before returning. PocketIC 15 evidence on Rust 1.88 covers explicit
-trap, actual 40-billion-instruction exhaustion, insufficient cycles followed
-by top-up, upgrade reconstruction before a downstream-hook observation,
-stop/resume, overdue coalescing, terminal and scheduler/work-gap cancellation,
-duplicate demand, two simultaneous timers, trap isolation, rejection of
-external executor ingress, and subsequent progress. Trapped or exhausted work
-contributes no fabricated completion, instruction sample, or memory-page
-sample. Within one runtime epoch, page extents are monotonic high-water
-observations, not exact live bytes; sub-page allocator liveness remains
-consumer-owned.
-
-That recovery guarantee applies to the later consumer-work message. It does
-not claim recovery if the small scheduler message itself traps or exhausts its
-instructions; the scheduler is deliberately fixed, bounded, and contains no
-consumer work.
-
-These guarantees apply only to `Watchdog`. Ordinary after-completion recurrence
-arms its successor after normal return and therefore cannot survive a trap or
-instruction exhaustion in consumer work. Beyond the open cleanup line, the
-remaining integration work is downstream landing and exact-version alignment,
-not another timer runtime. See
-[the architecture note](docs/architecture.md) for the intended boundary and
-implementation order, the frozen
-[0.3 Patch 1 contract](docs/design/0.3-patch-1-contract.md) for the decisions
-that preceded implementation, the implemented
-[observability contract](docs/design/observability.md), and the
-[0.3 evidence report](docs/audits/0.3-runtime-evidence-2026-08-13.md).
-[The safety boundary](SAFETY.md) defines the guarantees and their limits. The
-[0.5 design note](docs/design/0.5-policy-specific-callback-authority.md)
-records the callback-authority hard cut and its migration boundary.
-
-## Policies
-
-| Policy | Work | Successor timing | Failure boundary |
+| Policy | Consumer work | Successor timing | Trap or exhaustion behavior |
 | --- | --- | --- | --- |
-| `Once` | asynchronous | only when explicitly requested | no automatic recovery after a trap |
-| `AfterCompletion` | asynchronous | after normal callback completion | no automatic recovery after a trap |
-| `Watchdog` | synchronous | committed by a separate scheduler message before work | successor survives trapped or exhausted consumer work |
+| `Once` | Asynchronous | Only when explicitly requested | No automatic recovery |
+| `AfterCompletion` | Asynchronous | Armed after normal work completion | No automatic recovery |
+| `Watchdog` | Synchronous and bounded | Committed by a scheduler message before a separate work message | The committed successor survives failed consumer work |
 
-## Intended use
+`Watchdog` deliberately uses two messages. The small scheduler callback
+validates its generation, arms the next cadence successor, queues immediate
+work, and returns. Only the later work callback invokes consumer code.
 
-Canic and IcyDB motivated the shared wrapper. Canic needs framework timers and
-lifecycle integration; IcyDB needs a recovery watchdog; an application may add
-more timers of its own. All of them should eventually declare timers into one
-canister-local registry so an operator can answer “what timers exist in this
-canister?” from one snapshot.
+> ⚠️ The recovery guarantee covers the consumer-work message. It does not claim
+> recovery if the fixed scheduler message itself traps or exhausts its
+> instructions.
+
+Ordinary recurrence is cheaper and is the correct default when work must
+finish normally before another invocation is allowed. Use `Watchdog` only
+when committing the next wake-up before fallible synchronous work is the
+required protocol.
+
+## 🚀 Minimal `Once` example
+
+Add one exact package version when this crate participates in a shared
+framework/application registry:
+
+```toml
+[dependencies]
+ic-timers = "=0.6.0"
+```
+
+Initialize the runtime from the canister's existing lifecycle owner, declare a
+timer, retain its non-clone registration capability, and schedule it:
+
+```rust
+use ic_timers::{
+    DeclarationLifetime, OnceRegistration, TimerCompletion, TimerDirective,
+    TimerIdentity, TimerRunResult, TimerSchedule, initialize_runtime,
+    register_once,
+};
+use std::{error::Error, time::Duration};
+
+fn declare_cleanup_timer() -> Result<OnceRegistration, Box<dyn Error>> {
+    initialize_runtime()?;
+
+    let timer = register_once(
+        TimerIdentity::try_new("my-canister", "maintenance", "cleanup")?,
+        DeclarationLifetime::Retained,
+        |_context| async {
+            // Perform one bounded unit of application work.
+            TimerRunResult::new(TimerCompletion::success(1), TimerDirective::Stop)
+        },
+    )?;
+
+    timer.ensure_scheduled(TimerSchedule::After(Duration::from_secs(30)))?;
+    Ok(timer)
+}
+```
+
+The returned registration is the sole-owner control capability. Keep it in
+volatile owner state so that code can inspect, ensure, reconcile, cancel, or
+unregister that exact claim. The capability types are `#[must_use]` and are
+intentionally not cloneable.
+
+For fixed declarations, use `reconcile_once`,
+`reconcile_after_completion`, or `reconcile_watchdog` during both `init` and
+`post_upgrade`. Those helpers always create retained declarations, including
+inactive ones. Transient `RemoveWhenStopped` declarations use the direct
+registration functions.
+
+## 🏗️ Runtime ownership
+
+| Layer | Owns |
+| --- | --- |
+| Consumer | Durable demand, application outcomes, and lifecycle composition |
+| Registration capability | Claim-scoped control for one logical declaration |
+| `ic-timers` runtime | Callback execution, provider effects, and lifecycle reconciliation |
+| Canonical registry | Identities, generations, policy state, arbitration, callbacks, counters, and handles |
+| Private `platform` module | The only direct `ic-cdk-timers` and IC system-fact calls |
+
+The registry is volatile. It stores no stable timer policy, provider handle,
+generation, snapshot, epoch, or application recovery authority. After an
+upgrade, consumers derive desired timers from their own durable state and
+reconstruct them synchronously before downstream post-upgrade work.
+
+Callbacks run without a registry borrow. Nested ensure, reconcile, cancel,
+and unregister requests are arbitrated by one canonical pending command and
+the exact callback generation.
+
+## 📊 Truthful observability
+
+`timer_snapshot` and `timer_inventory` return inert values; snapshots never
+become mutation authority. The inventory carries the runtime epoch even when
+its ordered timer slice is empty. `timer_inventory` is the 0.6 replacement for
+the removed bare-vector `timer_snapshots` function.
+
+| Observation | Meaning |
+| --- | --- |
+| Identity and policy | Deterministic ownership and the configured execution contract |
+| Runtime state | Policy-specific inactive, armed, running, successor, and watchdog-attempt state |
+| Counters | Requested, armed, started, completed, outcomes, cancellations, stale work, coalescing, and unacknowledged work |
+| Instructions | Completed scheduler/work sample count plus total, latest, and maximum measurements |
+| Memory | Latest start/end Wasm and stable page extents plus maximum observed growth |
+| Epoch | The volatile runtime boundary to which counters and samples belong |
+
+Each measurement covers the accepted `ic-timers` callback envelope: it begins
+before callback acceptance and ends after completion processing and any
+successor binding. It is not an exclusive measurement of application code.
+Trapped or instruction-exhausted work produces no fabricated sample. A
+terminal `RemoveWhenStopped` callback can delete its declaration before the
+final measurement is retained; no timer then remains to expose that sample.
+
+Wasm and stable-memory values are 64 KiB page extents: they are runtime
+high-water observations, not exact live bytes. Sub-page allocator liveness
+remains an owner-derived measurement. Async ordinary samples may also include
+canister activity interleaved while the callback future awaits.
+
+Read scheduler and work memory independently, and preserve `Option` when
+projecting the values:
+
+```rust
+use ic_timers::MemoryPageSummary;
+
+struct CompletedMemoryObservation {
+    samples: u64,
+    wasm_start_pages: u64,
+    wasm_end_pages: u64,
+    stable_start_pages: u64,
+    stable_end_pages: u64,
+    maximum_wasm_growth_pages: u64,
+    maximum_stable_growth_pages: u64,
+}
+
+fn completed_memory(
+    summary: MemoryPageSummary,
+) -> Option<CompletedMemoryObservation> {
+    let latest = summary.latest()?;
+    Some(CompletedMemoryObservation {
+        samples: summary.samples(),
+        wasm_start_pages: latest.start().wasm_pages(),
+        wasm_end_pages: latest.end().wasm_pages(),
+        stable_start_pages: latest.start().stable_pages(),
+        stable_end_pages: latest.end().stable_pages(),
+        maximum_wasm_growth_pages: summary.maximum_wasm_growth_pages()?,
+        maximum_stable_growth_pages: summary.maximum_stable_growth_pages()?,
+    })
+}
+
+// Given a TimerSnapshot named `snapshot`:
+let performance = snapshot.observability().performance();
+let scheduler = completed_memory(performance.scheduler_memory_pages());
+let work = completed_memory(performance.work_memory_pages());
+```
+
+Here `None` means no callback of that role completed normally. `Some` with
+equal start/end extents and maximum growth of zero is a real completed sample
+that observed no page growth.
+
+`has_armed_wakeup()` is a claim-scoped observation of canonical provider-handle
+ownership. It is not a delivery guarantee or durable demand. When durable
+demand requires a timer, call `ensure_scheduled()` unconditionally instead of
+using the observation as a check-then-arm guard.
+
+## 🔄 Lifecycle and shared-registry rules
+
+1. The canister's existing lifecycle owner calls `initialize_runtime()`.
+2. Frameworks and applications reconcile their retained declarations from
+   consumer-owned durable authority.
+3. Application hooks run only after required reconstruction.
+4. The same sequence runs during `init` and `post_upgrade`.
+
+The crate exports no lifecycle hook, lifecycle macro, public Candid endpoint,
+or consumer-work executor.
+
+> 🚨 Every consumer linked into one canister must resolve the same
+> `ic-timers` Cargo package ID. Two resolved versions create two independent
+> library statics and therefore two registries.
+
+The registry's 128-handle ceiling does not reserve capacity in the provider's
+canister-wide limit of 250 outstanding dispatches. A composed canister must
+also inventory or migrate every remaining direct `ic-cdk-timers` user.
+
+Canic, IcyDB, and application timers motivated this shared model. The
+[Canic adapter contract](docs/adoption/canic.md) and
+[IcyDB adoption record](docs/adoption/icydb.md) preserve the exact downstream
+mapping and evidence without making patch-specific worktree state part of
+this README.
 
 For a canister with one simple callback and no need for shared inventory,
-metrics, or recovery policy, using `ic-cdk-timers` directly remains the simpler
-choice.
+metrics, lifecycle reconciliation, or a recovery policy, using
+`ic-cdk-timers` directly remains the simpler choice.
 
-The lifecycle owner calls `initialize_runtime` synchronously before any
-registration, then invokes each consumer's reconciliation during `init` and
-`post_upgrade` before downstream hooks. Consumers persist their own desired
-state; `ic-timers` persists no policy, handle, generation, epoch, or application
-authority.
+## 🛡️ Guarantees and limits
 
-Lifecycle reconciliation is intentionally retained-only so an inactive fixed
-owner remains observable and keeps its capacity reservation. Transient
-`RemoveWhenStopped` callbacks use the direct registration functions and are
-registered again by their owner if later desired. Cancelling a transient
-declaration removes it and expires its claim even when it has not yet been
-scheduled.
+| Guarantee | Boundary |
+| --- | --- |
+| Deterministic bounded identity | Three non-empty components, each at most 64 UTF-8 bytes |
+| Unique canonical ownership | One declaration per identity within one resolved runtime |
+| Checked scheduling | Positive cadence and checked deadline arithmetic |
+| Harmless stale delivery | Identity, claim, callback generation, and role are validated |
+| Fail-closed binding | Failed provider effects cannot leave false scheduled state |
+| Safe cancellation | Owned provider handles are cleared; already-running work is not interrupted |
+| Watchdog recovery | Pre-armed successor survives consumer-work trap or exhaustion |
+| No catch-up storm | Overdue watchdog cadence coalesces from current dispatch time |
 
-All consumers must resolve to the same `ic-timers` Cargo package ID. Two
-resolved versions contain two independent library statics and do not share a
-registry. The crate exports no lifecycle hook, macro, Candid endpoint, or
-consumer-work executor. The pinned provider's internal executor export rejects
-non-self callers, which the PocketIC suite verifies.
+Read [SAFETY.md](SAFETY.md) before relying on the watchdog protocol or
+operational measurements.
 
-The 64-entry registry and maximum 128 owned handles do not reserve capacity in
-the provider's canister-wide 250 outstanding-dispatch limit. An adoption must
-also inventory or migrate every remaining direct `ic-cdk-timers` user in the
-final canister and prove one resolved `ic-timers` package ID.
+## 🧪 Development and evidence
 
-Canic's validated uncommitted adoption worktree implements the hard-cut mapping
-recorded in the [Canic adapter contract](docs/adoption/canic.md). It composes
-claim-specific cancellation and domain reconciliation instead of gaining a
-global switch that could suspend other owners in the shared registry, and it
-derives status plus timer/performance metrics from one shared inventory scan.
+| Command | Purpose |
+| --- | --- |
+| `make update-dev` | Install the pinned toolchain, components, Wasm target, and formatting hook |
+| `make ci` | Run the normal warning-denied checks, native tests, Wasm build, and package checks |
+| `make msrv` | Prove the Rust 1.88.0 workspace and supported probe configurations |
+| `make repository-check` | Validate repository-only documentation, evidence, or tooling work |
+| `make pocketic-watchdog` | Run the focused real-canister watchdog recovery matrix |
+| `make pocketic-cohorts` | Compare real-canister policy cohorts and measurements |
+| `make release-impact` | Classify changes as crate-impacting, repository-only, or absent |
 
-Tagged IcyDB 0.226.1 uses the shared registry and its pre-armed watchdog. A
-validated post-tag integration upgrades to `has_armed_wakeup()` on exact
-0.3.8. The dependencies, removed parallel state, downstream PocketIC evidence,
-measurements, and remaining landing boundary are recorded in the
-[IcyDB adoption record](docs/adoption/icydb.md).
+Normal development uses Rust 1.97.1. The real-canister suites use the audited
+PocketIC 15.0.0 Linux x86_64 binary. The first run downloads it into the
+ignored `target/tools` cache; later runs verify its version and SHA-256. Set
+`POCKET_IC_BIN=/path/to/pocket-ic` only for an explicitly managed binary.
 
-The current Canic and IcyDB worktrees both pin exact 0.3.8. Their development
-graphs are aligned, but a tagged combined Wasm must still prove that it resolves
-one package and has no remaining direct provider user before released
-composition is claimed.
+The evidence covers real work traps, 40-billion-instruction exhaustion,
+insufficient cycles followed by top-up, upgrade reconstruction, stop/resume,
+overdue coalescing, cancellation gaps, duplicate demand, simultaneous timers,
+trap isolation, and rejection of external executor ingress.
 
-## Development
+## 📚 Documentation map
 
-```text
-make update-dev
-make ci
-```
+| Document | Purpose |
+| --- | --- |
+| [Architecture](docs/architecture.md) | Canonical ownership, module boundaries, and lifecycle model |
+| [Safety boundary](SAFETY.md) | Exact guarantees, assumptions, and non-guarantees |
+| [Observability design](docs/design/observability.md) | Snapshot and measurement semantics |
+| [0.5 design](docs/design/0.5-policy-specific-callback-authority.md) | Policy-specific callback capabilities and migration boundary |
+| [0.6 release note](docs/changelog/0.6.0.md) | Atomic inventory epoch and hard-cut migration |
+| [Runtime evidence](docs/audits/0.3-runtime-evidence-2026-08-13.md) | PocketIC protocol, isolation, size, and instruction evidence |
+| [Current status](docs/status/current.md) | Compact maintainer handoff |
+| [Release guide](docs/releasing.md) | Versioning, validation, and publication workflow |
 
-`make update-dev` installs the pinned Rust toolchain, Clippy, rustfmt, the Wasm
-target, and this repository's single formatting hook. Normal development uses
-Rust 1.97.1; `make msrv` checks the declared Rust 1.88.0 minimum separately.
-`make help` lists the smaller component targets.
-
-`make release-impact` distinguishes crate-impacting work from a repository-only
-documentation, evidence, or tooling update. Validate the latter with
-`make repository-check`; it does not change the crate version or create a
-publishable release identity. Public removals before 1.0 remain hard cuts but
-advance the minor compatibility line rather than a patch.
-
-The focused real-canister evidence is intentionally separate from the normal
-CI gate. The first run automatically downloads the exact audited PocketIC
-15.0.0 Linux x86_64 binary into the ignored `target/tools` cache, then every
-run verifies its reported version and SHA-256:
-
-```text
-make pocketic-watchdog
-make pocketic-cohorts
-```
-
-Set `POCKET_IC_BIN=/path/to/pocket-ic` only to use an explicitly managed
-binary; overrides are validated strictly and are never replaced automatically.
-
-## License
+## 📄 License
 
 MIT
