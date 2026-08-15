@@ -35,7 +35,9 @@ The current runtime provides:
   declaration and consumes no provider handle, allowing fixed owners to reserve
   bounded inventory capacity before application hooks;
 - direct registration, rather than lifecycle reconciliation, for transient
-  `RemoveWhenStopped` declarations whose capability expires on removal;
+  `RemoveWhenStopped` declarations whose capability expires on terminal
+  completion or cancellation, including cancellation before the first
+  provider wake-up is armed;
 - exact ordinary reconciliation whose pending command has one canonical owner
   in the registry and can replace a live deadline in either direction;
 - work-scoped `TimerContext` delegation validated against the exact callback
@@ -59,7 +61,13 @@ The current runtime provides:
   failure paths restore or clear every linear provider capability before
   returning an error. Terminal watchdog control failures also clear any
   pending nested command and check paired scheduler/work generations before
-  mutating either counter;
+  mutating either counter. Provider-effect shape is checked before platform
+  calls, including exact identity and claim-generation agreement between a
+  Watchdog successor and its queued work. Arm effects distinguish initial from
+  replacement ownership, while clear effects name a non-empty handle set; a
+  no-op clear is not representable. Callback dispatch cannot consume a provider
+  handle until the identity, registration claim generation, callback
+  generation, and role all match the canonical owner;
 - fail-closed public and lifecycle effect application: a retained declaration
   whose provider arm cannot establish canonical ownership becomes inactive
   with `ProviderBindingFailed` rather than remaining falsely scheduled; and

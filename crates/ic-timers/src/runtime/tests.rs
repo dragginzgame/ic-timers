@@ -2,6 +2,7 @@ use super::*;
 use crate::{
     InactiveReason, TimerLastOutcome, TimerPolicy, TimerRegistrationStatus,
     TimerRuntimeStateSnapshot, WatchdogDecision, WatchdogRuntimeStateSnapshot,
+    control::WakeupArm,
     platform::{advance_instructions, discard_next_due, run_next_due, set_time, timer_count},
 };
 use std::{
@@ -120,6 +121,66 @@ fn fresh_inactive_reconciliation_reserves_complete_retained_inventory() {
         );
         assert_eq!(snapshot.generation(), None);
     }
+}
+
+#[test]
+fn fresh_transient_cancellation_expires_every_registration_policy() {
+    setup();
+    let once_identity = identity("fresh-transient-once");
+    let after_identity = identity("fresh-transient-after");
+    let watchdog_identity = identity("fresh-transient-watchdog");
+    let cadence = TimerCadence::from_nanos(5).expect("fixture cadence should be valid");
+
+    let once = register_once(
+        once_identity.clone(),
+        DeclarationLifetime::RemoveWhenStopped,
+        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+    )
+    .expect("once registration should succeed");
+    let after = register_after_completion(
+        after_identity.clone(),
+        cadence,
+        DeclarationLifetime::RemoveWhenStopped,
+        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+    )
+    .expect("after-completion registration should succeed");
+    let watchdog = register_watchdog(
+        watchdog_identity.clone(),
+        cadence,
+        DeclarationLifetime::RemoveWhenStopped,
+        |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
+    )
+    .expect("watchdog registration should succeed");
+
+    once.cancel().expect("once cancellation should succeed");
+    after
+        .cancel()
+        .expect("after-completion cancellation should succeed");
+    watchdog
+        .cancel()
+        .expect("watchdog cancellation should succeed");
+
+    assert_eq!(timer_count(), 0);
+    for identity in [&once_identity, &after_identity, &watchdog_identity] {
+        assert!(
+            timer_snapshot(identity)
+                .expect("snapshot lookup should succeed")
+                .is_none(),
+            "transient cancellation should remove {identity:?}"
+        );
+    }
+    assert!(matches!(
+        once.has_armed_wakeup(),
+        Err(TimerError::RegistrationExpired)
+    ));
+    assert!(matches!(
+        after.has_armed_wakeup(),
+        Err(TimerError::RegistrationExpired)
+    ));
+    assert!(matches!(
+        watchdog.has_armed_wakeup(),
+        Err(TimerError::RegistrationExpired)
+    ));
 }
 
 #[test]
@@ -478,6 +539,58 @@ fn retained_ordinary_context_expires_after_its_work_attempt() {
 
     assert!(run_next_due());
     assert_eq!(calls.get(), 2);
+    assert_eq!(timer_count(), 0);
+}
+
+#[test]
+fn stale_reused_identity_callback_cannot_consume_the_new_claims_handle() {
+    setup();
+    let timer_identity = identity("stale-consume-reuse");
+    let old = register_once(
+        timer_identity.clone(),
+        DeclarationLifetime::RemoveWhenStopped,
+        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+    )
+    .expect("old registration should succeed");
+    old.ensure_scheduled(TimerSchedule::At(15))
+        .expect("old wake-up should arm");
+    let old_handle = with_registry_mut(|registry| {
+        registry
+            .take_wakeup_handle(&timer_identity)
+            .ok_or(TimerError::OwnershipInvariant)
+    })
+    .expect("old provider handle should detach");
+    let (old_token, old_provider_handle) = old_handle.into_parts();
+    platform::clear_timer(old_provider_handle);
+    old.cancel()
+        .expect("old transient registration should be removed");
+
+    let replacement = register_once(
+        timer_identity,
+        DeclarationLifetime::Retained,
+        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+    )
+    .expect("replacement registration should succeed");
+    replacement
+        .ensure_scheduled(TimerSchedule::At(25))
+        .expect("replacement wake-up should arm");
+    assert_eq!(timer_count(), 1);
+
+    with_registry_mut(|registry| {
+        registry.consume_provider_handle(&old_token);
+        Ok(())
+    })
+    .expect("stale callback consumption should be harmless");
+    assert!(
+        replacement
+            .has_armed_wakeup()
+            .expect("replacement claim should retain its handle")
+    );
+    assert_eq!(timer_count(), 1);
+
+    replacement
+        .cancel()
+        .expect("replacement cleanup should succeed");
     assert_eq!(timer_count(), 0);
 }
 
@@ -1107,6 +1220,105 @@ fn provider_confirmation_failure_clears_the_installed_handle() {
     ));
     assert_eq!(timer_count(), 0);
     assert_retained_provider_binding_failure(&timer, 1, 0);
+}
+
+#[test]
+fn watchdog_dispatch_rejects_cross_claim_tokens_before_provider_arms() {
+    setup();
+    let first = register_watchdog(
+        identity("cross-claim-first"),
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+        DeclarationLifetime::Retained,
+        |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue),
+    )
+    .expect("first watchdog registration should succeed");
+    let second = register_watchdog(
+        identity("cross-claim-second"),
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+        DeclarationLifetime::Retained,
+        |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue),
+    )
+    .expect("second watchdog registration should succeed");
+    first
+        .ensure_scheduled()
+        .expect("first scheduler should arm");
+    second
+        .ensure_scheduled()
+        .expect("second scheduler should arm");
+
+    let first_handle = with_registry_mut(|registry| {
+        registry
+            .take_wakeup_handle(first.identity())
+            .ok_or(TimerError::OwnershipInvariant)
+    })
+    .expect("first scheduler handle should detach");
+    let second_handle = with_registry_mut(|registry| {
+        registry
+            .take_wakeup_handle(second.identity())
+            .ok_or(TimerError::OwnershipInvariant)
+    })
+    .expect("second scheduler handle should detach");
+    let (first_scheduler, first_provider_handle) = first_handle.into_parts();
+    let (second_scheduler, second_provider_handle) = second_handle.into_parts();
+    platform::clear_timer(first_provider_handle);
+    platform::clear_timer(second_provider_handle);
+    assert_eq!(timer_count(), 0);
+
+    let first_dispatch =
+        with_registry_mut(|registry| Ok(registry.begin_watchdog_scheduler(&first_scheduler, 15)))
+            .expect("first scheduler should dispatch");
+    let second_dispatch =
+        with_registry_mut(|registry| Ok(registry.begin_watchdog_scheduler(&second_scheduler, 15)))
+            .expect("second scheduler should dispatch");
+    let RegistryEffect::DispatchWatchdog {
+        successor: first_successor,
+        successor_deadline_ns: first_deadline,
+        successor_delay_ns: first_delay,
+        ..
+    } = first_dispatch.into_effect()
+    else {
+        panic!("first scheduler should emit a watchdog dispatch");
+    };
+    let RegistryEffect::DispatchWatchdog {
+        work: second_work, ..
+    } = second_dispatch.into_effect()
+    else {
+        panic!("second scheduler should emit a watchdog dispatch");
+    };
+    let malformed_arm = RegistryEffect::ArmWakeup {
+        token: second_work.clone(),
+        deadline_ns: first_deadline,
+        delay_ns: 0,
+        arm: WakeupArm::Initial,
+    };
+    assert!(matches!(
+        apply_effect(&malformed_arm, ProviderHandles::default()),
+        Err(TimerError::OwnershipInvariant)
+    ));
+    assert_eq!(timer_count(), 0, "validation must precede provider arms");
+    let malformed_replacement = RegistryEffect::ArmWakeup {
+        token: first_successor.clone(),
+        deadline_ns: first_deadline,
+        delay_ns: first_delay,
+        arm: WakeupArm::Replacement,
+    };
+    assert!(matches!(
+        apply_effect(&malformed_replacement, ProviderHandles::default()),
+        Err(TimerError::OwnershipInvariant)
+    ));
+    assert_eq!(timer_count(), 0, "validation must precede provider arms");
+    let malformed = RegistryEffect::DispatchWatchdog {
+        successor: first_successor,
+        successor_deadline_ns: first_deadline,
+        successor_delay_ns: first_delay,
+        work: second_work,
+    };
+
+    assert!(matches!(
+        apply_effect(&malformed, ProviderHandles::default()),
+        Err(TimerError::OwnershipInvariant)
+    ));
+    assert_eq!(timer_count(), 0, "validation must precede provider arms");
 }
 
 #[test]

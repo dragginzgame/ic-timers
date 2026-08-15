@@ -25,7 +25,7 @@ pub enum TimerRegistration {
     },
 }
 
-/// Side effect requested from the timer platform boundary.
+/// Provider-neutral action consumed by the canonical registry.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TimerControlAction {
     /// No platform change is required.
@@ -36,13 +36,8 @@ pub enum TimerControlAction {
         generation: u64,
         /// Absolute IC timestamp in nanoseconds.
         deadline_ns: u64,
-    },
-    /// Clear the existing handle and arm this replacement.
-    Replace {
-        /// Generation the replacement callback must present.
-        generation: u64,
-        /// Absolute IC timestamp in nanoseconds.
-        deadline_ns: u64,
+        /// Whether the arm fills an empty slot or replaces its current handle.
+        kind: WakeupArm,
     },
     /// Clear the existing scheduled handle.
     Clear,
@@ -53,8 +48,20 @@ pub enum TimerControlAction {
     },
 }
 
+/// Whether one arm fills an empty wake-up slot or replaces its current handle.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum WakeupArm {
+    Initial,
+    Replacement,
+}
+
+impl WakeupArm {
+    pub(crate) const fn replaces_existing(self) -> bool {
+        matches!(self, Self::Replacement)
+    }
+}
+
 /// Invalid or exhausted timer-control transition.
-#[non_exhaustive]
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
 pub enum TimerControlError {
     /// The monotonic request sequence cannot be incremented.
@@ -179,17 +186,15 @@ impl TimerControl {
             generation,
             deadline_ns,
         };
-        if replace {
-            Ok(TimerControlAction::Replace {
-                generation,
-                deadline_ns,
-            })
-        } else {
-            Ok(TimerControlAction::Arm {
-                generation,
-                deadline_ns,
-            })
-        }
+        Ok(TimerControlAction::Arm {
+            generation,
+            deadline_ns,
+            kind: if replace {
+                WakeupArm::Replacement
+            } else {
+                WakeupArm::Initial
+            },
+        })
     }
 
     /// Begin the scheduled generation, rejecting stale callbacks.
@@ -235,6 +240,7 @@ impl TimerControl {
             Ok(TimerControlAction::Arm {
                 generation: next_generation,
                 deadline_ns,
+                kind: WakeupArm::Initial,
             })
         } else {
             self.registration = TimerRegistration::Unregistered;
@@ -290,9 +296,10 @@ mod tests {
         let old_generation = arm(&mut control, 100);
         assert_eq!(
             control.schedule(50),
-            Ok(TimerControlAction::Replace {
+            Ok(TimerControlAction::Arm {
                 generation: 2,
-                deadline_ns: 50
+                deadline_ns: 50,
+                kind: WakeupArm::Replacement,
             })
         );
         assert!(!control.begin(old_generation));
@@ -305,9 +312,10 @@ mod tests {
         let old_generation = arm(&mut control, 100);
         assert_eq!(
             control.reconcile(200),
-            Ok(TimerControlAction::Replace {
+            Ok(TimerControlAction::Arm {
                 generation: 2,
-                deadline_ns: 200
+                deadline_ns: 200,
+                kind: WakeupArm::Replacement,
             })
         );
         assert!(!control.begin(old_generation));
@@ -324,7 +332,8 @@ mod tests {
             control.complete(generation, Some(300), false),
             Ok(TimerControlAction::Arm {
                 generation: 2,
-                deadline_ns: 300
+                deadline_ns: 300,
+                kind: WakeupArm::Initial,
             })
         );
     }
@@ -339,7 +348,8 @@ mod tests {
             control.complete(generation, Some(90), false),
             Ok(TimerControlAction::Arm {
                 generation: 2,
-                deadline_ns: 90
+                deadline_ns: 90,
+                kind: WakeupArm::Initial,
             })
         );
     }
@@ -366,7 +376,8 @@ mod tests {
             control.complete(generation, Some(250), false),
             Ok(TimerControlAction::Arm {
                 generation: 2,
-                deadline_ns: 250
+                deadline_ns: 250,
+                kind: WakeupArm::Initial,
             })
         );
     }
@@ -391,7 +402,8 @@ mod tests {
             control.complete(generation, Some(90), false),
             Ok(TimerControlAction::Arm {
                 generation: 2,
-                deadline_ns: 90
+                deadline_ns: 90,
+                kind: WakeupArm::Initial,
             })
         );
     }

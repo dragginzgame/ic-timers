@@ -5,7 +5,7 @@
 //! authority.
 
 use crate::{
-    control::{TimerControl, TimerControlAction, TimerControlError, TimerRegistration},
+    control::{TimerControl, TimerControlAction, TimerControlError, TimerRegistration, WakeupArm},
     platform::TimerHandle,
     runtime::TimerContext,
     schedule::{DirectiveError, ScheduleError, TimerCadence, TimerDirective, TimerSchedule},
@@ -28,16 +28,6 @@ pub const MAX_TIMER_REGISTRATIONS: usize = 64;
 pub struct RegistrationClaim {
     identity: TimerIdentity,
     claim_generation: u64,
-}
-
-impl RegistrationClaim {
-    pub(crate) const fn identity(&self) -> &TimerIdentity {
-        &self.identity
-    }
-
-    pub(crate) const fn claim_generation(&self) -> u64 {
-        self.claim_generation
-    }
 }
 
 /// Internal callback role carried by a generation-checked dispatch token.
@@ -84,9 +74,21 @@ impl CallbackToken {
     pub(crate) const fn role(&self) -> CallbackRole {
         self.role
     }
+
+    pub(crate) fn belongs_to_same_claim(&self, other: &Self) -> bool {
+        self.identity == other.identity && self.claim_generation == other.claim_generation
+    }
 }
 
 impl RegistrationClaim {
+    pub(crate) const fn identity(&self) -> &TimerIdentity {
+        &self.identity
+    }
+
+    pub(crate) const fn claim_generation(&self) -> u64 {
+        self.claim_generation
+    }
+
     pub(crate) fn from_callback(token: &CallbackToken) -> Self {
         Self {
             identity: token.identity.clone(),
@@ -103,12 +105,11 @@ pub enum RegistryEffect {
         token: CallbackToken,
         deadline_ns: u64,
         delay_ns: u64,
-        replace: bool,
+        arm: WakeupArm,
     },
     ClearCallbacks {
         identity: TimerIdentity,
-        clear_wakeup: bool,
-        clear_work: bool,
+        handles: CallbacksToClear,
     },
     DispatchWatchdog {
         successor: CallbackToken,
@@ -116,6 +117,52 @@ pub enum RegistryEffect {
         successor_delay_ns: u64,
         work: CallbackToken,
     },
+}
+
+/// Non-empty subset of provider callbacks cleared by one effect.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum CallbacksToClear {
+    Wakeup,
+    Work,
+    WakeupAndWork,
+}
+
+impl CallbacksToClear {
+    pub(crate) const fn includes_wakeup(self) -> bool {
+        matches!(self, Self::Wakeup | Self::WakeupAndWork)
+    }
+
+    pub(crate) const fn includes_work(self) -> bool {
+        matches!(self, Self::Work | Self::WakeupAndWork)
+    }
+
+    const fn wakeup_and_maybe_work(include_work: bool) -> Self {
+        if include_work {
+            Self::WakeupAndWork
+        } else {
+            Self::Wakeup
+        }
+    }
+}
+
+impl RegistryEffect {
+    pub(crate) fn has_valid_shape(&self) -> bool {
+        match self {
+            Self::None | Self::ClearCallbacks { .. } => true,
+            Self::ArmWakeup { token, arm, .. } => match token.role {
+                CallbackRole::OrdinaryWork => true,
+                CallbackRole::WatchdogScheduler => matches!(arm, WakeupArm::Initial),
+                CallbackRole::WatchdogWork => false,
+            },
+            Self::DispatchWatchdog {
+                successor, work, ..
+            } => {
+                successor.role == CallbackRole::WatchdogScheduler
+                    && work.role == CallbackRole::WatchdogWork
+                    && successor.belongs_to_same_claim(work)
+            }
+        }
+    }
 }
 
 /// One pure transition and any terminal checked-control failure it produced.
@@ -179,7 +226,6 @@ pub enum RegisterError {
 }
 
 /// Invalid request against a logical registration claim.
-#[non_exhaustive]
 #[derive(Clone, Debug, Eq, Error, PartialEq)]
 pub enum RegistryError {
     #[error("timer registration is no longer present")]
@@ -260,6 +306,20 @@ struct PendingSchedule {
     mode: TimerSchedulingMode,
 }
 
+impl PendingSchedule {
+    fn resolve(schedule: TimerSchedule, now_ns: u64) -> Result<Self, ScheduleError> {
+        let resolved = schedule.resolve(now_ns)?;
+        Ok(Self {
+            deadline_ns: resolved.deadline_ns,
+            requested_delay_ns: resolved.requested_delay_ns,
+            mode: match schedule {
+                TimerSchedule::After(_) => TimerSchedulingMode::Once,
+                TimerSchedule::At(_) => TimerSchedulingMode::Deadline,
+            },
+        })
+    }
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum OrdinaryPending {
     Cancel,
@@ -270,7 +330,8 @@ enum OrdinaryPending {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum OrdinaryRequest {
-    Ensure,
+    EnsureOnce,
+    EnsureRecurring,
     Reconcile,
 }
 
@@ -496,6 +557,10 @@ impl Entry {
             CallbackRole::WatchdogWork => &mut self.work,
         }
     }
+
+    const fn owns_token_claim(&self, token: &CallbackToken) -> bool {
+        self.claim_generation == token.claim_generation
+    }
 }
 
 /// Pure, fixed-capacity canonical registry.
@@ -648,20 +713,11 @@ impl TimerRegistry {
         now_ns: u64,
         schedule: TimerSchedule,
     ) -> Result<RegistryTransition, RegistryError> {
-        let resolved = schedule.resolve(now_ns)?;
-        let mode = match schedule {
-            TimerSchedule::After(_) => TimerSchedulingMode::Once,
-            TimerSchedule::At(_) => TimerSchedulingMode::Deadline,
-        };
-        self.schedule_ordinary(
+        self.request_ordinary(
             claim,
             now_ns,
-            PendingSchedule {
-                deadline_ns: resolved.deadline_ns,
-                requested_delay_ns: resolved.requested_delay_ns,
-                mode,
-            },
-            true,
+            PendingSchedule::resolve(schedule, now_ns)?,
+            OrdinaryRequest::EnsureOnce,
         )
     }
 
@@ -680,20 +736,10 @@ impl TimerRegistry {
         let Some(schedule) = schedule else {
             return self.cancel(claim);
         };
-        let resolved = schedule.resolve(now_ns)?;
-        let mode = match schedule {
-            TimerSchedule::After(_) => TimerSchedulingMode::Once,
-            TimerSchedule::At(_) => TimerSchedulingMode::Deadline,
-        };
         self.request_ordinary(
             claim,
             now_ns,
-            PendingSchedule {
-                deadline_ns: resolved.deadline_ns,
-                requested_delay_ns: resolved.requested_delay_ns,
-                mode,
-            },
-            false,
+            PendingSchedule::resolve(schedule, now_ns)?,
             OrdinaryRequest::Reconcile,
         )
     }
@@ -718,10 +764,8 @@ impl TimerRegistry {
         now_ns: u64,
     ) -> Result<RegistryTransition, RegistryError> {
         let entry = self.entry(claim)?;
-        let (cadence, mode, ordinary, already_scheduled) = match entry.policy {
-            TimerPolicy::Once => {
-                return Err(RegistryError::WrongPolicy { actual: "once" });
-            }
+        match entry.policy {
+            TimerPolicy::Once => Err(RegistryError::WrongPolicy { actual: "once" }),
             TimerPolicy::AfterCompletion { cadence } => {
                 let already_scheduled = matches!(
                     entry.control,
@@ -733,55 +777,27 @@ impl TimerRegistry {
                         TimerRegistration::Scheduled { .. }
                     )
                 );
-                (
-                    cadence,
-                    TimerSchedulingMode::AfterCompletion,
-                    true,
-                    already_scheduled,
+                if already_scheduled {
+                    let entry = self.entry_mut(claim)?;
+                    entry.observability.counters_mut().record_schedule_request();
+                    entry.observability.counters_mut().record_coalesced();
+                    entry.latest_requested_delay_ns = Some(cadence.as_nanos());
+                    return Ok(RegistryTransition::normal(RegistryEffect::None));
+                }
+                let deadline_ns = cadence.deadline_after(now_ns)?;
+                self.request_ordinary(
+                    claim,
+                    now_ns,
+                    PendingSchedule {
+                        deadline_ns,
+                        requested_delay_ns: Some(cadence.as_nanos()),
+                        mode: TimerSchedulingMode::AfterCompletion,
+                    },
+                    OrdinaryRequest::EnsureRecurring,
                 )
             }
-            TimerPolicy::Watchdog { cadence } => {
-                (cadence, TimerSchedulingMode::Watchdog, false, false)
-            }
-        };
-        if ordinary {
-            if already_scheduled {
-                let entry = self.entry_mut(claim)?;
-                entry.observability.counters_mut().record_schedule_request();
-                entry.observability.counters_mut().record_coalesced();
-                entry.latest_requested_delay_ns = Some(cadence.as_nanos());
-                return Ok(RegistryTransition::normal(RegistryEffect::None));
-            }
-            let deadline_ns = cadence.deadline_after(now_ns)?;
-            self.schedule_ordinary(
-                claim,
-                now_ns,
-                PendingSchedule {
-                    deadline_ns,
-                    requested_delay_ns: Some(cadence.as_nanos()),
-                    mode,
-                },
-                false,
-            )
-        } else {
-            self.ensure_watchdog(claim, now_ns, cadence)
+            TimerPolicy::Watchdog { cadence } => self.ensure_watchdog(claim, now_ns, cadence),
         }
-    }
-
-    fn schedule_ordinary(
-        &mut self,
-        claim: &RegistrationClaim,
-        now_ns: u64,
-        requested: PendingSchedule,
-        require_once: bool,
-    ) -> Result<RegistryTransition, RegistryError> {
-        self.request_ordinary(
-            claim,
-            now_ns,
-            requested,
-            require_once,
-            OrdinaryRequest::Ensure,
-        )
     }
 
     fn request_ordinary(
@@ -789,11 +805,17 @@ impl TimerRegistry {
         claim: &RegistrationClaim,
         now_ns: u64,
         requested: PendingSchedule,
-        require_once: bool,
         request: OrdinaryRequest,
     ) -> Result<RegistryTransition, RegistryError> {
         let entry = self.entry_mut(claim)?;
-        if require_once && !matches!(entry.policy, TimerPolicy::Once) {
+        let policy_matches = match request {
+            OrdinaryRequest::EnsureOnce => matches!(entry.policy, TimerPolicy::Once),
+            OrdinaryRequest::EnsureRecurring => {
+                matches!(entry.policy, TimerPolicy::AfterCompletion { .. })
+            }
+            OrdinaryRequest::Reconcile => !matches!(entry.policy, TimerPolicy::Watchdog { .. }),
+        };
+        if !policy_matches {
             return Err(RegistryError::WrongPolicy {
                 actual: entry.policy.label(),
             });
@@ -811,7 +833,9 @@ impl TimerRegistry {
         };
         let was_running = matches!(control.registration(), TimerRegistration::Running { .. });
         let action = match request {
-            OrdinaryRequest::Ensure => control.schedule(requested.deadline_ns),
+            OrdinaryRequest::EnsureOnce | OrdinaryRequest::EnsureRecurring => {
+                control.schedule(requested.deadline_ns)
+            }
             OrdinaryRequest::Reconcile => control.reconcile(requested.deadline_ns),
         };
 
@@ -878,7 +902,7 @@ impl TimerRegistry {
                     token: token_for(claim, generation, CallbackRole::WatchdogScheduler),
                     deadline_ns,
                     delay_ns: deadline_ns.saturating_sub(now_ns),
-                    replace: false,
+                    arm: WakeupArm::Initial,
                 }))
             }
             WatchdogState::Scheduled { .. }
@@ -895,7 +919,7 @@ impl TimerRegistry {
             } => {
                 let Some(sequence) = control.request_sequence.checked_add(1) else {
                     return Ok(control.terminate(
-                        clear_callbacks(claim.identity.clone(), true, false),
+                        clear_callbacks(claim.identity.clone(), CallbacksToClear::Wakeup),
                         TimerControlFailure::RequestSequenceExhausted,
                     ));
                 };
@@ -932,6 +956,8 @@ impl TimerRegistry {
                     let mut remove = false;
                     let transition = match (before, action) {
                         (TimerRegistration::Unregistered, TimerControlAction::None) => {
+                            remove =
+                                matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
                             RegistryTransition::normal(RegistryEffect::None)
                         }
                         (TimerRegistration::Running { .. }, TimerControlAction::None) => {
@@ -947,24 +973,19 @@ impl TimerRegistry {
                                 matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
                             RegistryTransition::normal(clear_callbacks(
                                 identity.clone(),
-                                true,
-                                false,
+                                CallbacksToClear::Wakeup,
                             ))
                         }
                         (TimerRegistration::Scheduled { .. }, TimerControlAction::None)
-                        | (
-                            _,
-                            TimerControlAction::Arm { .. }
-                            | TimerControlAction::Replace { .. }
-                            | TimerControlAction::Disarm { .. },
-                        ) => {
+                        | (_, TimerControlAction::Arm { .. } | TimerControlAction::Disarm { .. }) =>
+                        {
                             let clear_wakeup = control.terminate();
                             *pending = None;
                             *inactive_reason = InactiveReason::ControlFailure(
                                 TimerControlFailure::DirectiveNotAllowed,
                             );
                             RegistryTransition::terminal(
-                                clear_callbacks(identity.clone(), clear_wakeup, false),
+                                clear_wakeup_if(identity.clone(), clear_wakeup),
                                 TimerControlFailure::DirectiveNotAllowed,
                             )
                         }
@@ -972,11 +993,19 @@ impl TimerRegistry {
                     (transition, remove)
                 }
                 EntryControl::Watchdog(control) => {
-                    let (transition, changed) = cancel_watchdog(control, &identity);
-                    if changed && transition.failure().is_none() {
+                    let cancels_immediately = matches!(
+                        control.state,
+                        WatchdogState::Scheduled { .. }
+                            | WatchdogState::AwaitingWork {
+                                attempt_status: WatchdogAttemptStatus::Dispatched,
+                                ..
+                            }
+                    );
+                    let transition = cancel_watchdog(control, &identity);
+                    if cancels_immediately && transition.failure().is_none() {
                         entry.observability.counters_mut().record_cancellation();
                     }
-                    let stopped = changed || transition.failure().is_some();
+                    let stopped = matches!(control.state, WatchdogState::Inactive);
                     (
                         transition,
                         stopped && matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped),
@@ -1052,7 +1081,7 @@ impl TimerRegistry {
                         *pending = None;
                         *inactive_reason = InactiveReason::ControlFailure(failure);
                         RegistryTransition::terminal(
-                            clear_callbacks(identity.clone(), clear_wakeup, false),
+                            clear_wakeup_if(identity.clone(), clear_wakeup),
                             failure,
                         )
                     }
@@ -1071,7 +1100,7 @@ impl TimerRegistry {
                 };
                 let Some(sequence) = control.request_sequence.checked_add(1) else {
                     let transition = control.terminate(
-                        clear_callbacks(identity.clone(), true, false),
+                        clear_callbacks(identity.clone(), CallbacksToClear::Wakeup),
                         TimerControlFailure::RequestSequenceExhausted,
                     );
                     self.entries.remove(&identity);
@@ -1094,9 +1123,7 @@ impl TimerRegistry {
         let Some(entry) = self.entries.get_mut(token.identity()) else {
             return CallbackAcceptance::Stale;
         };
-        if token.role != CallbackRole::OrdinaryWork
-            || token.claim_generation != entry.claim_generation
-        {
+        if token.role != CallbackRole::OrdinaryWork || !entry.owns_token_claim(token) {
             entry.observability.counters_mut().record_stale_wakeup();
             return CallbackAcceptance::Stale;
         }
@@ -1244,17 +1271,13 @@ impl TimerRegistry {
                     TimerControlAction::Arm {
                         generation,
                         deadline_ns,
-                    }
-                    | TimerControlAction::Replace {
-                        generation,
-                        deadline_ns,
+                        kind,
                     } => {
                         let selected = selected_schedule.unwrap_or(PendingSchedule {
                             deadline_ns,
                             requested_delay_ns: None,
                             mode: entry.scheduling_mode,
                         });
-                        let replace = matches!(action, TimerControlAction::Replace { .. });
                         entry.scheduling_mode = selected.mode;
                         entry.latest_requested_delay_ns = selected.requested_delay_ns;
                         RegistryTransition::normal(RegistryEffect::ArmWakeup {
@@ -1266,7 +1289,7 @@ impl TimerRegistry {
                             ),
                             deadline_ns,
                             delay_ns: deadline_ns.saturating_sub(now_ns),
-                            replace,
+                            arm: kind,
                         })
                     }
                     TimerControlAction::Disarm { cancelled } => {
@@ -1288,7 +1311,7 @@ impl TimerRegistry {
                         remove = matches!(pending_command, Some(OrdinaryPending::Unregister))
                             || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
                         RegistryTransition::terminal(
-                            clear_callbacks(identity.clone(), clear_wakeup, false),
+                            clear_wakeup_if(identity.clone(), clear_wakeup),
                             TimerControlFailure::DirectiveNotAllowed,
                         )
                     }
@@ -1314,9 +1337,7 @@ impl TimerRegistry {
         let Some(entry) = self.entries.get_mut(token.identity()) else {
             return RegistryTransition::normal(RegistryEffect::None);
         };
-        if token.role != CallbackRole::WatchdogScheduler
-            || token.claim_generation != entry.claim_generation
-        {
+        if token.role != CallbackRole::WatchdogScheduler || !entry.owns_token_claim(token) {
             entry.observability.counters_mut().record_stale_wakeup();
             return RegistryTransition::normal(RegistryEffect::None);
         }
@@ -1360,13 +1381,13 @@ impl TimerRegistry {
         let Some((successor_generation, attempt_generation)) = control.next_dispatch_generations()
         else {
             return control.terminate(
-                clear_callbacks(token.identity.clone(), false, true),
+                clear_callbacks(token.identity.clone(), CallbacksToClear::Work),
                 TimerControlFailure::GenerationExhausted,
             );
         };
         let Ok(successor_deadline_ns) = cadence.deadline_after(now_ns) else {
             return control.terminate(
-                clear_callbacks(token.identity.clone(), false, true),
+                clear_callbacks(token.identity.clone(), CallbacksToClear::Work),
                 TimerControlFailure::DeadlineOverflow,
             );
         };
@@ -1402,9 +1423,7 @@ impl TimerRegistry {
         let Some(entry) = self.entries.get_mut(token.identity()) else {
             return CallbackAcceptance::Stale;
         };
-        if token.role != CallbackRole::WatchdogWork
-            || token.claim_generation != entry.claim_generation
-        {
+        if token.role != CallbackRole::WatchdogWork || !entry.owns_token_claim(token) {
             entry.observability.counters_mut().record_stale_work();
             return CallbackAcceptance::Stale;
         }
@@ -1497,7 +1516,10 @@ impl TimerRegistry {
                         InactiveReason::Stopped
                     };
                     (
-                        RegistryTransition::normal(clear_callbacks(identity.clone(), true, false)),
+                        RegistryTransition::normal(clear_callbacks(
+                            identity.clone(),
+                            CallbacksToClear::Wakeup,
+                        )),
                         unregister
                             || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped),
                     )
@@ -1560,7 +1582,7 @@ impl TimerRegistry {
         let Some(entry) = self.entries.get_mut(token.identity()) else {
             return;
         };
-        if token.claim_generation == entry.claim_generation
+        if entry.owns_token_claim(token)
             && token.role == CallbackRole::WatchdogScheduler
             && matches!(entry.control, EntryControl::Watchdog(_))
         {
@@ -1579,7 +1601,7 @@ impl TimerRegistry {
             (EntryControl::Ordinary { .. }, CallbackRole::OrdinaryWork)
                 | (EntryControl::Watchdog(_), CallbackRole::WatchdogWork)
         );
-        if token.claim_generation == entry.claim_generation && role_matches {
+        if entry.owns_token_claim(token) && role_matches {
             entry.observability.record_work_instructions(instructions);
         }
     }
@@ -1738,6 +1760,9 @@ impl TimerRegistry {
         let Some(entry) = self.entries.get_mut(token.identity()) else {
             return;
         };
+        if !entry.owns_token_claim(token) {
+            return;
+        }
         let slot = entry.provider_slot_mut(token.role);
         let matches_token = slot.as_ref().is_some_and(|owned| {
             owned.callback_generation == token.callback_generation && owned.role == token.role
@@ -1756,6 +1781,9 @@ impl TimerRegistry {
         &mut self,
         effect: &RegistryEffect,
     ) -> Result<(), RegistryError> {
+        if !effect.has_valid_shape() {
+            return Err(RegistryError::StaleCallback);
+        }
         match effect {
             RegistryEffect::None | RegistryEffect::ClearCallbacks { .. } => Ok(()),
             RegistryEffect::ArmWakeup {
@@ -1796,16 +1824,9 @@ impl TimerRegistry {
                 work,
                 ..
             } => {
-                let successor_claim_generation = successor.claim_generation;
                 let successor_callback_generation = successor.callback_generation;
                 let successor_role = successor.role;
                 let entry = self.entry_by_token_mut(successor, successor_role)?;
-                if successor_role != CallbackRole::WatchdogScheduler
-                    || work.role != CallbackRole::WatchdogWork
-                    || work.claim_generation != successor_claim_generation
-                {
-                    return Err(RegistryError::StaleCallback);
-                }
                 let EntryControl::Watchdog(control) = &entry.control else {
                     return Err(RegistryError::StaleCallback);
                 };
@@ -1866,7 +1887,7 @@ impl TimerRegistry {
             .entries
             .get_mut(token.identity())
             .ok_or(RegistryError::StaleCallback)?;
-        if entry.claim_generation != token.claim_generation || token.role != role {
+        if !entry.owns_token_claim(token) || token.role != role {
             return Err(RegistryError::StaleCallback);
         }
         Ok(entry)
@@ -1877,7 +1898,7 @@ impl TimerRegistry {
             .entries
             .get(token.identity())
             .ok_or(RegistryError::StaleCallback)?;
-        if token.claim_generation != entry.claim_generation {
+        if !entry.owns_token_claim(token) {
             return Err(RegistryError::StaleCallback);
         }
         let active = match (&entry.control, token.role) {
@@ -1940,15 +1961,15 @@ fn detach_provider_handle(
     }
 }
 
-const fn clear_callbacks(
-    identity: TimerIdentity,
-    clear_wakeup: bool,
-    clear_work: bool,
-) -> RegistryEffect {
-    RegistryEffect::ClearCallbacks {
-        identity,
-        clear_wakeup,
-        clear_work,
+const fn clear_callbacks(identity: TimerIdentity, handles: CallbacksToClear) -> RegistryEffect {
+    RegistryEffect::ClearCallbacks { identity, handles }
+}
+
+fn clear_wakeup_if(identity: TimerIdentity, clear_wakeup: bool) -> RegistryEffect {
+    if clear_wakeup {
+        clear_callbacks(identity, CallbacksToClear::Wakeup)
+    } else {
+        RegistryEffect::None
     }
 }
 
@@ -1963,12 +1984,8 @@ fn apply_ordinary_action(
         TimerControlAction::Arm {
             generation,
             deadline_ns,
-        }
-        | TimerControlAction::Replace {
-            generation,
-            deadline_ns,
+            kind,
         } => {
-            let replace = matches!(action, TimerControlAction::Replace { .. });
             entry.scheduling_mode = requested.mode;
             RegistryTransition::normal(RegistryEffect::ArmWakeup {
                 token: CallbackToken::new(
@@ -1979,7 +1996,7 @@ fn apply_ordinary_action(
                 ),
                 deadline_ns,
                 delay_ns: deadline_ns.saturating_sub(now_ns),
-                replace,
+                arm: kind,
             })
         }
         TimerControlAction::None => {
@@ -2009,14 +2026,7 @@ fn terminal_ordinary(
     let clear_wakeup = control.terminate();
     *pending = None;
     *inactive_reason = InactiveReason::ControlFailure(failure);
-    RegistryTransition::terminal(
-        RegistryEffect::ClearCallbacks {
-            identity,
-            clear_wakeup,
-            clear_work: false,
-        },
-        failure,
-    )
+    RegistryTransition::terminal(clear_wakeup_if(identity, clear_wakeup), failure)
 }
 
 fn terminal_completion(
@@ -2119,7 +2129,7 @@ const fn select_pending_ordinary(
     }
     match request {
         OrdinaryRequest::Reconcile => OrdinaryPending::Reconcile(requested),
-        OrdinaryRequest::Ensure => match current {
+        OrdinaryRequest::EnsureOnce | OrdinaryRequest::EnsureRecurring => match current {
             Some(OrdinaryPending::Reconcile(current) | OrdinaryPending::Schedule(current))
                 if current.deadline_ns <= requested.deadline_ns =>
             {
@@ -2136,30 +2146,24 @@ const fn select_pending_ordinary(
     }
 }
 
-fn cancel_watchdog(
-    control: &mut WatchdogControl,
-    identity: &TimerIdentity,
-) -> (RegistryTransition, bool) {
+fn cancel_watchdog(control: &mut WatchdogControl, identity: &TimerIdentity) -> RegistryTransition {
     match control.state {
-        WatchdogState::Inactive => (RegistryTransition::normal(RegistryEffect::None), false),
+        WatchdogState::Inactive => RegistryTransition::normal(RegistryEffect::None),
         WatchdogState::AwaitingWork {
             attempt_status: WatchdogAttemptStatus::Running,
             ..
         } => {
             let Some(sequence) = control.request_sequence.checked_add(1) else {
-                return (
-                    control.terminate(
-                        clear_callbacks(identity.clone(), true, false),
-                        TimerControlFailure::RequestSequenceExhausted,
-                    ),
-                    true,
+                return control.terminate(
+                    clear_callbacks(identity.clone(), CallbacksToClear::Wakeup),
+                    TimerControlFailure::RequestSequenceExhausted,
                 );
             };
             control.request_sequence = sequence;
             if !matches!(control.pending, Some(WatchdogPending::Unregister)) {
                 control.pending = Some(WatchdogPending::Cancel);
             }
-            (RegistryTransition::normal(RegistryEffect::None), false)
+            RegistryTransition::normal(RegistryEffect::None)
         }
         WatchdogState::Scheduled { .. }
         | WatchdogState::AwaitingWork {
@@ -2170,12 +2174,12 @@ fn cancel_watchdog(
             let Some((scheduler_generation, attempt_generation)) =
                 control.next_dispatch_generations()
             else {
-                return (
-                    control.terminate(
-                        clear_callbacks(identity.clone(), true, clear_work),
-                        TimerControlFailure::GenerationExhausted,
+                return control.terminate(
+                    clear_callbacks(
+                        identity.clone(),
+                        CallbacksToClear::wakeup_and_maybe_work(clear_work),
                     ),
-                    true,
+                    TimerControlFailure::GenerationExhausted,
                 );
             };
             control.scheduler_generation = scheduler_generation;
@@ -2183,10 +2187,10 @@ fn cancel_watchdog(
             control.state = WatchdogState::Inactive;
             control.pending = None;
             control.inactive_reason = InactiveReason::Cancelled;
-            (
-                RegistryTransition::normal(clear_callbacks(identity.clone(), true, clear_work)),
-                true,
-            )
+            RegistryTransition::normal(clear_callbacks(
+                identity.clone(),
+                CallbacksToClear::wakeup_and_maybe_work(clear_work),
+            ))
         }
     }
 }

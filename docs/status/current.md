@@ -62,10 +62,7 @@ IcyDB-shaped watchdog evidence are complete.
   0.3.2, and the callback-authority/provider-binding fixes as 0.3.3 on
   2026-08-14.
 - Latest release line: `0.4.0`.
-- The named 0.4 line starts with the completed repository-only release-policy
-  and adoption evidence maintenance, then performs the code-bearing cleanup
-  and hard cuts requested for the next compatibility line.
-- The current 0.4 worktree makes the crate root the only public import path,
+- Released 0.4.0 makes the crate root the only public import path,
   collapses `TimerLabel` into `TimerIdentity`, removes snapshot-to-command and
   redundant observation projections, prevents default construction of partial
   observations, validates lifecycle declarations by exact claim, shares
@@ -77,14 +74,31 @@ IcyDB-shaped watchdog evidence are complete.
   restore all exact handles or retire the claim. Watchdog terminal failures
   share one pending-clearing path with atomic paired generation allocation,
   and illegal missing-cadence recurrence is private rather than an unreachable
-  public schedule error. The package version is intentionally unchanged until
-  the maintainer-owned release flow.
-- Normal CI, all 78 native tests, Rust 1.88 workspace and nested-probe checks,
-  warning-denied rustdoc/Clippy, Wasm compilation, offline packaging, provider
-  and release checks, dependency-duplicate inspection, and diff validation
-  pass for the current 0.4 candidate. PocketIC was not rerun because no
-  canonical registry transition, normal provider binding, or watchdog
-  protocol changed; native fault injection owns the restoration-path change.
+  public schedule error.
+- Open release line: `0.4.1`; package remains `0.4.0`.
+- The current patch fixes fresh `RemoveWhenStopped` cancellation for all three
+  policies, shares ordinary schedule resolution and retained lifecycle
+  verification, removes the extra Watchdog cancellation-result boolean, binds
+  provider helpers from one complete effect, and rejects malformed cross-claim
+  Watchdog dispatch before provider calls or counter confirmation. Exact claim
+  checks are now shared across callback and handle paths, closing an identity-
+  reuse bug where a late expired callback could detach the replacement claim's
+  provider handle. Provider arm/replace intent and non-empty clear selection
+  are now closed private values, cancellation and unregistration share one
+  detached-handle transition seam, and ordinary ensure/reconcile intent is one
+  closed request kind rather than a boolean policy gate. Public control
+  comments distinguish pending successors from armed wake-ups and
+  non-interrupting cancellation. Private compatibility annotations are removed
+  rather than retained. The public API, snapshot schema, counters, valid
+  provider calls, and message protocol are unchanged.
+- The current tree passes normal CI with all 83 native tests, warning-denied
+  rustdoc/Clippy, Wasm compilation, offline packaging, provider/release checks,
+  Rust 1.88 workspace and nested-probe checks, dependency-duplicate inspection,
+  both non-mutating 0.4.1 finalizers, release-impact classification, and diff
+  validation. PocketIC was not rerun because fresh inactive cancellation owns
+  no provider handle, malformed effects are rejected before provider calls,
+  and the stale-token fix only tightens exact-claim handle ownership; the
+  maintainer-owned version bump retains the complete release gate.
 - CI also checks rustdoc, shell syntax, and full-SHA GitHub Actions pins;
   Dependabot covers Cargo and Actions dependencies. A structural gate keeps
   every direct `ic-cdk-timers` reference inside private `platform` code and
@@ -313,9 +327,9 @@ uses exact 0.3.8. See `docs/adoption/icydb.md` and `docs/adoption/canic.md`.
 
 ## Next action
 
-Review and freeze the 0.4 candidate, then use the maintainer-owned minor
-release flow. After publication, ask Canic and IcyDB to requalify one exact
-0.4 package. Do not mutate downstream repositories unless the maintainer
+Finish and review the 0.4.1 cleanup candidate, then use the maintainer-owned
+patch release flow. After publication, ask Canic and IcyDB to requalify one
+exact 0.4.1 package. Do not mutate downstream repositories unless the maintainer
 explicitly authorizes an exact target.
 
 The maintainer owns release tags and all package-publication actions.

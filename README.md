@@ -138,7 +138,9 @@ authority.
 Lifecycle reconciliation is intentionally retained-only so an inactive fixed
 owner remains observable and keeps its capacity reservation. Transient
 `RemoveWhenStopped` callbacks use the direct registration functions and are
-registered again by their owner if later desired.
+registered again by their owner if later desired. Cancelling a transient
+declaration removes it and expires its claim even when it has not yet been
+scheduled.
 
 All consumers must resolve to the same `ic-timers` Cargo package ID. Two
 resolved versions contain two independent library statics and do not share a

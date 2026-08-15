@@ -120,21 +120,26 @@ impl TimerContext {
 
     /// Reconcile the executing ordinary declaration to one exact schedule.
     ///
-    /// `None` leaves retained callback authority inactive, or removes a
-    /// remove-on-stop declaration when cancellation wins arbitration.
+    /// `None` requests inactive state at normal completion. Retained callback
+    /// authority remains; a remove-on-stop declaration is removed when that
+    /// cancellation wins arbitration.
     /// Watchdog declarations reject this operation. A stored context cannot
     /// mutate the registration after its exact work attempt ends.
     pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
         reconcile_ordinary_claim(&self.claim(), Some(&self.token), schedule)
     }
 
-    /// Ensure recurrence while this exact work attempt is active.
+    /// Request configured recurrence after this exact work attempt.
+    ///
+    /// `Once` declarations reject this operation.
     pub fn ensure_recurring(&self) -> Result<(), TimerError> {
         ensure_recurring_claim(&self.claim(), Some(&self.token))
     }
 
     /// Request cancellation while this exact work attempt is active.
     ///
+    /// Cancellation does not interrupt the current invocation; normal
+    /// completion applies it before any callback successor is retained.
     /// A retained declaration becomes inactive. A remove-on-stop declaration
     /// is removed when cancellation wins arbitration.
     pub fn cancel(&self) -> Result<(), TimerError> {
@@ -164,7 +169,7 @@ impl OnceRegistration {
         has_armed_wakeup_claim(&self.claim)
     }
 
-    /// Synchronously ensure one callback is scheduled.
+    /// Ensure one invocation is armed or retained as the running work's successor.
     pub fn ensure_scheduled(&self, schedule: TimerSchedule) -> Result<(), TimerError> {
         ensure_once_claim(&self.claim, None, schedule)
     }
@@ -172,27 +177,33 @@ impl OnceRegistration {
     /// Reconcile to one exact desired schedule, replacing a later or earlier
     /// live deadline as necessary.
     ///
-    /// `None` leaves a retained declaration inactive. A remove-on-stop
-    /// declaration is removed and this claim expires.
+    /// `None` leaves a retained declaration inactive after any running work
+    /// completes. A remove-on-stop declaration is removed and this claim
+    /// expires when the transition finalizes.
     pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
         reconcile_ordinary_claim(&self.claim, None, schedule)
     }
 
-    /// Cancel the current schedule.
+    /// Cancel the armed callback or the running work's successor.
     ///
+    /// Consumer work already running is not interrupted.
     /// A retained declaration keeps callback authority. A remove-on-stop
-    /// declaration is removed and this claim expires.
+    /// declaration and this claim expire when cancellation finalizes.
     pub fn cancel(&self) -> Result<(), TimerError> {
         cancel_claim(&self.claim, None)
     }
 
     /// Consume the claim and unregister its callback authority.
+    ///
+    /// When called from running work, removal is deferred until that invocation
+    /// completes normally.
     pub fn unregister(self) -> Result<(), TimerError> {
         unregister_claim(&self.claim)
     }
 }
 
-/// Opaque non-clone claim for one after-completion callback.
+/// Opaque non-clone claim for one callback with configured
+/// after-completion recurrence.
 #[must_use = "retain the registration claim so the timer remains controllable"]
 pub struct AfterCompletionRegistration {
     claim: RegistrationClaim,
@@ -204,12 +215,34 @@ pub struct WatchdogRegistration {
     claim: RegistrationClaim,
 }
 
+trait RegistrationClaimOwner {
+    fn registration_claim(&self) -> &RegistrationClaim;
+}
+
+impl RegistrationClaimOwner for OnceRegistration {
+    fn registration_claim(&self) -> &RegistrationClaim {
+        &self.claim
+    }
+}
+
+impl RegistrationClaimOwner for AfterCompletionRegistration {
+    fn registration_claim(&self) -> &RegistrationClaim {
+        &self.claim
+    }
+}
+
+impl RegistrationClaimOwner for WatchdogRegistration {
+    fn registration_claim(&self) -> &RegistrationClaim {
+        &self.claim
+    }
+}
+
 /// Desired volatile scheduling state during synchronous lifecycle reconciliation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TimerReconcileState {
-    /// Keep the retained declaration inactive and clear its live callbacks.
+    /// Request inactive state immediately unless consumer work is running.
     Inactive,
-    /// Ensure one authoritative wake-up exists.
+    /// Preserve scheduling demand now or through the running work's successor.
     Scheduled,
 }
 
@@ -235,15 +268,20 @@ impl WatchdogRegistration {
         ensure_recurring_claim(&self.claim, None)
     }
 
-    /// Cancel the scheduler and any dispatched work callback.
+    /// Cancel the scheduler and any work callback that has not started.
     ///
+    /// Consumer work already running is not interrupted; normal completion
+    /// clears its pre-armed successor.
     /// A retained declaration keeps callback authority. A remove-on-stop
-    /// declaration is removed and this claim expires.
+    /// declaration and this claim expire when cancellation finalizes.
     pub fn cancel(&self) -> Result<(), TimerError> {
         cancel_claim(&self.claim, None)
     }
 
     /// Consume the claim and unregister its callback authority.
+    ///
+    /// When called from running work, removal is deferred until that invocation
+    /// completes normally.
     pub fn unregister(self) -> Result<(), TimerError> {
         unregister_claim(&self.claim)
     }
@@ -265,27 +303,33 @@ impl AfterCompletionRegistration {
         has_armed_wakeup_claim(&self.claim)
     }
 
-    /// Synchronously ensure one callback is scheduled at the configured cadence.
+    /// Ensure configured recurrence is armed or retained as the running work's
+    /// successor.
     pub fn ensure_scheduled(&self) -> Result<(), TimerError> {
         ensure_recurring_claim(&self.claim, None)
     }
 
     /// Reconcile to one exact desired schedule without changing the configured
-    /// after-completion cadence. `None` makes a retained declaration inactive;
-    /// it removes a remove-on-stop declaration and expires this claim.
+    /// after-completion cadence. `None` makes a retained declaration inactive
+    /// after any running work completes; it removes a remove-on-stop
+    /// declaration and expires this claim when the transition finalizes.
     pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
         reconcile_ordinary_claim(&self.claim, None, schedule)
     }
 
-    /// Cancel the current schedule.
+    /// Cancel the armed callback or the running work's successor.
     ///
+    /// Consumer work already running is not interrupted.
     /// A retained declaration keeps callback authority. A remove-on-stop
-    /// declaration is removed and this claim expires.
+    /// declaration and this claim expire when cancellation finalizes.
     pub fn cancel(&self) -> Result<(), TimerError> {
         cancel_claim(&self.claim, None)
     }
 
     /// Consume the claim and unregister its callback authority.
+    ///
+    /// When called from running work, removal is deferred until that invocation
+    /// completes normally.
     pub fn unregister(self) -> Result<(), TimerError> {
         unregister_claim(&self.claim)
     }
@@ -310,7 +354,7 @@ where
     Ok(OnceRegistration { claim })
 }
 
-/// Register one asynchronous fixed-cadence after-completion callback.
+/// Register one asynchronous callback with configured after-completion recurrence.
 pub fn register_after_completion<F, Fut>(
     identity: TimerIdentity,
     cadence: TimerCadence,
@@ -370,24 +414,10 @@ where
     F: FnMut(TimerContext) -> Fut + 'static,
     Fut: Future<Output = TimerRunResult> + 'static,
 {
-    if registration.is_none() {
-        *registration = Some(register_once(
-            identity.clone(),
-            DeclarationLifetime::Retained,
-            callback,
-        )?);
-    }
-    verify_declaration(
-        registration
-            .as_ref()
-            .map(|registration| &registration.claim),
-        identity,
-        TimerPolicy::Once,
-    )?;
-    registration
-        .as_ref()
-        .ok_or(TimerError::ReconciliationConflict)?
-        .reconcile_schedule(desired)
+    let registration = reconcile_registration(registration, identity, TimerPolicy::Once, || {
+        register_once(identity.clone(), DeclarationLifetime::Retained, callback)
+    })?;
+    registration.reconcile_schedule(desired)
 }
 
 /// Reconstruct or reconcile one after-completion declaration synchronously.
@@ -409,24 +439,19 @@ where
     F: FnMut(TimerContext) -> Fut + 'static,
     Fut: Future<Output = TimerRunResult> + 'static,
 {
-    if registration.is_none() {
-        *registration = Some(register_after_completion(
-            identity.clone(),
-            cadence,
-            DeclarationLifetime::Retained,
-            callback,
-        )?);
-    }
-    verify_declaration(
-        registration
-            .as_ref()
-            .map(|registration| &registration.claim),
+    let registration = reconcile_registration(
+        registration,
         identity,
         TimerPolicy::AfterCompletion { cadence },
+        || {
+            register_after_completion(
+                identity.clone(),
+                cadence,
+                DeclarationLifetime::Retained,
+                callback,
+            )
+        },
     )?;
-    let registration = registration
-        .as_ref()
-        .ok_or(TimerError::ReconciliationConflict)?;
     match desired {
         TimerReconcileState::Inactive => registration.cancel(),
         TimerReconcileState::Scheduled => registration.ensure_scheduled(),
@@ -449,36 +474,49 @@ pub fn reconcile_watchdog<F>(
 where
     F: FnMut(TimerContext) -> WatchdogRunResult + 'static,
 {
-    if registration.is_none() {
-        *registration = Some(register_watchdog(
-            identity.clone(),
-            cadence,
-            DeclarationLifetime::Retained,
-            callback,
-        )?);
-    }
-    verify_declaration(
-        registration
-            .as_ref()
-            .map(|registration| &registration.claim),
+    let registration = reconcile_registration(
+        registration,
         identity,
         TimerPolicy::Watchdog { cadence },
+        || {
+            register_watchdog(
+                identity.clone(),
+                cadence,
+                DeclarationLifetime::Retained,
+                callback,
+            )
+        },
     )?;
-    let registration = registration
-        .as_ref()
-        .ok_or(TimerError::ReconciliationConflict)?;
     match desired {
         TimerReconcileState::Inactive => registration.cancel(),
         TimerReconcileState::Scheduled => registration.ensure_scheduled(),
     }
 }
 
+fn reconcile_registration<'a, Registration>(
+    registration: &'a mut Option<Registration>,
+    identity: &TimerIdentity,
+    policy: TimerPolicy,
+    register: impl FnOnce() -> Result<Registration, TimerError>,
+) -> Result<&'a Registration, TimerError>
+where
+    Registration: RegistrationClaimOwner,
+{
+    if registration.is_none() {
+        *registration = Some(register()?);
+    }
+    let registration = registration
+        .as_ref()
+        .ok_or(TimerError::ReconciliationConflict)?;
+    verify_declaration(registration.registration_claim(), identity, policy)?;
+    Ok(registration)
+}
+
 fn verify_declaration(
-    claim: Option<&RegistrationClaim>,
+    claim: &RegistrationClaim,
     identity: &TimerIdentity,
     policy: TimerPolicy,
 ) -> Result<(), TimerError> {
-    let claim = claim.ok_or(TimerError::ReconciliationConflict)?;
     if claim.identity() != identity {
         return Err(TimerError::ReconciliationConflict);
     }
@@ -581,15 +619,7 @@ fn cancel_claim(
     claim: &RegistrationClaim,
     context: Option<&CallbackToken>,
 ) -> Result<(), TimerError> {
-    let (handles, transition) = with_registry_mut(|registry| {
-        validate_context(registry, context)?;
-        let handles = registry
-            .take_provider_handles_for_claim(claim)
-            .map_err(TimerError::from)?;
-        let transition = registry.cancel(claim).map_err(TimerError::from);
-        Ok((handles, transition))
-    })?;
-    finish_detached_claim_transition(claim, handles, transition)
+    apply_detached_claim_transition(claim, context, |registry| registry.cancel(claim))
 }
 
 fn validate_context(
@@ -604,11 +634,20 @@ fn validate_context(
 }
 
 fn unregister_claim(claim: &RegistrationClaim) -> Result<(), TimerError> {
+    apply_detached_claim_transition(claim, None, |registry| registry.unregister(claim))
+}
+
+fn apply_detached_claim_transition(
+    claim: &RegistrationClaim,
+    context: Option<&CallbackToken>,
+    operation: impl FnOnce(&mut TimerRegistry) -> Result<RegistryTransition, RegistryError>,
+) -> Result<(), TimerError> {
     let (handles, transition) = with_registry_mut(|registry| {
+        validate_context(registry, context)?;
         let handles = registry
             .take_provider_handles_for_claim(claim)
             .map_err(TimerError::from)?;
-        let transition = registry.unregister(claim).map_err(TimerError::from);
+        let transition = operation(registry).map_err(TimerError::from);
         Ok((handles, transition))
     })?;
     finish_detached_claim_transition(claim, handles, transition)
@@ -657,15 +696,14 @@ fn finish_transition(
 }
 
 fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result<(), TimerError> {
+    if !effect.has_valid_shape() {
+        clear_provider_handles(handles);
+        return Err(TimerError::OwnershipInvariant);
+    }
     match effect {
         RegistryEffect::None => restore_provider_handles(handles),
-        RegistryEffect::ArmWakeup {
-            token,
-            delay_ns,
-            replace,
-            ..
-        } => {
-            if *replace {
+        RegistryEffect::ArmWakeup { token, arm, .. } => {
+            if arm.replaces_existing() {
                 let replaced = take_detached_or_owned_handle(handles.take_wakeup(), |registry| {
                     registry.take_wakeup_handle(token.identity())
                 })?;
@@ -674,14 +712,13 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
                 }
             }
             restore_provider_handles(handles)?;
-            arm_wakeup(token, *delay_ns, effect)
+            arm_wakeup(effect)
         }
         RegistryEffect::ClearCallbacks {
             identity,
-            clear_wakeup,
-            clear_work,
+            handles: selected,
         } => {
-            if *clear_wakeup {
+            if selected.includes_wakeup() {
                 let wakeup = take_detached_or_owned_handle(handles.take_wakeup(), |registry| {
                     registry.take_wakeup_handle(identity)
                 })?;
@@ -689,7 +726,7 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
                     clear_provider_handle(wakeup);
                 }
             }
-            if *clear_work {
+            if selected.includes_work() {
                 let work = take_detached_or_owned_handle(handles.take_work(), |registry| {
                     registry.take_work_handle(identity)
                 })?;
@@ -699,12 +736,7 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
             }
             restore_provider_handles(handles)
         }
-        RegistryEffect::DispatchWatchdog {
-            successor,
-            successor_delay_ns,
-            work,
-            ..
-        } => {
+        RegistryEffect::DispatchWatchdog { successor, .. } => {
             if let Some(wakeup) = handles.take_wakeup() {
                 clear_provider_handle(wakeup);
             }
@@ -714,7 +746,7 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
             if let Some(replaced_work) = replaced_work {
                 clear_provider_handle(replaced_work);
             }
-            dispatch_watchdog_effect(successor, *successor_delay_ns, work, effect)
+            dispatch_watchdog_effect(effect)
         }
     }
 }
@@ -729,13 +761,15 @@ fn take_detached_or_owned_handle(
     )
 }
 
-fn arm_wakeup(
-    token: &CallbackToken,
-    delay_ns: u64,
-    effect: &RegistryEffect,
-) -> Result<(), TimerError> {
+fn arm_wakeup(effect: &RegistryEffect) -> Result<(), TimerError> {
+    let RegistryEffect::ArmWakeup {
+        token, delay_ns, ..
+    } = effect
+    else {
+        return Err(TimerError::OwnershipInvariant);
+    };
     let task_token = token.clone();
-    let handle = platform::set_timer(Duration::from_nanos(delay_ns), async move {
+    let handle = platform::set_timer(Duration::from_nanos(*delay_ns), async move {
         dispatch_wakeup(task_token).await;
     });
     if let Err((error, handle)) = install_provider_handle(token, handle) {
@@ -754,15 +788,19 @@ fn arm_wakeup(
     Ok(())
 }
 
-fn dispatch_watchdog_effect(
-    successor: &CallbackToken,
-    successor_delay_ns: u64,
-    work: &CallbackToken,
-    effect: &RegistryEffect,
-) -> Result<(), TimerError> {
+fn dispatch_watchdog_effect(effect: &RegistryEffect) -> Result<(), TimerError> {
+    let RegistryEffect::DispatchWatchdog {
+        successor,
+        successor_delay_ns,
+        work,
+        ..
+    } = effect
+    else {
+        return Err(TimerError::OwnershipInvariant);
+    };
     let successor_token = successor.clone();
     let successor_handle =
-        platform::set_timer(Duration::from_nanos(successor_delay_ns), async move {
+        platform::set_timer(Duration::from_nanos(*successor_delay_ns), async move {
             dispatch_watchdog_scheduler(&successor_token);
         });
     if let Err((error, handle)) = install_provider_handle(successor, successor_handle) {

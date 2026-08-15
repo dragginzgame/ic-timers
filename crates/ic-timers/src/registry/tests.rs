@@ -13,14 +13,14 @@ fn cadence(nanoseconds: u64) -> TimerCadence {
     TimerCadence::from_nanos(nanoseconds).expect("fixture cadence should be valid")
 }
 
-fn arm(transition: RegistryTransition) -> (CallbackToken, u64, bool) {
+fn arm(transition: RegistryTransition) -> (CallbackToken, u64, WakeupArm) {
     match transition.into_effect() {
         RegistryEffect::ArmWakeup {
             token,
             deadline_ns,
-            replace,
+            arm,
             ..
-        } => (token, deadline_ns, replace),
+        } => (token, deadline_ns, arm),
         effect => panic!("expected arm effect, got {effect:?}"),
     }
 }
@@ -113,6 +113,44 @@ fn removal_invalidates_old_claim_before_identity_reuse() {
 }
 
 #[test]
+fn fresh_remove_when_stopped_cancellation_releases_every_policy() {
+    let mut registry = registry();
+
+    let once = registry
+        .register_once(
+            identity("fresh-transient-once"),
+            DeclarationLifetime::RemoveWhenStopped,
+        )
+        .expect("once claim should succeed");
+    registry.cancel(&once).expect("once cancel should succeed");
+    assert!(registry.is_empty());
+
+    let after = registry
+        .register_after_completion(
+            identity("fresh-transient-after"),
+            cadence(1),
+            DeclarationLifetime::RemoveWhenStopped,
+        )
+        .expect("after-completion claim should succeed");
+    registry
+        .cancel(&after)
+        .expect("after-completion cancel should succeed");
+    assert!(registry.is_empty());
+
+    let watchdog = registry
+        .register_watchdog(
+            identity("fresh-transient-watchdog"),
+            cadence(1),
+            DeclarationLifetime::RemoveWhenStopped,
+        )
+        .expect("watchdog claim should succeed");
+    registry
+        .cancel(&watchdog)
+        .expect("watchdog cancel should succeed");
+    assert!(registry.is_empty());
+}
+
+#[test]
 fn explicit_unregistration_consumes_scheduled_and_running_claims() {
     let mut registry = registry();
     let scheduled_id = identity("unregister-scheduled");
@@ -131,8 +169,7 @@ fn explicit_unregistration_consumes_scheduled_and_running_claims() {
         transition.effect(),
         &RegistryEffect::ClearCallbacks {
             identity: scheduled_id.clone(),
-            clear_wakeup: true,
-            clear_work: false,
+            handles: CallbacksToClear::Wakeup,
         }
     );
     assert!(registry.snapshot(&scheduled_id).is_none());
@@ -208,11 +245,71 @@ fn running_watchdog_unregistration_clears_its_committed_successor() {
         completed.effect(),
         &RegistryEffect::ClearCallbacks {
             identity: timer.clone(),
-            clear_wakeup: true,
-            clear_work: false,
+            handles: CallbacksToClear::Wakeup,
         }
     );
     assert!(registry.snapshot(&timer).is_none());
+}
+
+#[test]
+fn watchdog_dispatch_confirmation_rejects_cross_claim_work() {
+    let mut registry = registry();
+    let first_id = identity("dispatch-claim-first");
+    let second_id = identity("dispatch-claim-second");
+    let first = registry
+        .register_watchdog(first_id.clone(), cadence(5), DeclarationLifetime::Retained)
+        .expect("first claim should succeed");
+    let second = registry
+        .register_watchdog(second_id, cadence(5), DeclarationLifetime::Retained)
+        .expect("second claim should succeed");
+
+    let (first_scheduler, _, _) = arm(registry
+        .ensure_recurring(&first, 0)
+        .expect("first ensure should succeed"));
+    let (second_scheduler, _, _) = arm(registry
+        .ensure_recurring(&second, 0)
+        .expect("second ensure should succeed"));
+    let (first_successor, first_deadline, _) =
+        dispatch(registry.begin_watchdog_scheduler(&first_scheduler, 5));
+    let (_, _, second_work) = dispatch(registry.begin_watchdog_scheduler(&second_scheduler, 5));
+    let malformed_arm = RegistryEffect::ArmWakeup {
+        token: second_work.clone(),
+        deadline_ns: first_deadline,
+        delay_ns: 0,
+        arm: WakeupArm::Initial,
+    };
+    assert_eq!(
+        registry.confirm_effect_applied(&malformed_arm),
+        Err(RegistryError::StaleCallback)
+    );
+    let malformed_replacement = RegistryEffect::ArmWakeup {
+        token: first_successor.clone(),
+        deadline_ns: first_deadline,
+        delay_ns: 5,
+        arm: WakeupArm::Replacement,
+    };
+    assert_eq!(
+        registry.confirm_effect_applied(&malformed_replacement),
+        Err(RegistryError::StaleCallback)
+    );
+    let malformed = RegistryEffect::DispatchWatchdog {
+        successor: first_successor,
+        successor_deadline_ns: first_deadline,
+        successor_delay_ns: 5,
+        work: second_work,
+    };
+
+    assert_eq!(
+        registry.confirm_effect_applied(&malformed),
+        Err(RegistryError::StaleCallback)
+    );
+    let counters = registry
+        .snapshot(&first_id)
+        .expect("first snapshot should remain")
+        .observability()
+        .counters();
+    assert_eq!(counters.wakeups_armed(), 0);
+    assert_eq!(counters.work_dispatched(), 0);
 }
 
 #[test]
@@ -237,9 +334,9 @@ fn once_coalesces_and_rotates_generations_while_nested_schedule_wins() {
             .wakeups_armed(),
         1
     );
-    let (first, deadline, replace) = arm(first_transition);
+    let (first, deadline, arm_kind) = arm(first_transition);
     assert_eq!(deadline, 100);
-    assert!(!replace);
+    assert_eq!(arm_kind, WakeupArm::Initial);
     assert_eq!(first.callback_generation(), 1);
 
     let duplicate = registry
@@ -366,16 +463,16 @@ fn ordinary_reconciliation_is_authoritative_and_registry_pending_is_ordered() {
         .register_after_completion(timer.clone(), cadence(5), DeclarationLifetime::Retained)
         .expect("claim should succeed");
 
-    let (replaced, deadline, replace) = arm(registry
+    let (replaced, deadline, arm_kind) = arm(registry
         .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(100)))
         .expect("initial reconciliation should arm"));
     assert_eq!(deadline, 100);
-    assert!(!replace);
-    let (current, deadline, replace) = arm(registry
+    assert_eq!(arm_kind, WakeupArm::Initial);
+    let (current, deadline, arm_kind) = arm(registry
         .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(200)))
         .expect("authoritative reconciliation may move later"));
     assert_eq!(deadline, 200);
-    assert!(replace);
+    assert_eq!(arm_kind, WakeupArm::Replacement);
     assert_eq!(
         registry.begin_ordinary(&replaced),
         CallbackAcceptance::Stale
@@ -760,8 +857,7 @@ fn watchdog_terminal_cancellation_makes_queued_callbacks_stale() {
         cancelled.effect(),
         &RegistryEffect::ClearCallbacks {
             identity: timer.clone(),
-            clear_wakeup: true,
-            clear_work: true,
+            handles: CallbacksToClear::WakeupAndWork,
         }
     );
     assert_eq!(
@@ -838,8 +934,7 @@ fn watchdog_result_matrix_tracks_retry_stop_and_invariant_failure() {
     assert!(matches!(
         stopped.effect(),
         RegistryEffect::ClearCallbacks {
-            clear_wakeup: true,
-            clear_work: false,
+            handles: CallbacksToClear::Wakeup,
             ..
         }
     ));
@@ -978,8 +1073,7 @@ fn watchdog_checked_generation_exhaustion_is_terminal_and_atomic() {
     assert!(matches!(
         transition.effect(),
         RegistryEffect::ClearCallbacks {
-            clear_wakeup: false,
-            clear_work: true,
+            handles: CallbacksToClear::Work,
             ..
         }
     ));
@@ -1021,8 +1115,7 @@ fn watchdog_checked_deadline_overflow_is_terminal() {
     assert!(matches!(
         transition.effect(),
         RegistryEffect::ClearCallbacks {
-            clear_wakeup: false,
-            clear_work: true,
+            handles: CallbacksToClear::Work,
             ..
         }
     ));
@@ -1080,8 +1173,7 @@ fn watchdog_checked_request_exhaustion_clears_pending_command() {
     assert!(matches!(
         transition.effect(),
         RegistryEffect::ClearCallbacks {
-            clear_wakeup: true,
-            clear_work: false,
+            handles: CallbacksToClear::Wakeup,
             ..
         }
     ));

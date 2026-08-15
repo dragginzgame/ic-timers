@@ -31,14 +31,23 @@ The module hierarchy keeps six responsibilities separate:
 6. `runtime` owns the one canister-local registry static, erases consumer
    callbacks for registry storage, exposes registration claims, applies
    provider effects, and drives live `Once`/`AfterCompletion` dispatch and the
-   two-role watchdog protocol. Its
-   delegated work context is valid only for the exact running callback token.
+   two-role watchdog protocol. Its delegated work context is valid only for
+   the exact running callback token.
    Claim-originated effect failures retire the declaration instead of leaving
    registry state scheduled without a provider handle. Lifecycle verification
    checks the exact claim and immutable declaration metadata directly rather
    than reconstructing authority from a snapshot. Synchronous operations that
    detach handles restore all of them before returning an unexpected registry
    error, retiring the exact claim if restoration cannot recover ownership.
+   Each provider binding consumes one complete registry effect; its shape is
+   validated before cleanup or platform calls rather than duplicating token
+   and delay arguments beside the canonical effect. One initial/replacement
+   arm kind flows from ordinary control through provider binding, and the
+   non-empty set of callbacks to clear is also a closed value rather than
+   independent booleans. The entry-local exact-claim predicate is shared by
+   callback acceptance, measurements, provider installation, and handle
+   consumption, so identity reuse cannot transfer handle authority to a stale
+   callback.
 
 The registry and runtime transition functions remain cohesive even where they
 are long: each audited function owns one atomic transition or one provider
@@ -120,7 +129,9 @@ pure transition coverage.
 Lifecycle reconciliation always installs retained declarations so a
 caller-owned `Option<Registration>` cannot outlive a remove-on-stop canonical
 entry. Transient `RemoveWhenStopped` timers use direct registration and are
-recreated explicitly by their owner if later desired.
+recreated explicitly by their owner if later desired; cancellation removes a
+transient declaration even before its first schedule. One private lifecycle
+seam installs and verifies the exact retained claim for all three policies.
 
 ## Safety boundary
 

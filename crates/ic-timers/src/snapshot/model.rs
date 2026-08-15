@@ -7,7 +7,7 @@ use crate::schedule::{ScheduleError, TimerCadence, TimerDirective, duration_ns};
 pub enum TimerPolicy {
     /// Run at most once unless an explicit directive or request schedules it.
     Once,
-    /// Arm the next run after the current callback completes.
+    /// Permit recurrence at a configured cadence after callback completion.
     AfterCompletion {
         /// Validated configured cadence.
         cadence: TimerCadence,
@@ -55,7 +55,7 @@ pub enum DeclarationLifetime {
 /// an armed callback.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum TimerSchedulingMode {
-    /// Initial or explicitly requested one-shot work.
+    /// An explicit relative-delay schedule, including initial one-shot work.
     Once,
     /// Recurrence delayed from the previous completion.
     AfterCompletion,

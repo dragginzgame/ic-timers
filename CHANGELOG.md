@@ -4,6 +4,47 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.4.1]
+
+### Changed
+
+- Share ordinary schedule resolution and retained lifecycle registration
+  verification instead of maintaining policy-specific copies.
+- Encode Once ensure, after-completion ensure, and authoritative reconciliation
+  as one closed ordinary request kind, removing a boolean policy gate and its
+  pass-through scheduling helper.
+- Derive watchdog cancellation and transient-removal decisions from canonical
+  post-transition state rather than an additional boolean result.
+- Bind provider operations from one complete registry effect rather than
+  passing duplicate token and delay arguments beside that effect.
+- Validate provider-effect shape before cleanup or platform calls, including
+  exact identity and claim-generation agreement between a Watchdog successor
+  and its queued work.
+- Centralize exact callback-claim ownership checks across dispatch,
+  measurement, provider installation, and provider-handle consumption.
+- Carry one closed initial/replacement arm kind from ordinary control through
+  provider binding instead of splitting and rejoining duplicate arm variants.
+  Clear effects likewise carry a non-empty callback selection, so "clear
+  nothing" cannot be emitted and a Watchdog scheduler replacement is rejected
+  before provider calls.
+- Share the detach/transition/restore path used by cancellation and explicit
+  unregistration, and remove compatibility-only annotations from private
+  control errors.
+- Correct public control documentation to distinguish armed wake-ups, pending
+  successors, and running work that cancellation cannot interrupt.
+
+### Fixed
+
+- Remove a fresh `RemoveWhenStopped` declaration when it is cancelled before
+  its first schedule. Once, after-completion, and Watchdog claims now expire
+  consistently on cancellation regardless of whether they ever owned a
+  provider handle.
+- Reject malformed cross-registration Watchdog dispatch effects before any
+  provider callback is armed or observability counter is confirmed.
+- Prevent a late callback from an expired claim from consuming the provider
+  handle of a replacement registration that reused the same identity, role,
+  and callback generation.
+
 ## [0.4.0] - 2026-08-15
 
 ### Changed

@@ -15,3 +15,4 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.3.7 code hygiene and module boundaries](0.3.7.md)
 - [0.3.8 Canic adoption evidence](0.3.8.md)
 - [0.4.0 cleanup and hard cuts](0.4.0.md)
+- [0.4.1 private-runtime cleanup](0.4.1.md)
