@@ -3,7 +3,10 @@ use crate::{
     InactiveReason, TimerLastOutcome, TimerPolicy, TimerRegistrationStatus,
     TimerRuntimeStateSnapshot, WatchdogDecision, WatchdogRuntimeStateSnapshot,
     control::WakeupArm,
-    platform::{advance_instructions, discard_next_due, run_next_due, set_time, timer_count},
+    platform::{
+        advance_instructions, discard_next_due, grow_memory_pages, run_next_due, set_time,
+        timer_count,
+    },
 };
 use std::{
     cell::{Cell, RefCell},
@@ -337,6 +340,7 @@ fn once_owns_one_provider_handle_and_executes_without_registry_borrow() {
         move |_context| {
             callback_calls.set(callback_calls.get() + 1);
             advance_instructions(7);
+            grow_memory_pages(2, 3);
             let visible = timer_snapshot(&callback_identity)
                 .expect("consumer work must not observe a registry borrow")
                 .is_some();
@@ -381,6 +385,15 @@ fn once_owns_one_provider_handle_and_executes_without_registry_borrow() {
             .latest(),
         Some(7)
     );
+    let memory = stopped.observability().performance().work_memory_pages();
+    assert_eq!(memory.samples(), 1);
+    let latest = memory.latest().expect("normal work should have one sample");
+    assert_eq!(latest.start().wasm_pages(), 1);
+    assert_eq!(latest.start().stable_pages(), 0);
+    assert_eq!(latest.end().wasm_pages(), 3);
+    assert_eq!(latest.end().stable_pages(), 3);
+    assert_eq!(memory.maximum_wasm_growth_pages(), Some(2));
+    assert_eq!(memory.maximum_stable_growth_pages(), Some(3));
 }
 
 #[test]
@@ -429,15 +442,16 @@ fn after_completion_rearms_from_actual_completion_time() {
 }
 
 #[test]
-fn nested_cancel_then_ensure_reenables_after_callback_completion() {
+fn after_completion_context_can_restore_recurrence_after_nested_cancel() {
     setup();
-    let timer = identity("nested");
+    let timer = identity("after-context");
     let calls = Rc::new(Cell::new(0_u64));
     let callback_calls = Rc::clone(&calls);
-    let registration = register_once(
+    let registration = register_after_completion(
         timer.clone(),
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
         DeclarationLifetime::Retained,
-        move |context| {
+        move |context: AfterCompletionContext| {
             let call = callback_calls.get() + 1;
             callback_calls.set(call);
             async move {
@@ -446,7 +460,54 @@ fn nested_cancel_then_ensure_reenables_after_callback_completion() {
                         .cancel()
                         .expect("nested cancellation should succeed");
                     context
-                        .ensure_once(TimerSchedule::At(30))
+                        .ensure_scheduled()
+                        .expect("later nested ensure should succeed");
+                }
+                TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop)
+            }
+        },
+    )
+    .expect("registration should succeed");
+    registration
+        .ensure_scheduled()
+        .expect("initial ensure should succeed");
+
+    set_time(15);
+    assert!(run_next_due());
+    assert_eq!(calls.get(), 1);
+    assert_eq!(timer_count(), 1);
+    assert_eq!(
+        timer_snapshot(&timer)
+            .expect("snapshot lookup should succeed")
+            .and_then(|snapshot| snapshot.next_deadline_ns()),
+        Some(20)
+    );
+
+    set_time(20);
+    assert!(run_next_due());
+    assert_eq!(calls.get(), 2);
+    assert_eq!(timer_count(), 0);
+}
+
+#[test]
+fn once_context_can_restore_scheduling_after_nested_cancel() {
+    setup();
+    let timer = identity("nested");
+    let calls = Rc::new(Cell::new(0_u64));
+    let callback_calls = Rc::clone(&calls);
+    let registration = register_once(
+        timer.clone(),
+        DeclarationLifetime::Retained,
+        move |context: OnceContext| {
+            let call = callback_calls.get() + 1;
+            callback_calls.set(call);
+            async move {
+                if call == 1 {
+                    context
+                        .cancel()
+                        .expect("nested cancellation should succeed");
+                    context
+                        .ensure_scheduled(TimerSchedule::At(30))
                         .expect("later nested ensure should succeed");
                 }
                 TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop)
@@ -474,7 +535,7 @@ fn nested_cancel_then_ensure_reenables_after_callback_completion() {
 }
 
 #[test]
-fn retained_ordinary_context_expires_after_its_work_attempt() {
+fn retained_once_context_expires_after_its_work_attempt() {
     setup();
     let timer = identity("ordinary-context-expiry");
     let calls = Rc::new(Cell::new(0_u64));
@@ -484,7 +545,7 @@ fn retained_ordinary_context_expires_after_its_work_attempt() {
     let registration = register_once(
         timer.clone(),
         DeclarationLifetime::Retained,
-        move |context| {
+        move |context: OnceContext| {
             let call = callback_calls.get() + 1;
             callback_calls.set(call);
             let directive = if call == 1 {
@@ -524,7 +585,7 @@ fn retained_ordinary_context_expires_after_its_work_attempt() {
         Err(TimerError::RegistrationExpired)
     ));
     assert!(matches!(
-        expired.ensure_once(TimerSchedule::At(30)),
+        expired.ensure_scheduled(TimerSchedule::At(30)),
         Err(TimerError::RegistrationExpired)
     ));
     assert!(matches!(
@@ -783,13 +844,13 @@ fn watchdog_nested_cancel_then_ensure_retains_committed_successor() {
         timer.clone(),
         TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
         DeclarationLifetime::Retained,
-        move |context| {
+        move |context: WatchdogContext| {
             let call = callback_calls.get() + 1;
             callback_calls.set(call);
             if call == 1 {
                 context.cancel().expect("nested cancel should succeed");
                 context
-                    .ensure_recurring()
+                    .ensure_scheduled()
                     .expect("later nested ensure should succeed");
             }
             WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
@@ -826,7 +887,7 @@ fn retained_watchdog_context_expires_without_clearing_successor() {
         timer.clone(),
         TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
         DeclarationLifetime::Retained,
-        move |context| {
+        move |context: WatchdogContext| {
             let call = callback_calls.get() + 1;
             callback_calls.set(call);
             if call == 1 {
@@ -865,7 +926,7 @@ fn retained_watchdog_context_expires_without_clearing_successor() {
         Err(TimerError::RegistrationExpired)
     ));
     assert!(matches!(
-        expired.ensure_recurring(),
+        expired.ensure_scheduled(),
         Err(TimerError::RegistrationExpired)
     ));
     assert_eq!(
@@ -926,7 +987,10 @@ fn unexpected_watchdog_completion_failure_traps_and_leaves_successor_armed() {
         timer.clone(),
         TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
         DeclarationLifetime::Retained,
-        |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue),
+        |_context| {
+            grow_memory_pages(2, 3);
+            WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue)
+        },
     )
     .expect("watchdog registration should succeed");
     registration
@@ -944,13 +1008,16 @@ fn unexpected_watchdog_completion_failure_traps_and_leaves_successor_armed() {
         1,
         "the cadence successor was committed by the earlier scheduler message"
     );
-    let counters = timer_snapshot(&timer)
+    let snapshot = timer_snapshot(&timer)
         .expect("snapshot lookup should succeed")
-        .expect("retained watchdog should remain declared")
-        .observability()
-        .counters();
+        .expect("retained watchdog should remain declared");
+    let counters = snapshot.observability().counters();
     assert_eq!(counters.work_started(), 1);
     assert_eq!(counters.work_completed(), 0);
+    let performance = snapshot.observability().performance();
+    assert_eq!(performance.scheduler_memory_pages().samples(), 1);
+    assert_eq!(performance.work_memory_pages().samples(), 0);
+    assert_eq!(performance.work_memory_pages().latest(), None);
 }
 
 #[test]
@@ -1080,9 +1147,9 @@ fn transition_error_restores_detached_claim_handles() {
         finish_detached_claim_transition(
             &registration.claim,
             handles,
-            Err(TimerError::WrongPolicy),
+            Err(TimerError::OwnershipInvariant),
         ),
-        Err(TimerError::WrongPolicy)
+        Err(TimerError::OwnershipInvariant)
     ));
     assert!(
         registration
@@ -1550,6 +1617,8 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
     assert_eq!(performance.scheduler_instructions().samples(), 3);
     assert_eq!(performance.scheduler_instructions().latest(), Some(10));
     assert_eq!(performance.work_instructions().samples(), 3);
+    assert_eq!(performance.scheduler_memory_pages().samples(), 3);
+    assert_eq!(performance.work_memory_pages().samples(), 3);
     assert!(
         performance
             .work_instructions()

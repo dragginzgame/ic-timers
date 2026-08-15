@@ -50,9 +50,11 @@ handles, generations, pending commands, reconciliation state, or snapshot
 copies. It exists only so Canic can enumerate and control claims it owns.
 Its capacity cannot exceed `MAX_TIMER_REGISTRATIONS`.
 
-`TimerContext` is not a custody value. It delegates control only while its
-exact callback generation is running and expires on completion, so Canic must
-not retain it as a substitute for the policy-specific registration claim.
+`OnceContext` and `AfterCompletionContext` are not custody values. Each
+delegates only policy-valid control while its exact callback generation is
+running and expires on completion, so Canic must not retain one as a
+substitute for the policy-specific registration claim. Canic currently owns no
+Watchdog callback.
 
 ## Identity and policy mapping
 
@@ -160,6 +162,12 @@ instead of preserving parallel instrumentation. The public per-timer
 distinct canonical signal. The Canic DTO hard-cuts `generation: u64` to
 `generation: Option<u64>`; an inactive timer has no generation and must not
 invent zero.
+
+The open 0.5 snapshot adds scheduler/work memory-page summaries without
+changing this legacy projection. If Canic exposes them as new rows, it must
+label start/end extents and observed growth in 64 KiB pages. It must not sum
+absolute extents, convert them into an exact live-byte claim, or attribute an
+async ordinary interval exclusively to timer work.
 
 ## Suspension and lifecycle composition
 

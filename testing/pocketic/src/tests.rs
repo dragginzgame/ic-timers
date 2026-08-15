@@ -7,6 +7,17 @@ const TIMER_EXECUTOR_METHOD: &str = "<ic-cdk internal> timer_executor";
 const INIT_CYCLES: u128 = 2_000_000_000_000;
 
 #[derive(CandidType, Debug, Deserialize, Eq, PartialEq)]
+struct ProbeMemorySummary {
+    samples: u64,
+    latest_wasm_start_pages: u64,
+    latest_wasm_end_pages: u64,
+    latest_stable_start_pages: u64,
+    latest_stable_end_pages: u64,
+    maximum_wasm_growth_pages: u64,
+    maximum_stable_growth_pages: u64,
+}
+
+#[derive(CandidType, Debug, Deserialize, Eq, PartialEq)]
 struct ProbeSnapshot {
     registered: bool,
     completed_work: u64,
@@ -22,6 +33,8 @@ struct ProbeSnapshot {
     scheduler_instruction_total: u64,
     work_instruction_samples: u64,
     work_instruction_total: u64,
+    scheduler_memory: Option<ProbeMemorySummary>,
+    work_memory: Option<ProbeMemorySummary>,
     post_upgrade_reconstructed: bool,
     secondary_registered: bool,
     secondary_completed_work: u64,
@@ -70,6 +83,13 @@ fn trapped_work_keeps_committed_successor_and_executor_is_private() {
     assert_eq!(trapped.scheduler_instruction_samples, 1);
     assert!(trapped.scheduler_instruction_total > 0);
     assert_eq!(trapped.work_instruction_samples, 0);
+    let trapped_scheduler_memory = trapped
+        .scheduler_memory
+        .as_ref()
+        .expect("normally completed scheduler must retain a memory sample");
+    assert_eq!(trapped_scheduler_memory.samples, 1);
+    assert_memory_summary_is_coherent(trapped_scheduler_memory);
+    assert_eq!(trapped.work_memory, None);
     assert_eq!(trapped.next_deadline_ns, Some(trap_at + 1_000_000_000));
 
     pic.advance_time(Duration::from_secs(1));
@@ -86,6 +106,18 @@ fn trapped_work_keeps_committed_successor_and_executor_is_private() {
     assert!(recovered.scheduler_instruction_total > trapped.scheduler_instruction_total);
     assert_eq!(recovered.work_instruction_samples, 1);
     assert!(recovered.work_instruction_total > 0);
+    let recovered_scheduler_memory = recovered
+        .scheduler_memory
+        .as_ref()
+        .expect("second normal scheduler completion must retain a memory sample");
+    assert_eq!(recovered_scheduler_memory.samples, 2);
+    assert_memory_summary_is_coherent(recovered_scheduler_memory);
+    let recovered_work_memory = recovered
+        .work_memory
+        .as_ref()
+        .expect("normally completed work must retain a memory sample");
+    assert_eq!(recovered_work_memory.samples, 1);
+    assert_memory_summary_is_coherent(recovered_work_memory);
     assert!(
         recovered
             .next_deadline_ns
@@ -130,6 +162,23 @@ fn trapped_work_keeps_committed_successor_and_executor_is_private() {
     );
 }
 
+fn assert_memory_summary_is_coherent(summary: &ProbeMemorySummary) {
+    assert!(summary.latest_wasm_end_pages >= summary.latest_wasm_start_pages);
+    assert!(summary.latest_stable_end_pages >= summary.latest_stable_start_pages);
+    assert!(
+        summary.maximum_wasm_growth_pages
+            >= summary
+                .latest_wasm_end_pages
+                .saturating_sub(summary.latest_wasm_start_pages)
+    );
+    assert!(
+        summary.maximum_stable_growth_pages
+            >= summary
+                .latest_stable_end_pages
+                .saturating_sub(summary.latest_stable_start_pages)
+    );
+}
+
 #[test]
 fn instruction_exhaustion_leaves_successor_for_later_progress() {
     let pic = PocketIc::new();
@@ -152,6 +201,13 @@ fn instruction_exhaustion_leaves_successor_for_later_progress() {
     assert_eq!(exhausted.work_dispatched, 1);
     assert_eq!(exhausted.work_completed, 0);
     assert_eq!(exhausted.work_instruction_samples, 0);
+    let exhausted_scheduler_memory = exhausted
+        .scheduler_memory
+        .as_ref()
+        .expect("normally completed scheduler must retain a memory sample");
+    assert_eq!(exhausted_scheduler_memory.samples, 1);
+    assert_memory_summary_is_coherent(exhausted_scheduler_memory);
+    assert_eq!(exhausted.work_memory, None);
     assert_eq!(exhausted.next_deadline_ns, Some(exhaust_at + 1_000_000_000));
 
     pic.advance_time(Duration::from_secs(1));
@@ -162,6 +218,18 @@ fn instruction_exhaustion_leaves_successor_for_later_progress() {
     assert_eq!(recovered.work_completed, 1);
     assert_eq!(recovered.unacknowledged, 1);
     assert_eq!(recovered.work_instruction_samples, 1);
+    let recovered_scheduler_memory = recovered
+        .scheduler_memory
+        .as_ref()
+        .expect("second normal scheduler completion must retain a memory sample");
+    assert_eq!(recovered_scheduler_memory.samples, 2);
+    assert_memory_summary_is_coherent(recovered_scheduler_memory);
+    let recovered_work_memory = recovered
+        .work_memory
+        .as_ref()
+        .expect("normally completed recovery work must retain a memory sample");
+    assert_eq!(recovered_work_memory.samples, 1);
+    assert_memory_summary_is_coherent(recovered_work_memory);
 }
 
 #[test]

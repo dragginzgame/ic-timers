@@ -6,15 +6,15 @@
 
 use crate::{
     control::{TimerControl, TimerControlAction, TimerControlError, TimerRegistration, WakeupArm},
-    platform::TimerHandle,
-    runtime::TimerContext,
+    platform::{MemoryPages, TimerHandle},
     schedule::{DirectiveError, ScheduleError, TimerCadence, TimerDirective, TimerSchedule},
     snapshot::{
-        DeclarationLifetime, InactiveReason, OrdinaryRuntimeStateSnapshot, TimerCompletion,
-        TimerCompletionOutcome, TimerControlFailure, TimerDirectiveSnapshot, TimerEpoch,
-        TimerIdentity, TimerObservabilitySnapshot, TimerPolicy, TimerRunResult,
-        TimerRuntimeStateSnapshot, TimerSchedulingMode, TimerSnapshot, WatchdogAttemptSnapshot,
-        WatchdogAttemptStatus, WatchdogDecision, WatchdogRunResult, WatchdogRuntimeStateSnapshot,
+        DeclarationLifetime, InactiveReason, MemoryPageExtent, MemoryPageSample,
+        OrdinaryRuntimeStateSnapshot, TimerCompletion, TimerCompletionOutcome, TimerControlFailure,
+        TimerDirectiveSnapshot, TimerEpoch, TimerIdentity, TimerObservabilitySnapshot, TimerPolicy,
+        TimerRunResult, TimerRuntimeStateSnapshot, TimerSchedulingMode, TimerSnapshot,
+        WatchdogAttemptSnapshot, WatchdogAttemptStatus, WatchdogDecision, WatchdogRunResult,
+        WatchdogRuntimeStateSnapshot,
     },
 };
 use std::{cell::RefCell, collections::BTreeMap, future::Future, pin::Pin, rc::Rc};
@@ -232,8 +232,8 @@ pub enum RegistryError {
     UnknownRegistration,
     #[error("timer registration claim is stale")]
     StaleRegistration,
-    #[error("timer operation is not legal for policy {actual}")]
-    WrongPolicy { actual: &'static str },
+    #[error("timer policy invariant failed for {actual}")]
+    PolicyMismatch { actual: &'static str },
     #[error("timer callback token is stale")]
     StaleCallback,
     #[error("timer registration has no ordinary callback")]
@@ -245,8 +245,8 @@ pub enum RegistryError {
 }
 
 type OrdinaryFuture = Pin<Box<dyn Future<Output = TimerRunResult>>>;
-pub type OrdinaryCallback = Rc<RefCell<Box<dyn FnMut(TimerContext) -> OrdinaryFuture>>>;
-pub type WatchdogCallback = Rc<RefCell<Box<dyn FnMut(TimerContext) -> WatchdogRunResult>>>;
+pub type OrdinaryCallback = Rc<RefCell<Box<dyn FnMut(CallbackToken) -> OrdinaryFuture>>>;
+pub type WatchdogCallback = Rc<RefCell<Box<dyn FnMut(CallbackToken) -> WatchdogRunResult>>>;
 
 enum EntryCallback {
     #[cfg(test)]
@@ -371,7 +371,6 @@ enum WatchdogState {
 struct WatchdogControl {
     scheduler_generation: u64,
     attempt_generation: u64,
-    request_sequence: u64,
     state: WatchdogState,
     pending: Option<WatchdogPending>,
     inactive_reason: InactiveReason,
@@ -382,7 +381,6 @@ impl Default for WatchdogControl {
         Self {
             scheduler_generation: 0,
             attempt_generation: 0,
-            request_sequence: 0,
             state: WatchdogState::Inactive,
             pending: None,
             inactive_reason: InactiveReason::NeverScheduled,
@@ -752,7 +750,7 @@ impl TimerRegistry {
         if matches!(entry.control, EntryControl::Ordinary { .. }) {
             Ok(())
         } else {
-            Err(RegistryError::WrongPolicy {
+            Err(RegistryError::PolicyMismatch {
                 actual: entry.policy.label(),
             })
         }
@@ -765,7 +763,7 @@ impl TimerRegistry {
     ) -> Result<RegistryTransition, RegistryError> {
         let entry = self.entry(claim)?;
         match entry.policy {
-            TimerPolicy::Once => Err(RegistryError::WrongPolicy { actual: "once" }),
+            TimerPolicy::Once => Err(RegistryError::PolicyMismatch { actual: "once" }),
             TimerPolicy::AfterCompletion { cadence } => {
                 let already_scheduled = matches!(
                     entry.control,
@@ -816,7 +814,7 @@ impl TimerRegistry {
             OrdinaryRequest::Reconcile => !matches!(entry.policy, TimerPolicy::Watchdog { .. }),
         };
         if !policy_matches {
-            return Err(RegistryError::WrongPolicy {
+            return Err(RegistryError::PolicyMismatch {
                 actual: entry.policy.label(),
             });
         }
@@ -827,7 +825,7 @@ impl TimerRegistry {
             control, pending, ..
         } = &mut entry.control
         else {
-            return Err(RegistryError::WrongPolicy {
+            return Err(RegistryError::PolicyMismatch {
                 actual: entry.policy.label(),
             });
         };
@@ -870,7 +868,7 @@ impl TimerRegistry {
     ) -> Result<RegistryTransition, RegistryError> {
         let entry = self.entry_mut(claim)?;
         if !matches!(entry.policy, TimerPolicy::Watchdog { .. }) {
-            return Err(RegistryError::WrongPolicy {
+            return Err(RegistryError::PolicyMismatch {
                 actual: entry.policy.label(),
             });
         }
@@ -878,7 +876,7 @@ impl TimerRegistry {
         entry.latest_requested_delay_ns = Some(cadence.as_nanos());
 
         let EntryControl::Watchdog(control) = &mut entry.control else {
-            return Err(RegistryError::WrongPolicy {
+            return Err(RegistryError::PolicyMismatch {
                 actual: entry.policy.label(),
             });
         };
@@ -917,13 +915,6 @@ impl TimerRegistry {
                 attempt_status: WatchdogAttemptStatus::Running,
                 ..
             } => {
-                let Some(sequence) = control.request_sequence.checked_add(1) else {
-                    return Ok(control.terminate(
-                        clear_callbacks(claim.identity.clone(), CallbacksToClear::Wakeup),
-                        TimerControlFailure::RequestSequenceExhausted,
-                    ));
-                };
-                control.request_sequence = sequence;
                 if !matches!(control.pending, Some(WatchdogPending::Unregister)) {
                     control.pending = Some(WatchdogPending::Ensure);
                 }
@@ -1062,7 +1053,7 @@ impl TimerRegistry {
                     inactive_reason,
                 } = &mut entry.control
                 else {
-                    return Err(RegistryError::WrongPolicy {
+                    return Err(RegistryError::PolicyMismatch {
                         actual: entry.policy.label(),
                     });
                 };
@@ -1094,19 +1085,10 @@ impl TimerRegistry {
             Some(CallbackRole::WatchdogWork) => {
                 let entry = self.entry_mut(claim)?;
                 let EntryControl::Watchdog(control) = &mut entry.control else {
-                    return Err(RegistryError::WrongPolicy {
+                    return Err(RegistryError::PolicyMismatch {
                         actual: entry.policy.label(),
                     });
                 };
-                let Some(sequence) = control.request_sequence.checked_add(1) else {
-                    let transition = control.terminate(
-                        clear_callbacks(identity.clone(), CallbacksToClear::Wakeup),
-                        TimerControlFailure::RequestSequenceExhausted,
-                    );
-                    self.entries.remove(&identity);
-                    return Ok(transition);
-                };
-                control.request_sequence = sequence;
                 control.pending = Some(WatchdogPending::Unregister);
                 Ok(RegistryTransition::normal(RegistryEffect::None))
             }
@@ -1574,36 +1556,40 @@ impl TimerRegistry {
         Ok(entry.policy == policy && entry.lifetime == lifetime)
     }
 
-    pub(crate) fn record_scheduler_instructions(
+    pub(crate) fn record_callback_measurements(
         &mut self,
         token: &CallbackToken,
         instructions: u64,
-    ) {
+        memory_start: MemoryPages,
+        memory_end: MemoryPages,
+    ) -> Result<(), RegistryError> {
+        // A normal remove-on-stop completion can delete its entry before the
+        // post-run measurement is committed, leaving nothing to observe.
         let Some(entry) = self.entries.get_mut(token.identity()) else {
-            return;
+            return Ok(());
         };
-        if entry.owns_token_claim(token)
-            && token.role == CallbackRole::WatchdogScheduler
-            && matches!(entry.control, EntryControl::Watchdog(_))
-        {
-            entry
-                .observability
-                .record_scheduler_instructions(instructions);
+        // Identity reuse must not let a late callback write into a newer
+        // registration's observations.
+        if !entry.owns_token_claim(token) {
+            return Ok(());
         }
-    }
 
-    pub(crate) fn record_work_instructions(&mut self, token: &CallbackToken, instructions: u64) {
-        let Some(entry) = self.entries.get_mut(token.identity()) else {
-            return;
-        };
-        let role_matches = matches!(
-            (&entry.control, token.role),
+        let memory = memory_sample(memory_start, memory_end);
+        match (&entry.control, token.role) {
+            (EntryControl::Watchdog(_), CallbackRole::WatchdogScheduler) => entry
+                .observability
+                .record_scheduler_measurements(instructions, memory),
             (EntryControl::Ordinary { .. }, CallbackRole::OrdinaryWork)
-                | (EntryControl::Watchdog(_), CallbackRole::WatchdogWork)
-        );
-        if entry.owns_token_claim(token) && role_matches {
-            entry.observability.record_work_instructions(instructions);
+            | (EntryControl::Watchdog(_), CallbackRole::WatchdogWork) => entry
+                .observability
+                .record_work_measurements(instructions, memory),
+            _ => {
+                return Err(RegistryError::PolicyMismatch {
+                    actual: entry.policy.label(),
+                });
+            }
         }
+        Ok(())
     }
 
     pub(crate) fn fail_registration(
@@ -1961,6 +1947,13 @@ fn detach_provider_handle(
     }
 }
 
+const fn memory_sample(start: MemoryPages, end: MemoryPages) -> MemoryPageSample {
+    MemoryPageSample::new(
+        MemoryPageExtent::new(start.wasm(), start.stable()),
+        MemoryPageExtent::new(end.wasm(), end.stable()),
+    )
+}
+
 const fn clear_callbacks(identity: TimerIdentity, handles: CallbacksToClear) -> RegistryEffect {
     RegistryEffect::ClearCallbacks { identity, handles }
 }
@@ -2082,9 +2075,6 @@ fn invariant_completion(
 
 const fn map_control_failure(error: TimerControlError) -> TimerControlFailure {
     match error {
-        TimerControlError::RequestSequenceExhausted => {
-            TimerControlFailure::RequestSequenceExhausted
-        }
         TimerControlError::GenerationExhausted => TimerControlFailure::GenerationExhausted,
         TimerControlError::StaleCompletion => TimerControlFailure::DirectiveNotAllowed,
     }
@@ -2153,13 +2143,6 @@ fn cancel_watchdog(control: &mut WatchdogControl, identity: &TimerIdentity) -> R
             attempt_status: WatchdogAttemptStatus::Running,
             ..
         } => {
-            let Some(sequence) = control.request_sequence.checked_add(1) else {
-                return control.terminate(
-                    clear_callbacks(identity.clone(), CallbacksToClear::Wakeup),
-                    TimerControlFailure::RequestSequenceExhausted,
-                );
-            };
-            control.request_sequence = sequence;
             if !matches!(control.pending, Some(WatchdogPending::Unregister)) {
                 control.pending = Some(WatchdogPending::Cancel);
             }

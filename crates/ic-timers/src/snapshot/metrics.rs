@@ -1,4 +1,4 @@
-//! Saturating epoch-local counters and instruction aggregates.
+//! Saturating epoch-local counters and bounded callback measurements.
 
 use super::{TimerCompletion, TimerCompletionOutcome, TimerEpoch, TimerOutcomeSnapshot};
 
@@ -257,25 +257,181 @@ impl MeasurementSummary {
     }
 }
 
-/// Completed instruction aggregates split by callback role.
+/// Wasm and stable memory extents in 64 KiB pages at one instant.
+///
+/// Within one runtime epoch these are monotonic page extents, not allocator
+/// liveness or exact live-byte measurements. Consumers that need live bytes
+/// must supply an owner-derived bound for allocations within the final page.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MemoryPageExtent {
+    wasm: u64,
+    stable: u64,
+}
+
+impl MemoryPageExtent {
+    const EMPTY: Self = Self { wasm: 0, stable: 0 };
+
+    pub(crate) const fn new(wasm: u64, stable: u64) -> Self {
+        Self { wasm, stable }
+    }
+
+    /// Return the Wasm linear-memory extent in 64 KiB pages.
+    #[must_use]
+    pub const fn wasm_pages(self) -> u64 {
+        self.wasm
+    }
+
+    /// Return the stable-memory extent in 64 KiB pages.
+    #[must_use]
+    pub const fn stable_pages(self) -> u64 {
+        self.stable
+    }
+}
+
+/// Page extents observed at the start and end of one normally completed
+/// callback.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MemoryPageSample {
+    start: MemoryPageExtent,
+    end: MemoryPageExtent,
+}
+
+impl MemoryPageSample {
+    const EMPTY: Self = Self {
+        start: MemoryPageExtent::EMPTY,
+        end: MemoryPageExtent::EMPTY,
+    };
+
+    pub(crate) const fn new(start: MemoryPageExtent, end: MemoryPageExtent) -> Self {
+        Self { start, end }
+    }
+
+    /// Return page extents sampled at callback start.
+    #[must_use]
+    pub const fn start(self) -> MemoryPageExtent {
+        self.start
+    }
+
+    /// Return page extents sampled after normal callback completion.
+    #[must_use]
+    pub const fn end(self) -> MemoryPageExtent {
+        self.end
+    }
+
+    /// Return non-negative Wasm-memory page growth observed between samples.
+    ///
+    /// For async ordinary work, the interval may include interleaved canister
+    /// activity while the callback future is awaiting.
+    #[must_use]
+    pub const fn wasm_growth_pages(self) -> u64 {
+        self.end.wasm.saturating_sub(self.start.wasm)
+    }
+
+    /// Return non-negative stable-memory page growth observed between samples.
+    ///
+    /// For async ordinary work, the interval may include interleaved canister
+    /// activity while the callback future is awaiting.
+    #[must_use]
+    pub const fn stable_growth_pages(self) -> u64 {
+        self.end.stable.saturating_sub(self.start.stable)
+    }
+}
+
+/// Bounded page-extent observations for one callback role.
+///
+/// Absolute page extents are retained only for the latest normal completion;
+/// they are never totaled. Maximums describe observed start-to-end page
+/// growth, which is not exclusive allocation attribution for async work.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MemoryPageSummary {
+    samples: u64,
+    latest: MemoryPageSample,
+    maximum_wasm_growth: u64,
+    maximum_stable_growth: u64,
+}
+
+impl MemoryPageSummary {
+    const EMPTY: Self = Self {
+        samples: 0,
+        latest: MemoryPageSample::EMPTY,
+        maximum_wasm_growth: 0,
+        maximum_stable_growth: 0,
+    };
+
+    const fn record(&mut self, sample: MemoryPageSample) {
+        self.samples = self.samples.saturating_add(1);
+        self.latest = sample;
+        self.maximum_wasm_growth = max_u64(self.maximum_wasm_growth, sample.wasm_growth_pages());
+        self.maximum_stable_growth =
+            max_u64(self.maximum_stable_growth, sample.stable_growth_pages());
+    }
+
+    /// Return the number of normally completed callback samples.
+    #[must_use]
+    pub const fn samples(self) -> u64 {
+        self.samples
+    }
+
+    /// Return start/end page extents for the latest normal completion.
+    #[must_use]
+    pub const fn latest(self) -> Option<MemoryPageSample> {
+        if self.samples == 0 {
+            None
+        } else {
+            Some(self.latest)
+        }
+    }
+
+    /// Return the largest observed Wasm-memory page growth in one sample.
+    #[must_use]
+    pub const fn maximum_wasm_growth_pages(self) -> Option<u64> {
+        if self.samples == 0 {
+            None
+        } else {
+            Some(self.maximum_wasm_growth)
+        }
+    }
+
+    /// Return the largest observed stable-memory page growth in one sample.
+    #[must_use]
+    pub const fn maximum_stable_growth_pages(self) -> Option<u64> {
+        if self.samples == 0 {
+            None
+        } else {
+            Some(self.maximum_stable_growth)
+        }
+    }
+}
+
+const fn max_u64(left: u64, right: u64) -> u64 {
+    if left > right { left } else { right }
+}
+
+/// Completed instruction and memory-page measurements split by callback role.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TimerPerformance {
     scheduler_instructions: MeasurementSummary,
     work_instructions: MeasurementSummary,
+    scheduler_memory_pages: MemoryPageSummary,
+    work_memory_pages: MemoryPageSummary,
 }
 
 impl TimerPerformance {
     const EMPTY: Self = Self {
         scheduler_instructions: MeasurementSummary::EMPTY,
         work_instructions: MeasurementSummary::EMPTY,
+        scheduler_memory_pages: MemoryPageSummary::EMPTY,
+        work_memory_pages: MemoryPageSummary::EMPTY,
     };
 
-    pub(crate) const fn record_scheduler(&mut self, instructions: u64) {
+    pub(crate) const fn record_scheduler(&mut self, instructions: u64, memory: MemoryPageSample) {
         self.scheduler_instructions.record(instructions);
+        self.scheduler_memory_pages.record(memory);
     }
 
-    pub(crate) const fn record_work(&mut self, instructions: u64) {
+    pub(crate) const fn record_work(&mut self, instructions: u64, memory: MemoryPageSample) {
         self.work_instructions.record(instructions);
+        self.work_memory_pages.record(memory);
     }
 
     /// Return normally completed scheduler instruction measurements.
@@ -288,6 +444,18 @@ impl TimerPerformance {
     #[must_use]
     pub const fn work_instructions(self) -> MeasurementSummary {
         self.work_instructions
+    }
+
+    /// Return normally completed scheduler memory-page observations.
+    #[must_use]
+    pub const fn scheduler_memory_pages(self) -> MemoryPageSummary {
+        self.scheduler_memory_pages
+    }
+
+    /// Return normally completed consumer-work memory-page observations.
+    #[must_use]
+    pub const fn work_memory_pages(self) -> MemoryPageSummary {
+        self.work_memory_pages
     }
 }
 
@@ -328,12 +496,20 @@ impl TimerObservabilitySnapshot {
         &mut self.counters
     }
 
-    pub(crate) const fn record_scheduler_instructions(&mut self, instructions: u64) {
-        self.performance.record_scheduler(instructions);
+    pub(crate) const fn record_scheduler_measurements(
+        &mut self,
+        instructions: u64,
+        memory: MemoryPageSample,
+    ) {
+        self.performance.record_scheduler(instructions, memory);
     }
 
-    pub(crate) const fn record_work_instructions(&mut self, instructions: u64) {
-        self.performance.record_work(instructions);
+    pub(crate) const fn record_work_measurements(
+        &mut self,
+        instructions: u64,
+        memory: MemoryPageSample,
+    ) {
+        self.performance.record_work(instructions, memory);
     }
 
     /// Return the observation epoch.
@@ -354,7 +530,7 @@ impl TimerObservabilitySnapshot {
         self.counters
     }
 
-    /// Return completed instruction aggregates.
+    /// Return completed instruction and memory-page measurements.
     #[must_use]
     pub const fn performance(self) -> TimerPerformance {
         self.performance
@@ -410,16 +586,72 @@ mod tests {
     }
 
     #[test]
-    fn instruction_roles_are_separate_and_saturating() {
+    fn callback_measurements_are_role_specific_bounded_and_saturating() {
         let mut performance = TimerPerformance::EMPTY;
-        performance.record_scheduler(20);
-        performance.record_work(30);
-        performance.record_work(10);
+        performance.record_scheduler(
+            20,
+            MemoryPageSample::new(MemoryPageExtent::new(1, 2), MemoryPageExtent::new(2, 4)),
+        );
+        performance.record_work(
+            30,
+            MemoryPageSample::new(MemoryPageExtent::new(2, 4), MemoryPageExtent::new(5, 5)),
+        );
+        performance.record_work(
+            10,
+            MemoryPageSample::new(MemoryPageExtent::new(5, 5), MemoryPageExtent::new(6, 9)),
+        );
 
         assert_eq!(performance.scheduler_instructions().total(), 20);
         assert_eq!(performance.work_instructions().samples(), 2);
         assert_eq!(performance.work_instructions().total(), 40);
         assert_eq!(performance.work_instructions().latest(), Some(10));
         assert_eq!(performance.work_instructions().maximum(), Some(30));
+
+        let scheduler_memory = performance.scheduler_memory_pages();
+        assert_eq!(
+            scheduler_memory.samples(),
+            performance.scheduler_instructions().samples()
+        );
+        assert_eq!(scheduler_memory.samples(), 1);
+        let scheduler_latest = scheduler_memory
+            .latest()
+            .expect("scheduler sample should exist");
+        assert_eq!(scheduler_latest.start().wasm_pages(), 1);
+        assert_eq!(scheduler_latest.start().stable_pages(), 2);
+        assert_eq!(scheduler_latest.end().wasm_pages(), 2);
+        assert_eq!(scheduler_latest.end().stable_pages(), 4);
+        assert_eq!(scheduler_latest.wasm_growth_pages(), 1);
+        assert_eq!(scheduler_latest.stable_growth_pages(), 2);
+
+        let work_memory = performance.work_memory_pages();
+        assert_eq!(
+            work_memory.samples(),
+            performance.work_instructions().samples()
+        );
+        assert_eq!(work_memory.samples(), 2);
+        let work_latest = work_memory.latest().expect("work sample should exist");
+        assert_eq!(work_latest.wasm_growth_pages(), 1);
+        assert_eq!(work_latest.stable_growth_pages(), 4);
+        assert_eq!(work_memory.maximum_wasm_growth_pages(), Some(3));
+        assert_eq!(work_memory.maximum_stable_growth_pages(), Some(4));
+    }
+
+    #[test]
+    fn memory_sample_count_saturates_while_latest_and_maximum_continue() {
+        let mut summary = MemoryPageSummary {
+            samples: u64::MAX,
+            latest: MemoryPageSample::EMPTY,
+            maximum_wasm_growth: 1,
+            maximum_stable_growth: 1,
+        };
+        let sample =
+            MemoryPageSample::new(MemoryPageExtent::new(10, 20), MemoryPageExtent::new(13, 25));
+
+        summary.record(sample);
+
+        assert_eq!(summary.samples(), u64::MAX);
+        assert_eq!(summary.latest(), Some(sample));
+        assert_eq!(summary.maximum_wasm_growth_pages(), Some(3));
+        assert_eq!(summary.maximum_stable_growth_pages(), Some(5));
     }
 }

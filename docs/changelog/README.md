@@ -16,3 +16,4 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.3.8 Canic adoption evidence](0.3.8.md)
 - [0.4.0 cleanup and hard cuts](0.4.0.md)
 - [0.4.1 private-runtime cleanup](0.4.1.md)
+- [0.5.0 policy-specific callback authority](0.5.0.md)

@@ -18,6 +18,9 @@
   identity, snapshot authority, and DRY findings.
 - [0.4.1 hygiene report](audits/code-hygiene-0.4.1-2026-08-15.md): transient
   cancellation, lifecycle reconciliation, and private scheduling cleanup.
+- [0.5 policy-specific callback authority](design/0.5-policy-specific-callback-authority.md):
+  typed work capabilities, removed runtime policy probing, and the request-
+  ordering audit.
 - [0.3.7 hygiene report](audits/code-hygiene-2026-08-15.md): module hierarchy,
   public-surface, duplication, and comment audit.
 - [Prior hygiene report](audits/code-hygiene-2026-08-14.md): callback-authority

@@ -151,6 +151,36 @@ fn fresh_remove_when_stopped_cancellation_releases_every_policy() {
 }
 
 #[test]
+fn measurement_routing_rejects_a_policy_role_mismatch() {
+    let mut registry = registry();
+    let timer = identity("measurement-role");
+    let claim = registry
+        .register_once(timer.clone(), DeclarationLifetime::Retained)
+        .expect("once claim should succeed");
+    let invalid = CallbackToken::new(
+        timer.clone(),
+        claim.claim_generation(),
+        1,
+        CallbackRole::WatchdogScheduler,
+    );
+    let pages = crate::platform::memory_pages();
+
+    assert_eq!(
+        registry.record_callback_measurements(&invalid, 10, pages, pages),
+        Err(RegistryError::PolicyMismatch { actual: "once" })
+    );
+    let performance = registry
+        .snapshot(&timer)
+        .expect("retained declaration should remain")
+        .observability()
+        .performance();
+    assert_eq!(performance.scheduler_instructions().samples(), 0);
+    assert_eq!(performance.work_instructions().samples(), 0);
+    assert_eq!(performance.scheduler_memory_pages().samples(), 0);
+    assert_eq!(performance.work_memory_pages().samples(), 0);
+}
+
+#[test]
 fn explicit_unregistration_consumes_scheduled_and_running_claims() {
     let mut registry = registry();
     let scheduled_id = identity("unregister-scheduled");
@@ -846,7 +876,7 @@ fn watchdog_terminal_cancellation_makes_queued_callbacks_stale() {
         .expect("claim should succeed");
     assert_eq!(
         registry.reconcile_ordinary(&claim, 0, None),
-        Err(RegistryError::WrongPolicy { actual: "watchdog" })
+        Err(RegistryError::PolicyMismatch { actual: "watchdog" })
     );
     let (scheduler, _, _) = arm(registry
         .ensure_recurring(&claim, 0)
@@ -1128,69 +1158,6 @@ fn watchdog_checked_deadline_overflow_is_terminal() {
     };
     assert_eq!(control.state, WatchdogState::Inactive);
     assert_eq!(control.pending, None);
-}
-
-#[test]
-fn watchdog_checked_request_exhaustion_clears_pending_command() {
-    let mut registry = registry();
-    let request_timer = identity("watchdog-request-overflow");
-    let request_claim = registry
-        .register_watchdog(
-            request_timer.clone(),
-            cadence(1),
-            DeclarationLifetime::Retained,
-        )
-        .expect("request-overflow claim should succeed");
-    let initial = registry
-        .ensure_recurring(&request_claim, 0)
-        .expect("initial request-overflow ensure should succeed");
-    let (scheduler, _, _) = arm(initial);
-    let dispatch_transition = registry.begin_watchdog_scheduler(&scheduler, 1);
-    let (_, _, work) = dispatch(dispatch_transition);
-    assert_eq!(
-        registry.begin_watchdog_work(&work),
-        CallbackAcceptance::Accepted
-    );
-    {
-        let entry = registry
-            .entries
-            .get_mut(&request_timer)
-            .expect("request-overflow entry should exist");
-        let EntryControl::Watchdog(control) = &mut entry.control else {
-            panic!("fixture should be watchdog control");
-        };
-        control.request_sequence = u64::MAX;
-        control.pending = Some(WatchdogPending::Cancel);
-    }
-
-    let transition = registry
-        .ensure_recurring(&request_claim, 2)
-        .expect("request overflow is a terminal transition");
-    assert_eq!(
-        transition.failure(),
-        Some(TimerControlFailure::RequestSequenceExhausted)
-    );
-    assert!(matches!(
-        transition.effect(),
-        RegistryEffect::ClearCallbacks {
-            handles: CallbacksToClear::Wakeup,
-            ..
-        }
-    ));
-    let entry = registry
-        .entries
-        .get(&request_timer)
-        .expect("retained request-overflow entry should remain");
-    let EntryControl::Watchdog(control) = &entry.control else {
-        panic!("fixture should remain watchdog control");
-    };
-    assert_eq!(control.pending, None);
-    assert_eq!(
-        registry.snapshot(&request_timer).map(|value| value.state()),
-        Some(TimerRuntimeStateSnapshot::Inactive {
-            reason: InactiveReason::ControlFailure(TimerControlFailure::RequestSequenceExhausted,),
-        })
-    );
 }
 
 #[test]

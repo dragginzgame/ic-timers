@@ -88,3 +88,17 @@ removes its parallel timer runtime. The two current development worktrees are
 therefore aligned to one exact patch. Their tagged releases still need a
 combined single-package qualification and canister-wide provider inventory
 before claiming released composition.
+
+## 0.5 memory-observation feedback
+
+IcyDB's 0.228 design feedback requested allocation-free start/end Wasm and
+stable memory page observations for normally completed scheduler and work
+callbacks. The open `ic-timers` 0.5 candidate implements that owner-local
+surface as bounded latest extents and maximum observed start-to-end growth. It
+does not total absolute pages, fabricate a trapped-work sample, or describe
+page extent as exact live bytes. IcyDB's Watchdog work is synchronous, avoiding
+the interleaved-await qualification that applies to ordinary async callbacks.
+
+IcyDB still owns any allocator-derived sub-page byte bound and its maximum
+64-index fanout probe. Those downstream measurements have not yet qualified an
+exact 0.5 package and are not claimed as `ic-timers` evidence here.

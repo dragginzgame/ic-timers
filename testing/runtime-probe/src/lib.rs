@@ -1,7 +1,7 @@
 use candid::CandidType;
 use ic_timers::{
-    DeclarationLifetime, MAX_TIMER_REGISTRATIONS, TimerCadence, TimerCompletion, TimerIdentity,
-    TimerLastOutcome, WatchdogDecision, WatchdogRegistration, WatchdogRunResult,
+    DeclarationLifetime, MAX_TIMER_REGISTRATIONS, MemoryPageSummary, TimerCadence, TimerCompletion,
+    TimerIdentity, TimerLastOutcome, WatchdogDecision, WatchdogRegistration, WatchdogRunResult,
     initialize_runtime, register_watchdog, timer_snapshot, timer_snapshots,
 };
 use serde::Deserialize;
@@ -24,6 +24,17 @@ thread_local! {
 }
 
 #[derive(CandidType, Debug, Deserialize, Eq, PartialEq)]
+struct ProbeMemorySummary {
+    samples: u64,
+    latest_wasm_start_pages: u64,
+    latest_wasm_end_pages: u64,
+    latest_stable_start_pages: u64,
+    latest_stable_end_pages: u64,
+    maximum_wasm_growth_pages: u64,
+    maximum_stable_growth_pages: u64,
+}
+
+#[derive(CandidType, Debug, Deserialize, Eq, PartialEq)]
 struct ProbeSnapshot {
     registered: bool,
     completed_work: u64,
@@ -39,6 +50,8 @@ struct ProbeSnapshot {
     scheduler_instruction_total: u64,
     work_instruction_samples: u64,
     work_instruction_total: u64,
+    scheduler_memory: Option<ProbeMemorySummary>,
+    work_memory: Option<ProbeMemorySummary>,
     post_upgrade_reconstructed: bool,
     secondary_registered: bool,
     secondary_completed_work: u64,
@@ -335,6 +348,8 @@ fn snapshot() -> ProbeSnapshot {
             scheduler_instruction_total: 0,
             work_instruction_samples: 0,
             work_instruction_total: 0,
+            scheduler_memory: None,
+            work_memory: None,
             post_upgrade_reconstructed: POST_UPGRADE_RECONSTRUCTED.with(Cell::get),
             secondary_registered: SECONDARY_REGISTRATION.with_borrow(Option::is_some),
             secondary_completed_work: SECONDARY_COMPLETED_WORK.with(Cell::get),
@@ -342,6 +357,8 @@ fn snapshot() -> ProbeSnapshot {
     };
     let counters = snapshot.observability().counters();
     let performance = snapshot.observability().performance();
+    let scheduler_memory = performance.scheduler_memory_pages();
+    let work_memory = performance.work_memory_pages();
     ProbeSnapshot {
         registered,
         completed_work,
@@ -358,10 +375,25 @@ fn snapshot() -> ProbeSnapshot {
         scheduler_instruction_total: performance.scheduler_instructions().total(),
         work_instruction_samples: performance.work_instructions().samples(),
         work_instruction_total: performance.work_instructions().total(),
+        scheduler_memory: probe_memory_summary(scheduler_memory),
+        work_memory: probe_memory_summary(work_memory),
         post_upgrade_reconstructed: POST_UPGRADE_RECONSTRUCTED.with(Cell::get),
         secondary_registered: SECONDARY_REGISTRATION.with_borrow(Option::is_some),
         secondary_completed_work: SECONDARY_COMPLETED_WORK.with(Cell::get),
     }
+}
+
+fn probe_memory_summary(summary: MemoryPageSummary) -> Option<ProbeMemorySummary> {
+    let latest = summary.latest()?;
+    Some(ProbeMemorySummary {
+        samples: summary.samples(),
+        latest_wasm_start_pages: latest.start().wasm_pages(),
+        latest_wasm_end_pages: latest.end().wasm_pages(),
+        latest_stable_start_pages: latest.start().stable_pages(),
+        latest_stable_end_pages: latest.end().stable_pages(),
+        maximum_wasm_growth_pages: summary.maximum_wasm_growth_pages()?,
+        maximum_stable_growth_pages: summary.maximum_stable_growth_pages()?,
+    })
 }
 
 fn probe_identity() -> TimerIdentity {

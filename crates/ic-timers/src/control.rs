@@ -1,7 +1,7 @@
-//! Deterministic arbitration for one logical timer identity.
+//! Pure callback-generation state for one ordinary timer.
 //!
 //! This module owns no task execution, platform timer handles, persistence, or
-//! time source.
+//! time source. The canonical registry owns pending-command arbitration.
 
 use thiserror::Error;
 
@@ -64,9 +64,6 @@ impl WakeupArm {
 /// Invalid or exhausted timer-control transition.
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
 pub enum TimerControlError {
-    /// The monotonic request sequence cannot be incremented.
-    #[error("timer request sequence exhausted")]
-    RequestSequenceExhausted,
     /// The callback generation cannot be incremented.
     #[error("timer generation exhausted")]
     GenerationExhausted,
@@ -79,7 +76,6 @@ pub enum TimerControlError {
 #[derive(Debug, Default)]
 pub struct TimerControl {
     generation: u64,
-    request_sequence: u64,
     registration: TimerRegistration,
 }
 
@@ -135,18 +131,14 @@ impl TimerControl {
     /// Running work returns no direct action so the canonical registry can
     /// arbitrate its pending command without a second pending-state machine.
     pub(crate) fn cancel(&mut self) -> Result<TimerControlAction, TimerControlError> {
-        let sequence = self.next_request_sequence()?;
-
         match self.registration {
             TimerRegistration::Scheduled { .. } => {
                 let generation = self.next_generation()?;
-                self.request_sequence = sequence;
                 self.generation = generation;
                 self.registration = TimerRegistration::Unregistered;
                 Ok(TimerControlAction::Clear)
             }
             TimerRegistration::Unregistered | TimerRegistration::Running { .. } => {
-                self.request_sequence = sequence;
                 Ok(TimerControlAction::None)
             }
         }
@@ -165,7 +157,6 @@ impl TimerControl {
         deadline_ns: u64,
         selection: DeadlineSelection,
     ) -> Result<TimerControlAction, TimerControlError> {
-        let sequence = self.next_request_sequence()?;
         let replace = match self.registration {
             TimerRegistration::Unregistered => Some(false),
             TimerRegistration::Scheduled {
@@ -175,12 +166,10 @@ impl TimerControl {
             TimerRegistration::Scheduled { .. } | TimerRegistration::Running { .. } => None,
         };
         let Some(replace) = replace else {
-            self.request_sequence = sequence;
             return Ok(TimerControlAction::None);
         };
 
         let generation = self.next_generation()?;
-        self.request_sequence = sequence;
         self.generation = generation;
         self.registration = TimerRegistration::Scheduled {
             generation,
@@ -252,12 +241,6 @@ impl TimerControl {
         self.generation
             .checked_add(1)
             .ok_or(TimerControlError::GenerationExhausted)
-    }
-
-    fn next_request_sequence(&self) -> Result<u64, TimerControlError> {
-        self.request_sequence
-            .checked_add(1)
-            .ok_or(TimerControlError::RequestSequenceExhausted)
     }
 }
 
@@ -434,20 +417,6 @@ mod tests {
     }
 
     #[test]
-    fn exhausted_request_sequence_fails_without_mutating_registration() {
-        let mut control = TimerControl {
-            request_sequence: u64::MAX,
-            ..TimerControl::default()
-        };
-
-        assert_eq!(
-            control.schedule(100),
-            Err(TimerControlError::RequestSequenceExhausted)
-        );
-        assert_eq!(control.registration(), TimerRegistration::Unregistered);
-    }
-
-    #[test]
     fn exhausted_generation_fails_without_replacing_current_handle() {
         let mut control = TimerControl {
             generation: u64::MAX,
@@ -455,7 +424,6 @@ mod tests {
                 generation: u64::MAX,
                 deadline_ns: 100,
             },
-            ..TimerControl::default()
         };
 
         assert_eq!(

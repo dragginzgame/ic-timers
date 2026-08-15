@@ -7,13 +7,14 @@ arms and clears the platform timers. This crate is intended to add one place
 for timer identity, scheduling policy, execution arbitration, observability,
 and lifecycle recovery.
 
-The released 0.3 line contains the complete bounded runtime, PocketIC
-recovery-watchdog evidence, and subsequent hardening. The open 0.4 line is a
-hard-cut API and ownership cleanup, not a second runtime. Tagged IcyDB 0.226.1
-hard-cuts to exact `ic-timers` 0.3.4, and its validated post-tag integration
-upgrades to exact 0.3.8. A validated uncommitted Canic worktree also hard-cuts
-to exact 0.3.8. The development subjects are aligned; tagged downstream
-releases still need combined one-package qualification.
+The released 0.3 line contains the complete bounded runtime and PocketIC
+recovery-watchdog evidence; released 0.4 hard-cuts and consolidates its public
+and private ownership surfaces. The open 0.5 line makes callback mutation
+authority policy-specific rather than exposing runtime policy probes. Tagged
+IcyDB 0.226.1 hard-cuts to exact `ic-timers` 0.3.4, and its validated post-tag
+integration upgrades to exact 0.3.8. A validated uncommitted Canic worktree
+also hard-cuts to exact 0.3.8. Those development subjects are aligned; a 0.5
+upgrade must move both to one exact package before combined qualification.
 
 ## Why wrap `ic-cdk-timers`?
 
@@ -62,8 +63,9 @@ The current crate contains:
   replacement and cancellation through `ic-cdk-timers`;
 - live policy-specific state transitions, including stale-callback and nested
   ensure/cancel arbitration;
-- work-scoped `TimerContext` delegation whose mutation authority expires when
-  the exact callback generation finishes;
+- policy-specific `OnceContext`, `AfterCompletionContext`, and
+  `WatchdogContext` work delegation whose mutation authority expires when the
+  exact callback generation finishes;
 - fail-closed provider-effect binding for public control calls, preventing a
   failed arm or replacement from leaving a declaration falsely scheduled;
 - claim-scoped `has_armed_wakeup` observation on every registration
@@ -72,8 +74,9 @@ The current crate contains:
 - validated positive cadence, typed directives, and checked deadline
   calculation;
 - live, inert policy-specific snapshots, with split scheduler/work counters,
-  truthful unacknowledged dispatches, functional expected-failure state, and
-  normally completed scheduler/work instruction aggregates;
+  truthful unacknowledged dispatches, functional expected-failure state,
+  normally completed instruction aggregates, and bounded latest/maximum-growth
+  Wasm/stable memory-page observations;
 - synchronous idempotent reconciliation helpers that always retain fixed
   lifecycle declarations, whose caller-owned volatile registration slot
   prevents duplicate callback replacement, and whose desired state remains
@@ -89,7 +92,10 @@ by top-up, upgrade reconstruction before a downstream-hook observation,
 stop/resume, overdue coalescing, terminal and scheduler/work-gap cancellation,
 duplicate demand, two simultaneous timers, trap isolation, rejection of
 external executor ingress, and subsequent progress. Trapped or exhausted work
-contributes no fabricated completion or instruction sample.
+contributes no fabricated completion, instruction sample, or memory-page
+sample. Within one runtime epoch, page extents are monotonic high-water
+observations, not exact live bytes; sub-page allocator liveness remains
+consumer-owned.
 
 That recovery guarantee applies to the later consumer-work message. It does
 not claim recovery if the small scheduler message itself traps or exhausts its
@@ -107,7 +113,9 @@ implementation order, the frozen
 that preceded implementation, the implemented
 [observability contract](docs/design/observability.md), and the
 [0.3 evidence report](docs/audits/0.3-runtime-evidence-2026-08-13.md).
-[The safety boundary](SAFETY.md) defines the guarantees and their limits.
+[The safety boundary](SAFETY.md) defines the guarantees and their limits. The
+[0.5 design note](docs/design/0.5-policy-specific-callback-authority.md)
+records the callback-authority hard cut and its migration boundary.
 
 ## Policies
 

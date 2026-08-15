@@ -16,6 +16,23 @@ use ic_cdk_timers::{
 #[derive(Debug, Eq, PartialEq)]
 pub struct TimerHandle(CdkTimerId);
 
+/// Copy-only page extents returned by the private system-fact boundary.
+#[derive(Clone, Copy)]
+pub struct MemoryPages {
+    wasm: u64,
+    stable: u64,
+}
+
+impl MemoryPages {
+    pub(crate) const fn wasm(self) -> u64 {
+        self.wasm
+    }
+
+    pub(crate) const fn stable(self) -> u64 {
+        self.stable
+    }
+}
+
 /// Arm one asynchronous one-shot callback.
 #[cfg(not(test))]
 pub fn set_timer(delay: Duration, task: impl Future<Output = ()> + 'static) -> TimerHandle {
@@ -47,6 +64,21 @@ pub fn instruction_counter() -> u64 {
     ic0::performance_counter(1)
 }
 
+/// Return current Wasm and stable memory extents in 64 KiB pages without
+/// allocation.
+#[cfg(not(test))]
+pub fn memory_pages() -> MemoryPages {
+    #[cfg(target_arch = "wasm32")]
+    let wasm = core::arch::wasm32::memory_size::<0>() as u64;
+    #[cfg(not(target_arch = "wasm32"))]
+    let wasm = 0;
+
+    MemoryPages {
+        wasm,
+        stable: ic0::stable64_size(),
+    }
+}
+
 /// Abort the current message when an internal callback invariant is violated.
 #[cfg(not(test))]
 pub fn trap(message: &str) -> ! {
@@ -56,7 +88,8 @@ pub fn trap(message: &str) -> ! {
 #[cfg(test)]
 pub use fake::{
     TimerHandle, advance_instructions, canister_version, clear_timer, discard_next_due,
-    instruction_counter, reset, run_next_due, set_time, set_timer, time_ns, timer_count, trap,
+    grow_memory_pages, instruction_counter, memory_pages, reset, run_next_due, set_time, set_timer,
+    time_ns, timer_count, trap,
 };
 
 #[cfg(test)]
@@ -85,6 +118,8 @@ mod fake {
         static CANISTER_VERSION: Cell<u64> = const { Cell::new(0) };
         static NEXT_HANDLE: Cell<u64> = const { Cell::new(0) };
         static INSTRUCTIONS: Cell<u64> = const { Cell::new(0) };
+        static WASM_MEMORY_PAGES: Cell<u64> = const { Cell::new(1) };
+        static STABLE_MEMORY_PAGES: Cell<u64> = const { Cell::new(0) };
         static TASKS: RefCell<BTreeMap<u64, ScheduledTask>> = const {
             RefCell::new(BTreeMap::new())
         };
@@ -131,6 +166,13 @@ mod fake {
         INSTRUCTIONS.with(Cell::get)
     }
 
+    pub fn memory_pages() -> MemoryPages {
+        MemoryPages {
+            wasm: WASM_MEMORY_PAGES.with(Cell::get),
+            stable: STABLE_MEMORY_PAGES.with(Cell::get),
+        }
+    }
+
     pub fn trap(message: &str) -> ! {
         panic!("{message}")
     }
@@ -141,11 +183,18 @@ mod fake {
         });
     }
 
+    pub fn grow_memory_pages(wasm: u64, stable: u64) {
+        WASM_MEMORY_PAGES.with(|pages| pages.set(pages.get().saturating_add(wasm)));
+        STABLE_MEMORY_PAGES.with(|pages| pages.set(pages.get().saturating_add(stable)));
+    }
+
     pub fn reset(now_ns: u64, canister_version: u64) {
         NOW_NS.with(|now| now.set(now_ns));
         CANISTER_VERSION.with(|version| version.set(canister_version));
         NEXT_HANDLE.with(|next| next.set(0));
         INSTRUCTIONS.with(|instructions| instructions.set(0));
+        WASM_MEMORY_PAGES.with(|pages| pages.set(1));
+        STABLE_MEMORY_PAGES.with(|pages| pages.set(0));
         TASKS.with(|tasks| tasks.borrow_mut().clear());
     }
 

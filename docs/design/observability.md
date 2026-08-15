@@ -9,11 +9,12 @@ pleasant inventory beside it. Its canonical snapshot is defined as a semantic
 superset of the timer information Canic exposes today.
 
 Ordinary and watchdog state, scheduler dispatch, work, stale,
-unacknowledged, and instruction observations are live. Normally completed
-accepted scheduler and work callbacks record IC call-context instruction
-deltas. Trapped and exhausted work record no sample. A downstream Canic
-worktree now validates the real adapter without parallel instrumentation;
-landing and tagged combined qualification remain external gates.
+unacknowledged, instruction, and memory-page observations are live. Normally
+completed accepted scheduler and work callbacks record IC call-context
+instruction deltas plus start/end Wasm and stable memory extents. Trapped and
+exhausted work record no sample. A downstream Canic worktree now validates the
+real adapter without parallel instrumentation; landing and tagged combined
+qualification remain external gates.
 
 This contract describes provider-neutral runtime data. `ic-timers` owns the
 identity, counters, measurements, and snapshot semantics. Canic, IcyDB, and
@@ -48,7 +49,7 @@ following groups.
 | State | Closed policy-specific state, registration projection, process condition, current generation, and watchdog attempt status. |
 | Outcome | Latest classified outcome, work count, last success and failure timestamps, and consecutive expected failures. |
 | Counters | Requests, wake-up arms, work dispatch arms, scheduler starts, work starts/completions, classified outcomes, cancellations, stale callbacks, coalescing, and unacknowledged attempts. |
-| Performance | Separate sample count, total, latest, and maximum instructions for schedulers and normally completed work. |
+| Performance | Separate sample count, total, latest, and maximum instructions for schedulers and normally completed work; per role, bounded latest start/end Wasm/stable page extents and maximum per-callback growth. |
 | Scope | Runtime epoch and start timestamp defining the reset boundary for every counter and aggregate. |
 
 Configured recurrence and callback directives are related but distinct. The
@@ -117,11 +118,28 @@ not infer work count from callback counters.
 ## Measurements and scope
 
 Instruction aggregates contain sample count, total, latest, and maximum values
-for scheduler and work roles. They update only when the measured callback path
-returns with a valid end measurement. A missing work completion remains visible
-through committed dispatch and later `unacknowledged` observation; the runtime
-does not synthesize a zero measurement for trapped or exhausted work. Elapsed
-IC time is absent because message time is not a truthful synchronous duration.
+for scheduler and work roles. The corresponding memory summaries contain a
+saturating sample count, the latest start/end Wasm and stable extents in 64 KiB
+pages, and maximum non-negative observed start-to-end growth for each memory.
+They never total absolute page counts. Ordinary callbacks may await, so their
+sample interval can include interleaved canister activity and is not exclusive
+allocation attribution; Watchdog work and scheduler paths are synchronous.
+For each role, memory and instruction sample counts advance together on the
+same normal-completion record.
+
+Both measurement kinds update only when the measured callback path returns
+with a valid end measurement. A missing work completion remains visible through
+committed dispatch and later `unacknowledged` observation; the runtime does not
+synthesize zero instructions or a memory sample for trapped or exhausted work.
+Elapsed IC time is absent because message time is not a truthful synchronous
+duration. Page reads bracket the instruction-delta interval from outside, so
+memory observation does not change which instructions that aggregate covers.
+
+Within one runtime epoch, Wasm and stable page counts are monotonic
+extent/high-water observations. They are not exact live bytes: allocator
+liveness within the final page is invisible at this boundary. Consumers
+needing a byte-level bound must derive it from their allocator or storage owner
+rather than asking `ic-timers` to fabricate one.
 
 The snapshot carries a runtime epoch identifier and epoch start timestamp.
 Every counter, timestamp, and aggregate must state whether it is scoped to that
@@ -168,9 +186,10 @@ provide feedback as the pre-1.0 API evolves:
 - An unacknowledged attempt is counted in the epoch and scheduler message that
   retires its committed dispatch. It has no arithmetic invariant with
   `work_started`, because a trapping work-message start mutation rolls back.
-- Counts, work, instructions, and nanosecond values use `u64`. Hot-path
-  counters, streaks, sample counts, and totals saturate; latest and maximum
-  measurements continue to update after total saturation.
+- Counts, work, instructions, page extents, and nanosecond values use `u64`.
+  Hot-path counters, streaks, sample counts, and instruction totals saturate;
+  latest and maximum measurements continue to update after count or total
+  saturation. Absolute memory extents have no total.
 - The crate exposes provider-neutral Rust values and stable enum labels but no
   Candid or Serde contract. Consumers own serialization adapters. Public API
   evolution follows crate SemVer rather than a consumer's wire format.

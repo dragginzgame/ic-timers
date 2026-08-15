@@ -15,7 +15,6 @@
 
 #![forbid(unsafe_code)]
 #![deny(rustdoc::broken_intra_doc_links)]
-
 mod control;
 mod platform;
 mod registry;
@@ -25,18 +24,19 @@ mod snapshot;
 
 pub use registry::{MAX_TIMER_REGISTRATIONS, RegisterError};
 pub use runtime::{
-    AfterCompletionRegistration, OnceRegistration, TimerContext, TimerError, TimerReconcileState,
-    WatchdogRegistration, consecutive_expected_failures, initialize_runtime,
-    reconcile_after_completion, reconcile_once, reconcile_watchdog, register_after_completion,
-    register_once, register_watchdog, timer_snapshot, timer_snapshots,
+    AfterCompletionContext, AfterCompletionRegistration, OnceContext, OnceRegistration, TimerError,
+    TimerReconcileState, WatchdogContext, WatchdogRegistration, consecutive_expected_failures,
+    initialize_runtime, reconcile_after_completion, reconcile_once, reconcile_watchdog,
+    register_after_completion, register_once, register_watchdog, timer_snapshot, timer_snapshots,
 };
 pub use schedule::{ScheduleError, TimerCadence, TimerDirective, TimerSchedule};
 pub use snapshot::{
     DeclarationLifetime, InactiveReason, MAX_TIMER_IDENTITY_COMPONENT_BYTES, MeasurementSummary,
-    OrdinaryRuntimeStateSnapshot, TimerCompletion, TimerCompletionOutcome, TimerControlFailure,
-    TimerCounters, TimerDirectiveSnapshot, TimerEpoch, TimerIdentity, TimerIdentityError,
-    TimerIdentityField, TimerLastOutcome, TimerObservabilitySnapshot, TimerOutcomeSnapshot,
-    TimerPerformance, TimerPolicy, TimerProcessCondition, TimerRegistrationStatus, TimerRunResult,
+    MemoryPageExtent, MemoryPageSample, MemoryPageSummary, OrdinaryRuntimeStateSnapshot,
+    TimerCompletion, TimerCompletionOutcome, TimerControlFailure, TimerCounters,
+    TimerDirectiveSnapshot, TimerEpoch, TimerIdentity, TimerIdentityError, TimerIdentityField,
+    TimerLastOutcome, TimerObservabilitySnapshot, TimerOutcomeSnapshot, TimerPerformance,
+    TimerPolicy, TimerProcessCondition, TimerRegistrationStatus, TimerRunResult,
     TimerRuntimeStateSnapshot, TimerSchedulingMode, TimerSnapshot, WatchdogAttemptSnapshot,
     WatchdogAttemptStatus, WatchdogDecision, WatchdogRunResult, WatchdogRuntimeStateSnapshot,
 };

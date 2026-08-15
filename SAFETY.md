@@ -10,7 +10,7 @@ The current runtime provides:
 
 - a provider-call-free fixed-capacity registry with unique bounded identities
   and deterministic snapshot ordering;
-- checked positive cadence, deadline, generation, and request arithmetic;
+- checked positive cadence, deadline, and callback-generation arithmetic;
 - policy-specific ordinary and watchdog states that cannot express a watchdog
   successor as ordinary running state;
 - deterministic arbitration among scheduling, cancellation, unregistration,
@@ -40,11 +40,13 @@ The current runtime provides:
   provider wake-up is armed;
 - exact ordinary reconciliation whose pending command has one canonical owner
   in the registry and can replace a live deadline in either direction;
-- work-scoped `TimerContext` delegation validated against the exact callback
-  generation and role, so a context retained after completion cannot mutate a
-  successor or later registration;
+- work-scoped `OnceContext`, `AfterCompletionContext`, and `WatchdogContext`
+  delegation validated against the exact callback generation and role. Each
+  exposes only policy-valid operations, and a context retained after
+  completion cannot mutate a successor or later registration;
 - normally completed scheduler and work instruction samples from IC
-  call-context counter type 1;
+  call-context counter type 1, paired with allocation-free start/end Wasm and
+  stable memory extents in 64 KiB pages;
 - focused PocketIC evidence that explicit trap and actual instruction
   exhaustion roll back work completion while the committed successor remains,
   retires the attempt as unacknowledged, and permits later progress;
@@ -108,9 +110,10 @@ the idempotent ensure operation whenever their authority requires a wake-up.
 - A consumer may keep a bounded custody collection of its opaque claims for
   enumeration. That collection must not copy deadlines, generations, pending
   commands, counters, snapshots, or provider handles into a parallel authority.
-- `TimerContext` may be used for nested ensure, reconciliation, or cancellation
-  only while its exact consumer-work attempt is running. Retaining it provides
-  inert identity metadata, not a second long-lived registration capability.
+- A policy-specific callback context may be used for its nested ensure,
+  reconciliation, or cancellation operations only while its exact
+  consumer-work attempt is running. Retaining it provides inert identity
+  metadata, not a second long-lived registration capability.
 - The provider's 250 outstanding-dispatch limit is canister-wide. The
   registry's 64-entry and 128-owned-handle bounds do not reserve provider
   capacity; consumers must inventory remaining direct provider users and
@@ -136,8 +139,13 @@ claims come from the tagged release and validated post-tag integration.
 
 Callback starts and completions are deliberately separate. A trap or
 instruction exhaustion can prevent all post-run code, so the runtime must not
-invent a completion, zero instruction cost, elapsed duration, or zero work
-count.
+invent a completion, zero instruction cost, memory-page sample, elapsed
+duration, or zero work count. Memory observations report runtime-epoch-local
+monotonic Wasm and stable page extents plus observed start-to-end growth, not
+exact live bytes, sub-page allocator liveness, or exclusive work attribution.
+An async ordinary callback's interval may include canister activity interleaved
+while its future is awaiting.
+
 The live watchdog records only that an earlier committed dispatch lacks a
 committed completion when a later scheduler retires it. It cannot infer a trap,
 instruction exhaustion, delay, or interruption from that fact alone.

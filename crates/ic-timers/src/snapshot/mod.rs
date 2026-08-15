@@ -11,7 +11,8 @@ pub use identity::{
     MAX_TIMER_IDENTITY_COMPONENT_BYTES, TimerIdentity, TimerIdentityError, TimerIdentityField,
 };
 pub use metrics::{
-    MeasurementSummary, TimerCounters, TimerObservabilitySnapshot, TimerPerformance,
+    MeasurementSummary, MemoryPageExtent, MemoryPageSample, MemoryPageSummary, TimerCounters,
+    TimerObservabilitySnapshot, TimerPerformance,
 };
 pub use model::{
     DeclarationLifetime, InactiveReason, OrdinaryRuntimeStateSnapshot, TimerCompletion,

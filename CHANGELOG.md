@@ -4,6 +4,42 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.5.0]
+
+### Changed
+
+- Hard-cut the shared callback control capability into `OnceContext`,
+  `AfterCompletionContext`, and `WatchdogContext`. Each callback now receives
+  only the mutation operations legal for its declared policy, while exact
+  callback-generation validation and expiry semantics remain unchanged.
+- Give all callback contexts the same policy-shaped `ensure_scheduled` naming
+  used by their registration capabilities. `OnceContext` accepts an explicit
+  schedule, while after-completion and Watchdog contexts use their configured
+  cadence.
+- Keep nested request arbitration in the registry's existing pending-command
+  state and callback generations. Remove request counters that were incremented
+  but never read, compared, exposed, or used to select a winning command.
+- Add allocation-free start/end Wasm-memory and stable-memory page-extent
+  sampling for normally completed scheduler and work callbacks. Snapshots keep
+  only the latest extent pair and maximum observed start-to-end growth for each
+  role; they never total absolute page counts or fabricate samples for trapped
+  or instruction-exhausted work.
+- Route completed measurements from the callback token's canonical role rather
+  than maintaining separate scheduler and work recording paths. An impossible
+  policy/role pairing now fails as an ownership invariant instead of silently
+  discarding the record.
+
+### Removed
+
+- Remove the public `TimerContext` type and its policy-probing `ensure_once`
+  and `ensure_recurring` methods. No alias or deprecated forwarding surface is
+  retained.
+- Remove public `TimerError::WrongPolicy`; an invalid policy operation is no
+  longer expressible through the callback API. Defensive internal policy
+  mismatches fail as ownership invariants.
+- Remove `TimerControlFailure::RequestSequenceExhausted` and its stable label.
+  Generation, deadline, directive, and provider-binding failures remain.
+
 ## [0.4.1] - 2026-08-15
 
 ### Changed

@@ -138,8 +138,6 @@ impl TryFrom<TimerDirective> for TimerDirectiveSnapshot {
 pub enum TimerControlFailure {
     /// A callback generation counter reached its maximum.
     GenerationExhausted,
-    /// A nested request sequence reached its maximum.
-    RequestSequenceExhausted,
     /// Checked successor deadline arithmetic overflowed.
     DeadlineOverflow,
     /// A requested relative delay cannot be encoded as `u64` nanoseconds.
@@ -156,7 +154,6 @@ impl TimerControlFailure {
     pub const fn label(self) -> &'static str {
         match self {
             Self::GenerationExhausted => "generation_exhausted",
-            Self::RequestSequenceExhausted => "request_sequence_exhausted",
             Self::DeadlineOverflow => "deadline_overflow",
             Self::DelayOutOfRange => "delay_out_of_range",
             Self::DirectiveNotAllowed => "directive_not_allowed",

@@ -17,9 +17,9 @@ The module hierarchy keeps six responsibilities separate:
    the top-level coherent snapshot or initializes its observation fragments;
    nested values expose no alternate construction or control path.
 3. `control` is the private ordinary generation/registration state machine. It
-   owns checked generations and request sequences, immediate schedule,
-   reconciliation and cancellation transitions, and stale completion
-   rejection. It owns no pending command.
+   owns checked callback generations, immediate schedule, reconciliation and
+   cancellation transitions, and stale completion rejection. It owns no
+   pending command.
 4. `registry` is the provider-call-free fixed-capacity canonical owner for
    structured identities, callback closures, claim generations,
    policy-specific state, the sole pending ordinary-command machine, nested
@@ -31,8 +31,9 @@ The module hierarchy keeps six responsibilities separate:
 6. `runtime` owns the one canister-local registry static, erases consumer
    callbacks for registry storage, exposes registration claims, applies
    provider effects, and drives live `Once`/`AfterCompletion` dispatch and the
-   two-role watchdog protocol. Its delegated work context is valid only for
-   the exact running callback token.
+   two-role watchdog protocol. Its three policy-specific delegated work
+   contexts wrap one private mechanism and are valid only for the exact
+   running callback token.
    Claim-originated effect failures retire the declaration instead of leaving
    registry state scheduled without a provider handle. Lifecycle verification
    checks the exact claim and immutable declaration metadata directly rather
@@ -71,8 +72,8 @@ The runtime provides:
 - serial execution with overdue work coalesced into one pending run;
 - cancellation requested safely by the running callback;
 - synchronous lifecycle restoration followed by deferred application work;
-- runtime-start counters, last outcomes, deadlines, and instruction
-  consumption;
+- runtime-start counters, last outcomes, deadlines, instruction consumption,
+  and bounded memory-page extent/growth observations;
 - exact-claim observation of armed provider wake-up ownership without a
   snapshot-derived control path;
 - bounded identity components and allocation-conscious hot paths; and
@@ -85,10 +86,9 @@ every callback independently.
 
 The canonical snapshot is designed as a semantic superset of Canic's current
 timer status, scheduling counters, and instruction metrics. In particular,
-callback starts and completions
-remain separate because traps and instruction exhaustion can prevent post-run
-measurement, and consecutive expected failures remain cheap functional state
-because recovery decisions consume them. See the
+callback starts and completions remain separate because traps and instruction
+exhaustion can prevent post-run measurement, and consecutive expected failures
+remain cheap functional state because recovery decisions consume them. See the
 [observability and Canic parity contract](design/observability.md).
 
 ## Frozen 0.3 contract
@@ -101,9 +101,11 @@ watchdog work is synchronous so its separate work message cannot cross an
 registry. See the [Patch 1 runtime contract](design/0.3-patch-1-contract.md).
 
 The live snapshot omits elapsed IC time: message time cannot truthfully measure
-synchronous callback duration. It instead distinguishes scheduler
-and work instructions, and it will call a dispatched watchdog attempt without
-a committed completion *unacknowledged*, not definitely trapped.
+synchronous callback duration. It instead distinguishes scheduler and work
+instructions, plus latest start/end and maximum-growth Wasm/stable memory-page
+observations. Page extent is not exact allocator liveness. A dispatched
+watchdog attempt without a committed completion is *unacknowledged*, not
+definitely trapped, and has no fabricated measurement.
 
 ## Implementation sequence
 
@@ -175,10 +177,12 @@ authority-snapshot fence without duplicating registry state. Scheduling,
 deadlines, generations, counters, pending commands, provider handles, and
 reconciliation authority remain exclusively in `ic-timers`.
 
-Consumer callbacks may issue nested control through `TimerContext`, but that
-delegation is checked against the exact running generation and work role. A
-stored context expires at callback completion and cannot become another entry
-in a consumer custody collection.
+Consumer callbacks may issue nested control through `OnceContext`,
+`AfterCompletionContext`, or `WatchdogContext`. Each type exposes only the
+operations legal for its policy, while the shared private delegation is
+checked against the exact running generation and work role. A stored context
+expires at callback completion and cannot become another entry in a consumer
+custody collection.
 
 IcyDB's exact dependency, removed parallel timer state, and downstream
 real-canister evidence are recorded in the
