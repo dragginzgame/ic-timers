@@ -10,7 +10,7 @@ IcyDB-shaped watchdog evidence are complete.
 
 ## Current foundation
 
-- Workspace package version: `0.3.8`.
+- Workspace package version: `0.4.0`.
 - Direct timer provider: exact `ic-cdk-timers` 1.0.0.
 - `control` is the private Canic-derived ordinary generation/registration
   state machine for checked request sequences, stale callbacks, immediate
@@ -61,7 +61,7 @@ IcyDB-shaped watchdog evidence are complete.
 - Post-0.3 hardening was released as 0.3.1, the Canic adoption corrections as
   0.3.2, and the callback-authority/provider-binding fixes as 0.3.3 on
   2026-08-14.
-- Open release line: `0.4.0`; package remains `0.3.8`.
+- Latest release line: `0.4.0`.
 - The named 0.4 line starts with the completed repository-only release-policy
   and adoption evidence maintenance, then performs the code-bearing cleanup
   and hard cuts requested for the next compatibility line.
