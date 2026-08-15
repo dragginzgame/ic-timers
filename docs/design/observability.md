@@ -10,12 +10,15 @@ superset of the timer information Canic exposes today.
 
 Ordinary and watchdog state, scheduler dispatch, work, stale,
 unacknowledged, instruction, and memory-page observations are live. Normally
-completed accepted scheduler and work callbacks record their complete
-`ic-timers` callback envelope, from before acceptance through completion
+completed accepted scheduler and work callbacks record the `ic-timers`
+execution interval from immediately before acceptance through completion
 processing and any successor binding. They do not isolate application code.
-Trapped and exhausted work record no sample. Canic validates the real adapter
-without parallel instrumentation; combined qualification remains an external
-gate.
+The provider dispatch prefix, provider return/reply tail, page reads, and
+post-interval measurement-summary update are outside the instruction delta.
+It is therefore not a complete IC-message measurement and must not be used
+alone as proof against the IC message instruction limit. Trapped and exhausted
+work record no sample. Canic validates the real adapter without parallel
+instrumentation; combined qualification remains an external gate.
 
 This contract describes provider-neutral runtime data. `ic-timers` owns the
 identity, counters, measurements, and snapshot semantics. Canic, IcyDB, and
@@ -51,7 +54,7 @@ following groups.
 | State | Closed policy-specific state, registration projection, process condition, current generation, and watchdog attempt status. |
 | Outcome | Latest classified outcome, work count, last success and failure timestamps, and consecutive expected failures. |
 | Counters | Requests, wake-up arms, work dispatch arms, scheduler starts, work starts/completions, classified outcomes, cancellations, stale callbacks, coalescing, and unacknowledged attempts. |
-| Performance | Separate sample count, total, latest, and maximum instructions for normally completed accepted scheduler/work envelopes; per role, bounded latest start/end Wasm/stable page extents and maximum per-callback growth. |
+| Performance | Separate sample count, total, latest, and maximum instructions for normally completed accepted scheduler/work intervals; per role, bounded latest start/end Wasm/stable page extents and maximum per-callback growth. |
 | Scope | Runtime epoch and start timestamp defining the reset boundary for every counter and aggregate. |
 
 Configured recurrence and callback directives are related but distinct. The
@@ -133,10 +136,13 @@ not infer work count from callback counters.
 ## Measurements and scope
 
 Instruction aggregates contain sample count, total, latest, and maximum values
-for scheduler and work roles. Each accepted interval begins before callback
-acceptance and ends after completion processing plus any successor binding, so
-it includes `ic-timers` arbitration and provider binding as well as consumer
-work. It is not an application-only measurement. The corresponding memory
+for scheduler and work roles. Each accepted interval begins immediately before
+callback acceptance and ends after completion processing plus any successor
+binding, so it includes `ic-timers` arbitration and provider binding as well as
+consumer work. It is not an application-only measurement. The start page read
+precedes the instruction interval; the end page read and bounded summary write
+follow it. Provider executor work before entering `ic-timers` and after the
+runtime callback returns also remains outside it. The corresponding memory
 summaries contain a saturating sample count, the latest start/end Wasm and
 stable extents in 64 KiB pages, and maximum non-negative observed start-to-end
 growth for each memory.
@@ -154,7 +160,9 @@ If a terminal `RemoveWhenStopped` callback removes its declaration during
 normal completion, the post-transition measurement has no remaining timer on
 which to commit and is discarded. This is intentionally different from
 fabricating a zero sample: the transient timer itself is absent from the final
-inventory.
+inventory. A consumer that requires a durable terminal audit receipt must own
+that receipt outside the volatile timer registry; `ic-timers` does not retain
+tombstones or create a second authority for removed declarations.
 
 Elapsed IC time is absent because message time is not a truthful synchronous
 duration. Page reads bracket the instruction-delta interval from outside, so
@@ -165,6 +173,15 @@ instructions for both an empty counter bracket and the matching start/end
 page-read bracket, an observed delta of zero for the four reads. This is a
 regression subject, not a future IC metering guarantee, and it does not claim
 to isolate the bounded summary update performed after the interval.
+
+PocketIC 15's public test surface does not expose the complete instruction
+total for an individual timer-generated update message. The focused
+[0.6 calibration probe](../audits/0.6-message-instruction-calibration-2026-08-15.md)
+therefore reports the available scheduler/work intervals for minimal and
+bounded representative Watchdog work, while marking the full-message total
+and residual difference unavailable. Cycle-balance deltas are not converted
+to instructions. Real message-level trap and exhaustion evidence remains
+required for hard instruction-limit claims.
 
 Within one runtime epoch, Wasm and stable page counts are monotonic
 extent/high-water observations. They are not exact live bytes: allocator

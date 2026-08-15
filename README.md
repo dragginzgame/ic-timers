@@ -158,12 +158,19 @@ the removed bare-vector `timer_snapshots` function.
 | Memory | Latest start/end Wasm and stable page extents plus maximum observed growth |
 | Epoch | The volatile runtime boundary to which counters and samples belong |
 
-Each measurement covers the accepted `ic-timers` callback envelope: it begins
-before callback acceptance and ends after completion processing and any
-successor binding. It is not an exclusive measurement of application code.
+Each instruction measurement covers the accepted `ic-timers` execution
+interval: it begins immediately before callback acceptance and ends after
+completion processing and any successor binding. It is not an exclusive
+measurement of application code, nor is it the complete IC message. Provider
+dispatch before entering the runtime, provider return/reply work, page reads,
+and the bounded summary write remain outside the instruction delta. Do not use
+the library aggregate alone as proof against the IC message instruction limit.
+
 Trapped or instruction-exhausted work produces no fabricated sample. A
 terminal `RemoveWhenStopped` callback can delete its declaration before the
 final measurement is retained; no timer then remains to expose that sample.
+Consumers that require a durable terminal audit receipt must store it outside
+the volatile timer registry rather than treating a snapshot as authority.
 
 Wasm and stable-memory values are 64 KiB page extents: they are runtime
 high-water observations, not exact live bytes. Sub-page allocator liveness

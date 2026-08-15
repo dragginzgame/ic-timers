@@ -58,6 +58,11 @@ thread_local! {
     static CALLBACKS: Cell<u64> = const { Cell::new(0) };
 }
 
+#[cfg(feature = "watchdog")]
+thread_local! {
+    static REPRESENTATIVE_WATCHDOG_WORK: Cell<bool> = const { Cell::new(false) };
+}
+
 #[derive(CandidType, Debug)]
 struct OperationMeasurement {
     changed: bool,
@@ -134,6 +139,14 @@ fn memory_sampling_overhead() -> MemorySamplingMeasurement {
         overhead_instructions: sampled_bracket_instructions
             .saturating_sub(empty_bracket_instructions),
     }
+}
+
+/// Select a bounded non-trivial callback body for the probe's next Watchdog
+/// registration. This endpoint exists only in the Watchdog test canister.
+#[cfg(feature = "watchdog")]
+#[ic_cdk::update]
+fn use_representative_watchdog_work() {
+    REPRESENTATIVE_WATCHDOG_WORK.with(|enabled| enabled.set(true));
 }
 
 #[ic_cdk::query]
@@ -300,7 +313,7 @@ fn start_inner() -> bool {
             DeclarationLifetime::Retained,
             |_context| {
                 CALLBACKS.with(|calls| calls.set(calls.get().saturating_add(1)));
-                WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue)
+                WatchdogRunResult::new(watchdog_completion(), WatchdogDecision::Continue)
             },
         ) {
             Ok(registration) => registration,
@@ -312,6 +325,24 @@ fn start_inner() -> bool {
         *slot = Some(registration);
         true
     })
+}
+
+#[cfg(feature = "watchdog")]
+fn watchdog_completion() -> TimerCompletion {
+    if !REPRESENTATIVE_WATCHDOG_WORK.with(Cell::get) {
+        return TimerCompletion::no_work();
+    }
+
+    // Keep the calibration body dependency-free, deterministic, bounded, and
+    // visibly non-trivial after optimization. It models synchronous work, not
+    // IcyDB database logic or a production instruction budget.
+    let mut state = std::hint::black_box(0x9e37_79b9_7f4a_7c15_u64);
+    for step in 0..100_000_u64 {
+        state = state.rotate_left(7) ^ step;
+        state = state.wrapping_mul(0xbf58_476d_1ce4_e5b9);
+    }
+    std::hint::black_box(state);
+    TimerCompletion::success(1)
 }
 
 #[cfg(feature = "baseline")]

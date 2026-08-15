@@ -18,3 +18,4 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.4.1 private-runtime cleanup](0.4.1.md)
 - [0.5.0 policy-specific callback authority](0.5.0.md)
 - [0.6.0 atomic inventory epoch](0.6.0.md)
+- [0.6.1 measurement calibration](0.6.1.md)

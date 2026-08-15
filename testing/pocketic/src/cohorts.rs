@@ -45,6 +45,9 @@ fn comparable_policy_cohorts_report_size_and_instruction_subjects() {
     for cohort in ["baseline", "once", "after-completion", "watchdog"] {
         run_cohort(cohort);
     }
+    let minimal_work = run_watchdog_calibration("minimal", false);
+    let representative_work = run_watchdog_calibration("representative", true);
+    assert!(representative_work > minimal_work);
 }
 
 fn run_cohort(cohort: &str) {
@@ -164,6 +167,41 @@ fn run_cohort(cohort: &str) {
     );
 }
 
+fn run_watchdog_calibration(profile: &str, representative_work: bool) -> u64 {
+    let pic = PocketIc::new();
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, INIT_CYCLES);
+    pic.install_canister(
+        canister_id,
+        cohort_wasm("watchdog"),
+        Encode!().expect("encode calibration init"),
+        None,
+    );
+    if representative_work {
+        update_unit(&pic, canister_id, "use_representative_watchdog_work");
+    }
+    let start = update_measurement(&pic, canister_id, "start");
+    assert!(start.changed);
+
+    let cycles_before_dispatch = pic.cycle_balance(canister_id);
+    pic.advance_time(Duration::from_secs(1));
+    drive_rounds(&pic, 16);
+    let dispatch_cycles = cycles_before_dispatch.saturating_sub(pic.cycle_balance(canister_id));
+    let completed = observe(&pic, canister_id);
+    assert_eq!(completed.scheduler_instruction_samples, 1);
+    assert_eq!(completed.work_instruction_samples, 1);
+    assert_eq!(completed.work_completed, 1);
+
+    println!(
+        "ic_timers_watchdog_calibration profile={} total_message_instructions=unavailable scheduler={} work={} unaccounted_instructions=unavailable dispatch_cycles={}",
+        profile,
+        completed.scheduler_instruction_total,
+        completed.work_instruction_total,
+        dispatch_cycles,
+    );
+    completed.work_instruction_total
+}
+
 fn cohort_wasm(cohort: &str) -> Vec<u8> {
     let root = env::var_os("IC_TIMERS_COHORT_ROOT")
         .map(PathBuf::from)
@@ -194,6 +232,16 @@ fn update_measurement(
         )
         .unwrap_or_else(|error| panic!("update {method}: {error:?}"));
     Decode!(&bytes, OperationMeasurement).unwrap_or_else(|error| panic!("decode {method}: {error}"))
+}
+
+fn update_unit(pic: &PocketIc, canister_id: Principal, method: &str) {
+    pic.update_call(
+        canister_id,
+        Principal::anonymous(),
+        method,
+        Encode!().expect("encode unit update"),
+    )
+    .unwrap_or_else(|error| panic!("update {method}: {error:?}"));
 }
 
 fn memory_sampling_measurement(

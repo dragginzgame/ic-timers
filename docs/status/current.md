@@ -15,7 +15,7 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 ## Release state
 
 - Workspace package version: `0.6.0`.
-- Latest release line: `0.6.0`.
+- Open release line: `0.6.1`; package remains `0.6.0`.
 - Direct provider dependency: exact `ic-cdk-timers` 1.0.0.
 - Minimum supported Rust version: 1.88.0.
 - Development toolchain: Rust 1.97.1.
@@ -54,10 +54,12 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 - The superseded bare-vector `timer_snapshots()` function is removed. No alias,
   deprecated forwarder, or second inventory shape is retained.
 - `timer_snapshot()` remains the focused lookup for one known identity.
-- Public measurement documentation now defines scheduler/work values as the
-  complete accepted `ic-timers` callback envelope, not application-only work.
-  A terminal `RemoveWhenStopped` declaration may disappear before its final
-  measurement is retained because no timer remains to expose it.
+- Public measurement documentation defines scheduler/work values as the
+  accepted `ic-timers` execution interval, not application-only work or the
+  complete IC message. Provider entry/exit work, page reads, and the bounded
+  summary write remain outside the instruction delta. A terminal
+  `RemoveWhenStopped` declaration may disappear before its final measurement
+  is retained because no timer remains to expose it.
 
 ## 0.5 hard cut
 
@@ -101,6 +103,11 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
   for both an empty bracket and the four start/end Wasm/stable page reads: an
   observed sampling delta of zero, kept outside callback aggregates. This is a
   PocketIC regression subject, not a future metering guarantee.
+- A bounded minimal-versus-representative Watchdog calibration records the
+  available scheduler/work instruction intervals and cycle deltas. PocketIC
+  15 does not expose a per-message update instruction total through its public
+  test API, so the complete-message total and unaccounted difference remain
+  explicitly unavailable rather than being inferred from cycles.
 - The 0.6 inventory subject reruns the complete PocketIC watchdog matrix and
   all policy cohorts successfully. The inventory hard cut does not change
   provider binding or the two-message protocol.
@@ -131,4 +138,6 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 Coordinate Canic and IcyDB onto the 0.6 inventory hard cut atomically, then
 qualify one combined Wasm through Canic's lifecycle-composition seam without
-adding a second registry or compatibility path.
+adding a second registry or compatibility path. Downstream 0.6 performance
+baselines must label the corrected interval boundary and retain external
+message-exhaustion evidence for hard instruction-limit claims.

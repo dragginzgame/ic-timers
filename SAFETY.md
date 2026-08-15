@@ -145,13 +145,18 @@ invent a completion, zero instruction cost, memory-page sample, elapsed
 duration, or zero work count. Memory observations report runtime-epoch-local
 monotonic Wasm and stable page extents plus observed start-to-end growth, not
 exact live bytes, sub-page allocator liveness, or exclusive work attribution.
-The accepted measurement envelope starts before callback acceptance and ends
-after completion processing and any successor binding, so it includes
-`ic-timers` runtime work and is not exclusive application-code attribution. An
-async ordinary callback's interval may also include canister activity
-interleaved while its future is awaiting. A terminal `RemoveWhenStopped`
-callback can remove its declaration before the final measurement is retained;
-no timer remains from which to observe that sample.
+The accepted instruction interval starts immediately before callback
+acceptance and ends after completion processing and any successor binding, so
+it includes `ic-timers` runtime work and is not exclusive application-code
+attribution. It excludes provider dispatch before entering `ic-timers`, the
+provider return/reply tail, page reads, and the post-interval summary write;
+the aggregate is not a complete IC-message measurement or sufficient evidence
+for the IC message instruction limit. An async ordinary callback's interval
+may also include canister activity interleaved while its future is awaiting. A
+terminal `RemoveWhenStopped` callback can remove its declaration before the
+final measurement is retained; no timer remains from which to observe that
+sample. Consumers needing a durable terminal audit receipt must own it outside
+the volatile registry; the runtime deliberately keeps no tombstones.
 
 The live watchdog records only that an earlier committed dispatch lacks a
 committed completion when a later scheduler retires it. It cannot infer a trap,

@@ -4,6 +4,26 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.6.1]
+
+### Documentation
+
+- Clarify that callback instruction aggregates cover the accepted
+  `ic-timers` execution interval, not the complete IC message: provider
+  entry/exit, page reads, and the post-interval summary write remain outside.
+- Require consumers that need a durable terminal audit receipt for a removed
+  transient timer to own it outside the volatile registry; no tombstone or
+  parallel authority is added.
+- Freeze IcyDB's 0.6 performance-rebaseline and single-package qualification
+  requirements without claiming that downstream adoption has occurred.
+
+### Evidence
+
+- Extend the PocketIC cohort with deterministic minimal and bounded
+  representative Watchdog callbacks. Report scheduler/work instruction
+  intervals and cycle deltas while marking complete-message instructions and
+  their residual difference unavailable on PocketIC 15's public test surface.
+
 ## [0.6.0] - 2026-08-15
 
 ### Added
@@ -14,9 +34,11 @@ All notable changes to this project are recorded here.
 
 ### Changed
 
-- Define instruction and memory observations as the complete accepted
-  `ic-timers` callback envelope, including acceptance, completion processing,
-  and any successor binding rather than application code alone.
+- Define instruction observations as the accepted `ic-timers` execution
+  interval, including acceptance, completion processing, and any successor
+  binding rather than application code alone. Memory reads bracket that
+  interval; provider entry/exit and the summary write remain outside its
+  instruction delta.
 - Document that terminal `RemoveWhenStopped` completion may remove its timer
   before the final measurement can be retained.
 

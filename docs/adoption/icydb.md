@@ -113,3 +113,23 @@ reports the page-read cost separately from callback instruction aggregates.
 In PocketIC 15.0.0, the empty and sampled brackets both measured 200
 call-context instructions, for an observed four-read delta of zero. This is a
 local regression subject rather than a promise about future IC metering.
+
+## Exact-0.6 adoption requirements
+
+IcyDB has not yet supplied exact-0.6 adoption evidence. When it advances, its
+0.228 watchdog measurements must be rebaselined rather than directly compared
+with 0.5 totals: the documented meaning is the accepted `ic-timers` work
+interval, not application callback code alone. The runtime's counter placement
+did not change between 0.5 and 0.6; the 0.6 documentation corrects the broader
+envelope label. Cross-release reports must identify the exact artifact and
+measurement interpretation.
+
+IcyDB must retain external PocketIC evidence for its hard 40-billion-
+instruction exhaustion claim because the library aggregate excludes provider
+entry/exit and post-interval observation accounting. The final combined Wasm
+must also resolve exactly one `ic-timers` package across IcyDB, Canic, and
+application owners.
+
+The [0.6 calibration record](../audits/0.6-message-instruction-calibration-2026-08-15.md)
+keeps unavailable full-message instruction totals explicit and does not
+convert cycle-balance deltas into instruction estimates.
