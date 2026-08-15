@@ -14,8 +14,8 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Release state
 
-- Workspace package version: `0.5.0`.
-- Open release line: `0.6.0`; package remains `0.5.0`.
+- Workspace package version: `0.6.0`.
+- Latest release line: `0.6.0`.
 - Direct provider dependency: exact `ic-cdk-timers` 1.0.0.
 - Minimum supported Rust version: 1.88.0.
 - Development toolchain: Rust 1.97.1.
