@@ -10,32 +10,66 @@ fn identity(owner: &str, subsystem: &str, name: &str) -> TimerIdentity {
 }
 
 #[test]
-fn labels_are_bounded_in_utf8_bytes() {
-    assert!(TimerLabel::new("a".repeat(MAX_TIMER_LABEL_BYTES)).is_ok());
+fn identity_components_are_bounded_in_utf8_bytes() {
+    assert!(
+        TimerIdentity::try_new(
+            "owner",
+            "subsystem",
+            "a".repeat(MAX_TIMER_IDENTITY_COMPONENT_BYTES),
+        )
+        .is_ok()
+    );
     assert_eq!(
-        TimerLabel::new("a".repeat(MAX_TIMER_LABEL_BYTES + 1)),
-        Err(TimerLabelError::TooLong {
-            actual_bytes: MAX_TIMER_LABEL_BYTES + 1,
-            max_bytes: MAX_TIMER_LABEL_BYTES,
+        TimerIdentity::try_new(
+            "owner",
+            "subsystem",
+            "a".repeat(MAX_TIMER_IDENTITY_COMPONENT_BYTES + 1),
+        ),
+        Err(TimerIdentityError::TooLong {
+            field: TimerIdentityField::Name,
+            actual_bytes: MAX_TIMER_IDENTITY_COMPONENT_BYTES + 1,
+            max_bytes: MAX_TIMER_IDENTITY_COMPONENT_BYTES,
         })
     );
-    assert!(TimerLabel::new("é".repeat(MAX_TIMER_LABEL_BYTES / 2)).is_ok());
+    assert!(
+        TimerIdentity::try_new(
+            "owner",
+            "subsystem",
+            "é".repeat(MAX_TIMER_IDENTITY_COMPONENT_BYTES / 2),
+        )
+        .is_ok()
+    );
     assert!(matches!(
-        TimerLabel::new("é".repeat(MAX_TIMER_LABEL_BYTES / 2 + 1)),
-        Err(TimerLabelError::TooLong { .. })
+        TimerIdentity::try_new(
+            "owner",
+            "subsystem",
+            "é".repeat(MAX_TIMER_IDENTITY_COMPONENT_BYTES / 2 + 1),
+        ),
+        Err(TimerIdentityError::TooLong {
+            field: TimerIdentityField::Name,
+            ..
+        })
     ));
 }
 
 #[test]
-fn labels_reject_ambiguous_operator_text() {
-    assert_eq!(TimerLabel::new(""), Err(TimerLabelError::Empty));
+fn identity_components_reject_ambiguous_operator_text() {
     assert_eq!(
-        TimerLabel::new(" timer"),
-        Err(TimerLabelError::SurroundingWhitespace)
+        TimerIdentity::try_new("", "subsystem", "name"),
+        Err(TimerIdentityError::Empty {
+            field: TimerIdentityField::Owner,
+        })
     );
     assert_eq!(
-        TimerLabel::new("timer\nname"),
-        Err(TimerLabelError::ControlCharacter {
+        TimerIdentity::try_new("owner", " subsystem", "name"),
+        Err(TimerIdentityError::SurroundingWhitespace {
+            field: TimerIdentityField::Subsystem,
+        })
+    );
+    assert_eq!(
+        TimerIdentity::try_new("owner", "subsystem", "timer\nname"),
+        Err(TimerIdentityError::ControlCharacter {
+            field: TimerIdentityField::Name,
             byte_index: 5,
             character: '\n',
         })
@@ -46,9 +80,8 @@ fn labels_reject_ambiguous_operator_text() {
 fn identities_validate_components_and_order_deterministically() {
     assert_eq!(
         TimerIdentity::try_new("canic", "", "renewal"),
-        Err(TimerIdentityError {
+        Err(TimerIdentityError::Empty {
             field: TimerIdentityField::Subsystem,
-            source: TimerLabelError::Empty,
         })
     );
 
@@ -59,18 +92,12 @@ fn identities_validate_components_and_order_deterministically() {
         identity("canic", "auth", "cleanup"),
     ];
     identities.sort();
-    let labels = identities
+    let components = identities
         .iter()
-        .map(|value| {
-            (
-                value.owner().as_str(),
-                value.subsystem().as_str(),
-                value.name().as_str(),
-            )
-        })
+        .map(|value| (value.owner(), value.subsystem(), value.name()))
         .collect::<Vec<_>>();
     assert_eq!(
-        labels,
+        components,
         vec![
             ("canic", "auth", "cleanup"),
             ("canic", "auth", "renewal"),
@@ -85,7 +112,7 @@ fn policies_and_directives_have_one_cadence_owner() {
     let cadence = TimerCadence::from_nanos(5_000).expect("fixture cadence should be valid");
     let policy = TimerPolicy::Watchdog { cadence };
     assert_eq!(policy.label(), "watchdog");
-    assert_eq!(policy.cadence_ns(), Some(5_000));
+    assert_eq!(policy.cadence().map(TimerCadence::as_nanos), Some(5_000));
 
     assert_eq!(
         TimerDirectiveSnapshot::RetryAfter { delay_ns: 10 }.scheduling_mode(),
@@ -110,7 +137,6 @@ fn policies_and_directives_have_one_cadence_owner() {
             delay_ns: 25_000_000,
         }
     );
-    assert_eq!(TimerDirective::from(snapshot), directive);
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -145,13 +171,13 @@ fn project_to_canic(snapshot: &TimerSnapshot) -> CanicProjection<'_> {
     let counters = observations.counters();
     let outcomes = observations.outcomes();
     CanicProjection {
-        name: snapshot.identity().name().as_str(),
-        subsystem: snapshot.identity().subsystem().as_str(),
+        name: snapshot.identity().name(),
+        subsystem: snapshot.identity().subsystem(),
         timer_mode: match snapshot.policy() {
             TimerPolicy::Once => "once",
             TimerPolicy::AfterCompletion { .. } | TimerPolicy::Watchdog { .. } => "interval",
         },
-        configured_cadence_ns: snapshot.policy().cadence_ns(),
+        configured_cadence_ns: snapshot.policy().cadence().map(TimerCadence::as_nanos),
         latest_delay_ms: snapshot
             .latest_armed_delay_ns()
             .map(|nanoseconds| nanoseconds / 1_000_000),

@@ -30,7 +30,7 @@ impl TimerCadence {
     }
 
     /// Resolve one successor relative to the supplied dispatch time.
-    pub const fn deadline_after(self, now_ns: u64) -> Result<u64, ScheduleError> {
+    pub(super) const fn deadline_after(self, now_ns: u64) -> Result<u64, ScheduleError> {
         checked_deadline_after(now_ns, self.0)
     }
 }
@@ -46,7 +46,7 @@ pub enum TimerSchedule {
 
 impl TimerSchedule {
     /// Resolve the request to an absolute deadline and optional relative delay.
-    pub(crate) fn resolve(self, now_ns: u64) -> Result<ResolvedSchedule, ScheduleError> {
+    pub(super) fn resolve(self, now_ns: u64) -> Result<ResolvedSchedule, ScheduleError> {
         match self {
             Self::After(delay) => {
                 let delay_ns = duration_ns(delay)?;
@@ -79,11 +79,11 @@ pub enum TimerDirective {
 }
 
 impl TimerDirective {
-    pub(crate) fn resolve(
+    pub(super) fn resolve(
         self,
         now_ns: u64,
         cadence: Option<TimerCadence>,
-    ) -> Result<ResolvedDirective, ScheduleError> {
+    ) -> Result<ResolvedDirective, DirectiveError> {
         match self {
             Self::Stop => Ok(ResolvedDirective {
                 deadline_ns: None,
@@ -105,7 +105,7 @@ impl TimerDirective {
                 requested_delay_ns: None,
             }),
             Self::RecurAfterCompletion => {
-                let cadence = cadence.ok_or(ScheduleError::MissingCadence)?;
+                let cadence = cadence.ok_or(DirectiveError::MissingCadence)?;
                 Ok(ResolvedDirective {
                     deadline_ns: Some(cadence.deadline_after(now_ns)?),
                     requested_delay_ns: Some(cadence.as_nanos()),
@@ -128,19 +128,28 @@ pub enum ScheduleError {
     /// Adding the delay to the current time overflows a `u64`.
     #[error("timer deadline exceeds the supported timestamp range")]
     DeadlineOverflow,
-    /// After-completion recurrence was requested without a configured cadence.
-    #[error("timer directive requires an after-completion cadence")]
-    MissingCadence,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) struct ResolvedSchedule {
+pub enum DirectiveError {
+    Schedule(ScheduleError),
+    MissingCadence,
+}
+
+impl From<ScheduleError> for DirectiveError {
+    fn from(error: ScheduleError) -> Self {
+        Self::Schedule(error)
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ResolvedSchedule {
     pub(crate) deadline_ns: u64,
     pub(crate) requested_delay_ns: Option<u64>,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) struct ResolvedDirective {
+pub struct ResolvedDirective {
     pub(crate) deadline_ns: Option<u64>,
     pub(crate) requested_delay_ns: Option<u64>,
 }
@@ -152,7 +161,7 @@ const fn checked_deadline_after(now_ns: u64, delay_ns: u64) -> Result<u64, Sched
     }
 }
 
-pub(crate) fn duration_ns(duration: Duration) -> Result<u64, ScheduleError> {
+pub fn duration_ns(duration: Duration) -> Result<u64, ScheduleError> {
     u64::try_from(duration.as_nanos()).map_err(|_| ScheduleError::DelayOutOfRange)
 }
 
@@ -208,11 +217,11 @@ mod tests {
         );
         assert_eq!(
             TimerDirective::RecurAfterCompletion.resolve(10, None),
-            Err(ScheduleError::MissingCadence)
+            Err(DirectiveError::MissingCadence)
         );
         assert_eq!(
             TimerDirective::RetryAfter(Duration::from_nanos(1)).resolve(u64::MAX, None),
-            Err(ScheduleError::DeadlineOverflow)
+            Err(DirectiveError::Schedule(ScheduleError::DeadlineOverflow))
         );
     }
 }

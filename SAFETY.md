@@ -6,7 +6,7 @@ actually enforce and test.
 
 ## Current guarantees
 
-The 0.3 runtime provides:
+The current runtime provides:
 
 - a provider-call-free fixed-capacity registry with unique bounded identities
   and deterministic snapshot ordering;
@@ -55,7 +55,11 @@ The 0.3 runtime provides:
 - external rejection of the provider's internal timer-executor route; and
 - fail-closed handling of unexpected internal callback completion, provider
   ownership, cleanup, and accounting errors. Watchdog work traps its current
-  message instead of returning after losing the committed successor;
+  message instead of returning after losing the committed successor. Detached
+  failure paths restore or clear every linear provider capability before
+  returning an error. Terminal watchdog control failures also clear any
+  pending nested command and check paired scheduler/work generations before
+  mutating either counter;
 - fail-closed public and lifecycle effect application: a retained declaration
   whose provider arm cannot establish canonical ownership becomes inactive
   with `ProviderBindingFailed` rather than remaining falsely scheduled; and

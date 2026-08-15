@@ -868,6 +868,123 @@ fn provider_cleanup_borrow_failure_is_returned_instead_of_discarded() {
 }
 
 #[test]
+fn provider_restoration_drains_all_detached_handles_after_first_failure() {
+    setup();
+    let timer = identity("provider-restore-drain");
+    let registration = register_watchdog(
+        timer.clone(),
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+        DeclarationLifetime::Retained,
+        |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue),
+    )
+    .expect("watchdog registration should succeed");
+    registration
+        .ensure_scheduled()
+        .expect("initial scheduler should arm");
+
+    set_time(15);
+    assert!(run_next_due(), "scheduler callback should execute");
+    assert_eq!(timer_count(), 2, "successor and work should be armed");
+    let handles = with_registry_mut(|registry| {
+        registry
+            .take_provider_handles_for_claim(&registration.claim)
+            .map_err(TimerError::from)
+    })
+    .expect("both handles should detach");
+
+    inject_provider_install_fault();
+    assert!(matches!(
+        restore_provider_handles(handles),
+        Err(TimerError::OwnershipInvariant)
+    ));
+    assert_eq!(
+        timer_count(),
+        1,
+        "the failed handle should clear while the remaining handle is restored"
+    );
+
+    let (restored_wakeup, restored_work) = with_registry_mut(|registry| {
+        Ok((
+            registry.take_wakeup_handle(&timer),
+            registry.take_work_handle(&timer),
+        ))
+    })
+    .expect("restored handle should detach for fixture cleanup");
+    assert!(restored_wakeup.is_none());
+    assert!(restored_work.is_some());
+    clear_provider_handles(ProviderHandles::from_parts(restored_wakeup, restored_work));
+    assert_eq!(timer_count(), 0);
+}
+
+#[test]
+fn detached_provider_selection_does_not_reborrow_the_registry() {
+    setup();
+    let timer = identity("detached-selection");
+    let registration = register_once(
+        timer.clone(),
+        DeclarationLifetime::Retained,
+        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+    )
+    .expect("registration should succeed");
+    registration
+        .ensure_scheduled(TimerSchedule::At(15))
+        .expect("provider wake-up should arm");
+    let detached = with_registry_mut(|registry| Ok(registry.take_wakeup_handle(&timer)))
+        .expect("registry should be available")
+        .expect("provider handle should detach");
+
+    let selected = RUNTIME.with(|runtime| {
+        let _borrow = runtime.borrow_mut();
+        take_detached_or_owned_handle(Some(detached), |_| None)
+    });
+    let selected = selected
+        .expect("a detached handle should avoid another registry borrow")
+        .expect("the detached handle should be retained");
+
+    clear_provider_handle(selected);
+    assert_eq!(timer_count(), 0);
+}
+
+#[test]
+fn transition_error_restores_detached_claim_handles() {
+    setup();
+    let timer = identity("transition-error-restore");
+    let registration = register_once(timer, DeclarationLifetime::Retained, |_context| async {
+        TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop)
+    })
+    .expect("registration should succeed");
+    registration
+        .ensure_scheduled(TimerSchedule::At(15))
+        .expect("provider wake-up should arm");
+    let handles = with_registry_mut(|registry| {
+        registry
+            .take_provider_handles_for_claim(&registration.claim)
+            .map_err(TimerError::from)
+    })
+    .expect("provider handle should detach");
+
+    assert!(matches!(
+        finish_detached_claim_transition(
+            &registration.claim,
+            handles,
+            Err(TimerError::WrongPolicy),
+        ),
+        Err(TimerError::WrongPolicy)
+    ));
+    assert!(
+        registration
+            .has_armed_wakeup()
+            .expect("restored claim should remain readable")
+    );
+    assert_eq!(timer_count(), 1);
+
+    registration
+        .cancel()
+        .expect("fixture cleanup should succeed");
+    assert_eq!(timer_count(), 0);
+}
+
+#[test]
 fn public_provider_install_failure_retires_false_scheduled_state() {
     setup();
     let timer = identity("provider-install-fault");

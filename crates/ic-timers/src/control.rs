@@ -76,6 +76,21 @@ pub struct TimerControl {
     registration: TimerRegistration,
 }
 
+#[derive(Clone, Copy)]
+enum DeadlineSelection {
+    Earliest,
+    Exact,
+}
+
+impl DeadlineSelection {
+    const fn replaces(self, current_deadline_ns: u64, requested_deadline_ns: u64) -> bool {
+        match self {
+            Self::Earliest => requested_deadline_ns < current_deadline_ns,
+            Self::Exact => requested_deadline_ns != current_deadline_ns,
+        }
+    }
+}
+
 impl TimerControl {
     /// Return the latest allocated callback generation.
     #[must_use]
@@ -105,43 +120,7 @@ impl TimerControl {
         &mut self,
         deadline_ns: u64,
     ) -> Result<TimerControlAction, TimerControlError> {
-        let sequence = self.next_request_sequence()?;
-
-        match self.registration {
-            TimerRegistration::Unregistered => {
-                let generation = self.next_generation()?;
-                self.request_sequence = sequence;
-                self.generation = generation;
-                self.registration = TimerRegistration::Scheduled {
-                    generation,
-                    deadline_ns,
-                };
-                Ok(TimerControlAction::Arm {
-                    generation,
-                    deadline_ns,
-                })
-            }
-            TimerRegistration::Scheduled {
-                deadline_ns: current_deadline,
-                ..
-            } if deadline_ns < current_deadline => {
-                let generation = self.next_generation()?;
-                self.request_sequence = sequence;
-                self.generation = generation;
-                self.registration = TimerRegistration::Scheduled {
-                    generation,
-                    deadline_ns,
-                };
-                Ok(TimerControlAction::Replace {
-                    generation,
-                    deadline_ns,
-                })
-            }
-            TimerRegistration::Scheduled { .. } | TimerRegistration::Running { .. } => {
-                self.request_sequence = sequence;
-                Ok(TimerControlAction::None)
-            }
-        }
+        self.request_deadline(deadline_ns, DeadlineSelection::Earliest)
     }
 
     /// Cancel scheduled state immediately.
@@ -171,46 +150,45 @@ impl TimerControl {
         &mut self,
         deadline_ns: u64,
     ) -> Result<TimerControlAction, TimerControlError> {
-        let sequence = self.next_request_sequence()?;
+        self.request_deadline(deadline_ns, DeadlineSelection::Exact)
+    }
 
-        match self.registration {
-            TimerRegistration::Unregistered => {
-                let generation = self.next_generation()?;
-                self.request_sequence = sequence;
-                self.generation = generation;
-                self.registration = TimerRegistration::Scheduled {
-                    generation,
-                    deadline_ns,
-                };
-                Ok(TimerControlAction::Arm {
-                    generation,
-                    deadline_ns,
-                })
-            }
+    fn request_deadline(
+        &mut self,
+        deadline_ns: u64,
+        selection: DeadlineSelection,
+    ) -> Result<TimerControlAction, TimerControlError> {
+        let sequence = self.next_request_sequence()?;
+        let replace = match self.registration {
+            TimerRegistration::Unregistered => Some(false),
             TimerRegistration::Scheduled {
-                deadline_ns: current_deadline,
+                deadline_ns: current_deadline_ns,
                 ..
-            } if deadline_ns == current_deadline => {
-                self.request_sequence = sequence;
-                Ok(TimerControlAction::None)
-            }
-            TimerRegistration::Scheduled { .. } => {
-                let generation = self.next_generation()?;
-                self.request_sequence = sequence;
-                self.generation = generation;
-                self.registration = TimerRegistration::Scheduled {
-                    generation,
-                    deadline_ns,
-                };
-                Ok(TimerControlAction::Replace {
-                    generation,
-                    deadline_ns,
-                })
-            }
-            TimerRegistration::Running { .. } => {
-                self.request_sequence = sequence;
-                Ok(TimerControlAction::None)
-            }
+            } if selection.replaces(current_deadline_ns, deadline_ns) => Some(true),
+            TimerRegistration::Scheduled { .. } | TimerRegistration::Running { .. } => None,
+        };
+        let Some(replace) = replace else {
+            self.request_sequence = sequence;
+            return Ok(TimerControlAction::None);
+        };
+
+        let generation = self.next_generation()?;
+        self.request_sequence = sequence;
+        self.generation = generation;
+        self.registration = TimerRegistration::Scheduled {
+            generation,
+            deadline_ns,
+        };
+        if replace {
+            Ok(TimerControlAction::Replace {
+                generation,
+                deadline_ns,
+            })
+        } else {
+            Ok(TimerControlAction::Arm {
+                generation,
+                deadline_ns,
+            })
         }
     }
 

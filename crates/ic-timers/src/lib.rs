@@ -5,8 +5,8 @@
 //! the provider that arms and clears platform timers. This crate adds
 //! bounded coordination, scheduling, and observation above it.
 //!
-//! The 0.3 runtime executes `Once`, after-completion, and pre-armed
-//! synchronous watchdog callbacks through one volatile canister-local registry.
+//! The runtime executes `Once`, after-completion, and pre-armed synchronous
+//! watchdog callbacks through one volatile canister-local registry.
 //! Consumers retain durable application authority and synchronously reconstruct
 //! retained registrations during their existing lifecycle hooks. Transient
 //! remove-on-stop callbacks use direct registration. Registration capabilities
@@ -20,8 +20,8 @@ mod control;
 mod platform;
 mod registry;
 mod runtime;
-pub mod schedule;
-pub mod snapshot;
+mod schedule;
+mod snapshot;
 
 pub use registry::{MAX_TIMER_REGISTRATIONS, RegisterError};
 pub use runtime::{
@@ -32,12 +32,11 @@ pub use runtime::{
 };
 pub use schedule::{ScheduleError, TimerCadence, TimerDirective, TimerSchedule};
 pub use snapshot::{
-    DeclarationLifetime, InactiveReason, MAX_TIMER_LABEL_BYTES, MeasurementSummary,
+    DeclarationLifetime, InactiveReason, MAX_TIMER_IDENTITY_COMPONENT_BYTES, MeasurementSummary,
     OrdinaryRuntimeStateSnapshot, TimerCompletion, TimerCompletionOutcome, TimerControlFailure,
     TimerCounters, TimerDirectiveSnapshot, TimerEpoch, TimerIdentity, TimerIdentityError,
-    TimerIdentityField, TimerLabel, TimerLabelError, TimerLastOutcome, TimerObservabilitySnapshot,
-    TimerOutcomeSnapshot, TimerPerformance, TimerPolicy, TimerProcessCondition,
-    TimerRegistrationStatus, TimerRunResult, TimerRuntimeStateSnapshot, TimerSchedulingMode,
-    TimerSnapshot, WatchdogAttemptSnapshot, WatchdogAttemptStatus, WatchdogDecision,
-    WatchdogRunResult, WatchdogRuntimeStateSnapshot,
+    TimerIdentityField, TimerLastOutcome, TimerObservabilitySnapshot, TimerOutcomeSnapshot,
+    TimerPerformance, TimerPolicy, TimerProcessCondition, TimerRegistrationStatus, TimerRunResult,
+    TimerRuntimeStateSnapshot, TimerSchedulingMode, TimerSnapshot, WatchdogAttemptSnapshot,
+    WatchdogAttemptStatus, WatchdogDecision, WatchdogRunResult, WatchdogRuntimeStateSnapshot,
 };

@@ -4,6 +4,8 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.4.0]
+
 ### Changed
 
 - Correct the pre-1.0 release policy: hard cuts still remove superseded APIs
@@ -19,6 +21,67 @@ All notable changes to this project are recorded here.
   exact-pin 0.3.8. Development-time package alignment is complete; released
   combined composition still requires one-package qualification from tagged
   downstream subjects.
+- Start the 0.4 hard-cut cleanup of the public facade and private runtime:
+  remove superseded compatibility surface, consolidate duplicated paths, and
+  keep only one canonical authority for each timer operation.
+- Make the crate root the only public import path. The former public
+  `schedule` and `snapshot` module paths are removed while their retained
+  provider-neutral values remain available from `ic_timers::*`.
+- Collapse identity validation into `TimerIdentity::try_new`, return identity
+  components directly as `&str`, and report field-specific failures from one
+  `TimerIdentityError` enum. The component bound is now named
+  `MAX_TIMER_IDENTITY_COMPONENT_BYTES`.
+- Keep observation construction registry-owned: observation fragments no
+  longer implement `Default`, and policy/state helper projections that merely
+  duplicated the canonical `TimerSnapshot` surface are private.
+- Correct inactive-state documentation to distinguish retained callback
+  authority from the absence of a scheduled or running callback generation.
+- Consolidate exact-claim lifecycle verification, ordinary scheduled
+  transitions, earliest/exact deadline mutation, provider-role slot selection,
+  and lazy provider-handle detach/clear selection without adding another
+  authority or compatibility layer.
+- Mark private platform and detached provider capabilities `must_use` so new
+  internal paths cannot silently ignore the obligation to bind, restore, or
+  clear them.
+- Consolidate watchdog terminal failure transitions so they clear pending
+  commands consistently, and allocate the paired scheduler/work generations
+  atomically before changing canonical state.
+- Keep directive/policy mismatch internal to the registry instead of exposing
+  it through the public scheduling-error vocabulary.
+- Borrow exact registration claims during private unregistration and derive
+  callback claims from one complete callback token, avoiding redundant
+  identity allocation and independently supplied authority fields.
+
+### Fixed
+
+- Drain every detached watchdog provider handle before returning the first
+  restoration failure. A failed wake-up restoration can no longer skip the
+  remaining work-handle capability; focused fault injection covers the
+  two-handle path.
+- Avoid re-borrowing the registry when an exact detached provider capability
+  is already available, eliminating eager alternate-handle evaluation.
+- Restore all provider handles after any unexpected synchronous post-detach
+  registry error. If restoration itself fails, retire the exact claim instead
+  of dropping a linear capability or leaving false scheduled state.
+
+### Removed
+
+- Remove `TimerLabel`, `TimerLabelError`, `TimerIdentity::new`, and
+  `MAX_TIMER_LABEL_BYTES`; the intermediate label abstraction duplicated the
+  only supported identity constructor.
+- Remove conversion from inert `TimerDirectiveSnapshot` observations back to
+  executable `TimerDirective` commands.
+- Remove duplicate `consecutive_expected_failures` forwarding methods from
+  `TimerSnapshot` and `TimerObservabilitySnapshot`; the value remains on
+  `TimerOutcomeSnapshot`, and the cheap identity-scoped runtime query remains
+  public.
+- Remove `TimerPolicy::cadence_ns`, `TimerCounters::provider_arms`, the public
+  completion-partition checker, and public helpers on nested directive/runtime
+  state. Consumers can use the typed cadence, separate committed arm counters,
+  and coherent top-level snapshot projections directly.
+- Remove the unreachable public `ScheduleError::MissingCadence` variant.
+  Missing recurrence cadence is an illegal internal policy/directive pairing,
+  not an error a consumer schedule request can produce.
 
 ## [0.3.8] - 2026-08-15
 

@@ -2,10 +2,10 @@
 
 ## Current runtime
 
-The crate root is the public convenience facade. It re-exports the runtime
-operations and the provider-neutral values that also remain grouped under the
-public `schedule` and `snapshot` modules. Implementation modules are private;
-in particular, neither `platform` nor `registry` is a consumer API.
+The crate root is the only public facade. It re-exports runtime operations and
+provider-neutral values directly; every implementation and value-grouping
+module is private. In particular, neither `platform`, `registry`, `schedule`,
+nor `snapshot` is a consumer import path.
 
 The module hierarchy keeps six responsibilities separate:
 
@@ -13,7 +13,9 @@ The module hierarchy keeps six responsibilities separate:
    directives, and checked nanosecond/deadline conversion.
 2. `snapshot` owns inert public identity and observation values. Its private
    `identity`, `model`, and `metrics` children separate validation, closed
-   state/outcome types, and saturating measurements.
+   state/outcome types, and saturating measurements. Only the registry builds
+   the top-level coherent snapshot or initializes its observation fragments;
+   nested values expose no alternate construction or control path.
 3. `control` is the private ordinary generation/registration state machine. It
    owns checked generations and request sequences, immediate schedule,
    reconciliation and cancellation transitions, and stale completion
@@ -32,7 +34,11 @@ The module hierarchy keeps six responsibilities separate:
    two-role watchdog protocol. Its
    delegated work context is valid only for the exact running callback token.
    Claim-originated effect failures retire the declaration instead of leaving
-   registry state scheduled without a provider handle.
+   registry state scheduled without a provider handle. Lifecycle verification
+   checks the exact claim and immutable declaration metadata directly rather
+   than reconstructing authority from a snapshot. Synchronous operations that
+   detach handles restore all of them before returning an unexpected registry
+   error, retiring the exact claim if restoration cannot recover ownership.
 
 The registry and runtime transition functions remain cohesive even where they
 are long: each audited function owns one atomic transition or one provider
@@ -60,7 +66,7 @@ The runtime provides:
   consumption;
 - exact-claim observation of armed provider wake-up ownership without a
   snapshot-derived control path;
-- bounded labels and allocation-conscious hot paths; and
+- bounded identity components and allocation-conscious hot paths; and
 - portable snapshot DTOs so Canic, IcyDB, and standalone canisters can expose
   the same operator view.
 

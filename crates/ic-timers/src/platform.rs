@@ -12,6 +12,7 @@ use ic_cdk_timers::{
 
 /// Linear handle for one armed platform timer.
 #[cfg(not(test))]
+#[must_use = "bind or clear the platform timer handle"]
 #[derive(Debug, Eq, PartialEq)]
 pub struct TimerHandle(CdkTimerId);
 
@@ -75,6 +76,7 @@ mod fake {
         task: Task,
     }
 
+    #[must_use = "bind or clear the platform timer handle"]
     #[derive(Debug, Eq, PartialEq)]
     pub struct TimerHandle(u64);
 

@@ -6,7 +6,7 @@ use super::{TimerCompletion, TimerCompletionOutcome, TimerEpoch, TimerOutcomeSna
 ///
 /// Fields are private so mutation preserves saturation and the completion
 /// partition. The registry is the sole writer.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TimerCounters {
     schedule_requests: u64,
     wakeups_armed: u64,
@@ -26,6 +26,24 @@ pub struct TimerCounters {
 }
 
 impl TimerCounters {
+    const EMPTY: Self = Self {
+        schedule_requests: 0,
+        wakeups_armed: 0,
+        work_dispatched: 0,
+        scheduler_started: 0,
+        work_started: 0,
+        work_completed: 0,
+        succeeded: 0,
+        no_work: 0,
+        retryable_failure: 0,
+        invariant_failure: 0,
+        cancelled: 0,
+        stale_wakeups: 0,
+        stale_work: 0,
+        coalesced: 0,
+        unacknowledged: 0,
+    };
+
     pub(crate) const fn record_schedule_request(&mut self) {
         self.schedule_requests = self.schedule_requests.saturating_add(1);
     }
@@ -102,12 +120,6 @@ impl TimerCounters {
         self.work_dispatched
     }
 
-    /// Return actual provider arms across both callback roles.
-    #[must_use]
-    pub const fn provider_arms(self) -> u64 {
-        self.wakeups_armed.saturating_add(self.work_dispatched)
-    }
-
     /// Return accepted watchdog scheduler callbacks.
     #[must_use]
     pub const fn scheduler_started(self) -> u64 {
@@ -180,9 +192,10 @@ impl TimerCounters {
         self.unacknowledged
     }
 
-    /// Check that every completion belongs to exactly one outcome class.
+    /// Check the owner-local completion partition invariant.
     #[must_use]
-    pub const fn completion_partition_is_valid(self) -> bool {
+    #[cfg(test)]
+    pub(crate) const fn completion_partition_is_valid(self) -> bool {
         self.work_completed
             == self
                 .succeeded
@@ -193,7 +206,7 @@ impl TimerCounters {
 }
 
 /// Saturating aggregate for one instruction measurement role.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct MeasurementSummary {
     samples: u64,
     total: u64,
@@ -202,6 +215,13 @@ pub struct MeasurementSummary {
 }
 
 impl MeasurementSummary {
+    const EMPTY: Self = Self {
+        samples: 0,
+        total: 0,
+        latest: None,
+        maximum: None,
+    };
+
     pub(crate) const fn record(&mut self, value: u64) {
         self.samples = self.samples.saturating_add(1);
         self.total = self.total.saturating_add(value);
@@ -238,13 +258,18 @@ impl MeasurementSummary {
 }
 
 /// Completed instruction aggregates split by callback role.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TimerPerformance {
     scheduler_instructions: MeasurementSummary,
     work_instructions: MeasurementSummary,
 }
 
 impl TimerPerformance {
+    const EMPTY: Self = Self {
+        scheduler_instructions: MeasurementSummary::EMPTY,
+        work_instructions: MeasurementSummary::EMPTY,
+    };
+
     pub(crate) const fn record_scheduler(&mut self, instructions: u64) {
         self.scheduler_instructions.record(instructions);
     }
@@ -279,38 +304,9 @@ impl TimerObservabilitySnapshot {
     pub(crate) const fn new(epoch: TimerEpoch) -> Self {
         Self {
             epoch,
-            outcomes: TimerOutcomeSnapshot::new(),
-            counters: TimerCounters {
-                schedule_requests: 0,
-                wakeups_armed: 0,
-                work_dispatched: 0,
-                scheduler_started: 0,
-                work_started: 0,
-                work_completed: 0,
-                succeeded: 0,
-                no_work: 0,
-                retryable_failure: 0,
-                invariant_failure: 0,
-                cancelled: 0,
-                stale_wakeups: 0,
-                stale_work: 0,
-                coalesced: 0,
-                unacknowledged: 0,
-            },
-            performance: TimerPerformance {
-                scheduler_instructions: MeasurementSummary {
-                    samples: 0,
-                    total: 0,
-                    latest: None,
-                    maximum: None,
-                },
-                work_instructions: MeasurementSummary {
-                    samples: 0,
-                    total: 0,
-                    latest: None,
-                    maximum: None,
-                },
-            },
+            outcomes: TimerOutcomeSnapshot::EMPTY,
+            counters: TimerCounters::EMPTY,
+            performance: TimerPerformance::EMPTY,
         }
     }
 
@@ -363,12 +359,6 @@ impl TimerObservabilitySnapshot {
     pub const fn performance(self) -> TimerPerformance {
         self.performance
     }
-
-    /// Return functional expected-failure state without rebuilding a snapshot.
-    #[must_use]
-    pub const fn consecutive_expected_failures(self) -> u64 {
-        self.outcomes.consecutive_expected_failures()
-    }
 }
 
 #[cfg(test)]
@@ -408,7 +398,8 @@ mod tests {
         counters.record_unacknowledged();
 
         assert_eq!(counters.schedule_requests(), u64::MAX);
-        assert_eq!(counters.provider_arms(), u64::MAX);
+        assert_eq!(counters.wakeups_armed(), u64::MAX);
+        assert_eq!(counters.work_dispatched(), u64::MAX);
         assert_eq!(counters.work_completed(), u64::MAX);
         assert_eq!(counters.cancelled(), u64::MAX);
         assert_eq!(counters.stale_wakeups(), u64::MAX);
@@ -420,7 +411,7 @@ mod tests {
 
     #[test]
     fn instruction_roles_are_separate_and_saturating() {
-        let mut performance = TimerPerformance::default();
+        let mut performance = TimerPerformance::EMPTY;
         performance.record_scheduler(20);
         performance.record_work(30);
         performance.record_work(10);

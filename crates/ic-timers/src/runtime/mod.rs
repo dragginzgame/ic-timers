@@ -101,7 +101,7 @@ impl TimerContext {
     }
 
     fn claim(&self) -> RegistrationClaim {
-        RegistrationClaim::delegated(self.token.identity().clone(), self.token.claim_generation())
+        RegistrationClaim::from_callback(&self.token)
     }
 
     /// Return the logical timer identity executing this work.
@@ -188,7 +188,7 @@ impl OnceRegistration {
 
     /// Consume the claim and unregister its callback authority.
     pub fn unregister(self) -> Result<(), TimerError> {
-        unregister_claim(self.claim)
+        unregister_claim(&self.claim)
     }
 }
 
@@ -245,7 +245,7 @@ impl WatchdogRegistration {
 
     /// Consume the claim and unregister its callback authority.
     pub fn unregister(self) -> Result<(), TimerError> {
-        unregister_claim(self.claim)
+        unregister_claim(&self.claim)
     }
 }
 
@@ -287,7 +287,7 @@ impl AfterCompletionRegistration {
 
     /// Consume the claim and unregister its callback authority.
     pub fn unregister(self) -> Result<(), TimerError> {
-        unregister_claim(self.claim)
+        unregister_claim(&self.claim)
     }
 }
 
@@ -378,7 +378,9 @@ where
         )?);
     }
     verify_declaration(
-        registration.as_ref().map(OnceRegistration::identity),
+        registration
+            .as_ref()
+            .map(|registration| &registration.claim),
         identity,
         TimerPolicy::Once,
     )?;
@@ -418,7 +420,7 @@ where
     verify_declaration(
         registration
             .as_ref()
-            .map(AfterCompletionRegistration::identity),
+            .map(|registration| &registration.claim),
         identity,
         TimerPolicy::AfterCompletion { cadence },
     )?;
@@ -456,7 +458,9 @@ where
         )?);
     }
     verify_declaration(
-        registration.as_ref().map(WatchdogRegistration::identity),
+        registration
+            .as_ref()
+            .map(|registration| &registration.claim),
         identity,
         TimerPolicy::Watchdog { cadence },
     )?;
@@ -470,18 +474,21 @@ where
 }
 
 fn verify_declaration(
-    claimed_identity: Option<&TimerIdentity>,
+    claim: Option<&RegistrationClaim>,
     identity: &TimerIdentity,
     policy: TimerPolicy,
 ) -> Result<(), TimerError> {
-    if claimed_identity != Some(identity) {
+    let claim = claim.ok_or(TimerError::ReconciliationConflict)?;
+    if claim.identity() != identity {
         return Err(TimerError::ReconciliationConflict);
     }
-    let snapshot = timer_snapshot(identity)?.ok_or(TimerError::RegistrationExpired)?;
-    if snapshot.policy() != policy || snapshot.lifetime() != DeclarationLifetime::Retained {
-        return Err(TimerError::ReconciliationConflict);
-    }
-    Ok(())
+    with_registry(|registry| {
+        registry
+            .declaration_matches(claim, policy, DeclarationLifetime::Retained)
+            .map_err(TimerError::from)?
+            .then_some(())
+            .ok_or(TimerError::ReconciliationConflict)
+    })
 }
 
 /// Return one coherent inert snapshot by identity.
@@ -513,18 +520,26 @@ where
     })))
 }
 
+fn apply_claim_transition(
+    claim: &RegistrationClaim,
+    context: Option<&CallbackToken>,
+    operation: impl FnOnce(&mut TimerRegistry) -> Result<RegistryTransition, RegistryError>,
+) -> Result<(), TimerError> {
+    let transition = with_registry_mut(|registry| {
+        validate_context(registry, context)?;
+        operation(registry).map_err(TimerError::from)
+    })?;
+    finish_claim_transition(claim, transition, ProviderHandles::default())
+}
+
 fn ensure_once_claim(
     claim: &RegistrationClaim,
     context: Option<&CallbackToken>,
     schedule: TimerSchedule,
 ) -> Result<(), TimerError> {
-    let transition = with_registry_mut(|registry| {
-        validate_context(registry, context)?;
-        registry
-            .ensure_once(claim, platform::time_ns(), schedule)
-            .map_err(TimerError::from)
-    })?;
-    finish_claim_transition(claim, transition, ProviderHandles::default())
+    apply_claim_transition(claim, context, |registry| {
+        registry.ensure_once(claim, platform::time_ns(), schedule)
+    })
 }
 
 fn reconcile_ordinary_claim(
@@ -543,31 +558,23 @@ fn reconcile_ordinary_claim(
                 .map_err(TimerError::from)?;
             let transition = registry
                 .reconcile_ordinary(claim, platform::time_ns(), None)
-                .map_err(TimerError::from)?;
+                .map_err(TimerError::from);
             Ok((handles, transition))
         })?;
-        return finish_claim_transition(claim, transition, handles);
+        return finish_detached_claim_transition(claim, handles, transition);
     }
-    let transition = with_registry_mut(|registry| {
-        validate_context(registry, context)?;
-        registry
-            .reconcile_ordinary(claim, platform::time_ns(), schedule)
-            .map_err(TimerError::from)
-    })?;
-    finish_claim_transition(claim, transition, ProviderHandles::default())
+    apply_claim_transition(claim, context, |registry| {
+        registry.reconcile_ordinary(claim, platform::time_ns(), schedule)
+    })
 }
 
 fn ensure_recurring_claim(
     claim: &RegistrationClaim,
     context: Option<&CallbackToken>,
 ) -> Result<(), TimerError> {
-    let transition = with_registry_mut(|registry| {
-        validate_context(registry, context)?;
-        registry
-            .ensure_recurring(claim, platform::time_ns())
-            .map_err(TimerError::from)
-    })?;
-    finish_claim_transition(claim, transition, ProviderHandles::default())
+    apply_claim_transition(claim, context, |registry| {
+        registry.ensure_recurring(claim, platform::time_ns())
+    })
 }
 
 fn cancel_claim(
@@ -579,10 +586,10 @@ fn cancel_claim(
         let handles = registry
             .take_provider_handles_for_claim(claim)
             .map_err(TimerError::from)?;
-        let transition = registry.cancel(claim).map_err(TimerError::from)?;
+        let transition = registry.cancel(claim).map_err(TimerError::from);
         Ok((handles, transition))
     })?;
-    finish_claim_transition(claim, transition, handles)
+    finish_detached_claim_transition(claim, handles, transition)
 }
 
 fn validate_context(
@@ -596,17 +603,29 @@ fn validate_context(
     })
 }
 
-fn unregister_claim(claim: RegistrationClaim) -> Result<(), TimerError> {
-    let cleanup_claim =
-        RegistrationClaim::delegated(claim.identity().clone(), claim.claim_generation());
+fn unregister_claim(claim: &RegistrationClaim) -> Result<(), TimerError> {
     let (handles, transition) = with_registry_mut(|registry| {
         let handles = registry
-            .take_provider_handles_for_claim(&claim)
+            .take_provider_handles_for_claim(claim)
             .map_err(TimerError::from)?;
-        let transition = registry.unregister(claim).map_err(TimerError::from)?;
+        let transition = registry.unregister(claim).map_err(TimerError::from);
         Ok((handles, transition))
     })?;
-    finish_claim_transition(&cleanup_claim, transition, handles)
+    finish_detached_claim_transition(claim, handles, transition)
+}
+
+fn finish_detached_claim_transition(
+    claim: &RegistrationClaim,
+    handles: ProviderHandles,
+    transition: Result<RegistryTransition, TimerError>,
+) -> Result<(), TimerError> {
+    match transition {
+        Ok(transition) => finish_claim_transition(claim, transition, handles),
+        Err(error) => match restore_provider_handles(handles) {
+            Ok(()) => Err(error),
+            Err(restoration_error) => retire_failed_claim(claim, restoration_error),
+        },
+    }
 }
 
 fn finish_claim_transition(
@@ -616,10 +635,14 @@ fn finish_claim_transition(
 ) -> Result<(), TimerError> {
     match finish_transition(transition, handles) {
         result @ (Ok(()) | Err(TimerError::ControlFailure(_))) => result,
-        Err(error) => match fail_claim_provider_binding(claim) {
-            Ok(()) | Err(TimerError::RegistrationExpired) => Err(error),
-            Err(cleanup_error) => Err(cleanup_error),
-        },
+        Err(error) => retire_failed_claim(claim, error),
+    }
+}
+
+fn retire_failed_claim(claim: &RegistrationClaim, error: TimerError) -> Result<(), TimerError> {
+    match fail_claim_provider_binding(claim) {
+        Ok(()) | Err(TimerError::RegistrationExpired) => Err(error),
+        Err(cleanup_error) => Err(cleanup_error),
     }
 }
 
@@ -642,23 +665,15 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
             replace,
             ..
         } => {
-            let detached_wakeup = handles.take_wakeup();
             if *replace {
-                let replaced = match detached_wakeup {
-                    Some(handle) => Some(handle),
-                    None => with_registry_mut(|registry| {
-                        Ok(registry.take_wakeup_handle(token.identity()))
-                    })?,
-                };
+                let replaced = take_detached_or_owned_handle(handles.take_wakeup(), |registry| {
+                    registry.take_wakeup_handle(token.identity())
+                })?;
                 if let Some(replaced) = replaced {
                     clear_provider_handle(replaced);
                 }
-            } else if let Some(detached_wakeup) = detached_wakeup {
-                restore_provider_handle(detached_wakeup)?;
             }
-            if let Some(work) = handles.take_work() {
-                restore_provider_handle(work)?;
-            }
+            restore_provider_handles(handles)?;
             arm_wakeup(token, *delay_ns, effect)
         }
         RegistryEffect::ClearCallbacks {
@@ -666,31 +681,21 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
             clear_wakeup,
             clear_work,
         } => {
-            let detached_wakeup = handles.take_wakeup();
             if *clear_wakeup {
-                let wakeup = match detached_wakeup {
-                    Some(handle) => Some(handle),
-                    None => {
-                        with_registry_mut(|registry| Ok(registry.take_wakeup_handle(identity)))?
-                    }
-                };
+                let wakeup = take_detached_or_owned_handle(handles.take_wakeup(), |registry| {
+                    registry.take_wakeup_handle(identity)
+                })?;
                 if let Some(wakeup) = wakeup {
                     clear_provider_handle(wakeup);
                 }
-            } else if let Some(wakeup) = detached_wakeup {
-                restore_provider_handle(wakeup)?;
             }
-            let detached_work = handles.take_work();
             if *clear_work {
-                let work = match detached_work {
-                    Some(handle) => Some(handle),
-                    None => with_registry_mut(|registry| Ok(registry.take_work_handle(identity)))?,
-                };
+                let work = take_detached_or_owned_handle(handles.take_work(), |registry| {
+                    registry.take_work_handle(identity)
+                })?;
                 if let Some(work) = work {
                     clear_provider_handle(work);
                 }
-            } else if let Some(work) = detached_work {
-                restore_provider_handle(work)?;
             }
             restore_provider_handles(handles)
         }
@@ -703,15 +708,25 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
             if let Some(wakeup) = handles.take_wakeup() {
                 clear_provider_handle(wakeup);
             }
-            let replaced_work = handles.take_work().or(with_registry_mut(|registry| {
-                Ok(registry.take_work_handle(successor.identity()))
-            })?);
+            let replaced_work = take_detached_or_owned_handle(handles.take_work(), |registry| {
+                registry.take_work_handle(successor.identity())
+            })?;
             if let Some(replaced_work) = replaced_work {
                 clear_provider_handle(replaced_work);
             }
             dispatch_watchdog_effect(successor, *successor_delay_ns, work, effect)
         }
     }
+}
+
+fn take_detached_or_owned_handle(
+    detached: Option<ProviderHandle>,
+    take_owned: impl FnOnce(&mut TimerRegistry) -> Option<ProviderHandle>,
+) -> Result<Option<ProviderHandle>, TimerError> {
+    detached.map_or_else(
+        || with_registry_mut(|registry| Ok(take_owned(registry))),
+        |handle| Ok(Some(handle)),
+    )
 }
 
 fn arm_wakeup(
@@ -806,13 +821,15 @@ fn confirm_effect(effect: &RegistryEffect) -> Result<(), TimerError> {
 }
 
 fn restore_provider_handles(mut handles: ProviderHandles) -> Result<(), TimerError> {
-    if let Some(wakeup) = handles.take_wakeup() {
-        restore_provider_handle(wakeup)?;
-    }
-    if let Some(work) = handles.take_work() {
-        restore_provider_handle(work)?;
-    }
-    Ok(())
+    // Every detached linear capability must be restored or cleared even when
+    // restoring an earlier handle fails.
+    let wakeup_failure = handles
+        .take_wakeup()
+        .and_then(|handle| restore_provider_handle(handle).err());
+    let work_failure = handles
+        .take_work()
+        .and_then(|handle| restore_provider_handle(handle).err());
+    wakeup_failure.or(work_failure).map_or(Ok(()), Err)
 }
 
 fn restore_provider_handle(handle: ProviderHandle) -> Result<(), TimerError> {
@@ -831,19 +848,23 @@ fn clear_provider_handle(handle: ProviderHandle) {
     platform::clear_timer(handle);
 }
 
-fn clear_entry_provider_handles(identity: &TimerIdentity) -> Result<(), TimerError> {
-    let mut handles = with_registry_mut(|registry| {
-        Ok(ProviderHandles::from_parts(
-            registry.take_wakeup_handle(identity),
-            registry.take_work_handle(identity),
-        ))
-    })?;
+fn clear_provider_handles(mut handles: ProviderHandles) {
     if let Some(wakeup) = handles.take_wakeup() {
         clear_provider_handle(wakeup);
     }
     if let Some(work) = handles.take_work() {
         clear_provider_handle(work);
     }
+}
+
+fn clear_entry_provider_handles(identity: &TimerIdentity) -> Result<(), TimerError> {
+    let handles = with_registry_mut(|registry| {
+        Ok(ProviderHandles::from_parts(
+            registry.take_wakeup_handle(identity),
+            registry.take_work_handle(identity),
+        ))
+    })?;
+    clear_provider_handles(handles);
     Ok(())
 }
 
@@ -970,7 +991,11 @@ fn dispatch_watchdog_work(token: &CallbackToken) {
 }
 
 fn finish_watchdog_dispatch(token: &CallbackToken, result: WatchdogRunResult) {
-    let claim = RegistrationClaim::delegated(token.identity().clone(), token.claim_generation());
+    let claim = RegistrationClaim::from_callback(token);
+    // Unlike synchronous public control, an unexpected callback-completion
+    // failure must trap. IC message rollback restores these temporarily
+    // detached heap capabilities while the previously committed successor
+    // remains armed by the scheduler message.
     let completed = with_registry_mut(|registry| {
         let handles = registry
             .take_provider_handles_for_claim(&claim)
@@ -1019,7 +1044,7 @@ fn finish_callback_transition(
 }
 
 fn fail_provider_binding(token: &CallbackToken) -> Result<(), TimerError> {
-    let claim = RegistrationClaim::delegated(token.identity().clone(), token.claim_generation());
+    let claim = RegistrationClaim::from_callback(token);
     fail_claim_provider_binding(&claim)
 }
 
@@ -1029,13 +1054,7 @@ fn fail_claim_provider_binding(claim: &RegistrationClaim) -> Result<(), TimerErr
             .fail_registration(claim, TimerControlFailure::ProviderBindingFailed)
             .map_err(TimerError::from)
     });
-    let mut handles = failed?;
-    if let Some(wakeup) = handles.take_wakeup() {
-        clear_provider_handle(wakeup);
-    }
-    if let Some(work) = handles.take_work() {
-        clear_provider_handle(work);
-    }
+    clear_provider_handles(failed?);
     Ok(())
 }
 

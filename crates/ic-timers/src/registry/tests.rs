@@ -78,7 +78,7 @@ fn duplicate_registration_and_capacity_fail_without_partial_state() {
     let names = registry
         .snapshots()
         .into_iter()
-        .map(|snapshot| snapshot.identity().name().as_str().to_owned())
+        .map(|snapshot| snapshot.identity().name().to_owned())
         .collect::<Vec<_>>();
     assert_eq!(names.first().map(String::as_str), Some("timer-00"));
     assert_eq!(names.last().map(String::as_str), Some("timer-63"));
@@ -125,7 +125,7 @@ fn explicit_unregistration_consumes_scheduled_and_running_claims() {
     confirm(&mut registry, &scheduled_transition);
     let (queued, _, _) = arm(scheduled_transition);
     let transition = registry
-        .unregister(scheduled)
+        .unregister(&scheduled)
         .expect("scheduled unregistration should succeed");
     assert_eq!(
         transition.effect(),
@@ -153,7 +153,7 @@ fn explicit_unregistration_consumes_scheduled_and_running_claims() {
     );
     assert_eq!(
         registry
-            .unregister(running)
+            .unregister(&running)
             .expect("running unregistration should defer")
             .effect(),
         &RegistryEffect::None
@@ -192,7 +192,7 @@ fn running_watchdog_unregistration_clears_its_committed_successor() {
     );
     assert_eq!(
         registry
-            .unregister(claim)
+            .unregister(&claim)
             .expect("running unregistration should defer")
             .effect(),
         &RegistryEffect::None
@@ -917,7 +917,7 @@ fn watchdog_nested_cancel_then_ensure_retains_committed_successor() {
 }
 
 #[test]
-fn watchdog_checked_generation_and_request_exhaustion_are_terminal() {
+fn watchdog_checked_generation_exhaustion_is_terminal_and_atomic() {
     let mut registry = registry();
     let timer = identity("watchdog-overflow");
     let claim = registry
@@ -944,6 +944,159 @@ fn watchdog_checked_generation_and_request_exhaustion_are_terminal() {
         registry.snapshot(&timer).map(|value| value.state()),
         Some(TimerRuntimeStateSnapshot::Inactive {
             reason: InactiveReason::ControlFailure(TimerControlFailure::GenerationExhausted,),
+        })
+    );
+
+    let attempt_timer = identity("watchdog-attempt-overflow");
+    let attempt_claim = registry
+        .register_watchdog(
+            attempt_timer.clone(),
+            cadence(1),
+            DeclarationLifetime::Retained,
+        )
+        .expect("attempt-overflow claim should succeed");
+    let initial = registry
+        .ensure_recurring(&attempt_claim, 0)
+        .expect("initial attempt-overflow ensure should succeed");
+    let (scheduler, _, _) = arm(initial);
+    {
+        let entry = registry
+            .entries
+            .get_mut(&attempt_timer)
+            .expect("attempt-overflow entry should exist");
+        let EntryControl::Watchdog(control) = &mut entry.control else {
+            panic!("fixture should be watchdog control");
+        };
+        control.attempt_generation = u64::MAX;
+    }
+
+    let transition = registry.begin_watchdog_scheduler(&scheduler, 1);
+    assert_eq!(
+        transition.failure(),
+        Some(TimerControlFailure::GenerationExhausted)
+    );
+    assert!(matches!(
+        transition.effect(),
+        RegistryEffect::ClearCallbacks {
+            clear_wakeup: false,
+            clear_work: true,
+            ..
+        }
+    ));
+    let entry = registry
+        .entries
+        .get(&attempt_timer)
+        .expect("retained attempt-overflow entry should remain");
+    let EntryControl::Watchdog(control) = &entry.control else {
+        panic!("fixture should remain watchdog control");
+    };
+    assert_eq!(
+        control.scheduler_generation, 1,
+        "paired generation allocation must be atomic"
+    );
+    assert_eq!(control.state, WatchdogState::Inactive);
+    assert_eq!(control.pending, None);
+}
+
+#[test]
+fn watchdog_checked_deadline_overflow_is_terminal() {
+    let mut registry = registry();
+    let deadline_timer = identity("watchdog-deadline-overflow");
+    let deadline_claim = registry
+        .register_watchdog(
+            deadline_timer.clone(),
+            cadence(1),
+            DeclarationLifetime::Retained,
+        )
+        .expect("deadline-overflow claim should succeed");
+    let initial = registry
+        .ensure_recurring(&deadline_claim, 0)
+        .expect("initial deadline-overflow ensure should succeed");
+    let (scheduler, _, _) = arm(initial);
+    let transition = registry.begin_watchdog_scheduler(&scheduler, u64::MAX);
+    assert_eq!(
+        transition.failure(),
+        Some(TimerControlFailure::DeadlineOverflow)
+    );
+    assert!(matches!(
+        transition.effect(),
+        RegistryEffect::ClearCallbacks {
+            clear_wakeup: false,
+            clear_work: true,
+            ..
+        }
+    ));
+    let entry = registry
+        .entries
+        .get(&deadline_timer)
+        .expect("retained deadline-overflow entry should remain");
+    let EntryControl::Watchdog(control) = &entry.control else {
+        panic!("fixture should remain watchdog control");
+    };
+    assert_eq!(control.state, WatchdogState::Inactive);
+    assert_eq!(control.pending, None);
+}
+
+#[test]
+fn watchdog_checked_request_exhaustion_clears_pending_command() {
+    let mut registry = registry();
+    let request_timer = identity("watchdog-request-overflow");
+    let request_claim = registry
+        .register_watchdog(
+            request_timer.clone(),
+            cadence(1),
+            DeclarationLifetime::Retained,
+        )
+        .expect("request-overflow claim should succeed");
+    let initial = registry
+        .ensure_recurring(&request_claim, 0)
+        .expect("initial request-overflow ensure should succeed");
+    let (scheduler, _, _) = arm(initial);
+    let dispatch_transition = registry.begin_watchdog_scheduler(&scheduler, 1);
+    let (_, _, work) = dispatch(dispatch_transition);
+    assert_eq!(
+        registry.begin_watchdog_work(&work),
+        CallbackAcceptance::Accepted
+    );
+    {
+        let entry = registry
+            .entries
+            .get_mut(&request_timer)
+            .expect("request-overflow entry should exist");
+        let EntryControl::Watchdog(control) = &mut entry.control else {
+            panic!("fixture should be watchdog control");
+        };
+        control.request_sequence = u64::MAX;
+        control.pending = Some(WatchdogPending::Cancel);
+    }
+
+    let transition = registry
+        .ensure_recurring(&request_claim, 2)
+        .expect("request overflow is a terminal transition");
+    assert_eq!(
+        transition.failure(),
+        Some(TimerControlFailure::RequestSequenceExhausted)
+    );
+    assert!(matches!(
+        transition.effect(),
+        RegistryEffect::ClearCallbacks {
+            clear_wakeup: true,
+            clear_work: false,
+            ..
+        }
+    ));
+    let entry = registry
+        .entries
+        .get(&request_timer)
+        .expect("retained request-overflow entry should remain");
+    let EntryControl::Watchdog(control) = &entry.control else {
+        panic!("fixture should remain watchdog control");
+    };
+    assert_eq!(control.pending, None);
+    assert_eq!(
+        registry.snapshot(&request_timer).map(|value| value.state()),
+        Some(TimerRuntimeStateSnapshot::Inactive {
+            reason: InactiveReason::ControlFailure(TimerControlFailure::RequestSequenceExhausted,),
         })
     );
 }

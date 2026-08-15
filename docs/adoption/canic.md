@@ -68,11 +68,11 @@ Each `TimerKey` maps to one fixed `TimerIdentity`:
 
 Application timers use owner `canic`, subsystem `application-{id}`, and the
 validated caller label as their name. The checked monotonic allocation ID keeps
-duplicate human labels distinct without another registry. The current 96-byte
-public name allowance must hard-cut to `MAX_TIMER_LABEL_BYTES` (64 UTF-8
-bytes), and invalid labels, exhausted IDs, duplicate identities, and exhausted
-capacity must be returned as typed errors. Do not truncate, hash silently,
-evict another timer, or allocate a second unbounded identity table.
+duplicate human labels distinct without another registry. The former 96-byte
+public name allowance hard-cuts to `MAX_TIMER_IDENTITY_COMPONENT_BYTES` (64
+UTF-8 bytes), and invalid components, exhausted IDs, duplicate identities, and
+exhausted capacity must be returned as typed errors. Do not truncate, hash
+silently, evict another timer, or allocate a second unbounded identity table.
 
 The complete policy inventory is:
 

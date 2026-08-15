@@ -8,8 +8,7 @@ mod metrics;
 mod model;
 
 pub use identity::{
-    MAX_TIMER_LABEL_BYTES, TimerIdentity, TimerIdentityError, TimerIdentityField, TimerLabel,
-    TimerLabelError,
+    MAX_TIMER_IDENTITY_COMPONENT_BYTES, TimerIdentity, TimerIdentityError, TimerIdentityField,
 };
 pub use metrics::{
     MeasurementSummary, TimerCounters, TimerObservabilitySnapshot, TimerPerformance,
@@ -38,7 +37,7 @@ pub struct TimerSnapshot {
 }
 
 impl TimerSnapshot {
-    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::too_many_arguments)] // Registry-only constructor keeps one coherent boundary.
     pub(crate) const fn new(
         identity: TimerIdentity,
         policy: TimerPolicy,
@@ -184,12 +183,6 @@ impl TimerSnapshot {
     #[must_use]
     pub const fn observability(&self) -> TimerObservabilitySnapshot {
         self.observability
-    }
-
-    /// Return recovery-sensitive expected-failure state directly.
-    #[must_use]
-    pub const fn consecutive_expected_failures(&self) -> u64 {
-        self.observability.consecutive_expected_failures()
     }
 }
 

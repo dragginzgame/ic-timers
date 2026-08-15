@@ -7,8 +7,9 @@ arms and clears the platform timers. This crate is intended to add one place
 for timer identity, scheduling policy, execution arbitration, observability,
 and lifecycle recovery.
 
-The current release contains the complete bounded runtime, PocketIC
-recovery-watchdog evidence, and post-0.3 hardening. Tagged IcyDB 0.226.1
+The released 0.3 line contains the complete bounded runtime, PocketIC
+recovery-watchdog evidence, and subsequent hardening. The open 0.4 line is a
+hard-cut API and ownership cleanup, not a second runtime. Tagged IcyDB 0.226.1
 hard-cuts to exact `ic-timers` 0.3.4, and its validated post-tag integration
 upgrades to exact 0.3.8. A validated uncommitted Canic worktree also hard-cuts
 to exact 0.3.8. The development subjects are aligned; tagged downstream
@@ -97,8 +98,9 @@ consumer work.
 
 These guarantees apply only to `Watchdog`. Ordinary after-completion recurrence
 arms its successor after normal return and therefore cannot survive a trap or
-instruction exhaustion in consumer work. The remaining project work is
-downstream landing and exact-version alignment, not another timer runtime. See
+instruction exhaustion in consumer work. Beyond the open cleanup line, the
+remaining integration work is downstream landing and exact-version alignment,
+not another timer runtime. See
 [the architecture note](docs/architecture.md) for the intended boundary and
 implementation order, the frozen
 [0.3 Patch 1 contract](docs/design/0.3-patch-1-contract.md) for the decisions

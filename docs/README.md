@@ -14,7 +14,9 @@
   behavior, and required evidence.
 - [Code-hygiene audit](audits/code-hygiene.md): recurring mechanical and API
   review checklist.
-- [Latest hygiene report](audits/code-hygiene-2026-08-15.md): module hierarchy,
+- [0.4 hygiene report](audits/code-hygiene-0.4-2026-08-15.md): hard-cut facade,
+  identity, snapshot authority, and DRY findings.
+- [0.3.7 hygiene report](audits/code-hygiene-2026-08-15.md): module hierarchy,
   public-surface, duplication, and comment audit.
 - [Prior hygiene report](audits/code-hygiene-2026-08-14.md): callback-authority
   lifetime and release monotonicity findings, fixes, and evidence.

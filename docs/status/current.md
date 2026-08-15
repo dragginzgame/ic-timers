@@ -61,9 +61,30 @@ IcyDB-shaped watchdog evidence are complete.
 - Post-0.3 hardening was released as 0.3.1, the Canic adoption corrections as
   0.3.2, and the callback-authority/provider-binding fixes as 0.3.3 on
   2026-08-14.
-- Latest release line: `0.3.8`.
-- Current `Unreleased` work is repository-only release-policy and adoption
-  evidence maintenance; no new crate version or release line is staged.
+- Open release line: `0.4.0`; package remains `0.3.8`.
+- The named 0.4 line starts with the completed repository-only release-policy
+  and adoption evidence maintenance, then performs the code-bearing cleanup
+  and hard cuts requested for the next compatibility line.
+- The current 0.4 worktree makes the crate root the only public import path,
+  collapses `TimerLabel` into `TimerIdentity`, removes snapshot-to-command and
+  redundant observation projections, prevents default construction of partial
+  observations, validates lifecycle declarations by exact claim, shares
+  earliest/exact deadline mutation, and consolidates provider-handle ownership
+  paths. A focused fault test closes an early-return path that could skip the
+  second of two detached watchdog handles after the first restoration failed.
+  Provider selection is now lazy when an exact detached handle is already
+  available. Unexpected synchronous transition errors after detachment now
+  restore all exact handles or retire the claim. Watchdog terminal failures
+  share one pending-clearing path with atomic paired generation allocation,
+  and illegal missing-cadence recurrence is private rather than an unreachable
+  public schedule error. The package version is intentionally unchanged until
+  the maintainer-owned release flow.
+- Normal CI, all 78 native tests, Rust 1.88 workspace and nested-probe checks,
+  warning-denied rustdoc/Clippy, Wasm compilation, offline packaging, provider
+  and release checks, dependency-duplicate inspection, and diff validation
+  pass for the current 0.4 candidate. PocketIC was not rerun because no
+  canonical registry transition, normal provider binding, or watchdog
+  protocol changed; native fault injection owns the restoration-path change.
 - CI also checks rustdoc, shell syntax, and full-SHA GitHub Actions pins;
   Dependabot covers Cargo and Actions dependencies. A structural gate keeps
   every direct `ic-cdk-timers` reference inside private `platform` code and
@@ -262,7 +283,7 @@ passing. The current IcyDB post-tag worktree also exact-pins 0.3.8 and retains
 its focused real-canister recovery evidence. Both development graphs now align
 to one package version; tagged combined qualification remains downstream work.
 
-The current repository-only update separates implementation hard cuts from
+The repository policy update separates implementation hard cuts from
 SemVer: an incompatible public pre-1.0 change requires a minor bump. A release
 impact classifier distinguishes crate source/manifest changes from repository
 documentation, evidence, external-test, CI, and tooling changes. Version bumps
@@ -292,10 +313,9 @@ uses exact 0.3.8. See `docs/adoption/icydb.md` and `docs/adoption/canic.md`.
 
 ## Next action
 
-Review the repository-only SemVer/release-impact policy and aligned downstream
-evidence update without creating another crate release. The IcyDB-owned and
-Canic-owned landings plus tagged combined qualification remain downstream
-work. Do not mutate downstream repositories unless the maintainer explicitly
-authorizes an exact target.
+Review and freeze the 0.4 candidate, then use the maintainer-owned minor
+release flow. After publication, ask Canic and IcyDB to requalify one exact
+0.4 package. Do not mutate downstream repositories unless the maintainer
+explicitly authorizes an exact target.
 
 The maintainer owns release tags and all package-publication actions.

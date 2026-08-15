@@ -1,7 +1,6 @@
 //! Closed policy, state, outcome, and epoch values.
 
 use crate::schedule::{ScheduleError, TimerCadence, TimerDirective, duration_ns};
-use std::time::Duration;
 
 /// Configured recurrence policy for one logical timer.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -37,15 +36,6 @@ impl TimerPolicy {
         match self {
             Self::Once => None,
             Self::AfterCompletion { cadence } | Self::Watchdog { cadence } => Some(cadence),
-        }
-    }
-
-    /// Return the configured cadence in nanoseconds, when present.
-    #[must_use]
-    pub const fn cadence_ns(self) -> Option<u64> {
-        match self.cadence() {
-            Some(cadence) => Some(cadence.as_nanos()),
-            None => None,
         }
     }
 }
@@ -116,9 +106,7 @@ pub enum TimerDirectiveSnapshot {
 }
 
 impl TimerDirectiveSnapshot {
-    /// Return the scheduling mode produced by this directive, if any.
-    #[must_use]
-    pub const fn scheduling_mode(self) -> Option<TimerSchedulingMode> {
+    pub(crate) const fn scheduling_mode(self) -> Option<TimerSchedulingMode> {
         match self {
             Self::Stop => None,
             Self::ContinueImmediately => Some(TimerSchedulingMode::Continuation),
@@ -142,20 +130,6 @@ impl TryFrom<TimerDirective> for TimerDirectiveSnapshot {
             TimerDirective::ScheduleAt(deadline_ns) => Self::ScheduleAt { deadline_ns },
             TimerDirective::RecurAfterCompletion => Self::RecurAfterCompletion,
         })
-    }
-}
-
-impl From<TimerDirectiveSnapshot> for TimerDirective {
-    fn from(value: TimerDirectiveSnapshot) -> Self {
-        match value {
-            TimerDirectiveSnapshot::Stop => Self::Stop,
-            TimerDirectiveSnapshot::ContinueImmediately => Self::ContinueImmediately,
-            TimerDirectiveSnapshot::RetryAfter { delay_ns } => {
-                Self::RetryAfter(Duration::from_nanos(delay_ns))
-            }
-            TimerDirectiveSnapshot::ScheduleAt { deadline_ns } => Self::ScheduleAt(deadline_ns),
-            TimerDirectiveSnapshot::RecurAfterCompletion => Self::RecurAfterCompletion,
-        }
     }
 }
 
@@ -191,7 +165,7 @@ impl TimerControlFailure {
     }
 }
 
-/// Why a declaration currently has no authoritative callback.
+/// Why a declaration currently has no scheduled or running callback generation.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum InactiveReason {
     /// The declaration has not yet been scheduled.
@@ -281,7 +255,7 @@ pub enum WatchdogRuntimeStateSnapshot {
 /// Closed policy-specific runtime state.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum TimerRuntimeStateSnapshot {
-    /// The declaration has no authoritative callback.
+    /// The declaration has no scheduled or running callback generation.
     Inactive {
         /// Reason scheduling is inactive.
         reason: InactiveReason,
@@ -293,9 +267,7 @@ pub enum TimerRuntimeStateSnapshot {
 }
 
 impl TimerRuntimeStateSnapshot {
-    /// Return the next authoritative deadline, when one exists.
-    #[must_use]
-    pub const fn next_deadline_ns(self) -> Option<u64> {
+    pub(crate) const fn next_deadline_ns(self) -> Option<u64> {
         match self {
             Self::Inactive { .. }
             | Self::Ordinary(OrdinaryRuntimeStateSnapshot::Running { .. }) => None,
@@ -311,10 +283,13 @@ impl TimerRuntimeStateSnapshot {
     }
 }
 
-/// Portable projection of the provider-neutral registration state.
+/// Portable projection of provider callback-generation state.
+///
+/// This is independent of declaration lifetime: a retained declaration may
+/// report `Unregistered` while it keeps callback authority for a later ensure.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum TimerRegistrationStatus {
-    /// No callback is authoritative.
+    /// No callback generation is scheduled or running.
     Unregistered,
     /// A wake-up generation is authoritative and consumer work is not running.
     Scheduled,
@@ -567,7 +542,7 @@ impl WatchdogRunResult {
 }
 
 /// Latest outcome and functional failure state for one timer.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TimerOutcomeSnapshot {
     last_outcome: Option<TimerLastOutcome>,
     last_work_count: Option<u64>,
@@ -578,16 +553,14 @@ pub struct TimerOutcomeSnapshot {
 }
 
 impl TimerOutcomeSnapshot {
-    pub(crate) const fn new() -> Self {
-        Self {
-            last_outcome: None,
-            last_work_count: None,
-            last_success_at_ns: None,
-            last_failure_at_ns: None,
-            last_unacknowledged_at_ns: None,
-            consecutive_expected_failures: 0,
-        }
-    }
+    pub(crate) const EMPTY: Self = Self {
+        last_outcome: None,
+        last_work_count: None,
+        last_success_at_ns: None,
+        last_failure_at_ns: None,
+        last_unacknowledged_at_ns: None,
+        consecutive_expected_failures: 0,
+    };
 
     pub(crate) const fn record_completion(
         &mut self,
@@ -692,7 +665,7 @@ mod tests {
     fn expected_failure_streak_saturates() {
         let mut outcomes = TimerOutcomeSnapshot {
             consecutive_expected_failures: u64::MAX,
-            ..TimerOutcomeSnapshot::default()
+            ..TimerOutcomeSnapshot::EMPTY
         };
 
         outcomes.record_completion(TimerCompletion::retryable_failure(0), 10);
