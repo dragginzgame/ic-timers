@@ -24,6 +24,9 @@ All notable changes to this project are recorded here.
   continuation mode with zero requested/armed delay. Equivalent or earlier
   deadlines and repeated/dispatched/running requests coalesce without another
   provider handle or snapshot format.
+- Make release-truth finalization validate the separate latest-release and
+  named-target markers semantically, then advance release history and remove
+  the target marker. It no longer requires one exact candidate-prose sentence.
 
 ### Documentation
 

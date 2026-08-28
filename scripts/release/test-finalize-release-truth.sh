@@ -39,12 +39,13 @@ cat > "${temporary_root}/docs/status/current.md" <<'EOF'
 # Current status
 
 - Workspace package version: `0.3.3`.
-- Open release line: `0.3.4`; package remains `0.3.3`.
+- Latest release line: `0.3.3`.
+- Named target release: `0.3.4` (unbumped and unreleased).
 EOF
 cat > "${temporary_root}/docs/changelog/0.3.4.md" <<'EOF'
 # 0.3.4
 
-Status: release candidate for 0.3.4; package version remains 0.3.3.
+Status: targeted, unbumped, and unreleased.
 EOF
 cat > "${temporary_root}/docs/adoption/canic.md" <<'EOF'
 # Canic adapter contract
@@ -65,6 +66,10 @@ grep -Fqx -- '- Workspace package version: `0.3.4`.' \
     "${temporary_root}/docs/status/current.md"
 grep -Fqx -- '- Latest release line: `0.3.4`.' \
     "${temporary_root}/docs/status/current.md"
+if grep -Fq -- '- Named target release:' "${temporary_root}/docs/status/current.md"; then
+    echo "error: finalized status retained its target-release marker" >&2
+    exit 1
+fi
 grep -Fqx -- 'Status: released 0.3.4.' \
     "${temporary_root}/docs/changelog/0.3.4.md"
 
