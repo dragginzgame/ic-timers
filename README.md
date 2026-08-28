@@ -15,7 +15,7 @@ crate's `platform` module and is never re-exported.
 
 | | Current contract |
 | --- | --- |
-| 🧩 API line | `0.6` atomic-inventory hard cut |
+| 🧩 API line | `0.7` immediate-Watchdog continuation hard cut |
 | 🦀 Rust | Edition 2024; MSRV 1.88.0 |
 | ⚙️ Provider | Exact `ic-cdk-timers` 1.0.0, private and wrapped |
 | 🗂️ Capacity | 64 logical timers; at most 128 owned provider handles |
@@ -99,8 +99,13 @@ framework/application registry:
 
 ```toml
 [dependencies]
-ic-timers = "=0.6.0"
+ic-timers = "=0.7.0"
 ```
+
+Every framework and application crate linked into the same canister must use
+that same exact package version. Mixing this pin with an older exact release
+can resolve two package identities and therefore create two independent timer
+registries.
 
 Initialize the runtime from the canister's existing lifecycle owner, declare a
 timer, retain its non-clone registration capability, and schedule it:
@@ -318,6 +323,7 @@ trap isolation, and rejection of external executor ingress.
 | [Observability design](docs/design/observability.md) | Snapshot and measurement semantics |
 | [0.5 design](docs/design/0.5-policy-specific-callback-authority.md) | Policy-specific callback capabilities and migration boundary |
 | [0.6 release note](docs/changelog/0.6.0.md) | Atomic inventory epoch and hard-cut migration |
+| [0.7 release note](docs/changelog/0.7.0.md) | Immediate progress-sensitive Watchdog continuation |
 | [Runtime evidence](docs/audits/0.3-runtime-evidence-2026-08-13.md) | PocketIC protocol, isolation, size, and instruction evidence |
 | [Current status](docs/status/current.md) | Compact maintainer handoff |
 | [Release guide](docs/releasing.md) | Versioning, validation, and publication workflow |

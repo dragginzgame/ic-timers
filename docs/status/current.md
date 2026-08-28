@@ -61,7 +61,7 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
   `RemoveWhenStopped` declaration may disappear before its final measurement
   is retained because no timer remains to expose it.
 
-## Targeted 0.7.0 immediate Watchdog continuation
+## 0.7.0 immediate Watchdog continuation
 
 - `WatchdogDecision::ContinueImmediately` replaces the exact cadence successor
   committed before work with one scheduler deadline at current IC time. It
@@ -74,8 +74,7 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 - `reconcile_watchdog` hard-cuts its desired state to the policy-specific
   `WatchdogReconcileState`, whose `ScheduledImmediately` variant covers the
   first actionable wake-up. No compatibility alias or dual reconciliation path
-  remains. The maintainer selected the next pre-1.0 minor line, `0.7.0`; no
-  package version has been bumped.
+  remains. This public pre-1.0 hard cut was released in `0.7.0`.
 - Continue stays cadence-based. Invariant failure, stop, cancellation, and
   unregistration remain terminal; unregistration is sticky, later cancellation
   wins, later ensure can re-enable cancellation as before, and immediate demand
@@ -176,9 +175,8 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Next action
 
-When the maintainer requests the version bump, run the complete `0.7.0`
-release gate. After publication, adopt the immediate API atomically in IcyDB
-and rerun its backlog, trap, exhaustion, lifecycle, and performance evidence.
-Continue coordinating Canic and IcyDB onto one exact package and qualify one
-combined Wasm through Canic's lifecycle-composition seam without a second
-registry or compatibility path.
+Complete Canic's in-progress exact-`0.7.0` adoption and adopt the immediate API
+atomically in IcyDB, then rerun downstream backlog, trap, exhaustion,
+lifecycle, and performance evidence. Continue coordinating Canic and IcyDB
+onto one exact package and qualify one combined Wasm through Canic's
+lifecycle-composition seam without a second registry or compatibility path.

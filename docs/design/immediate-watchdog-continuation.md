@@ -1,6 +1,6 @@
 # Immediate progress-sensitive Watchdog continuation
 
-Status: targeted for `0.7.0`; package version remains `0.6.1`.
+Status: released in `0.7.0`.
 
 ## Consumer requirement
 
@@ -30,9 +30,8 @@ The extension is policy-specific:
 
 `reconcile_watchdog` now accepts `WatchdogReconcileState` rather than the
 generic two-state `TimerReconcileState`. This is a pre-1.0 hard cut: no alias,
-forwarder, or dual reconciliation path remains. Because the public type changes,
-the maintainer selected the next minor line, `0.7.0`. This implementation does
-not itself bump a version.
+forwarder, or dual reconciliation path remains. Because the public type
+changes, the hard cut was released on the next minor line, `0.7.0`.
 
 The API does not infer progress from work count and does not add a configurable
 retry policy. The consumer classifies its result: successful progress with
