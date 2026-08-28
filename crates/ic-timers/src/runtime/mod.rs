@@ -112,6 +112,10 @@ impl CallbackContext {
         ensure_recurring_claim(&self.claim(), Some(&self.token))
     }
 
+    fn schedule_watchdog_immediately(&self) -> Result<(), TimerError> {
+        ensure_watchdog_immediately_claim(&self.claim(), Some(&self.token))
+    }
+
     fn reconcile_ordinary(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
         reconcile_ordinary_claim(&self.claim(), Some(&self.token), schedule)
     }
@@ -241,9 +245,20 @@ impl WatchdogContext {
     /// Request that the pre-armed cadence successor remain scheduled.
     ///
     /// This is idempotent unless it supersedes a nested cancellation request.
-    /// It never arms an additional Watchdog successor.
+    /// It never arms an additional Watchdog successor and cannot move a
+    /// pending immediate successor later.
     pub fn ensure_scheduled(&self) -> Result<(), TimerError> {
         self.inner.schedule_recurring()
+    }
+
+    /// Request that this work attempt's pre-armed successor run immediately.
+    ///
+    /// Repeated requests coalesce, and a cadence ensure cannot move the
+    /// pending immediate deadline later. Normal completion replaces the exact
+    /// cadence successor with a zero-delay scheduler callback. Consumer work
+    /// still runs only in the scheduler's separately queued later message.
+    pub fn ensure_scheduled_immediately(&self) -> Result<(), TimerError> {
+        self.inner.schedule_watchdog_immediately()
     }
 
     /// Request cancellation while this exact work attempt is active.
@@ -347,13 +362,27 @@ impl RegistrationClaimOwner for WatchdogRegistration {
     }
 }
 
-/// Desired volatile scheduling state during synchronous lifecycle reconciliation.
+/// Desired volatile after-completion state during lifecycle reconciliation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TimerReconcileState {
     /// Request inactive state immediately unless consumer work is running.
     Inactive,
     /// Preserve scheduling demand now or through the running work's successor.
     Scheduled,
+}
+
+/// Desired volatile watchdog state during synchronous lifecycle reconciliation.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum WatchdogReconcileState {
+    /// Request inactive state immediately unless consumer work is running.
+    Inactive,
+    /// Preserve or arm one scheduler wake-up at the configured cadence.
+    Scheduled,
+    /// Preserve an earlier wake-up or arm/move one scheduler wake-up to now.
+    ///
+    /// The zero-delay provider callback executes as a later replicated
+    /// scheduler message and does not invoke consumer work synchronously.
+    ScheduledImmediately,
 }
 
 impl WatchdogRegistration {
@@ -374,8 +403,21 @@ impl WatchdogRegistration {
     }
 
     /// Synchronously ensure one watchdog scheduler wake-up is authoritative.
+    ///
+    /// An existing earlier immediate deadline is retained and never delayed.
     pub fn ensure_scheduled(&self) -> Result<(), TimerError> {
         ensure_recurring_claim(&self.claim, None)
+    }
+
+    /// Synchronously ensure one watchdog scheduler wake-up is due now.
+    ///
+    /// An inactive declaration arms one zero-delay scheduler. A later cadence
+    /// deadline is replaced in place; an already earlier or equivalent
+    /// deadline and repeated immediate requests coalesce. If work is already
+    /// dispatched, that zero-delay work satisfies the request. If work is
+    /// running, the request applies to that attempt's pre-armed successor.
+    pub fn ensure_scheduled_immediately(&self) -> Result<(), TimerError> {
+        ensure_watchdog_immediately_claim(&self.claim, None)
     }
 
     /// Cancel the scheduler and any work callback that has not started.
@@ -488,7 +530,8 @@ where
 ///
 /// The callback cannot be async: it runs only in the work message after a
 /// separate scheduler message has armed the next cadence successor. Its
-/// `WatchdogDecision` either retains or clears that committed successor.
+/// `WatchdogDecision` retains the cadence successor, replaces it with a
+/// deadline of now, or clears it.
 pub fn register_watchdog<F>(
     identity: TimerIdentity,
     cadence: TimerCadence,
@@ -574,14 +617,16 @@ where
 /// Reconstruct or reconcile one watchdog declaration synchronously.
 ///
 /// Durable readiness remains consumer-owned. Fresh inactive authority still
-/// installs an observable retained declaration. This helper owns no lifecycle
-/// export and persists no policy, generation, provider handle, or callback.
+/// installs an observable retained declaration. `ScheduledImmediately` arms
+/// its first scheduler at deadline now without synchronous consumer work.
+/// This helper owns no lifecycle export and persists no policy, generation,
+/// provider handle, or callback.
 /// Transient `RemoveWhenStopped` watchdogs use [`register_watchdog`] directly.
 pub fn reconcile_watchdog<F>(
     registration: &mut Option<WatchdogRegistration>,
     identity: &TimerIdentity,
     cadence: TimerCadence,
-    desired: TimerReconcileState,
+    desired: WatchdogReconcileState,
     callback: F,
 ) -> Result<(), TimerError>
 where
@@ -601,8 +646,9 @@ where
         },
     )?;
     match desired {
-        TimerReconcileState::Inactive => registration.cancel(),
-        TimerReconcileState::Scheduled => registration.ensure_scheduled(),
+        WatchdogReconcileState::Inactive => registration.cancel(),
+        WatchdogReconcileState::Scheduled => registration.ensure_scheduled(),
+        WatchdogReconcileState::ScheduledImmediately => registration.ensure_scheduled_immediately(),
     }
 }
 
@@ -731,6 +777,15 @@ fn ensure_recurring_claim(
 ) -> Result<(), TimerError> {
     apply_claim_transition(claim, context, |registry| {
         registry.ensure_recurring(claim, platform::time_ns())
+    })
+}
+
+fn ensure_watchdog_immediately_claim(
+    claim: &RegistrationClaim,
+    context: Option<&CallbackToken>,
+) -> Result<(), TimerError> {
+    apply_claim_transition(claim, context, |registry| {
+        registry.ensure_watchdog_immediately(claim, platform::time_ns())
     })
 }
 

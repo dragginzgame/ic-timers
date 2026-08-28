@@ -500,6 +500,11 @@ impl TimerRunResult {
 pub enum WatchdogDecision {
     /// Retain the successor committed by the scheduler message.
     Continue,
+    /// Move the committed successor to the current IC time.
+    ///
+    /// The replacement remains a later scheduler message; this never invokes
+    /// consumer work recursively in the current message.
+    ContinueImmediately,
     /// Terminate and clear the committed successor.
     Stop,
 }
@@ -531,7 +536,7 @@ impl WatchdogRunResult {
         self.completion
     }
 
-    /// Return whether the committed successor remains authoritative.
+    /// Return how the committed successor should be retained or cleared.
     #[must_use]
     pub const fn decision(self) -> WatchdogDecision {
         self.decision
@@ -680,7 +685,7 @@ mod tests {
 
         let watchdog = WatchdogRunResult::new(
             TimerCompletion::invariant_failure(3),
-            WatchdogDecision::Continue,
+            WatchdogDecision::ContinueImmediately,
         );
         assert_eq!(watchdog.decision(), WatchdogDecision::Stop);
     }

@@ -69,6 +69,24 @@ work, and returns. Only the later work callback invokes consumer code.
 > recovery if the fixed scheduler message itself traps or exhausts its
 > instructions.
 
+A Watchdog can drain successful bounded work without waiting a full cadence:
+
+```rust,ignore
+let decision = match outcome {
+    SuccessfulProgress { more_work: true } => WatchdogDecision::ContinueImmediately,
+    RetryableFailure => WatchdogDecision::Continue,
+    Quiescent | TerminalFailure => WatchdogDecision::Stop,
+};
+```
+
+Use `WatchdogReconcileState::ScheduledImmediately` when lifecycle
+reconstruction discovers inactive actionable debt, or call
+`WatchdogRegistration::ensure_scheduled_immediately()` when a retained claim
+discovers new debt later. “Immediately” arms a zero-delay scheduler for a later
+replicated message; it never calls consumer work synchronously. The scheduler
+still pre-arms the cadence successor before every work attempt, and normal
+`ContinueImmediately` replaces that exact successor rather than adding one.
+
 Ordinary recurrence is cheaper and is the correct default when work must
 finish normally before another invocation is allowed. Use `Watchdog` only
 when committing the next wake-up before fallible synchronous work is the
@@ -220,8 +238,9 @@ that observed no page growth.
 
 `has_armed_wakeup()` is a claim-scoped observation of canonical provider-handle
 ownership. It is not a delivery guarantee or durable demand. When durable
-demand requires a timer, call `ensure_scheduled()` unconditionally instead of
-using the observation as a check-then-arm guard.
+demand requires a timer, call `ensure_scheduled()` or
+`ensure_scheduled_immediately()` unconditionally instead of using the
+observation as a check-then-arm guard.
 
 ## 🔄 Lifecycle and shared-registry rules
 

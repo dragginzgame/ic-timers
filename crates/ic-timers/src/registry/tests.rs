@@ -167,6 +167,11 @@ fn measurement_routing_rejects_a_policy_role_mismatch() {
     let pages = crate::platform::memory_pages();
 
     assert_eq!(
+        registry.ensure_watchdog_immediately(&claim, 10),
+        Err(RegistryError::PolicyMismatch { actual: "once" })
+    );
+
+    assert_eq!(
         registry.record_callback_measurements(&invalid, 10, pages, pages),
         Err(RegistryError::PolicyMismatch { actual: "once" })
     );
@@ -869,6 +874,323 @@ fn watchdog_dispatches_successor_first_and_retires_unacknowledged_attempt() {
 }
 
 #[test]
+fn watchdog_immediate_initial_and_replacement_requests_coalesce_without_duplicates() {
+    let mut registry = registry();
+    let immediate_timer = identity("watchdog-immediate-initial");
+    let immediate_claim = registry
+        .register_watchdog(
+            immediate_timer.clone(),
+            cadence(5),
+            DeclarationLifetime::Retained,
+        )
+        .expect("claim should succeed");
+    let initial = registry
+        .ensure_watchdog_immediately(&immediate_claim, 10)
+        .expect("immediate initial ensure should succeed");
+    assert!(matches!(
+        initial.effect(),
+        RegistryEffect::ArmWakeup {
+            deadline_ns: 10,
+            delay_ns: 0,
+            arm: WakeupArm::Initial,
+            ..
+        }
+    ));
+    confirm(&mut registry, &initial);
+    let duplicate = registry
+        .ensure_watchdog_immediately(&immediate_claim, 10)
+        .expect("equivalent immediate ensure should coalesce");
+    assert_eq!(duplicate.effect(), &RegistryEffect::None);
+    let snapshot = registry
+        .snapshot(&immediate_timer)
+        .expect("snapshot should exist");
+    assert_eq!(snapshot.next_deadline_ns(), Some(10));
+    assert_eq!(
+        snapshot.scheduling_mode(),
+        TimerSchedulingMode::Continuation
+    );
+    assert_eq!(snapshot.latest_requested_delay_ns(), Some(0));
+    assert_eq!(snapshot.latest_armed_delay_ns(), Some(0));
+    assert_eq!(snapshot.observability().counters().schedule_requests(), 2);
+    assert_eq!(snapshot.observability().counters().wakeups_armed(), 1);
+    assert_eq!(snapshot.observability().counters().coalesced(), 1);
+
+    let replacement_timer = identity("watchdog-immediate-replacement");
+    let replacement_claim = registry
+        .register_watchdog(
+            replacement_timer.clone(),
+            cadence(5),
+            DeclarationLifetime::Retained,
+        )
+        .expect("replacement claim should succeed");
+    let cadence_arm = registry
+        .ensure_recurring(&replacement_claim, 10)
+        .expect("cadence ensure should succeed");
+    confirm(&mut registry, &cadence_arm);
+    let (stale_scheduler, _, _) = arm(cadence_arm);
+    let replacement = registry
+        .ensure_watchdog_immediately(&replacement_claim, 12)
+        .expect("later cadence deadline should move to now");
+    assert!(matches!(
+        replacement.effect(),
+        RegistryEffect::ArmWakeup {
+            deadline_ns: 12,
+            delay_ns: 0,
+            arm: WakeupArm::Replacement,
+            ..
+        }
+    ));
+    confirm(&mut registry, &replacement);
+    let (immediate_scheduler, _, _) = arm(replacement);
+    assert_eq!(
+        registry
+            .begin_watchdog_scheduler(&stale_scheduler, 15)
+            .effect(),
+        &RegistryEffect::None
+    );
+    let duplicate = registry
+        .ensure_watchdog_immediately(&replacement_claim, 12)
+        .expect("repeated replacement should coalesce");
+    assert_eq!(duplicate.effect(), &RegistryEffect::None);
+    let overdue_duplicate = registry
+        .ensure_watchdog_immediately(&replacement_claim, 13)
+        .expect("an already earlier deadline should satisfy immediate demand");
+    assert_eq!(overdue_duplicate.effect(), &RegistryEffect::None);
+    let snapshot = registry
+        .snapshot(&replacement_timer)
+        .expect("replacement snapshot should exist");
+    assert_eq!(snapshot.next_deadline_ns(), Some(12));
+    assert_eq!(
+        snapshot.generation(),
+        Some(immediate_scheduler.callback_generation())
+    );
+    assert_eq!(snapshot.latest_requested_delay_ns(), Some(0));
+    assert_eq!(snapshot.latest_armed_delay_ns(), Some(0));
+    let counters = snapshot.observability().counters();
+    assert_eq!(counters.schedule_requests(), 4);
+    assert_eq!(counters.wakeups_armed(), 2);
+    assert_eq!(counters.coalesced(), 2);
+    assert_eq!(counters.stale_wakeups(), 1);
+}
+
+#[test]
+fn watchdog_running_immediate_request_replaces_exact_successor_and_beats_cadence() {
+    let mut registry = registry();
+    let timer = identity("watchdog-running-immediate");
+    let claim = registry
+        .register_watchdog(timer.clone(), cadence(5), DeclarationLifetime::Retained)
+        .expect("claim should succeed");
+    let initial = registry
+        .ensure_recurring(&claim, 10)
+        .expect("initial ensure should succeed");
+    confirm(&mut registry, &initial);
+    let (scheduler, _, _) = arm(initial);
+    let dispatched = registry.begin_watchdog_scheduler(&scheduler, 20);
+    confirm(&mut registry, &dispatched);
+    let (cadence_successor, cadence_deadline, work) = dispatch(dispatched);
+    assert_eq!(cadence_deadline, 25);
+
+    let dispatched_request = registry
+        .ensure_watchdog_immediately(&claim, 20)
+        .expect("dispatched work should satisfy immediate demand");
+    assert_eq!(dispatched_request.effect(), &RegistryEffect::None);
+    assert_eq!(
+        registry.begin_watchdog_work(&work),
+        CallbackAcceptance::Accepted
+    );
+    assert_eq!(
+        registry
+            .ensure_watchdog_immediately(&claim, 21)
+            .expect("running immediate request should pend")
+            .effect(),
+        &RegistryEffect::None
+    );
+    assert_eq!(
+        registry
+            .ensure_recurring(&claim, 21)
+            .expect("cadence ensure must not delay pending immediate work")
+            .effect(),
+        &RegistryEffect::None
+    );
+    let completed = registry
+        .complete_watchdog_work(
+            &work,
+            21,
+            WatchdogRunResult::new(TimerCompletion::success(1), WatchdogDecision::Stop),
+        )
+        .expect("pending immediate request should override callback stop");
+    assert!(matches!(
+        completed.effect(),
+        RegistryEffect::ArmWakeup {
+            deadline_ns: 21,
+            delay_ns: 0,
+            arm: WakeupArm::Replacement,
+            ..
+        }
+    ));
+    confirm(&mut registry, &completed);
+    let (immediate_successor, _, _) = arm(completed);
+    assert_eq!(
+        registry
+            .begin_watchdog_scheduler(&cadence_successor, 25)
+            .effect(),
+        &RegistryEffect::None,
+        "the replaced cadence generation must remain stale"
+    );
+    let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
+    assert_eq!(snapshot.next_deadline_ns(), Some(21));
+    assert_eq!(
+        snapshot.generation(),
+        Some(immediate_successor.callback_generation())
+    );
+    assert_eq!(
+        snapshot.scheduling_mode(),
+        TimerSchedulingMode::Continuation
+    );
+    assert_eq!(snapshot.latest_requested_delay_ns(), Some(0));
+    assert_eq!(snapshot.latest_armed_delay_ns(), Some(0));
+    let counters = snapshot.observability().counters();
+    assert_eq!(counters.schedule_requests(), 4);
+    assert_eq!(counters.wakeups_armed(), 3);
+    assert_eq!(counters.work_dispatched(), 1);
+    assert_eq!(counters.coalesced(), 3);
+    assert_eq!(counters.stale_wakeups(), 1);
+}
+
+#[test]
+#[allow(clippy::too_many_lines)] // One precedence matrix over three independent declarations.
+fn watchdog_completion_arbitrates_immediate_cancellation_and_unregistration() {
+    let mut registry = registry();
+    let continue_timer = identity("watchdog-decision-immediate");
+    let continue_claim = registry
+        .register_watchdog(continue_timer, cadence(5), DeclarationLifetime::Retained)
+        .expect("continue claim should succeed");
+    let (scheduler, _, _) = arm(registry
+        .ensure_recurring(&continue_claim, 10)
+        .expect("continue ensure should succeed"));
+    let (cadence_successor, _, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 20));
+    assert_eq!(
+        registry.begin_watchdog_work(&work),
+        CallbackAcceptance::Accepted
+    );
+    let immediate = registry
+        .complete_watchdog_work(
+            &work,
+            21,
+            WatchdogRunResult::new(
+                TimerCompletion::success(1),
+                WatchdogDecision::ContinueImmediately,
+            ),
+        )
+        .expect("immediate decision should succeed");
+    assert!(matches!(
+        immediate.effect(),
+        RegistryEffect::ArmWakeup {
+            deadline_ns: 21,
+            delay_ns: 0,
+            arm: WakeupArm::Replacement,
+            ..
+        }
+    ));
+    assert_ne!(
+        arm(immediate).0.callback_generation(),
+        cadence_successor.callback_generation()
+    );
+
+    let cancel_timer = identity("watchdog-immediate-then-cancel");
+    let cancel_claim = registry
+        .register_watchdog(
+            cancel_timer.clone(),
+            cadence(5),
+            DeclarationLifetime::Retained,
+        )
+        .expect("cancel claim should succeed");
+    let (scheduler, _, _) = arm(registry
+        .ensure_recurring(&cancel_claim, 10)
+        .expect("cancel ensure should succeed"));
+    let (_successor, _, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 20));
+    assert_eq!(
+        registry.begin_watchdog_work(&work),
+        CallbackAcceptance::Accepted
+    );
+    registry
+        .ensure_watchdog_immediately(&cancel_claim, 21)
+        .expect("immediate request should pend");
+    registry
+        .cancel(&cancel_claim)
+        .expect("later cancellation should pend");
+    let cancelled = registry
+        .complete_watchdog_work(
+            &work,
+            21,
+            WatchdogRunResult::new(
+                TimerCompletion::success(1),
+                WatchdogDecision::ContinueImmediately,
+            ),
+        )
+        .expect("cancellation should override continuation");
+    assert!(matches!(
+        cancelled.effect(),
+        RegistryEffect::ClearCallbacks {
+            handles: CallbacksToClear::Wakeup,
+            ..
+        }
+    ));
+    assert_eq!(
+        registry
+            .snapshot(&cancel_timer)
+            .map(|snapshot| snapshot.state()),
+        Some(TimerRuntimeStateSnapshot::Inactive {
+            reason: InactiveReason::Cancelled,
+        })
+    );
+
+    let unregister_timer = identity("watchdog-immediate-then-unregister");
+    let unregister_claim = registry
+        .register_watchdog(
+            unregister_timer.clone(),
+            cadence(5),
+            DeclarationLifetime::Retained,
+        )
+        .expect("unregister claim should succeed");
+    let (scheduler, _, _) = arm(registry
+        .ensure_recurring(&unregister_claim, 10)
+        .expect("unregister ensure should succeed"));
+    let (_successor, _, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 20));
+    assert_eq!(
+        registry.begin_watchdog_work(&work),
+        CallbackAcceptance::Accepted
+    );
+    registry
+        .ensure_watchdog_immediately(&unregister_claim, 21)
+        .expect("immediate request should pend");
+    registry
+        .unregister(&unregister_claim)
+        .expect("unregistration should pend");
+    registry
+        .ensure_watchdog_immediately(&unregister_claim, 21)
+        .expect("unregistration should remain sticky");
+    let unregistered = registry
+        .complete_watchdog_work(
+            &work,
+            21,
+            WatchdogRunResult::new(
+                TimerCompletion::success(1),
+                WatchdogDecision::ContinueImmediately,
+            ),
+        )
+        .expect("unregistration should override every continuation");
+    assert!(matches!(
+        unregistered.effect(),
+        RegistryEffect::ClearCallbacks {
+            handles: CallbacksToClear::Wakeup,
+            ..
+        }
+    ));
+    assert!(registry.snapshot(&unregister_timer).is_none());
+}
+
+#[test]
 fn watchdog_terminal_cancellation_makes_queued_callbacks_stale() {
     let mut registry = registry();
     let timer = identity("watchdog-cancel");
@@ -947,6 +1269,13 @@ fn watchdog_result_matrix_tracks_retry_stop_and_invariant_failure() {
         )
         .expect("retryable continuation should succeed");
     assert_eq!(registry.consecutive_expected_failures(&timer), Some(1));
+    assert_eq!(
+        registry
+            .snapshot(&timer)
+            .and_then(|snapshot| snapshot.next_deadline_ns()),
+        Some(15),
+        "ordinary Continue must retain the cadence successor unchanged"
+    );
 
     let dispatched = registry.begin_watchdog_scheduler(&successor, 20);
     confirm(&mut registry, &dispatched);

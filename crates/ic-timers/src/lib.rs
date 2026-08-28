@@ -27,9 +27,10 @@ mod snapshot;
 pub use registry::{MAX_TIMER_REGISTRATIONS, RegisterError};
 pub use runtime::{
     AfterCompletionContext, AfterCompletionRegistration, OnceContext, OnceRegistration, TimerError,
-    TimerReconcileState, WatchdogContext, WatchdogRegistration, consecutive_expected_failures,
-    initialize_runtime, reconcile_after_completion, reconcile_once, reconcile_watchdog,
-    register_after_completion, register_once, register_watchdog, timer_inventory, timer_snapshot,
+    TimerReconcileState, WatchdogContext, WatchdogReconcileState, WatchdogRegistration,
+    consecutive_expected_failures, initialize_runtime, reconcile_after_completion, reconcile_once,
+    reconcile_watchdog, register_after_completion, register_once, register_watchdog,
+    timer_inventory, timer_snapshot,
 };
 pub use schedule::{ScheduleError, TimerCadence, TimerDirective, TimerSchedule};
 pub use snapshot::{

@@ -133,3 +133,24 @@ application owners.
 The [0.6 calibration record](../audits/0.6-message-instruction-calibration-2026-08-15.md)
 keeps unavailable full-message instruction totals explicit and does not
 convert cycle-balance deltas into instruction estimates.
+
+## Unreleased progress-sensitive integration guidance
+
+Current `ic-timers` HEAD adds the Watchdog-specific immediate continuation
+described in the
+[design record](../design/immediate-watchdog-continuation.md). This repository
+does not claim that IcyDB has adopted that unreleased API. When it does, the
+intended mapping is:
+
+| IcyDB condition | API |
+| --- | --- |
+| Inactive actionable debt during lifecycle or commit reconciliation | `WatchdogReconcileState::ScheduledImmediately` |
+| New actionable debt on an existing inactive or cadence-scheduled claim | `WatchdogRegistration::ensure_scheduled_immediately()` |
+| Successful bounded journal progress with more complete batches | `WatchdogDecision::ContinueImmediately` |
+| Returned retryable failure | `WatchdogDecision::Continue` |
+| Quiescence | `WatchdogDecision::Stop` |
+| Durable terminal failure | invariant-failure completion with `Stop` |
+
+This future adoption must remain an atomic single-package hard cut and rerun
+IcyDB's own backlog, trap, exhaustion, lifecycle, and performance evidence. It
+must not add a second watchdog or ordinary-timer drain loop.

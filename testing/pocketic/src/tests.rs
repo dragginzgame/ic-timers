@@ -22,11 +22,16 @@ struct ProbeSnapshot {
     registered: bool,
     completed_work: u64,
     next_deadline_ns: Option<u64>,
+    immediate_scheduling: bool,
+    latest_requested_delay_ns: Option<u64>,
+    latest_armed_delay_ns: Option<u64>,
+    schedule_requests: u64,
     scheduler_started: u64,
     wakeups_armed: u64,
     work_dispatched: u64,
     work_started: u64,
     work_completed: u64,
+    coalesced: u64,
     unacknowledged: u64,
     last_unacknowledged: bool,
     scheduler_instruction_samples: u64,
@@ -38,6 +43,97 @@ struct ProbeSnapshot {
     post_upgrade_reconstructed: bool,
     secondary_registered: bool,
     secondary_completed_work: u64,
+}
+
+#[test]
+fn immediate_initial_watchdog_runs_without_advancing_cadence_time() {
+    let pic = PocketIc::new();
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, INIT_CYCLES);
+    pic.install_canister(
+        canister_id,
+        probe_wasm(),
+        Encode!().expect("encode init"),
+        None,
+    );
+
+    assert!(update_bool(&pic, canister_id, "start_immediately"));
+    let initial = snapshot(&pic, canister_id);
+    assert_eq!(initial.completed_work, 0);
+    assert!(initial.immediate_scheduling);
+    assert_eq!(initial.latest_requested_delay_ns, Some(0));
+    assert_eq!(initial.latest_armed_delay_ns, Some(0));
+    assert_eq!(initial.schedule_requests, 1);
+    assert_eq!(initial.wakeups_armed, 1);
+
+    drive_rounds(&pic, 16);
+    let completed = snapshot(&pic, canister_id);
+    assert_eq!(completed.completed_work, 1);
+    assert_eq!(completed.scheduler_started, 1);
+    assert_eq!(completed.work_dispatched, 1);
+    assert_eq!(completed.work_completed, 1);
+    assert!(completed.next_deadline_ns.is_some());
+}
+
+#[test]
+fn successful_immediate_continuation_runs_again_without_waiting_for_cadence() {
+    let pic = PocketIc::new();
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, INIT_CYCLES);
+    pic.install_canister(
+        canister_id,
+        probe_wasm(),
+        Encode!().expect("encode init"),
+        None,
+    );
+    assert!(update_bool(&pic, canister_id, "start"));
+    update_unit(&pic, canister_id, "continue_immediately_on_next_work");
+
+    let cycles_before_first = pic.cycle_balance(canister_id);
+    pic.advance_time(Duration::from_secs(1));
+    let mut immediate = None;
+    for _ in 0..16 {
+        pic.tick();
+        let current = snapshot(&pic, canister_id);
+        if current.completed_work == 1 {
+            immediate = Some(current);
+            break;
+        }
+    }
+    let immediate = immediate.expect("first work completion should be observable");
+    assert!(immediate.immediate_scheduling);
+    assert_eq!(immediate.latest_requested_delay_ns, Some(0));
+    assert_eq!(immediate.latest_armed_delay_ns, Some(0));
+    assert_eq!(immediate.schedule_requests, 1);
+    assert_eq!(immediate.wakeups_armed, 3);
+    assert_eq!(immediate.work_dispatched, 1);
+    let first_dispatch_cycles = cycles_before_first.saturating_sub(pic.cycle_balance(canister_id));
+
+    let cycles_before_second = pic.cycle_balance(canister_id);
+    drive_rounds(&pic, 16);
+    let continued = snapshot(&pic, canister_id);
+    assert_eq!(continued.completed_work, 2);
+    assert_eq!(continued.scheduler_started, 2);
+    assert_eq!(continued.work_dispatched, 2);
+    assert_eq!(continued.work_completed, 2);
+    assert_eq!(continued.wakeups_armed, 4);
+    assert_eq!(continued.schedule_requests, 1);
+    assert_eq!(continued.coalesced, 0);
+    let second_dispatch_cycles =
+        cycles_before_second.saturating_sub(pic.cycle_balance(canister_id));
+    println!(
+        "ic_timers_immediate first_scheduler={} first_work={} first_cycles={} second_scheduler={} second_work={} second_cycles={}",
+        immediate.scheduler_instruction_total,
+        immediate.work_instruction_total,
+        first_dispatch_cycles,
+        continued
+            .scheduler_instruction_total
+            .saturating_sub(immediate.scheduler_instruction_total),
+        continued
+            .work_instruction_total
+            .saturating_sub(immediate.work_instruction_total),
+        second_dispatch_cycles,
+    );
 }
 
 #[test]

@@ -24,6 +24,9 @@ The current runtime provides:
 - a live synchronous watchdog whose scheduler arms the next cadence successor
   before it queues a separate immediate work callback and returns without
   invoking consumer work;
+- progress-sensitive Watchdog continuation that replaces that exact pre-armed
+  successor with a deadline of now after normal completion, plus initial
+  immediate scheduling through the same claim, generation, and handle owner;
 - private, non-copyable provider handles owned by canonical entries (one for
   ordinary timers, at most successor plus work for watchdogs), with terminal
   cancellation clearing the actual handles and all direct `ic-cdk-timers` use
@@ -70,6 +73,12 @@ The current runtime provides:
   no-op clear is not representable. Callback dispatch cannot consume a provider
   handle until the identity, registration claim generation, callback
   generation, and role all match the canonical owner;
+- zero-delay Watchdog requests that coalesce when work is already dispatched
+  or a scheduler deadline is already earlier/equivalent, and that replace one
+  later successor rather than adding another. An immediate pending request
+  applies only to the exact running attempt, cannot be downgraded by cadence
+  ensure, and remains subordinate to later cancellation or sticky
+  unregistration;
 - fail-closed public and lifecycle effect application: a retained declaration
   whose provider arm cannot establish canonical ownership becomes inactive
   with `ProviderBindingFailed` rather than remaining falsely scheduled; and
@@ -94,6 +103,10 @@ the idempotent ensure operation whenever their authority requires a wake-up.
   consumer-work message, not in the scheduler message that creates the next
   successor. The scheduler is fixed and bounded, but its normal return remains
   a protocol assumption.
+- `ContinueImmediately` is a consumer scheduling classification, not inferred
+  progress or a configurable retry policy. Consumers use it after successful
+  bounded progress, retain `Continue` for cadence-delayed retryable failures,
+  and keep work idempotent.
 - A committed successor provides another attempt, not exactly-once application
   effects. Consumer work remains idempotent and owns its durable authority.
 - Initialization and reconciliation are explicit lifecycle calls. The single

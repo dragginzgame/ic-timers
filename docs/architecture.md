@@ -150,6 +150,13 @@ by top-up, stop/resume, overdue coalescing, and cancellation in the
 scheduler/work gap. These proofs apply to synchronous `Watchdog`, not
 after-completion recurrence.
 
+After normal progress, a Watchdog may replace that exact cadence successor with
+a deadline of now. The replacement remains a scheduler callback in a later
+replicated message; that scheduler again pre-arms cadence safety before it
+queues work. Initial immediate reconciliation and running-work requests use the
+same declaration, claim, generation, pending-command, and provider-handle path.
+See the [immediate continuation design](design/immediate-watchdog-continuation.md).
+
 ## Consumer integration
 
 - Canic uses exact `ic-timers` 0.5.0 for framework and application timers and

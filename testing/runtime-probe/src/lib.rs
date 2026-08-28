@@ -1,8 +1,8 @@
 use candid::CandidType;
 use ic_timers::{
     DeclarationLifetime, MAX_TIMER_REGISTRATIONS, MemoryPageSummary, TimerCadence, TimerCompletion,
-    TimerIdentity, TimerLastOutcome, WatchdogDecision, WatchdogRegistration, WatchdogRunResult,
-    initialize_runtime, register_watchdog, timer_inventory, timer_snapshot,
+    TimerIdentity, TimerLastOutcome, TimerSchedulingMode, WatchdogDecision, WatchdogRegistration,
+    WatchdogRunResult, initialize_runtime, register_watchdog, timer_inventory, timer_snapshot,
 };
 use serde::Deserialize;
 use std::cell::{Cell, RefCell};
@@ -18,6 +18,7 @@ thread_local! {
     static TRAP_WINDOW: Cell<Option<(u64, u64)>> = const { Cell::new(None) };
     static EXHAUST_WINDOW: Cell<Option<(u64, u64)>> = const { Cell::new(None) };
     static STOP_ON_NEXT_WORK: Cell<bool> = const { Cell::new(false) };
+    static CONTINUE_IMMEDIATELY_ON_NEXT_WORK: Cell<bool> = const { Cell::new(false) };
     static DESIRED_SCHEDULED: Cell<bool> = const { Cell::new(false) };
     static SECONDARY_DESIRED_SCHEDULED: Cell<bool> = const { Cell::new(false) };
     static POST_UPGRADE_RECONSTRUCTED: Cell<bool> = const { Cell::new(false) };
@@ -39,11 +40,16 @@ struct ProbeSnapshot {
     registered: bool,
     completed_work: u64,
     next_deadline_ns: Option<u64>,
+    immediate_scheduling: bool,
+    latest_requested_delay_ns: Option<u64>,
+    latest_armed_delay_ns: Option<u64>,
+    schedule_requests: u64,
     scheduler_started: u64,
     wakeups_armed: u64,
     work_dispatched: u64,
     work_started: u64,
     work_completed: u64,
+    coalesced: u64,
     unacknowledged: u64,
     last_unacknowledged: bool,
     scheduler_instruction_samples: u64,
@@ -115,7 +121,17 @@ fn start() -> bool {
     install_watchdog()
 }
 
+#[ic_cdk::update]
+fn start_immediately() -> bool {
+    DESIRED_SCHEDULED.with(|desired| desired.set(true));
+    install_watchdog_with_initial_schedule(true)
+}
+
 fn install_watchdog() -> bool {
+    install_watchdog_with_initial_schedule(false)
+}
+
+fn install_watchdog_with_initial_schedule(immediate: bool) -> bool {
     REGISTRATION.with_borrow_mut(|slot| {
         if slot.is_some() {
             return false;
@@ -147,6 +163,10 @@ fn install_watchdog() -> bool {
                 let decision = if STOP_ON_NEXT_WORK.with(|stop| stop.replace(false)) {
                     DESIRED_SCHEDULED.with(|desired| desired.set(false));
                     WatchdogDecision::Stop
+                } else if CONTINUE_IMMEDIATELY_ON_NEXT_WORK
+                    .with(|requested| requested.replace(false))
+                {
+                    WatchdogDecision::ContinueImmediately
                 } else {
                     WatchdogDecision::Continue
                 };
@@ -156,12 +176,22 @@ fn install_watchdog() -> bool {
             Ok(registration) => registration,
             Err(_) => ic_cdk::trap("watchdog registration failed"),
         };
-        if registration.ensure_scheduled().is_err() {
+        let scheduled = if immediate {
+            registration.ensure_scheduled_immediately()
+        } else {
+            registration.ensure_scheduled()
+        };
+        if scheduled.is_err() {
             ic_cdk::trap("initial watchdog scheduling failed");
         }
         *slot = Some(registration);
         true
     })
+}
+
+#[ic_cdk::update]
+fn continue_immediately_on_next_work() {
+    CONTINUE_IMMEDIATELY_ON_NEXT_WORK.with(|requested| requested.set(true));
 }
 
 #[ic_cdk::update]
@@ -338,11 +368,16 @@ fn snapshot() -> ProbeSnapshot {
             registered,
             completed_work,
             next_deadline_ns: None,
+            immediate_scheduling: false,
+            latest_requested_delay_ns: None,
+            latest_armed_delay_ns: None,
+            schedule_requests: 0,
             scheduler_started: 0,
             wakeups_armed: 0,
             work_dispatched: 0,
             work_started: 0,
             work_completed: 0,
+            coalesced: 0,
             unacknowledged: 0,
             last_unacknowledged: false,
             scheduler_instruction_samples: 0,
@@ -364,11 +399,16 @@ fn snapshot() -> ProbeSnapshot {
         registered,
         completed_work,
         next_deadline_ns: snapshot.next_deadline_ns(),
+        immediate_scheduling: snapshot.scheduling_mode() == TimerSchedulingMode::Continuation,
+        latest_requested_delay_ns: snapshot.latest_requested_delay_ns(),
+        latest_armed_delay_ns: snapshot.latest_armed_delay_ns(),
+        schedule_requests: counters.schedule_requests(),
         scheduler_started: counters.scheduler_started(),
         wakeups_armed: counters.wakeups_armed(),
         work_dispatched: counters.work_dispatched(),
         work_started: counters.work_started(),
         work_completed: counters.work_completed(),
+        coalesced: counters.coalesced(),
         unacknowledged: counters.unacknowledged(),
         last_unacknowledged: snapshot.observability().outcomes().last_outcome()
             == Some(TimerLastOutcome::Unacknowledged),

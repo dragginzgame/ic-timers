@@ -21,6 +21,9 @@
 - [0.5 policy-specific callback authority](design/0.5-policy-specific-callback-authority.md):
   typed work capabilities, removed runtime policy probing, and the request-
   ordering audit.
+- [Immediate Watchdog continuation](design/immediate-watchdog-continuation.md):
+  progress-sensitive zero-delay replacement, initial reconciliation, request
+  arbitration, rollback, observation, and release boundary.
 - [0.3.7 hygiene report](audits/code-hygiene-2026-08-15.md): module hierarchy,
   public-surface, duplication, and comment audit.
 - [Prior hygiene report](audits/code-hygiene-2026-08-14.md): callback-authority
@@ -30,6 +33,9 @@
 - [0.3 runtime evidence](audits/0.3-runtime-evidence-2026-08-13.md): PocketIC
   matrix, Rust 1.88 verdict, Wasm/instruction/cycle cohorts, complexity, and
   downstream adoption sketch.
+- [Immediate Watchdog evidence](audits/immediate-watchdog-continuation-2026-08-28.md):
+  zero-delay PocketIC behavior, retained recovery matrix, provider faults,
+  instruction/cycle observation, size cohorts, and complexity delta.
 - [IcyDB adoption record](adoption/icydb.md): accepted shared-registry hard cut,
   downstream recovery evidence, and measured costs.
 - [Canic adapter contract](adoption/canic.md): required pre-1.0 hard cut,

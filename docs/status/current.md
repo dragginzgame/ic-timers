@@ -1,6 +1,6 @@
 # Current status
 
-Last updated: 2026-08-15
+Last updated: 2026-08-28
 
 ## Purpose
 
@@ -16,6 +16,7 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 - Workspace package version: `0.6.1`.
 - Latest release line: `0.6.1`.
+- Named target release: `0.7.0` (unbumped and unreleased).
 - Direct provider dependency: exact `ic-cdk-timers` 1.0.0.
 - Minimum supported Rust version: 1.88.0.
 - Development toolchain: Rust 1.97.1.
@@ -61,6 +62,30 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
   `RemoveWhenStopped` declaration may disappear before its final measurement
   is retained because no timer remains to expose it.
 
+## Targeted 0.7.0 immediate Watchdog continuation
+
+- `WatchdogDecision::ContinueImmediately` replaces the exact cadence successor
+  committed before work with one scheduler deadline at current IC time. It
+  remains a later replicated scheduler message and never recurses into work.
+- `WatchdogRegistration` and `WatchdogContext` expose
+  `ensure_scheduled_immediately()`. Inactive immediate demand arms one
+  zero-delay scheduler; a later cadence deadline is replaced; equivalent,
+  earlier, repeated, and dispatched demand coalesces; a running request applies
+  to that exact attempt's successor.
+- `reconcile_watchdog` hard-cuts its desired state to the policy-specific
+  `WatchdogReconcileState`, whose `ScheduledImmediately` variant covers the
+  first actionable wake-up. No compatibility alias or dual reconciliation path
+  remains. The maintainer selected the next pre-1.0 minor line, `0.7.0`; no
+  package version has been bumped.
+- Continue stays cadence-based. Invariant failure, stop, cancellation, and
+  unregistration remain terminal; unregistration is sticky, later cancellation
+  wins, later ensure can re-enable cancellation as before, and immediate demand
+  cannot be downgraded by cadence ensure.
+- The runtime state variants, snapshot fields, persistence count, provider
+  boundary, callback roles, registry/handle bounds, and two-message protocol
+  are unchanged. Immediate state projects through existing continuation mode,
+  zero delay, deadline, request, arm, and coalescing observations.
+
 ## 0.5 hard cut
 
 - The shared public `TimerContext` is removed. `OnceContext`,
@@ -89,9 +114,22 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Current evidence
 
-- Normal CI passes with 84 native tests, warning-denied Clippy and rustdoc,
-  Wasm compilation, offline package verification, formatting, provider
-  boundary checks, release wiring, and release-truth checks.
+- Package validation passes with 94 native tests, warning-denied Clippy and
+  rustdoc, Wasm compilation, offline package verification, formatting,
+  provider-boundary checks, Rust 1.88 workspace checking, and every supported
+  nested-probe lint configuration.
+- Pinned PocketIC 15 passes eight Watchdog subjects. New zero-delay initial and
+  successful immediate-continuation subjects execute without cadence-time
+  advancement; the existing explicit trap and actual 40-billion-instruction
+  exhaustion recovery, lifecycle, isolation, capacity, and cancellation
+  subjects remain green.
+- One same-callback PocketIC observation reports an immediate-replacement work
+  interval of 27,811 instructions versus 19,451 for cadence retention, with
+  scheduler/work cycle deltas of 30,742,889 and 30,732,414. These are accepted
+  runtime intervals and pair-level cycle deltas, not complete-message totals.
+- Current optimized size cohorts report 262,791 bytes for Watchdog versus
+  261,914 for after-completion: +877 bytes (0.335%). Registry capacity and the
+  at-most-two Watchdog handle bound do not change.
 - Rust 1.88 passes the complete workspace and every supported nested probe
   configuration.
 - The root dependency graph contains no duplicate packages.
@@ -139,8 +177,9 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Next action
 
-Coordinate Canic and IcyDB onto the 0.6 inventory hard cut atomically, then
-qualify one combined Wasm through Canic's lifecycle-composition seam without
-adding a second registry or compatibility path. Downstream 0.6 performance
-baselines must label the corrected interval boundary and retain external
-message-exhaustion evidence for hard instruction-limit claims.
+When the maintainer requests the version bump, run the complete `0.7.0`
+release gate. After publication, adopt the immediate API atomically in IcyDB
+and rerun its backlog, trap, exhaustion, lifecycle, and performance evidence.
+Continue coordinating Canic and IcyDB onto one exact package and qualify one
+combined Wasm through Canic's lifecycle-composition seam without a second
+registry or compatibility path.

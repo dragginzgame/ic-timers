@@ -1,7 +1,7 @@
 use super::*;
 use crate::{
     InactiveReason, TimerLastOutcome, TimerPolicy, TimerRegistrationStatus,
-    TimerRuntimeStateSnapshot, WatchdogDecision, WatchdogRuntimeStateSnapshot,
+    TimerRuntimeStateSnapshot, TimerSchedulingMode, WatchdogDecision, WatchdogRuntimeStateSnapshot,
     control::WakeupArm,
     platform::{
         advance_instructions, discard_next_due, grow_memory_pages, run_next_due, set_time,
@@ -93,7 +93,7 @@ fn fresh_inactive_reconciliation_reserves_complete_retained_inventory() {
         &mut watchdog,
         &watchdog_identity,
         cadence,
-        TimerReconcileState::Inactive,
+        WatchdogReconcileState::Inactive,
         |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
     )
     .expect("fresh inactive watchdog declaration should be retained");
@@ -289,6 +289,135 @@ fn watchdog_claim_observes_the_prearmed_successor_not_queued_work() {
             .has_armed_wakeup()
             .expect("retained claim should remain readable")
     );
+    assert_eq!(timer_count(), 0);
+}
+
+#[test]
+fn immediate_watchdog_reconciliation_arms_one_zero_delay_scheduler() {
+    setup();
+    let timer = identity("watchdog-immediate-reconcile");
+    let calls = Rc::new(Cell::new(0_u64));
+    let callback_calls = Rc::clone(&calls);
+    let mut registration = None;
+    reconcile_watchdog(
+        &mut registration,
+        &timer,
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+        WatchdogReconcileState::ScheduledImmediately,
+        move |_context| {
+            callback_calls.set(callback_calls.get().saturating_add(1));
+            WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
+        },
+    )
+    .expect("fresh immediate reconciliation should succeed");
+
+    assert_eq!(timer_count(), 1);
+    let scheduled = timer_snapshot(&timer)
+        .expect("snapshot lookup should succeed")
+        .expect("watchdog snapshot should exist");
+    assert_eq!(scheduled.next_deadline_ns(), Some(10));
+    assert_eq!(
+        scheduled.scheduling_mode(),
+        TimerSchedulingMode::Continuation
+    );
+    assert_eq!(scheduled.latest_requested_delay_ns(), Some(0));
+    assert_eq!(scheduled.latest_armed_delay_ns(), Some(0));
+    let counters = scheduled.observability().counters();
+    assert_eq!(counters.schedule_requests(), 1);
+    assert_eq!(counters.wakeups_armed(), 1);
+
+    assert!(run_next_due(), "zero-delay scheduler should run later");
+    assert_eq!(calls.get(), 0, "the scheduler must not invoke work inline");
+    assert_eq!(
+        timer_count(),
+        2,
+        "cadence successor and work should be armed"
+    );
+    assert!(run_next_due(), "separate work callback should run later");
+    assert_eq!(calls.get(), 1);
+    assert_eq!(timer_count(), 0);
+}
+
+#[test]
+fn immediate_watchdog_ensure_moves_cadence_earlier_and_repeats_idempotently() {
+    setup();
+    let timer = identity("watchdog-immediate-ensure");
+    let registration = register_watchdog(
+        timer.clone(),
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+        DeclarationLifetime::Retained,
+        |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
+    )
+    .expect("watchdog registration should succeed");
+    registration
+        .ensure_scheduled()
+        .expect("cadence scheduler should arm");
+    assert_eq!(timer_count(), 1);
+    registration
+        .ensure_scheduled_immediately()
+        .expect("cadence scheduler should move to now");
+    registration
+        .ensure_scheduled_immediately()
+        .expect("repeated immediate ensure should coalesce");
+
+    assert_eq!(timer_count(), 1, "replacement must own exactly one handle");
+    let snapshot = timer_snapshot(&timer)
+        .expect("snapshot lookup should succeed")
+        .expect("watchdog snapshot should exist");
+    assert_eq!(snapshot.next_deadline_ns(), Some(10));
+    assert_eq!(
+        snapshot.scheduling_mode(),
+        TimerSchedulingMode::Continuation
+    );
+    assert_eq!(snapshot.latest_requested_delay_ns(), Some(0));
+    assert_eq!(snapshot.latest_armed_delay_ns(), Some(0));
+    let counters = snapshot.observability().counters();
+    assert_eq!(counters.schedule_requests(), 3);
+    assert_eq!(counters.wakeups_armed(), 2);
+    assert_eq!(counters.coalesced(), 1);
+
+    registration
+        .cancel()
+        .expect("fixture cleanup should succeed");
+    assert_eq!(timer_count(), 0);
+}
+
+#[test]
+fn immediate_watchdog_ensure_coalesces_an_overdue_cadence_wakeup() {
+    setup();
+    let timer = identity("watchdog-immediate-overdue-cadence");
+    let registration = register_watchdog(
+        timer.clone(),
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+        DeclarationLifetime::Retained,
+        |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
+    )
+    .expect("watchdog registration should succeed");
+    registration
+        .ensure_scheduled()
+        .expect("cadence scheduler should arm");
+
+    set_time(20);
+    registration
+        .ensure_scheduled_immediately()
+        .expect("overdue cadence scheduler should satisfy immediate demand");
+
+    assert_eq!(timer_count(), 1, "coalescing must not add a provider timer");
+    let snapshot = timer_snapshot(&timer)
+        .expect("snapshot lookup should succeed")
+        .expect("watchdog snapshot should exist");
+    assert_eq!(snapshot.next_deadline_ns(), Some(15));
+    assert_eq!(snapshot.scheduling_mode(), TimerSchedulingMode::Watchdog);
+    assert_eq!(snapshot.latest_requested_delay_ns(), Some(0));
+    assert_eq!(snapshot.latest_armed_delay_ns(), Some(5));
+    let counters = snapshot.observability().counters();
+    assert_eq!(counters.schedule_requests(), 2);
+    assert_eq!(counters.wakeups_armed(), 1);
+    assert_eq!(counters.coalesced(), 1);
+
+    registration
+        .cancel()
+        .expect("fixture cleanup should succeed");
     assert_eq!(timer_count(), 0);
 }
 
@@ -807,6 +936,116 @@ fn watchdog_scheduler_prearms_successor_before_synchronous_work() {
 }
 
 #[test]
+fn watchdog_immediate_decision_replaces_successor_without_synchronous_recursion() {
+    setup();
+    let timer = identity("watchdog-immediate-decision");
+    let calls = Rc::new(Cell::new(0_u64));
+    let callback_calls = Rc::clone(&calls);
+    let registration = register_watchdog(
+        timer.clone(),
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+        DeclarationLifetime::Retained,
+        move |_context| {
+            let call = callback_calls.get().saturating_add(1);
+            callback_calls.set(call);
+            WatchdogRunResult::new(
+                TimerCompletion::success(1),
+                if call == 1 {
+                    WatchdogDecision::ContinueImmediately
+                } else {
+                    WatchdogDecision::Stop
+                },
+            )
+        },
+    )
+    .expect("watchdog registration should succeed");
+    registration
+        .ensure_scheduled()
+        .expect("initial scheduler should arm");
+
+    set_time(15);
+    assert!(run_next_due(), "scheduler should pre-arm cadence safety");
+    assert_eq!(timer_count(), 2);
+    assert!(run_next_due(), "first work callback should run");
+    assert_eq!(calls.get(), 1);
+    assert_eq!(
+        timer_count(),
+        1,
+        "cadence successor must be replaced, not added to"
+    );
+    let immediate = timer_snapshot(&timer)
+        .expect("snapshot lookup should succeed")
+        .expect("watchdog snapshot should exist");
+    assert_eq!(immediate.next_deadline_ns(), Some(15));
+    assert_eq!(
+        immediate.scheduling_mode(),
+        TimerSchedulingMode::Continuation
+    );
+    assert_eq!(immediate.latest_requested_delay_ns(), Some(0));
+    assert_eq!(immediate.latest_armed_delay_ns(), Some(0));
+    let counters = immediate.observability().counters();
+    assert_eq!(counters.wakeups_armed(), 3);
+    assert_eq!(counters.work_dispatched(), 1);
+
+    assert!(
+        run_next_due(),
+        "replacement scheduler should be a later message"
+    );
+    assert_eq!(
+        calls.get(),
+        1,
+        "scheduler still must not invoke consumer work"
+    );
+    assert_eq!(timer_count(), 2);
+    assert!(run_next_due(), "second separate work callback should run");
+    assert_eq!(calls.get(), 2);
+    assert_eq!(timer_count(), 0);
+}
+
+#[test]
+fn watchdog_running_immediate_context_targets_that_attempts_successor() {
+    setup();
+    let timer = identity("watchdog-context-immediate");
+    let registration = register_watchdog(
+        timer.clone(),
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+        DeclarationLifetime::Retained,
+        |context| {
+            context
+                .ensure_scheduled_immediately()
+                .expect("running immediate request should succeed");
+            context
+                .ensure_scheduled()
+                .expect("later cadence ensure must not delay immediate demand");
+            WatchdogRunResult::new(TimerCompletion::success(1), WatchdogDecision::Stop)
+        },
+    )
+    .expect("watchdog registration should succeed");
+    registration
+        .ensure_scheduled()
+        .expect("initial scheduler should arm");
+
+    set_time(15);
+    assert!(run_next_due());
+    assert!(run_next_due());
+    assert_eq!(timer_count(), 1);
+    let snapshot = timer_snapshot(&timer)
+        .expect("snapshot lookup should succeed")
+        .expect("watchdog snapshot should exist");
+    assert_eq!(snapshot.next_deadline_ns(), Some(15));
+    assert_eq!(
+        snapshot.scheduling_mode(),
+        TimerSchedulingMode::Continuation
+    );
+    assert_eq!(snapshot.observability().counters().schedule_requests(), 3);
+    assert_eq!(snapshot.observability().counters().coalesced(), 2);
+
+    registration
+        .cancel()
+        .expect("fixture cleanup should succeed");
+}
+
+#[test]
 fn watchdog_cancellation_clears_successor_and_queued_work() {
     setup();
     let timer = identity("watchdog-cancel");
@@ -936,6 +1175,10 @@ fn retained_watchdog_context_expires_without_clearing_successor() {
         expired.ensure_scheduled(),
         Err(TimerError::RegistrationExpired)
     ));
+    assert!(matches!(
+        expired.ensure_scheduled_immediately(),
+        Err(TimerError::RegistrationExpired)
+    ));
     assert_eq!(
         timer_count(),
         1,
@@ -987,7 +1230,7 @@ fn watchdog_successor_retires_an_unacknowledged_dispatched_attempt() {
 }
 
 #[test]
-fn unexpected_watchdog_completion_failure_traps_and_leaves_successor_armed() {
+fn immediate_watchdog_completion_fault_traps_and_leaves_cadence_successor_armed() {
     setup();
     let timer = identity("watchdog-completion-fault");
     let registration = register_watchdog(
@@ -996,7 +1239,10 @@ fn unexpected_watchdog_completion_failure_traps_and_leaves_successor_armed() {
         DeclarationLifetime::Retained,
         |_context| {
             grow_memory_pages(2, 3);
-            WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue)
+            WatchdogRunResult::new(
+                TimerCompletion::success(1),
+                WatchdogDecision::ContinueImmediately,
+            )
         },
     )
     .expect("watchdog registration should succeed");
@@ -1025,6 +1271,63 @@ fn unexpected_watchdog_completion_failure_traps_and_leaves_successor_armed() {
     assert_eq!(performance.scheduler_memory_pages().samples(), 1);
     assert_eq!(performance.work_memory_pages().samples(), 0);
     assert_eq!(performance.work_memory_pages().latest(), None);
+}
+
+#[test]
+fn immediate_watchdog_provider_replacement_failure_traps_for_message_rollback() {
+    setup();
+    let timer = identity("watchdog-immediate-provider-fault");
+    let registration = register_watchdog(
+        timer,
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+        DeclarationLifetime::Retained,
+        |_context| {
+            WatchdogRunResult::new(
+                TimerCompletion::success(1),
+                WatchdogDecision::ContinueImmediately,
+            )
+        },
+    )
+    .expect("watchdog registration should succeed");
+    registration
+        .ensure_scheduled()
+        .expect("initial scheduler should arm");
+    set_time(15);
+    assert!(run_next_due(), "scheduler should commit cadence safety");
+
+    inject_provider_install_fault();
+    let trapped = catch_unwind(AssertUnwindSafe(run_next_due));
+    assert!(
+        trapped.is_err(),
+        "replacement binding failure must trap the work message"
+    );
+    // The native provider mock is deliberately not transactional. On the IC,
+    // the trap rolls the clear/install and registry transition back together,
+    // restoring the cadence successor committed by the scheduler message.
+}
+
+#[test]
+fn public_immediate_watchdog_replacement_failure_retires_false_scheduled_state() {
+    setup();
+    let timer = identity("watchdog-public-immediate-provider-fault");
+    let registration = register_watchdog(
+        timer.clone(),
+        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+        DeclarationLifetime::Retained,
+        |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
+    )
+    .expect("watchdog registration should succeed");
+    registration
+        .ensure_scheduled()
+        .expect("cadence scheduler should arm");
+
+    inject_provider_install_fault();
+    assert!(matches!(
+        registration.ensure_scheduled_immediately(),
+        Err(TimerError::OwnershipInvariant)
+    ));
+    assert_eq!(timer_count(), 0);
+    assert_retained_provider_binding_failure(&timer, 2, 1);
 }
 
 #[test]
@@ -1378,7 +1681,7 @@ fn watchdog_dispatch_rejects_cross_claim_tokens_before_provider_arms() {
     };
     assert!(matches!(
         apply_effect(&malformed_replacement, ProviderHandles::default()),
-        Err(TimerError::OwnershipInvariant)
+        Err(TimerError::RegistrationExpired)
     ));
     assert_eq!(timer_count(), 0, "validation must precede provider arms");
     let malformed = RegistryEffect::DispatchWatchdog {
@@ -1493,7 +1796,7 @@ fn icydb_watchdog_result(
     match readiness {
         StartupReadiness::Recovering => WatchdogRunResult::new(
             TimerCompletion::success(completed_work_count),
-            WatchdogDecision::Continue,
+            WatchdogDecision::ContinueImmediately,
         ),
         StartupReadiness::RetryableFailure => WatchdogRunResult::new(
             TimerCompletion::retryable_failure(completed_work_count),
@@ -1525,7 +1828,10 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
 
     assert_eq!(
         icydb_watchdog_result(StartupReadiness::Recovering, 1),
-        WatchdogRunResult::new(TimerCompletion::success(1), WatchdogDecision::Continue)
+        WatchdogRunResult::new(
+            TimerCompletion::success(1),
+            WatchdogDecision::ContinueImmediately,
+        )
     );
     assert_eq!(
         icydb_watchdog_result(StartupReadiness::RetryableFailure, 0),
@@ -1556,7 +1862,7 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         &mut registration,
         &timer,
         cadence,
-        TimerReconcileState::Scheduled,
+        WatchdogReconcileState::ScheduledImmediately,
         move |_context| {
             advance_instructions(13);
             match callback_readiness.get() {
@@ -1577,7 +1883,7 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         &mut registration,
         &timer,
         cadence,
-        TimerReconcileState::Scheduled,
+        WatchdogReconcileState::ScheduledImmediately,
         |_context| {
             WatchdogRunResult::new(
                 TimerCompletion::invariant_failure(0),
@@ -1638,7 +1944,7 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         &mut registration,
         &timer,
         cadence,
-        TimerReconcileState::Scheduled,
+        WatchdogReconcileState::ScheduledImmediately,
         |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
     )
     .expect("returned-error commit guard should synchronously restore a wake-up");
@@ -1669,7 +1975,7 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         &mut registration,
         &timer,
         cadence,
-        TimerReconcileState::Scheduled,
+        WatchdogReconcileState::ScheduledImmediately,
         |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
     )
     .expect("retained terminal declaration can be reconstructed from durable demand");
@@ -1681,7 +1987,7 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         &mut registration,
         &timer,
         cadence,
-        TimerReconcileState::Inactive,
+        WatchdogReconcileState::Inactive,
         |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue),
     )
     .expect("terminal durable authority should cancel successor and queued work");
@@ -1691,7 +1997,7 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         &mut registration,
         &timer,
         TimerCadence::from_nanos(6).expect("fixture cadence should be valid"),
-        TimerReconcileState::Inactive,
+        WatchdogReconcileState::Inactive,
         |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
     );
     assert!(matches!(mismatch, Err(TimerError::ReconciliationConflict)));

@@ -4,6 +4,46 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.7.0]
+
+### Added
+
+- Add progress-sensitive Watchdog continuation through
+  `WatchdogDecision::ContinueImmediately`, claim- and context-scoped immediate
+  ensure operations, and `WatchdogReconcileState::ScheduledImmediately` for
+  the first actionable wake-up.
+
+### Changed
+
+- Hard-cut `reconcile_watchdog` from the generic `TimerReconcileState` to the
+  policy-specific `WatchdogReconcileState`. Immediate demand replaces the one
+  authoritative pre-armed successor at deadline now; cadence `Continue`, stop,
+  cancellation, unregistration, generation ownership, and the two-message
+  pre-arm protocol retain their existing meanings.
+- Project an immediate successor through the existing snapshot fields as
+  continuation mode with zero requested/armed delay. Equivalent or earlier
+  deadlines and repeated/dispatched/running requests coalesce without another
+  provider handle or snapshot format.
+
+### Documentation
+
+- Define immediate scheduling transitions, pending-command precedence,
+  replicated rollback requirements, IcyDB integration calls, state-space
+  change, and provider-call cost in a dedicated design record.
+
+### Evidence
+
+- Extend the pinned PocketIC Watchdog matrix with zero-delay initial scheduling
+  and successful immediate continuation without cadence-time advancement. The
+  complete eight-test trap, exhaustion, lifecycle, isolation, capacity, and
+  cancellation matrix passes.
+- Freeze native snapshot semantics when an immediate ensure coalesces with an
+  overdue cadence wake-up: cadence scheduling mode and armed delay remain
+  unchanged while the immediate request and coalescing counters advance.
+- Record immediate-versus-cadence instruction/cycle observations and current
+  compiler, optimized, and deterministic-gzip size cohorts. The controlled
+  Watchdog final Wasm is 877 bytes (0.335%) above after-completion.
+
 ## [0.6.1] - 2026-08-15
 
 ### Changed

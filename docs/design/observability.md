@@ -63,6 +63,14 @@ behavior. The latest directive should retain deadline, retry, immediate
 continuation, recurrence, and stop decisions without pretending that a retry
 temporarily changes the timer's configured policy.
 
+For a Watchdog whose cadence successor has been moved to now,
+`scheduling_mode` is `Continuation`, its authoritative next deadline is the
+immediate deadline, and the latest requested/armed delays are zero. The
+replacement increments `wakeups_armed`; repeated, already-earlier, dispatched,
+or running immediate demand increments `coalesced` without inventing another
+handle. Once that scheduler runs and pre-arms safety again, the current mode
+and armed delay return to the configured Watchdog cadence.
+
 All identities and enum values must have deterministic ordering. Labels must
 be bounded before they enter registry storage or metric labels. The snapshot
 must remain portable, but portability does not require a dependency on a
