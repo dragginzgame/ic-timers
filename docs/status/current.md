@@ -14,9 +14,8 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Release state
 
-- Workspace package version: `0.7.0`.
-- Latest release line: `0.7.0`.
-- Named target release: `0.7.1` (unreleased).
+- Workspace package version: `0.7.1`.
+- Latest release line: `0.7.1`.
 - Direct provider dependency: exact `ic-cdk-timers` 1.0.0.
 - Unreleased dependency update: exact `ic0` 1.2.0 in both lockfiles; existing
   platform bindings are unchanged upstream. See the
