@@ -11,7 +11,7 @@ license = "MIT"
 
 [workspace.dependencies]
 candid = "0.10"
-ic-cdk = "=0.20.2"
+ic-cdk = "=0.20.3"
 ic-timers = { path = "../crates/ic-timers" }
 pocket-ic = "=15.0.0"
 serde = "1.0"

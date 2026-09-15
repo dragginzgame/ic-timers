@@ -4,6 +4,17 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.7.1]
+
+### Changed
+
+- Update the exact `ic0` dependency from 1.1.0 to 1.2.0 in both workspace
+  lockfiles. The upstream additions do not change the bindings used by the
+  private platform module; no runtime or public API adaptation is needed.
+- Update the test canisters' exact `ic-cdk` dependency and its macros from
+  0.20.2 to 0.20.3. No probe source changes are required; this CDK update only
+  affects the nested testing workspace.
+
 ## [0.7.0] - 2026-08-28
 
 ### Added

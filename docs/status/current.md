@@ -1,6 +1,6 @@
 # Current status
 
-Last updated: 2026-08-28
+Last updated: 2026-09-15
 
 ## Purpose
 
@@ -16,7 +16,13 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 - Workspace package version: `0.7.0`.
 - Latest release line: `0.7.0`.
+- Named target release: `0.7.1` (unreleased).
 - Direct provider dependency: exact `ic-cdk-timers` 1.0.0.
+- Unreleased dependency update: exact `ic0` 1.2.0 in both lockfiles; existing
+  platform bindings are unchanged upstream. See the
+  [0.7.1 release note](../changelog/0.7.1.md).
+- The nested test canisters use exact `ic-cdk` 0.20.3 (unreleased tooling
+  update); the published timer crate does not depend on `ic-cdk` itself.
 - Minimum supported Rust version: 1.88.0.
 - Development toolchain: Rust 1.97.1.
 - The maintainer owns commits, tags, pushes, version bumps, and publication.
