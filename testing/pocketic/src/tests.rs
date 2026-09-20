@@ -19,6 +19,7 @@ struct ProbeMemorySummary {
 
 #[derive(CandidType, Debug, Deserialize, Eq, PartialEq)]
 struct ProbeSnapshot {
+    registration_id: Option<(u64, u64, u64)>,
     registered: bool,
     completed_work: u64,
     next_deadline_ns: Option<u64>,
@@ -171,6 +172,7 @@ fn trapped_work_keeps_committed_successor_and_executor_is_private() {
     pic.advance_time(Duration::from_secs(1));
     drive_rounds(&pic, 12);
     let trapped = snapshot(&pic, canister_id);
+    assert_eq!(trapped.registration_id, before_external.registration_id);
     assert_eq!(trapped.completed_work, 0);
     assert_eq!(trapped.secondary_completed_work, 1);
     assert_eq!(trapped.scheduler_started, 1);
@@ -191,6 +193,7 @@ fn trapped_work_keeps_committed_successor_and_executor_is_private() {
     pic.advance_time(Duration::from_secs(1));
     drive_rounds(&pic, 12);
     let recovered = snapshot(&pic, canister_id);
+    assert_eq!(recovered.registration_id, trapped.registration_id);
     assert_eq!(recovered.completed_work, 1);
     assert_eq!(recovered.secondary_completed_work, 2);
     assert_eq!(recovered.scheduler_started, 2);
@@ -228,6 +231,7 @@ fn trapped_work_keeps_committed_successor_and_executor_is_private() {
     )
     .expect("upgrade should succeed");
     let upgraded = snapshot(&pic, canister_id);
+    assert_ne!(upgraded.registration_id, recovered.registration_id);
     assert!(upgraded.registered);
     assert!(upgraded.secondary_registered);
     assert!(upgraded.post_upgrade_reconstructed);
@@ -556,4 +560,77 @@ fn snapshot(pic: &PocketIc, canister_id: Principal) -> ProbeSnapshot {
         )
         .unwrap_or_else(|error| panic!("query snapshot: {error:?}"));
     Decode!(&bytes, ProbeSnapshot).expect("decode snapshot")
+}
+
+#[test]
+fn exact_deadline_sleeps_and_registration_replacement_marks_counter_regrowth() {
+    let pic = PocketIc::new();
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, INIT_CYCLES);
+    pic.install_canister(
+        canister_id,
+        probe_wasm(),
+        Encode!().expect("encode init"),
+        None,
+    );
+    assert!(update_bool(&pic, canister_id, "start"));
+    let initial = snapshot(&pic, canister_id);
+    let first_deadline = initial.next_deadline_ns.expect("scheduled");
+    let later = first_deadline + 10_000_000_000;
+    update_deadline(&pic, canister_id, "schedule_at", later);
+    update_deadline(&pic, canister_id, "schedule_at", later);
+    pic.advance_time(Duration::from_secs(2));
+    drive_rounds(&pic, 16);
+    let sleeping = snapshot(&pic, canister_id);
+    assert_eq!(sleeping.completed_work, 0);
+    assert_eq!(sleeping.scheduler_started, 0);
+    assert_eq!(sleeping.next_deadline_ns, Some(later));
+    assert_eq!(sleeping.wakeups_armed, 2);
+    assert_eq!(sleeping.registration_id, initial.registration_id);
+
+    let continuation = later + 10_000_000_000;
+    update_deadline(&pic, canister_id, "schedule_at_on_next_work", continuation);
+    update_deadline(&pic, canister_id, "schedule_at", first_deadline);
+    drive_rounds(&pic, 16);
+    let completed = snapshot(&pic, canister_id);
+    assert_eq!(completed.completed_work, 1);
+    assert_eq!(completed.next_deadline_ns, Some(continuation));
+    assert_eq!(completed.registration_id, initial.registration_id);
+    pic.advance_time(Duration::from_secs(2));
+    drive_rounds(&pic, 16);
+    assert_eq!(snapshot(&pic, canister_id).completed_work, 1);
+
+    update_unit(&pic, canister_id, "stop");
+    assert_eq!(
+        snapshot(&pic, canister_id).registration_id,
+        completed.registration_id
+    );
+    update_unit(&pic, canister_id, "replace_registration");
+    let replaced = snapshot(&pic, canister_id);
+    assert_eq!(replaced.work_completed, 0);
+    assert_ne!(replaced.registration_id, completed.registration_id);
+    let old_id = completed.registration_id.expect("old id");
+    let new_id = replaced.registration_id.expect("new id");
+    assert_eq!((old_id.0, old_id.1), (new_id.0, new_id.1));
+    assert!(new_id.2 > old_id.2);
+    for _ in 0..2 {
+        pic.advance_time(Duration::from_secs(1));
+        drive_rounds(&pic, 16);
+    }
+    let regrown = snapshot(&pic, canister_id);
+    assert!(regrown.work_completed > completed.work_completed);
+    assert!(regrown.scheduler_instruction_total > completed.scheduler_instruction_total);
+    assert_eq!(regrown.registration_id, replaced.registration_id);
+}
+
+fn update_deadline(pic: &PocketIc, canister_id: Principal, method: &str, deadline: u64) {
+    let result = pic
+        .update_call(
+            canister_id,
+            Principal::anonymous(),
+            method,
+            Encode!(&deadline).expect("encode deadline"),
+        )
+        .expect("deadline update");
+    Decode!(&result, ()).expect("decode unit");
 }

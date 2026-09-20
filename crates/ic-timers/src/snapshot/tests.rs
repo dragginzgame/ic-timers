@@ -141,6 +141,7 @@ fn policies_and_directives_have_one_cadence_owner() {
 
 #[derive(Debug, Eq, PartialEq)]
 struct CanicProjection<'a> {
+    registration_id: TimerRegistrationId,
     name: &'a str,
     subsystem: &'a str,
     timer_mode: &'static str,
@@ -171,6 +172,7 @@ fn project_to_canic(snapshot: &TimerSnapshot) -> CanicProjection<'_> {
     let counters = observations.counters();
     let outcomes = observations.outcomes();
     CanicProjection {
+        registration_id: snapshot.registration_id(),
         name: snapshot.identity().name(),
         subsystem: snapshot.identity().subsystem(),
         timer_mode: match snapshot.policy() {
@@ -253,6 +255,7 @@ fn canonical_registry_snapshot_projects_canic_surface_without_parallel_metrics()
     assert_eq!(
         project_to_canic(&snapshot),
         CanicProjection {
+            registration_id: TimerRegistrationId::new(TimerEpoch::new(4, 100), 1),
             name: "renewal",
             subsystem: "auth",
             timer_mode: "interval",

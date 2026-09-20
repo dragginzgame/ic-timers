@@ -1,6 +1,6 @@
 # Current status
 
-Last updated: 2026-09-15
+Last updated: 2026-09-20
 
 ## Purpose
 
@@ -16,6 +16,11 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 - Workspace package version: `0.7.1`.
 - Latest release line: `0.7.1`.
+- Named target release: `0.8.0` (unreleased).
+- Snapshot registration continuity and exact-deadline Watchdog scheduling are
+  implemented, with validation recorded in the
+  [0.8.0 release note](../changelog/0.8.0.md). Package mutation and release remain
+  pending maintainer-owned actions.
 - Direct provider dependency: exact `ic-cdk-timers` 1.0.0.
 - Unreleased dependency update: exact `ic0` 1.2.0 in both lockfiles; existing
   platform bindings are unchanged upstream. See the
@@ -117,6 +122,13 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Current evidence
 
+- Targeted 0.8.0 passes 105 native tests and nine audited PocketIC Watchdog
+  subjects, plus warning-denied lint/docs, MSRV, Wasm, nested-probe lint,
+  provider-boundary and package checks. Registration continuity, exact-deadline
+  sleeping/replacement, reset/regrowth and interrupted deadline-proposal
+  recovery are covered. No downstream adoption or cost saving is claimed.
+- The remaining entries below retain earlier release evidence and performance
+  observations; the policy size/performance cohorts were not rerun for 0.8.0.
 - Package validation passes with 94 native tests, warning-denied Clippy and
   rustdoc, Wasm compilation, offline package verification, formatting,
   provider-boundary checks, Rust 1.88 workspace checking, and every supported
@@ -180,8 +192,12 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Next action
 
-Complete Canic's in-progress exact-`0.7.0` adoption and adopt the immediate API
-atomically in IcyDB, then rerun downstream backlog, trap, exhaustion,
-lifecycle, and performance evidence. Continue coordinating Canic and IcyDB
-onto one exact package and qualify one combined Wasm through Canic's
-lifecycle-composition seam without a second registry or compatibility path.
+Review the targeted 0.8.0 change, then run the version-bump/release flow when
+requested. Coordinate Canic/IcyDB/application adoption onto one resolved package:
+carry registration continuity through the existing metrics owner and remove Toko
+Miner's auxiliary deadline registration when adopting exact Watchdog schedules.
+The read-only downstream review found Toko Miner on ic-timers 0.7.1 with Canic
+0.110.32 adoption in progress; earlier downstream entries above are historical
+evidence, not a current dependency qualification. Actual downstream adapters,
+combined-Wasm tests, complete transfer evidence and live cost comparisons remain
+downstream work. No sibling repository was edited.

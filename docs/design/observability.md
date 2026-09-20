@@ -55,7 +55,7 @@ following groups.
 | Outcome | Latest classified outcome, work count, last success and failure timestamps, and consecutive expected failures. |
 | Counters | Requests, wake-up arms, work dispatch arms, scheduler starts, work starts/completions, classified outcomes, cancellations, stale callbacks, coalescing, and unacknowledged attempts. |
 | Performance | Separate sample count, total, latest, and maximum instructions for normally completed accepted scheduler/work intervals; per role, bounded latest start/end Wasm/stable page extents and maximum per-callback growth. |
-| Scope | Runtime epoch and start timestamp defining the reset boundary for every counter and aggregate. |
+| Scope | Runtime epoch plus registration identity defining the counter and aggregate lifetime, including replacement within one epoch. |
 
 Configured recurrence and callback directives are related but distinct. The
 configured policy should distinguish one-shot, after-completion, and watchdog
@@ -75,6 +75,24 @@ All identities and enum values must have deterministic ordering. Labels must
 be bounded before they enter registry storage or metric labels. The snapshot
 must remain portable, but portability does not require a dependency on a
 consumer's serialization model.
+
+## Registration continuity
+
+`TimerSnapshot::registration_id()` combines the existing registry claim sequence
+with the runtime epoch. Cancellation, scheduling and completed or interrupted
+work retain it; unregister/re-register changes it and resets measurements. An
+upgrade changes the epoch. Callback `generation()` is not a continuity key.
+
+Consumers may project the inert epoch/sequence fields, but cannot use them as
+control authority. For interval arithmetic, require the same canister and
+registration identity, advancing source times, compatible windows, nondecreasing
+values, and neither endpoint at `u64::MAX`. Saturation makes an exact delta
+unavailable. Matching identities alone do not prove freshness, complete-message
+accounting, transfer coverage or cycle cost. Reinstalls and restored/forked
+histories are separate observation histories.
+
+The [0.8 contract](0.8-registration-continuity-and-deadlines.md) defines the full
+continuity, saturation, deadline and downstream-adoption boundaries.
 
 ## Atomic inventory scope
 
@@ -197,11 +215,10 @@ liveness within the final page is invisible at this boundary. Consumers
 needing a byte-level bound must derive it from their allocator or storage owner
 rather than asking `ic-timers` to fabricate one.
 
-The snapshot carries a runtime epoch identifier and epoch start timestamp.
-Every counter, timestamp, and aggregate must state whether it is scoped to that
-epoch or persisted across epochs. The initial contract uses epoch-scoped
-counters so resets after upgrade are explicit to operators and adapters;
-persistent scheduling state used for reconstruction is a separate concern.
+The snapshot carries a runtime epoch and a registration identity. Counters and
+aggregates belong to that registration lifetime and are never persisted by the
+library. Both upgrade and unregister/re-register resets are explicit to adapters;
+consumer-owned durable demand used for reconstruction is a separate concern.
 
 All arithmetic must define overflow behavior. Hot-path counters and aggregates
 must not trap because an operator metric reached its numeric limit.

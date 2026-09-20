@@ -17,6 +17,9 @@ The current runtime provides:
   callback completion, and stale generations;
 - saturating completion, stale, coalescing, and unacknowledged-event state;
 - inert snapshots with private construction and read-only accessors;
+- inert registration identity combining the runtime epoch and a checked,
+  non-wrapping registration sequence, preserving counter continuity through
+  cancellation and detecting unregister/re-register within the same epoch;
 - one volatile canister-local owner initialized through a synchronous,
   idempotent seam;
 - live `Once` and `AfterCompletion` callback execution without retaining a
@@ -43,6 +46,9 @@ The current runtime provides:
   provider wake-up is armed;
 - exact ordinary reconciliation whose pending command has one canonical owner
   in the registry and can replace a live deadline in either direction;
+- exact Watchdog reconciliation and `ScheduleAt` completion through the same
+  successor owner, preserving the cadence recovery wake-up until normal work
+  completion commits the requested deadline;
 - work-scoped `OnceContext`, `AfterCompletionContext`, and `WatchdogContext`
   delegation validated against the exact callback generation and role. Each
   exposes only policy-valid operations, and a context retained after
@@ -94,6 +100,16 @@ the idempotent ensure operation whenever their authority requires a wake-up.
 
 ## Limits and consumer obligations
 
+- Compare registration identities within one canister history before deriving
+  counter deltas; require advancing source times and unsaturated endpoints.
+  A runtime epoch or callback generation alone does not prove continuity.
+  `u64::MAX` is conservatively saturated, and reinstalls or restored/forked
+  histories require a fresh observation baseline. Identity supplies neither
+  complete-message cost accounting nor balance-transfer attribution.
+- Exact deadline requests for already dispatched/running Watchdog work select
+  its successor on normal completion. They do not postpone queued work or alter
+  the committed recovery cadence; an interrupted attempt's pending proposal
+  is retired at recovery. Derive renewed demand from consumer-owned authority.
 - `Once` and `AfterCompletion` do not pre-arm a successor. A trap or
   instruction exhaustion before their callback returns can leave no future
   wake-up. Recovery-critical work must use `Watchdog`.

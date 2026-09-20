@@ -35,7 +35,7 @@ impl TimerCadence {
     }
 }
 
-/// Initial or explicit request for an ordinary timer deadline.
+/// Initial or explicit request for a timer deadline.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TimerSchedule {
     /// Schedule relative to the current IC time.

@@ -1528,3 +1528,152 @@ fn initial_snapshots_are_policy_specific_and_coherent() {
         assert_eq!(snapshot.observability().epoch(), TimerEpoch::new(7, 10));
     }
 }
+
+#[test]
+fn registration_sequence_exhaustion_never_reuses_a_snapshot_identity() {
+    let mut registry = registry();
+    registry.next_claim_generation = u64::MAX - 1;
+    let timer = identity("last-registration");
+    let claim = registry
+        .register_once(timer.clone(), DeclarationLifetime::Retained)
+        .unwrap();
+    let last = registry.snapshot(&timer).unwrap().registration_id();
+    assert_eq!(last.sequence(), u64::MAX);
+    registry.unregister(&claim).unwrap();
+    assert_eq!(
+        registry.register_once(timer.clone(), DeclarationLifetime::Retained),
+        Err(RegisterError::ClaimGenerationExhausted)
+    );
+    assert!(registry.snapshot(&timer).is_none());
+}
+
+#[test]
+fn watchdog_exact_pending_order_preserves_terminal_and_immediate_precedence() {
+    for scenario in 0..7 {
+        let mut registry = registry();
+        let timer = identity("deadline-arbitration");
+        let claim = registry
+            .register_watchdog(timer.clone(), cadence(5), DeclarationLifetime::Retained)
+            .unwrap();
+        let (scheduler, _, _) = arm(registry.ensure_watchdog_immediately(&claim, 10).unwrap());
+        let (_, _, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 10));
+        assert_eq!(
+            registry.begin_watchdog_work(&work),
+            CallbackAcceptance::Accepted
+        );
+        registry
+            .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(100)))
+            .unwrap();
+        match scenario {
+            0 => {
+                registry.cancel(&claim).unwrap();
+            }
+            1 => {
+                registry.unregister(&claim).unwrap();
+                registry
+                    .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(200)))
+                    .unwrap();
+            }
+            2 => {
+                registry.ensure_watchdog_immediately(&claim, 10).unwrap();
+            }
+            3 => {
+                registry.ensure_recurring(&claim, 10).unwrap();
+            }
+            4 => {
+                registry.cancel(&claim).unwrap();
+                registry
+                    .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(200)))
+                    .unwrap();
+            }
+            5 => {
+                registry
+                    .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(15)))
+                    .unwrap();
+            }
+            _ => {}
+        }
+        let completion = if scenario == 6 {
+            TimerCompletion::invariant_failure(0)
+        } else {
+            TimerCompletion::success(1)
+        };
+        let transition = registry
+            .complete_watchdog_work(
+                &work,
+                10,
+                WatchdogRunResult::new(completion, WatchdogDecision::ScheduleAt(300)),
+            )
+            .unwrap();
+        if scenario == 1 {
+            assert!(registry.snapshot(&timer).is_none());
+        } else {
+            let expected = match scenario {
+                0 | 6 => None,
+                2 => Some(10),
+                3 => Some(100),
+                4 => Some(200),
+                _ => Some(15),
+            };
+            assert_eq!(
+                registry.snapshot(&timer).unwrap().next_deadline_ns(),
+                expected,
+                "scenario {scenario}"
+            );
+        }
+        if scenario == 5 {
+            assert_eq!(transition.into_effect(), RegistryEffect::None);
+        }
+    }
+}
+
+#[test]
+fn watchdog_exact_replacement_rejects_stale_delivery_and_generation_exhaustion() {
+    let mut registry = registry();
+    let timer = identity("exact-generation");
+    let claim = registry
+        .register_watchdog(timer.clone(), cadence(5), DeclarationLifetime::Retained)
+        .unwrap();
+    let (old, _, _) = arm(registry.ensure_recurring(&claim, 10).unwrap());
+    let (new, deadline, kind) = arm(registry
+        .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(100)))
+        .unwrap());
+    assert_eq!((deadline, kind), (100, WakeupArm::Replacement));
+    assert_eq!(
+        registry.begin_watchdog_scheduler(&old, 15).into_effect(),
+        RegistryEffect::None
+    );
+    let (_, _, work) = dispatch(registry.begin_watchdog_scheduler(&new, 100));
+    assert_eq!(
+        registry.begin_watchdog_work(&work),
+        CallbackAcceptance::Accepted
+    );
+    let EntryControl::Watchdog(control) = &mut registry.entries.get_mut(&timer).unwrap().control
+    else {
+        panic!("watchdog")
+    };
+    control.scheduler_generation = u64::MAX;
+    let transition = registry
+        .complete_watchdog_work(
+            &work,
+            100,
+            WatchdogRunResult::new(
+                TimerCompletion::success(1),
+                WatchdogDecision::ScheduleAt(200),
+            ),
+        )
+        .unwrap();
+    assert!(matches!(
+        transition.into_effect(),
+        RegistryEffect::ClearCallbacks {
+            handles: CallbacksToClear::Wakeup,
+            ..
+        }
+    ));
+    assert_eq!(
+        registry.snapshot(&timer).unwrap().state(),
+        TimerRuntimeStateSnapshot::Inactive {
+            reason: InactiveReason::ControlFailure(TimerControlFailure::GenerationExhausted)
+        }
+    );
+}

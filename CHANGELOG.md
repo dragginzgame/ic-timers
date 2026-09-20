@@ -4,6 +4,33 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.8.0]
+
+### Added
+
+- Expose an inert `TimerRegistrationId` on every timer snapshot, combining the
+  runtime epoch and checked registration sequence so consumers can detect
+  unregister/re-register counter resets within one epoch.
+- Add exact Watchdog deadlines through registration/context
+  `reconcile_schedule`, `WatchdogDecision::ScheduleAt`, and
+  `WatchdogReconcileState::ScheduledAt`. Sleeping work owners can use one
+  Watchdog without an auxiliary deadline timer.
+
+### Changed
+
+- Extend the current snapshot shape and exhaustive Watchdog enums at the 0.8
+  minor boundary. Reuse the existing claim sequence, pending-command owner and
+  pre-armed successor without compatibility paths or another runtime.
+- Define continuity, saturation and source-window requirements for downstream
+  interval measurements; update the local consumer projection and probe DTOs.
+
+### Evidence
+
+- Pass 105 native tests and nine audited PocketIC Watchdog subjects, including
+  deadline sleeping/replacement, registration replacement with counter regrowth,
+  upgrade reset, and trap/instruction-exhaustion recovery after a nested deadline
+  proposal. Clippy, rustdoc, Wasm, MSRV, nested-probe lint and package checks pass.
+
 ## [0.7.1] - 2026-09-15
 
 ### Changed

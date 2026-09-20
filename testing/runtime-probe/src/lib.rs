@@ -1,8 +1,9 @@
 use candid::CandidType;
 use ic_timers::{
     DeclarationLifetime, MAX_TIMER_REGISTRATIONS, MemoryPageSummary, TimerCadence, TimerCompletion,
-    TimerIdentity, TimerLastOutcome, TimerSchedulingMode, WatchdogDecision, WatchdogRegistration,
-    WatchdogRunResult, initialize_runtime, register_watchdog, timer_inventory, timer_snapshot,
+    TimerIdentity, TimerLastOutcome, TimerSchedule, TimerSchedulingMode, WatchdogDecision,
+    WatchdogRegistration, WatchdogRunResult, initialize_runtime, register_watchdog,
+    timer_inventory, timer_snapshot,
 };
 use serde::Deserialize;
 use std::cell::{Cell, RefCell};
@@ -19,6 +20,7 @@ thread_local! {
     static EXHAUST_WINDOW: Cell<Option<(u64, u64)>> = const { Cell::new(None) };
     static STOP_ON_NEXT_WORK: Cell<bool> = const { Cell::new(false) };
     static CONTINUE_IMMEDIATELY_ON_NEXT_WORK: Cell<bool> = const { Cell::new(false) };
+    static DEADLINE_ON_NEXT_WORK: Cell<Option<u64>> = const { Cell::new(None) };
     static DESIRED_SCHEDULED: Cell<bool> = const { Cell::new(false) };
     static SECONDARY_DESIRED_SCHEDULED: Cell<bool> = const { Cell::new(false) };
     static POST_UPGRADE_RECONSTRUCTED: Cell<bool> = const { Cell::new(false) };
@@ -37,6 +39,7 @@ struct ProbeMemorySummary {
 
 #[derive(CandidType, Debug, Deserialize, Eq, PartialEq)]
 struct ProbeSnapshot {
+    registration_id: Option<(u64, u64, u64)>,
     registered: bool,
     completed_work: u64,
     next_deadline_ns: Option<u64>,
@@ -145,18 +148,30 @@ fn install_watchdog_with_initial_schedule(immediate: bool) -> bool {
             identity,
             cadence,
             DeclarationLifetime::Retained,
-            |_context| {
+            |context| {
                 let now_ns = ic_cdk::api::time();
                 let should_trap = TRAP_WINDOW
                     .with(Cell::get)
                     .is_some_and(|(start, end)| now_ns >= start && now_ns < end);
                 if should_trap {
+                    if context
+                        .reconcile_schedule(Some(TimerSchedule::At(now_ns + 60 * CADENCE_NS)))
+                        .is_err()
+                    {
+                        ic_cdk::trap("deadline proposal failed");
+                    }
                     ic_cdk::trap("intentional watchdog work trap");
                 }
                 let should_exhaust = EXHAUST_WINDOW
                     .with(Cell::get)
                     .is_some_and(|(start, end)| now_ns >= start && now_ns < end);
                 if should_exhaust {
+                    if context
+                        .reconcile_schedule(Some(TimerSchedule::At(now_ns + 60 * CADENCE_NS)))
+                        .is_err()
+                    {
+                        ic_cdk::trap("deadline proposal failed");
+                    }
                     exhaust_message_instructions();
                 }
                 COMPLETED_WORK.with(|completed| completed.set(completed.get().saturating_add(1)));
@@ -167,6 +182,10 @@ fn install_watchdog_with_initial_schedule(immediate: bool) -> bool {
                     .with(|requested| requested.replace(false))
                 {
                     WatchdogDecision::ContinueImmediately
+                } else if let Some(deadline_ns) =
+                    DEADLINE_ON_NEXT_WORK.with(|requested| requested.replace(None))
+                {
+                    WatchdogDecision::ScheduleAt(deadline_ns)
                 } else {
                     WatchdogDecision::Continue
                 };
@@ -192,6 +211,40 @@ fn install_watchdog_with_initial_schedule(immediate: bool) -> bool {
 #[ic_cdk::update]
 fn continue_immediately_on_next_work() {
     CONTINUE_IMMEDIATELY_ON_NEXT_WORK.with(|requested| requested.set(true));
+}
+
+#[ic_cdk::update]
+fn schedule_at(deadline_ns: u64) {
+    REGISTRATION.with_borrow(|slot| {
+        let Some(registration) = slot else {
+            ic_cdk::trap("missing registration")
+        };
+        if registration
+            .reconcile_schedule(Some(TimerSchedule::At(deadline_ns)))
+            .is_err()
+        {
+            ic_cdk::trap("deadline reconciliation failed");
+        }
+    });
+}
+
+#[ic_cdk::update]
+fn schedule_at_on_next_work(deadline_ns: u64) {
+    DEADLINE_ON_NEXT_WORK.with(|requested| requested.set(Some(deadline_ns)));
+}
+
+#[ic_cdk::update]
+fn replace_registration() {
+    REGISTRATION.with_borrow_mut(|slot| {
+        if let Some(registration) = slot.take() {
+            if registration.unregister().is_err() {
+                ic_cdk::trap("unregister failed");
+            }
+        }
+    });
+    if !install_watchdog() {
+        ic_cdk::trap("replacement failed");
+    }
 }
 
 #[ic_cdk::update]
@@ -365,6 +418,7 @@ fn snapshot() -> ProbeSnapshot {
     };
     let Some(snapshot) = snapshot else {
         return ProbeSnapshot {
+            registration_id: None,
             registered,
             completed_work,
             next_deadline_ns: None,
@@ -396,6 +450,11 @@ fn snapshot() -> ProbeSnapshot {
     let scheduler_memory = performance.scheduler_memory_pages();
     let work_memory = performance.work_memory_pages();
     ProbeSnapshot {
+        registration_id: Some((
+            snapshot.registration_id().epoch().canister_version(),
+            snapshot.registration_id().epoch().started_at_ns(),
+            snapshot.registration_id().sequence(),
+        )),
         registered,
         completed_work,
         next_deadline_ns: snapshot.next_deadline_ns(),

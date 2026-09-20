@@ -165,6 +165,14 @@ Callbacks run without a registry borrow. Nested ensure, reconcile, cancel,
 and unregister requests are arbitrated by one canonical pending command and
 the exact callback generation.
 
+For the targeted 0.8 API, a sleeping Watchdog can reconcile its own exact
+wake-up with `reconcile_schedule(Some(TimerSchedule::At(deadline_ns)))` and
+return `WatchdogDecision::ScheduleAt(next_deadline_ns)` after successful work.
+The scheduler still commits the cadence recovery successor before work runs.
+Return `Stop` when idle and reconstruct with `WatchdogReconcileState::ScheduledAt`
+when durable demand supplies a deadline. See the
+[0.8 contract](docs/design/0.8-registration-continuity-and-deadlines.md).
+
 ## 📊 Truthful observability
 
 `timer_snapshot` and `timer_inventory` return inert values; snapshots never
@@ -179,7 +187,13 @@ the removed bare-vector `timer_snapshots` function.
 | Counters | Requested, armed, started, completed, outcomes, cancellations, stale work, coalescing, and unacknowledged work |
 | Instructions | Completed scheduler/work sample count plus total, latest, and maximum measurements |
 | Memory | Latest start/end Wasm and stable page extents plus maximum observed growth |
-| Epoch | The volatile runtime boundary to which counters and samples belong |
+| Registration identity | Runtime epoch plus registration sequence; changes when counters are replaced, including within one epoch |
+
+Before subtracting cumulative measurements, compare `registration_id()` within
+the same canister and require advancing source times. Cancellation preserves the
+identifier; unregister/re-register changes it. Neither endpoint may be
+`u64::MAX`: saturation makes exact deltas unavailable. Callback `generation()`
+does not identify a counter lifetime.
 
 Each instruction measurement covers the accepted `ic-timers` execution
 interval: it begins immediately before callback acceptance and ends after

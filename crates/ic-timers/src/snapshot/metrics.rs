@@ -1,11 +1,14 @@
-//! Saturating epoch-local counters and bounded callback measurements.
+//! Saturating registration-local counters and bounded callback measurements.
 
 use super::{TimerCompletion, TimerCompletionOutcome, TimerEpoch, TimerOutcomeSnapshot};
 
-/// Epoch-local timer event counters.
+/// Registration-local timer event counters.
 ///
 /// Fields are private so mutation preserves saturation and the completion
 /// partition. The registry is the sole writer.
+/// A value equal to `u64::MAX` is conservatively saturated: do not derive an
+/// exact interval delta from that field. Compare registration identities before
+/// subtracting counters; runtime epoch equality alone does not prove continuity.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TimerCounters {
     schedule_requests: u64,
@@ -206,6 +209,11 @@ impl TimerCounters {
 }
 
 /// Saturating aggregate for one instruction measurement role.
+///
+/// Sample count and total saturate independently at `u64::MAX`. Treat that
+/// value as unavailable for exact interval arithmetic, including when it was
+/// reached exactly. Latest and maximum remain observations, not cumulative
+/// counters. Aggregates reset when the registration identity changes.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct MeasurementSummary {
     samples: u64,
@@ -533,7 +541,7 @@ impl TimerObservabilitySnapshot {
         self.outcomes
     }
 
-    /// Return epoch-local event counters.
+    /// Return registration-local event counters within this epoch.
     #[must_use]
     pub const fn counters(self) -> TimerCounters {
         self.counters

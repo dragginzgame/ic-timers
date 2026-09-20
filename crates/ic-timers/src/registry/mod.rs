@@ -12,9 +12,9 @@ use crate::{
         DeclarationLifetime, InactiveReason, MemoryPageExtent, MemoryPageSample,
         OrdinaryRuntimeStateSnapshot, TimerCompletion, TimerCompletionOutcome, TimerControlFailure,
         TimerDirectiveSnapshot, TimerEpoch, TimerIdentity, TimerInventorySnapshot,
-        TimerObservabilitySnapshot, TimerPolicy, TimerRunResult, TimerRuntimeStateSnapshot,
-        TimerSchedulingMode, TimerSnapshot, WatchdogAttemptSnapshot, WatchdogAttemptStatus,
-        WatchdogDecision, WatchdogRunResult, WatchdogRuntimeStateSnapshot,
+        TimerObservabilitySnapshot, TimerPolicy, TimerRegistrationId, TimerRunResult,
+        TimerRuntimeStateSnapshot, TimerSchedulingMode, TimerSnapshot, WatchdogAttemptSnapshot,
+        WatchdogAttemptStatus, WatchdogDecision, WatchdogRunResult, WatchdogRuntimeStateSnapshot,
     },
 };
 use std::{cell::RefCell, collections::BTreeMap, future::Future, pin::Pin, rc::Rc};
@@ -342,6 +342,7 @@ enum WatchdogPending {
     Cancel,
     Ensure,
     EnsureImmediately,
+    Reconcile(PendingSchedule),
     Unregister,
 }
 
@@ -349,6 +350,7 @@ enum WatchdogPending {
 enum WatchdogScheduleRequest {
     Cadence,
     Immediate,
+    Reconcile(PendingSchedule),
 }
 
 #[derive(Debug)]
@@ -398,6 +400,35 @@ impl Default for WatchdogControl {
 }
 
 impl WatchdogControl {
+    fn arm_scheduler(
+        &mut self,
+        claim: &RegistrationClaim,
+        now_ns: u64,
+        deadline_ns: u64,
+        arm: WakeupArm,
+    ) -> RegistryTransition {
+        let Some(generation) = self.scheduler_generation.checked_add(1) else {
+            let cleanup = if arm.replaces_existing() {
+                clear_callbacks(claim.identity.clone(), CallbacksToClear::Wakeup)
+            } else {
+                RegistryEffect::None
+            };
+            return self.terminate(cleanup, TimerControlFailure::GenerationExhausted);
+        };
+        self.scheduler_generation = generation;
+        self.state = WatchdogState::Scheduled {
+            scheduler_generation: generation,
+            deadline_ns,
+        };
+        self.pending = None;
+        RegistryTransition::normal(RegistryEffect::ArmWakeup {
+            token: token_for(claim, generation, CallbackRole::WatchdogScheduler),
+            deadline_ns,
+            delay_ns: deadline_ns.saturating_sub(now_ns),
+            arm,
+        })
+    }
+
     const fn next_dispatch_generations(&self) -> Option<(u64, u64)> {
         let Some(scheduler_generation) = self.scheduler_generation.checked_add(1) else {
             return None;
@@ -528,6 +559,7 @@ impl Entry {
 
         TimerSnapshot::new(
             identity,
+            TimerRegistrationId::new(self.observability.epoch(), self.claim_generation),
             self.policy,
             self.lifetime,
             state,
@@ -823,6 +855,30 @@ impl TimerRegistry {
         self.ensure_watchdog(claim, now_ns, cadence, WatchdogScheduleRequest::Immediate)
     }
 
+    pub(crate) fn reconcile_watchdog_schedule(
+        &mut self,
+        claim: &RegistrationClaim,
+        now_ns: u64,
+        schedule: Option<TimerSchedule>,
+    ) -> Result<RegistryTransition, RegistryError> {
+        let entry = self.entry(claim)?;
+        let TimerPolicy::Watchdog { cadence } = entry.policy else {
+            return Err(RegistryError::PolicyMismatch {
+                actual: entry.policy.label(),
+            });
+        };
+        let Some(schedule) = schedule else {
+            return self.cancel(claim);
+        };
+        let requested = PendingSchedule::resolve(schedule, now_ns)?;
+        self.ensure_watchdog(
+            claim,
+            now_ns,
+            cadence,
+            WatchdogScheduleRequest::Reconcile(requested),
+        )
+    }
+
     fn request_ordinary(
         &mut self,
         claim: &RegistrationClaim,
@@ -900,10 +956,11 @@ impl TimerRegistry {
         }
         entry.observability.counters_mut().record_schedule_request();
         let requested_delay_ns = match request {
-            WatchdogScheduleRequest::Cadence => cadence.as_nanos(),
-            WatchdogScheduleRequest::Immediate => 0,
+            WatchdogScheduleRequest::Cadence => Some(cadence.as_nanos()),
+            WatchdogScheduleRequest::Immediate => Some(0),
+            WatchdogScheduleRequest::Reconcile(requested) => requested.requested_delay_ns,
         };
-        entry.latest_requested_delay_ns = Some(requested_delay_ns);
+        entry.latest_requested_delay_ns = requested_delay_ns;
 
         let EntryControl::Watchdog(control) = &mut entry.control else {
             return Err(RegistryError::PolicyMismatch {
@@ -915,59 +972,54 @@ impl TimerRegistry {
                 let deadline_ns = match request {
                     WatchdogScheduleRequest::Cadence => cadence.deadline_after(now_ns)?,
                     WatchdogScheduleRequest::Immediate => now_ns,
+                    WatchdogScheduleRequest::Reconcile(requested) => requested.deadline_ns,
                 };
-                let Some(generation) = control.scheduler_generation.checked_add(1) else {
-                    return Ok(control.terminate(
-                        RegistryEffect::None,
-                        TimerControlFailure::GenerationExhausted,
-                    ));
-                };
-                control.scheduler_generation = generation;
-                control.state = WatchdogState::Scheduled {
-                    scheduler_generation: generation,
-                    deadline_ns,
-                };
-                control.pending = None;
-                entry.scheduling_mode = match request {
-                    WatchdogScheduleRequest::Cadence => TimerSchedulingMode::Watchdog,
-                    WatchdogScheduleRequest::Immediate => TimerSchedulingMode::Continuation,
-                };
-                Ok(RegistryTransition::normal(RegistryEffect::ArmWakeup {
-                    token: token_for(claim, generation, CallbackRole::WatchdogScheduler),
-                    deadline_ns,
-                    delay_ns: deadline_ns.saturating_sub(now_ns),
-                    arm: WakeupArm::Initial,
-                }))
+                let transition =
+                    control.arm_scheduler(claim, now_ns, deadline_ns, WakeupArm::Initial);
+                if transition.failure().is_none() {
+                    entry.scheduling_mode = match request {
+                        WatchdogScheduleRequest::Cadence => TimerSchedulingMode::Watchdog,
+                        WatchdogScheduleRequest::Immediate => TimerSchedulingMode::Continuation,
+                        WatchdogScheduleRequest::Reconcile(requested) => requested.mode,
+                    };
+                }
+                Ok(transition)
             }
             WatchdogState::Scheduled { deadline_ns, .. }
-                if matches!(request, WatchdogScheduleRequest::Immediate)
-                    && deadline_ns > now_ns =>
+                if match request {
+                    WatchdogScheduleRequest::Immediate => deadline_ns > now_ns,
+                    WatchdogScheduleRequest::Reconcile(requested) => {
+                        deadline_ns != requested.deadline_ns
+                    }
+                    WatchdogScheduleRequest::Cadence => false,
+                } =>
             {
-                let Some(generation) = control.scheduler_generation.checked_add(1) else {
-                    return Ok(control.terminate(
-                        clear_callbacks(claim.identity.clone(), CallbacksToClear::Wakeup),
-                        TimerControlFailure::GenerationExhausted,
-                    ));
+                let (deadline_ns, mode) = match request {
+                    WatchdogScheduleRequest::Reconcile(requested) => {
+                        (requested.deadline_ns, requested.mode)
+                    }
+                    WatchdogScheduleRequest::Immediate | WatchdogScheduleRequest::Cadence => {
+                        (now_ns, TimerSchedulingMode::Continuation)
+                    }
                 };
-                control.scheduler_generation = generation;
-                control.state = WatchdogState::Scheduled {
-                    scheduler_generation: generation,
-                    deadline_ns: now_ns,
-                };
-                control.pending = None;
-                entry.scheduling_mode = TimerSchedulingMode::Continuation;
-                Ok(RegistryTransition::normal(RegistryEffect::ArmWakeup {
-                    token: token_for(claim, generation, CallbackRole::WatchdogScheduler),
-                    deadline_ns: now_ns,
-                    delay_ns: 0,
-                    arm: WakeupArm::Replacement,
-                }))
+                let transition =
+                    control.arm_scheduler(claim, now_ns, deadline_ns, WakeupArm::Replacement);
+                if transition.failure().is_none() {
+                    entry.scheduling_mode = mode;
+                }
+                Ok(transition)
             }
-            WatchdogState::Scheduled { .. }
-            | WatchdogState::AwaitingWork {
+            WatchdogState::Scheduled { .. } => {
+                entry.observability.counters_mut().record_coalesced();
+                Ok(RegistryTransition::normal(RegistryEffect::None))
+            }
+            WatchdogState::AwaitingWork {
                 attempt_status: WatchdogAttemptStatus::Dispatched,
                 ..
             } => {
+                if let WatchdogScheduleRequest::Reconcile(requested) = request {
+                    control.pending = Some(WatchdogPending::Reconcile(requested));
+                }
                 entry.observability.counters_mut().record_coalesced();
                 Ok(RegistryTransition::normal(RegistryEffect::None))
             }
@@ -975,19 +1027,7 @@ impl TimerRegistry {
                 attempt_status: WatchdogAttemptStatus::Running,
                 ..
             } => {
-                if !matches!(control.pending, Some(WatchdogPending::Unregister)) {
-                    control.pending = match (control.pending, request) {
-                        (Some(WatchdogPending::EnsureImmediately), _)
-                        | (_, WatchdogScheduleRequest::Immediate) => {
-                            Some(WatchdogPending::EnsureImmediately)
-                        }
-                        (
-                            Some(WatchdogPending::Cancel | WatchdogPending::Ensure) | None,
-                            WatchdogScheduleRequest::Cadence,
-                        ) => Some(WatchdogPending::Ensure),
-                        (Some(WatchdogPending::Unregister), _) => Some(WatchdogPending::Unregister),
-                    };
-                }
+                control.pending = Some(select_pending_watchdog(control.pending, request, now_ns));
                 entry.observability.counters_mut().record_coalesced();
                 Ok(RegistryTransition::normal(RegistryEffect::None))
             }
@@ -1550,11 +1590,18 @@ impl TimerRegistry {
                     Some(WatchdogPending::EnsureImmediately) => {
                         WatchdogDecision::ContinueImmediately
                     }
+                    Some(WatchdogPending::Reconcile(requested)) => {
+                        WatchdogDecision::ScheduleAt(requested.deadline_ns)
+                    }
                     None => result.decision(),
                 }
             };
             let cancelled = matches!(control.pending, Some(WatchdogPending::Cancel));
             let unregister = matches!(control.pending, Some(WatchdogPending::Unregister));
+            let pending_schedule = match control.pending {
+                Some(WatchdogPending::Reconcile(requested)) => Some(requested),
+                _ => None,
+            };
             control.pending = None;
 
             match decision {
@@ -1567,10 +1614,20 @@ impl TimerRegistry {
                     entry.latest_requested_delay_ns = Some(cadence.as_nanos());
                     (RegistryTransition::normal(RegistryEffect::None), false)
                 }
-                WatchdogDecision::ContinueImmediately => {
-                    entry.scheduling_mode = TimerSchedulingMode::Continuation;
-                    entry.latest_requested_delay_ns = Some(0);
-                    if successor_deadline_ns <= now_ns {
+                WatchdogDecision::ContinueImmediately | WatchdogDecision::ScheduleAt(_) => {
+                    let (deadline_ns, retain_successor) =
+                        if let WatchdogDecision::ScheduleAt(deadline_ns) = decision {
+                            entry.scheduling_mode = pending_schedule
+                                .map_or(TimerSchedulingMode::Deadline, |requested| requested.mode);
+                            entry.latest_requested_delay_ns =
+                                pending_schedule.and_then(|requested| requested.requested_delay_ns);
+                            (deadline_ns, successor_deadline_ns == deadline_ns)
+                        } else {
+                            entry.scheduling_mode = TimerSchedulingMode::Continuation;
+                            entry.latest_requested_delay_ns = Some(0);
+                            (now_ns, successor_deadline_ns <= now_ns)
+                        };
+                    if retain_successor {
                         control.state = WatchdogState::Scheduled {
                             scheduler_generation: successor_generation,
                             deadline_ns: successor_deadline_ns,
@@ -1580,7 +1637,7 @@ impl TimerRegistry {
                         control.scheduler_generation = generation;
                         control.state = WatchdogState::Scheduled {
                             scheduler_generation: generation,
-                            deadline_ns: now_ns,
+                            deadline_ns,
                         };
                         (
                             RegistryTransition::normal(RegistryEffect::ArmWakeup {
@@ -1590,8 +1647,8 @@ impl TimerRegistry {
                                     generation,
                                     CallbackRole::WatchdogScheduler,
                                 ),
-                                deadline_ns: now_ns,
-                                delay_ns: 0,
+                                deadline_ns,
+                                delay_ns: deadline_ns.saturating_sub(now_ns),
                                 arm: WakeupArm::Replacement,
                             }),
                             false,
@@ -2255,6 +2312,32 @@ const fn select_pending_ordinary(
             | None => OrdinaryPending::Schedule(requested),
             Some(OrdinaryPending::Unregister) => OrdinaryPending::Unregister,
         },
+    }
+}
+
+const fn select_pending_watchdog(
+    pending: Option<WatchdogPending>,
+    request: WatchdogScheduleRequest,
+    now_ns: u64,
+) -> WatchdogPending {
+    match (pending, request) {
+        (Some(WatchdogPending::Unregister), _) => WatchdogPending::Unregister,
+        (_, WatchdogScheduleRequest::Reconcile(requested)) => WatchdogPending::Reconcile(requested),
+        (Some(WatchdogPending::Reconcile(requested)), WatchdogScheduleRequest::Cadence) => {
+            WatchdogPending::Reconcile(requested)
+        }
+        (Some(WatchdogPending::Reconcile(requested)), WatchdogScheduleRequest::Immediate)
+            if requested.deadline_ns <= now_ns =>
+        {
+            WatchdogPending::Reconcile(requested)
+        }
+        (Some(WatchdogPending::EnsureImmediately), _) | (_, WatchdogScheduleRequest::Immediate) => {
+            WatchdogPending::EnsureImmediately
+        }
+        (
+            Some(WatchdogPending::Cancel | WatchdogPending::Ensure) | None,
+            WatchdogScheduleRequest::Cadence,
+        ) => WatchdogPending::Ensure,
     }
 }
 

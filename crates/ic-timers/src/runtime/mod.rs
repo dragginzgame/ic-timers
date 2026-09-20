@@ -116,6 +116,10 @@ impl CallbackContext {
         ensure_watchdog_immediately_claim(&self.claim(), Some(&self.token))
     }
 
+    fn reconcile_watchdog(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
+        reconcile_watchdog_claim(&self.claim(), Some(&self.token), schedule)
+    }
+
     fn reconcile_ordinary(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
         reconcile_ordinary_claim(&self.claim(), Some(&self.token), schedule)
     }
@@ -261,6 +265,15 @@ impl WatchdogContext {
         self.inner.schedule_watchdog_immediately()
     }
 
+    /// Replace this attempt's successor with an exact schedule, or cancel it.
+    ///
+    /// Applied on normal completion; a trap preserves the committed cadence
+    /// successor. The latest reconciliation wins over prior scheduling demand,
+    /// but unregistration and invariant failure remain terminal.
+    pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
+        self.inner.reconcile_watchdog(schedule)
+    }
+
     /// Request cancellation while this exact work attempt is active.
     ///
     /// Cancellation does not interrupt the current invocation; normal
@@ -383,6 +396,8 @@ pub enum WatchdogReconcileState {
     /// The zero-delay provider callback executes as a later replicated
     /// scheduler message and does not invoke consumer work synchronously.
     ScheduledImmediately,
+    /// Reconcile the scheduler to an exact absolute IC timestamp.
+    ScheduledAt(u64),
 }
 
 impl WatchdogRegistration {
@@ -418,6 +433,17 @@ impl WatchdogRegistration {
     /// running, the request applies to that attempt's pre-armed successor.
     pub fn ensure_scheduled_immediately(&self) -> Result<(), TimerError> {
         ensure_watchdog_immediately_claim(&self.claim, None)
+    }
+
+    /// Reconcile to one exact scheduler deadline, or cancel with `None`.
+    ///
+    /// Unlike ensure, this can move a wake-up later. Identical deadlines
+    /// coalesce. Dispatched or running work is not postponed: reconciliation
+    /// selects its successor on normal completion. Until then, the committed
+    /// cadence successor remains the recovery wake-up. A subsequent recovery
+    /// attempt retires the interrupted attempt's pending proposal.
+    pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
+        reconcile_watchdog_claim(&self.claim, None, schedule)
     }
 
     /// Cancel the scheduler and any work callback that has not started.
@@ -531,7 +557,7 @@ where
 /// The callback cannot be async: it runs only in the work message after a
 /// separate scheduler message has armed the next cadence successor. Its
 /// `WatchdogDecision` retains the cadence successor, replaces it with a
-/// deadline of now, or clears it.
+/// deadline of now or an exact timestamp, or clears it.
 pub fn register_watchdog<F>(
     identity: TimerIdentity,
     cadence: TimerCadence,
@@ -619,6 +645,7 @@ where
 /// Durable readiness remains consumer-owned. Fresh inactive authority still
 /// installs an observable retained declaration. `ScheduledImmediately` arms
 /// its first scheduler at deadline now without synchronous consumer work.
+/// `ScheduledAt` reconciles an exact deadline, including moving it later.
 /// This helper owns no lifecycle export and persists no policy, generation,
 /// provider handle, or callback.
 /// Transient `RemoveWhenStopped` watchdogs use [`register_watchdog`] directly.
@@ -649,6 +676,9 @@ where
         WatchdogReconcileState::Inactive => registration.cancel(),
         WatchdogReconcileState::Scheduled => registration.ensure_scheduled(),
         WatchdogReconcileState::ScheduledImmediately => registration.ensure_scheduled_immediately(),
+        WatchdogReconcileState::ScheduledAt(deadline_ns) => {
+            registration.reconcile_schedule(Some(TimerSchedule::At(deadline_ns)))
+        }
     }
 }
 
@@ -786,6 +816,21 @@ fn ensure_watchdog_immediately_claim(
 ) -> Result<(), TimerError> {
     apply_claim_transition(claim, context, |registry| {
         registry.ensure_watchdog_immediately(claim, platform::time_ns())
+    })
+}
+
+fn reconcile_watchdog_claim(
+    claim: &RegistrationClaim,
+    context: Option<&CallbackToken>,
+    schedule: Option<TimerSchedule>,
+) -> Result<(), TimerError> {
+    if schedule.is_none() {
+        return apply_detached_claim_transition(claim, context, |registry| {
+            registry.reconcile_watchdog_schedule(claim, platform::time_ns(), None)
+        });
+    }
+    apply_claim_transition(claim, context, |registry| {
+        registry.reconcile_watchdog_schedule(claim, platform::time_ns(), schedule)
     })
 }
 

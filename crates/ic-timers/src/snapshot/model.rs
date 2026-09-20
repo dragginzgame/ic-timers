@@ -505,6 +505,11 @@ pub enum WatchdogDecision {
     /// The replacement remains a later scheduler message; this never invokes
     /// consumer work recursively in the current message.
     ContinueImmediately,
+    /// Replace the committed successor with an exact absolute IC deadline.
+    ///
+    /// A past deadline schedules a later message with zero delay. If work
+    /// traps, this proposal rolls back and the cadence successor remains.
+    ScheduleAt(u64),
     /// Terminate and clear the committed successor.
     Stop,
 }

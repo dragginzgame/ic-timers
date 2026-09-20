@@ -1,5 +1,8 @@
 # Documentation
 
+- [0.8 continuity and deadlines](design/0.8-registration-continuity-and-deadlines.md):
+  inert registration identity, interval-measurement limits, exact Watchdog
+  scheduling and downstream adoption requirements.
 - [Architecture](architecture.md): current boundary, intended runtime, and
   consumer integration.
 - [Observability contract](design/observability.md): implemented canonical

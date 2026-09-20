@@ -7,6 +7,36 @@ mod identity;
 mod metrics;
 mod model;
 
+/// Inert identity of one registration and its cumulative measurements.
+///
+/// Equality proves a shared counter lifetime only within one canister's
+/// observed runtime history. Reinstalls or restored/forked canister state are
+/// separate histories. The sequence never wraps: exhaustion rejects registration.
+/// Values are not provider handles or mutation capabilities.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub struct TimerRegistrationId {
+    epoch: TimerEpoch,
+    sequence: u64,
+}
+
+impl TimerRegistrationId {
+    pub(crate) const fn new(epoch: TimerEpoch, sequence: u64) -> Self {
+        Self { epoch, sequence }
+    }
+
+    /// Return the runtime reset boundary containing this registration.
+    #[must_use]
+    pub const fn epoch(self) -> TimerEpoch {
+        self.epoch
+    }
+
+    /// Return the nonzero registration sequence within this runtime epoch.
+    #[must_use]
+    pub const fn sequence(self) -> u64 {
+        self.sequence
+    }
+}
+
 pub use identity::{
     MAX_TIMER_IDENTITY_COMPONENT_BYTES, TimerIdentity, TimerIdentityError, TimerIdentityField,
 };
@@ -74,6 +104,7 @@ impl TimerInventorySnapshot {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TimerSnapshot {
     identity: TimerIdentity,
+    registration_id: TimerRegistrationId,
     policy: TimerPolicy,
     lifetime: DeclarationLifetime,
     state: TimerRuntimeStateSnapshot,
@@ -88,6 +119,7 @@ impl TimerSnapshot {
     #[allow(clippy::too_many_arguments)] // Registry-only constructor keeps one coherent boundary.
     pub(crate) const fn new(
         identity: TimerIdentity,
+        registration_id: TimerRegistrationId,
         policy: TimerPolicy,
         lifetime: DeclarationLifetime,
         state: TimerRuntimeStateSnapshot,
@@ -99,6 +131,7 @@ impl TimerSnapshot {
     ) -> Self {
         Self {
             identity,
+            registration_id,
             policy,
             lifetime,
             state,
@@ -114,6 +147,17 @@ impl TimerSnapshot {
     #[must_use]
     pub const fn identity(&self) -> &TimerIdentity {
         &self.identity
+    }
+
+    /// Return the inert identity of this registration's counter lifetime.
+    ///
+    /// Cancellation, rescheduling and completion preserve it. Unregistering
+    /// and registering again changes it, even within the same runtime epoch.
+    /// Compare only snapshots from the same canister. This value grants no
+    /// timer-control authority and cannot be used to reconstruct a registration.
+    #[must_use]
+    pub const fn registration_id(&self) -> TimerRegistrationId {
+        self.registration_id
     }
 
     /// Return the configured scheduling policy.
@@ -208,6 +252,9 @@ impl TimerSnapshot {
     }
 
     /// Return the latest authoritative callback generation.
+    ///
+    /// Scheduling changes this value. Use [`Self::registration_id`] to check
+    /// counter continuity across observations.
     #[must_use]
     pub const fn generation(&self) -> Option<u64> {
         match self.state {
@@ -227,7 +274,7 @@ impl TimerSnapshot {
         }
     }
 
-    /// Return epoch-scoped outcomes, counters, and measurements.
+    /// Return registration-scoped outcomes, counters, and measurements.
     #[must_use]
     pub const fn observability(&self) -> TimerObservabilitySnapshot {
         self.observability
