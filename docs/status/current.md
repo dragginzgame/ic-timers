@@ -14,9 +14,8 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Release state
 
-- Workspace package version: `0.7.1`.
-- Latest release line: `0.7.1`.
-- Named target release: `0.8.0` (unreleased).
+- Workspace package version: `0.8.0`.
+- Latest release line: `0.8.0`.
 - Snapshot registration continuity and exact-deadline Watchdog scheduling are
   implemented, with validation recorded in the
   [0.8.0 release note](../changelog/0.8.0.md). Package mutation and release remain
