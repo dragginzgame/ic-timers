@@ -106,7 +106,7 @@ make release-verify
 ```
 
 That gate includes `make ci`, the Rust 1.88 MSRV check, warning-denied linting
-of every supported nested probe configuration, the six-test watchdog/recovery
+of every supported nested probe configuration, the nine-test watchdog/recovery
 PocketIC suite, and the four policy cohorts. If `POCKET_IC_BIN` is unset, the
 gate installs the pinned PocketIC 15.0.0 Linux x86_64 artifact into the ignored
 `target/tools` cache. It verifies the downloaded or cached binary's version

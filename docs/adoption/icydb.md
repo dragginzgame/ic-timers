@@ -5,9 +5,13 @@ This is maintained downstream evidence supplied by the IcyDB owner; this
 repository did not modify IcyDB. Historical tagged and intermediate evidence
 is retained separately below.
 
-## Current exact-0.5.0 integration
+This record preserves the supplied exact-0.5.0 evidence; it is not a fresh
+inspection of downstream HEAD or qualification of 0.8.0 adoption. See the
+[current handoff](../status/current.md) for later reported downstream context.
 
-The current IcyDB dependency graph resolves exactly one `ic-timers` 0.5.0
+## Recorded exact-0.5.0 integration
+
+The recorded IcyDB dependency graph resolves exactly one `ic-timers` 0.5.0
 package. `ic-cdk-timers` 1.0.0 is private and transitive beneath it; IcyDB has
 no direct provider dependency or alternate provider path.
 
@@ -134,12 +138,12 @@ The [0.6 calibration record](../audits/0.6-message-instruction-calibration-2026-
 keeps unavailable full-message instruction totals explicit and does not
 convert cycle-balance deltas into instruction estimates.
 
-## Unreleased progress-sensitive integration guidance
+## Progress-sensitive integration guidance (available since 0.7.0)
 
-Current `ic-timers` HEAD adds the Watchdog-specific immediate continuation
+`ic-timers` 0.7.0 added the Watchdog-specific immediate continuation
 described in the
 [design record](../design/immediate-watchdog-continuation.md). This repository
-does not claim that IcyDB has adopted that unreleased API. When it does, the
+does not claim that IcyDB has adopted that API. When it does, the
 intended mapping is:
 
 | IcyDB condition | API |

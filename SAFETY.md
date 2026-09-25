@@ -150,7 +150,7 @@ the idempotent ensure operation whenever their authority requires a wake-up.
 - The current evidence uses the pinned PocketIC 15.0.0 binary and
   `ic-cdk-timers` 1.0.0 provider. A provider or evidence-binary change requires
   a renewed source and recovery audit.
-- IcyDB and Canic independently supply maintained exact-0.5.0
+- The recorded IcyDB and Canic adoption subjects independently supply exact-0.5.0
   shared-registry evidence, recorded separately from this library's
   owner-local proof. Canic's schema-3 adapter exports timer, instruction, and
   memory observations without a parallel runtime. Combined composition still

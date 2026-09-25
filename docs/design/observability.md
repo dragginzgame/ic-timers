@@ -1,6 +1,6 @@
 # Observability and Canic parity contract
 
-Status: canonical observations live; IcyDB and downstream Canic adapters validated
+Status: canonical observations live; downstream adapter evidence recorded for exact 0.5.0
 
 ## Purpose
 
@@ -130,7 +130,8 @@ performed against `ic-cdk-timers` and from callbacks that actually execute.
 | `coalesced` | Scheduling demand merged into existing scheduled or pending work rather than producing another logical run. |
 | `unacknowledged` | An older committed watchdog dispatch retired by its successor without a committed completion. |
 
-Every completed callback has exactly one classified completion outcome, so:
+Every completed callback has exactly one classified completion outcome. Before
+counter saturation:
 
 ```text
 work_completed = succeeded + no_work + retryable_failure + invariant_failure
@@ -150,10 +151,9 @@ metric. It must be stored with the timer entry and available without scanning
 or rebuilding the complete snapshot. Registry lookup by `TimerIdentity` should
 make it cheap enough for renewal and cycle-top-up decisions.
 
-The outcome taxonomy must define which completed outcomes increment or reset
-that streak. At minimum, retryable expected failures increment it; successful
-work resets it. The treatment of valid no-work outcomes must be settled before
-the 0.2 types are accepted and covered by focused transition tests.
+Retryable expected failures increment the streak. Success, valid no-work and
+invariant-failure outcomes reset it; an interrupted attempt preserves it.
+Maintained transition tests cover these rules.
 
 `work_count` is separate from callback starts and completions. One callback may
 find no work, perform one unit, or perform a bounded batch, so an adapter must
@@ -272,7 +272,7 @@ provide feedback as the pre-1.0 API evolves:
 The contract covers the following Canic operator information without parallel
 timer instrumentation:
 
-| Current Canic surface | Required projection from `ic-timers` |
+| Recorded Canic surface | Required projection from `ic-timers` |
 | --- | --- |
 | Timer executions and latest delay in `crates/canic-core/src/ops/runtime/metrics/timer.rs` | Started count, configured cadence, latest requested and armed delays, and next deadline. |
 | Completed count and total instructions in `crates/canic-core/src/ops/runtime/perf.rs` | Completed count and total, latest, and maximum instructions. |

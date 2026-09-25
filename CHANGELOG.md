@@ -4,6 +4,14 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+### Documentation
+
+- Align current guidance with the tagged 0.8.0 API, exact dependency example,
+  Rust 1.98.1 toolchain and nine maintained PocketIC Watchdog subjects. Correct
+  stale pending-release wording, distinguish historical downstream adoption
+  evidence, and clarify implemented observation semantics. Repository-only;
+  no runtime or public API change.
+
 ## [0.8.0] - 2026-09-20
 
 ### Added

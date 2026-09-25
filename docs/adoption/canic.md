@@ -4,7 +4,11 @@ Status: Canic has completed a hard-cut adoption of exact `ic-timers` 0.5.0
 with runtime introspection schema 3. Combined Canic/IcyDB qualification remains
 open.
 
-## Current exact-0.5.0 adoption
+This record preserves the supplied exact-0.5.0 evidence; it is not a fresh
+inspection of downstream HEAD or qualification of 0.8.0 adoption. See the
+[current handoff](../status/current.md) for later reported downstream context.
+
+## Recorded exact-0.5.0 adoption
 
 Canic's maintained downstream evidence reports exactly one resolved
 `ic-timers` 0.5.0 package and no direct `ic-cdk-timers` dependency. The

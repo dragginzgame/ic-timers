@@ -15,7 +15,7 @@ crate's `platform` module and is never re-exported.
 
 | | Current contract |
 | --- | --- |
-| 🧩 API line | `0.7` immediate-Watchdog continuation hard cut |
+| 🧩 API line | `0.8` registration continuity and exact Watchdog deadlines |
 | 🦀 Rust | Edition 2024; MSRV 1.88.0 |
 | ⚙️ Provider | Exact `ic-cdk-timers` 1.0.0, private and wrapped |
 | 🗂️ Capacity | 64 logical timers; at most 128 owned provider handles |
@@ -99,7 +99,7 @@ framework/application registry:
 
 ```toml
 [dependencies]
-ic-timers = "=0.7.0"
+ic-timers = "=0.8.0"
 ```
 
 Every framework and application crate linked into the same canister must use
@@ -165,7 +165,7 @@ Callbacks run without a registry borrow. Nested ensure, reconcile, cancel,
 and unregister requests are arbitrated by one canonical pending command and
 the exact callback generation.
 
-For the targeted 0.8 API, a sleeping Watchdog can reconcile its own exact
+In the 0.8 API, a sleeping Watchdog can reconcile its own exact
 wake-up with `reconcile_schedule(Some(TimerSchedule::At(deadline_ns)))` and
 return `WatchdogDecision::ScheduleAt(next_deadline_ns)` after successful work.
 The scheduler still commits the cadence recovery successor before work runs.
@@ -318,7 +318,7 @@ operational measurements.
 | `make pocketic-cohorts` | Compare real-canister policy cohorts and measurements |
 | `make release-impact` | Classify changes as crate-impacting, repository-only, or absent |
 
-Normal development uses Rust 1.97.1. The real-canister suites use the audited
+Normal development uses Rust 1.98.1. The real-canister suites use the audited
 PocketIC 15.0.0 Linux x86_64 binary. The first run downloads it into the
 ignored `target/tools` cache; later runs verify its version and SHA-256. Set
 `POCKET_IC_BIN=/path/to/pocket-ic` only for an explicitly managed binary.
@@ -338,6 +338,7 @@ trap isolation, and rejection of external executor ingress.
 | [0.5 design](docs/design/0.5-policy-specific-callback-authority.md) | Policy-specific callback capabilities and migration boundary |
 | [0.6 release note](docs/changelog/0.6.0.md) | Atomic inventory epoch and hard-cut migration |
 | [0.7 release note](docs/changelog/0.7.0.md) | Immediate progress-sensitive Watchdog continuation |
+| [0.8 release note](docs/changelog/0.8.0.md) | Registration continuity and exact Watchdog deadlines |
 | [Runtime evidence](docs/audits/0.3-runtime-evidence-2026-08-13.md) | PocketIC protocol, isolation, size, and instruction evidence |
 | [Current status](docs/status/current.md) | Compact maintainer handoff |
 | [Release guide](docs/releasing.md) | Versioning, validation, and publication workflow |

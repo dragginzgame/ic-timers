@@ -73,7 +73,7 @@ The runtime provides:
 - serial execution with overdue work coalesced into one pending run;
 - cancellation requested safely by the running callback;
 - synchronous lifecycle restoration followed by deferred application work;
-- runtime-start counters, last outcomes, deadlines, instruction consumption,
+- registration-lifetime counters, last outcomes, deadlines, instruction consumption,
   and bounded memory-page extent/growth observations;
 - exact-claim observation of armed provider wake-up ownership without a
   snapshot-derived control path;
@@ -157,14 +157,24 @@ queues work. Initial immediate reconciliation and running-work requests use the
 same declaration, claim, generation, pending-command, and provider-handle path.
 See the [immediate continuation design](design/immediate-watchdog-continuation.md).
 
+Since 0.8.0, exact Watchdog reconciliation can also move a sleeping deadline
+earlier or later. Dispatched or running work retains the committed cadence
+recovery successor until normal completion applies the pending schedule or
+`WatchdogDecision::ScheduleAt`. Snapshots carry a registration identity so
+consumers can detect counter replacement within one runtime epoch. See the
+[continuity and deadline contract](design/0.8-registration-continuity-and-deadlines.md).
+
 ## Consumer integration
 
-- Canic uses exact `ic-timers` 0.5.0 for framework and application timers and
+The following records describe the supplied exact-0.5.0 adoption evidence,
+not a current downstream dependency audit or qualification of 0.8.0:
+
+- Canic adopted exact `ic-timers` 0.5.0 for framework and application timers and
   exposes schema-3 timer, instruction, and memory observations. Canisters
   initialize the shared registry independently of declaring jobs: Fleet
   Coordinator initializes an empty registry, while genuine owners reserve
   their fixed declarations before application hooks.
-- IcyDB uses exact `ic-timers` 0.5.0 and the watchdog policy for replicated
+- IcyDB adopted exact `ic-timers` 0.5.0 and the watchdog policy for replicated
   recovery driving with claim-scoped armed-wakeup observation.
 - A canister using both should see one inventory. Ownership labels distinguish
   scheduling clients; they do not create separate timer runtimes.
@@ -200,6 +210,6 @@ IcyDB's exact dependency, removed parallel timer state, and downstream
 real-canister evidence are recorded in the
 [IcyDB adoption record](adoption/icydb.md). The
 [Canic adapter contract](adoption/canic.md) records its exact-0.5.0/schema-3
-adoption. Both owners independently resolve 0.5.0; combined qualification
+adoption. Both recorded subjects independently resolve 0.5.0; combined qualification
 remains open until Canic's lifecycle-composition seam can host one final
 single-registry Wasm subject.

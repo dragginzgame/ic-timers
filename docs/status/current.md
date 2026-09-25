@@ -1,6 +1,6 @@
 # Current status
 
-Last updated: 2026-09-20
+Last updated: 2026-09-25
 
 ## Purpose
 
@@ -18,16 +18,16 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 - Latest release line: `0.8.0`.
 - Snapshot registration continuity and exact-deadline Watchdog scheduling are
   implemented, with validation recorded in the
-  [0.8.0 release note](../changelog/0.8.0.md). Package mutation and release remain
-  pending maintainer-owned actions.
+  [0.8.0 release note](../changelog/0.8.0.md). The version bump and local
+  `v0.8.0` release tag are complete. Registry publication is not verified here.
 - Direct provider dependency: exact `ic-cdk-timers` 1.0.0.
-- Unreleased dependency update: exact `ic0` 1.2.0 in both lockfiles; existing
+- Released in 0.7.1: exact `ic0` 1.2.0 in both lockfiles; existing
   platform bindings are unchanged upstream. See the
   [0.7.1 release note](../changelog/0.7.1.md).
-- The nested test canisters use exact `ic-cdk` 0.20.3 (unreleased tooling
-  update); the published timer crate does not depend on `ic-cdk` itself.
+- The nested test canisters use exact `ic-cdk` 0.20.3 (updated in 0.7.1);
+  the published timer crate does not depend on `ic-cdk` itself.
 - Minimum supported Rust version: 1.88.0.
-- Development toolchain: Rust 1.97.1.
+- Development toolchain: Rust 1.98.1.
 - The maintainer owns commits, tags, pushes, version bumps, and publication.
 
 ## Canonical runtime
@@ -121,8 +121,8 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Current evidence
 
-- Targeted 0.8.0 passes 105 native tests and nine audited PocketIC Watchdog
-  subjects, plus warning-denied lint/docs, MSRV, Wasm, nested-probe lint,
+- Recorded 0.8.0 validation passes 105 native tests and nine audited
+  PocketIC Watchdog subjects, plus warning-denied lint/docs, MSRV, Wasm, nested-probe lint,
   provider-boundary and package checks. Registration continuity, exact-deadline
   sleeping/replacement, reset/regrowth and interrupted deadline-proposal
   recovery are covered. No downstream adoption or cost saving is claimed.
@@ -141,7 +141,7 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
   interval of 27,811 instructions versus 19,451 for cadence retention, with
   scheduler/work cycle deltas of 30,742,889 and 30,732,414. These are accepted
   runtime intervals and pair-level cycle deltas, not complete-message totals.
-- Current optimized size cohorts report 262,791 bytes for Watchdog versus
+- The 0.7.0 optimized size cohorts report 262,791 bytes for Watchdog versus
   261,914 for after-completion: +877 bytes (0.335%). Registry capacity and the
   at-most-two Watchdog handle bound do not change.
 - Rust 1.88 passes the complete workspace and every supported nested probe
@@ -191,8 +191,11 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Next action
 
-Review the targeted 0.8.0 change, then run the version-bump/release flow when
-requested. Coordinate Canic/IcyDB/application adoption onto one resolved package:
+The documentation review aligns current guidance with the tagged 0.8.0 source
+and Rust 1.98.1 pin. These repository-only corrections remain untagged and are
+recorded under `Unreleased`; no next release target is selected.
+
+Coordinate Canic/IcyDB/application adoption onto one resolved package:
 carry registration continuity through the existing metrics owner and remove Toko
 Miner's auxiliary deadline registration when adopting exact Watchdog schedules.
 The read-only downstream review found Toko Miner on ic-timers 0.7.1 with Canic

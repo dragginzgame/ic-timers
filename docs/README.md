@@ -3,7 +3,7 @@
 - [0.8 continuity and deadlines](design/0.8-registration-continuity-and-deadlines.md):
   inert registration identity, interval-measurement limits, exact Watchdog
   scheduling and downstream adoption requirements.
-- [Architecture](architecture.md): current boundary, intended runtime, and
+- [Architecture](architecture.md): current boundary, implemented runtime, and
   consumer integration.
 - [Observability contract](design/observability.md): implemented canonical
   timer snapshot, counter semantics, and validated Canic adapter mapping.
@@ -13,8 +13,8 @@
 - [0.3 Patch 1 contract](design/0.3-patch-1-contract.md): frozen capacity,
   public API, policy/state, counters, provider evidence, MSRV, and measurement
   decisions before runtime implementation.
-- [Safety boundary](../SAFETY.md): implemented guarantees, missing recovery
-  behavior, and required evidence.
+- [Safety boundary](../SAFETY.md): implemented guarantees, recovery limits,
+  and required evidence.
 - [Code-hygiene audit](audits/code-hygiene.md): recurring mechanical and API
   review checklist.
 - [0.4 hygiene report](audits/code-hygiene-0.4-2026-08-15.md): hard-cut facade,
