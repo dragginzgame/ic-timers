@@ -1,13 +1,15 @@
 # IcyDB adoption record
 
-Status: IcyDB has completed a hard-cut adoption of exact `ic-timers` 0.5.0.
+Status: historical exact-0.5.0 IcyDB adoption record.
 This is maintained downstream evidence supplied by the IcyDB owner; this
 repository did not modify IcyDB. Historical tagged and intermediate evidence
 is retained separately below.
 
 This record preserves the supplied exact-0.5.0 evidence; it is not a fresh
 inspection of downstream HEAD or qualification of 0.8.0 adoption. See the
-[current handoff](../status/current.md) for later reported downstream context.
+[current handoff](../status/current.md) and
+[dated Toko Miner evidence](toko-miner.md) for later downstream context,
+including scoped 0.8.0 composition qualification.
 
 ## Recorded exact-0.5.0 integration
 
@@ -41,7 +43,7 @@ synchronous idempotent ensure seam before returning. Durable demand always
 calls `ensure_scheduled()` unconditionally; `has_armed_wakeup()` remains a
 reporting observation and does not create a check-then-arm race.
 
-## Current downstream validation
+## Recorded exact-0.5.0 downstream validation
 
 IcyDB reports the following checks passing against exact 0.5.0:
 
@@ -118,12 +120,13 @@ In PocketIC 15.0.0, the empty and sampled brackets both measured 200
 call-context instructions, for an observed four-read delta of zero. This is a
 local regression subject rather than a promise about future IC metering.
 
-## Exact-0.6 adoption requirements
+## Historical exact-0.6 adoption requirements
 
-IcyDB has not yet supplied exact-0.6 adoption evidence. When it advances, its
-0.228 watchdog measurements must be rebaselined rather than directly compared
-with 0.5 totals: the documented meaning is the accepted `ic-timers` work
-interval, not application callback code alone. The runtime's counter placement
+At the time of the exact-0.5.0 record, exact-0.6 adoption evidence was not yet
+supplied. The resulting requirement remains relevant to cross-release
+comparisons: 0.228 watchdog measurements must be rebaselined rather than
+directly compared with 0.5 totals. The documented meaning is the accepted
+`ic-timers` work interval, not application callback code alone. The runtime's counter placement
 did not change between 0.5 and 0.6; the 0.6 documentation corrects the broader
 envelope label. Cross-release reports must identify the exact artifact and
 measurement interpretation.
@@ -140,11 +143,14 @@ convert cycle-balance deltas into instruction estimates.
 
 ## Progress-sensitive integration guidance (available since 0.7.0)
 
-`ic-timers` 0.7.0 added the Watchdog-specific immediate continuation
-described in the
-[design record](../design/immediate-watchdog-continuation.md). This repository
-does not claim that IcyDB has adopted that API. When it does, the
-intended mapping is:
+`ic-timers` 0.7.0 added the Watchdog-specific immediate continuation described
+in the [design record](../design/immediate-watchdog-continuation.md).
+Read-only IcyDB source inspection on 2026-10-02 finds generated lifecycle
+reconciliation using `ScheduledImmediately` and successful recovery progress
+using `ContinueImmediately`, with registry 0.8.0 in its lockfile. Its owner
+records 11 focused 0.8.0 PocketIC integration tests passing in
+`docs/design/0.261-entity-rename/0.261-status.md` (D1 final evidence);
+this repository did not rerun them. The integration mapping is:
 
 | IcyDB condition | API |
 | --- | --- |
@@ -155,6 +161,6 @@ intended mapping is:
 | Quiescence | `WatchdogDecision::Stop` |
 | Durable terminal failure | invariant-failure completion with `Stop` |
 
-This future adoption must remain an atomic single-package hard cut and rerun
-IcyDB's own backlog, trap, exhaustion, lifecycle, and performance evidence. It
-must not add a second watchdog or ordinary-timer drain loop.
+Further adoption must remain an atomic single-package hard cut and retain
+IcyDB's own backlog, trap, exhaustion, lifecycle and performance evidence.
+It must not add a second watchdog or ordinary-timer drain loop.

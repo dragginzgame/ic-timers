@@ -236,10 +236,10 @@ fn schedule_at_on_next_work(deadline_ns: u64) {
 #[ic_cdk::update]
 fn replace_registration() {
     REGISTRATION.with_borrow_mut(|slot| {
-        if let Some(registration) = slot.take() {
-            if registration.unregister().is_err() {
-                ic_cdk::trap("unregister failed");
-            }
+        if let Some(registration) = slot.take()
+            && registration.unregister().is_err()
+        {
+            ic_cdk::trap("unregister failed");
         }
     });
     if !install_watchdog() {

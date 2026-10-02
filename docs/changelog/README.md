@@ -22,3 +22,4 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.7.0 immediate Watchdog continuation](0.7.0.md)
 - [0.7.1 dependency maintenance](0.7.1.md)
 - [0.8.0 registration continuity and Watchdog deadlines](0.8.0.md)
+- [0.8.1 Rust 1.99 and CI maintenance](0.8.1.md)

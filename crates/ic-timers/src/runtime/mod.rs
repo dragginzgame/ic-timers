@@ -1125,7 +1125,10 @@ fn clear_entry_provider_handles(identity: &TimerIdentity) -> Result<(), TimerErr
     Ok(())
 }
 
-#[allow(clippy::future_not_send)] // IC callbacks and canister-local state are single-threaded.
+#[expect(
+    clippy::future_not_send,
+    reason = "IC callbacks and canister-local state are single-threaded."
+)]
 async fn dispatch_wakeup(token: CallbackToken) {
     match token.role() {
         CallbackRole::OrdinaryWork => dispatch_ordinary(token).await,
@@ -1134,7 +1137,10 @@ async fn dispatch_wakeup(token: CallbackToken) {
     }
 }
 
-#[allow(clippy::future_not_send)] // IC callbacks and canister-local state are single-threaded.
+#[expect(
+    clippy::future_not_send,
+    reason = "IC callbacks and canister-local state are single-threaded."
+)]
 async fn dispatch_ordinary(token: CallbackToken) {
     let measurement = CallbackMeasurementStart::capture();
     let accepted = with_registry_mut(|registry| {

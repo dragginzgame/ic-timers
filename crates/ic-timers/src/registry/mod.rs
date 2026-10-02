@@ -1232,7 +1232,10 @@ impl TimerRegistry {
         }
     }
 
-    #[allow(clippy::too_many_lines)] // One atomic policy transition; splitting obscures rollback state.
+    #[expect(
+        clippy::too_many_lines,
+        reason = "One atomic policy transition; splitting obscures rollback state."
+    )]
     pub(crate) fn complete_ordinary(
         &mut self,
         token: &CallbackToken,
@@ -1420,7 +1423,6 @@ impl TimerRegistry {
         ))
     }
 
-    #[allow(clippy::too_many_lines)] // The bounded scheduler protocol is audited as one path.
     pub(crate) fn begin_watchdog_scheduler(
         &mut self,
         token: &CallbackToken,
@@ -1545,7 +1547,10 @@ impl TimerRegistry {
         }
     }
 
-    #[allow(clippy::too_many_lines)] // One atomic successor and request-arbitration transition.
+    #[expect(
+        clippy::too_many_lines,
+        reason = "One atomic successor and request-arbitration transition."
+    )]
     pub(crate) fn complete_watchdog_work(
         &mut self,
         token: &CallbackToken,

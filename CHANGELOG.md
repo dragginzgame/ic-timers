@@ -4,13 +4,31 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.8.1]
+
+### Development
+
+- Update the development and hosted CI toolchains to Rust 1.99.0 while
+  retaining Rust 1.88.0 as the MSRV. Run warning-denied nested-probe linting
+  on both toolchains in hosted CI, including every supported policy feature.
+- Fix Rust 1.99 Clippy's empty-collection assertions in the native inventory
+  test to include collection contents on failure, and collapse the nested
+  unregister check in the runtime probe. No runtime or public API change.
+- Remove the obsolete scheduler line-count suppression and replace the nine
+  active Clippy suppressions with explained lint expectations, so obsolete
+  exceptions fail warning-denied checks (Toko Miner IC-TIMERS-002).
+
 ### Documentation
 
 - Align current guidance with the tagged 0.8.0 API, exact dependency example,
-  Rust 1.98.1 toolchain and nine maintained PocketIC Watchdog subjects. Correct
+  Rust 1.99.0 toolchain and nine maintained PocketIC Watchdog subjects. Correct
   stale pending-release wording, distinguish historical downstream adoption
   evidence, and clarify implemented observation semantics. Repository-only;
   no runtime or public API change.
+- Refresh the handoff and adoption records with dated 0.8.0 publication and
+  scoped Canic/IcyDB/Toko Miner composition evidence. Retire the old lifecycle
+  blocker while keeping current deployment and cost comparisons unverified
+  (Toko Miner IC-TIMERS-001).
 
 ## [0.8.0] - 2026-09-20
 

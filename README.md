@@ -312,13 +312,17 @@ operational measurements.
 | --- | --- |
 | `make update-dev` | Install the pinned toolchain, components, Wasm target, and formatting hook |
 | `make ci` | Run the normal warning-denied checks, native tests, Wasm build, and package checks |
-| `make msrv` | Prove the Rust 1.88.0 workspace and supported probe configurations |
+| `make msrv` | Check the workspace with Rust 1.88.0 |
+| `make testing-check` | Format and lint every supported nested probe configuration with Rust 1.88.0 |
 | `make repository-check` | Validate repository-only documentation, evidence, or tooling work |
 | `make pocketic-watchdog` | Run the focused real-canister watchdog recovery matrix |
 | `make pocketic-cohorts` | Compare real-canister policy cohorts and measurements |
 | `make release-impact` | Classify changes as crate-impacting, repository-only, or absent |
 
-Normal development uses Rust 1.98.1. The real-canister suites use the audited
+Normal development and hosted CI use Rust 1.99.0. Hosted CI also lints every
+supported nested probe configuration with both Rust 1.99.0 and Rust 1.88.0.
+To run the development-toolchain probe checks locally, use
+`make testing-check MSRV=1.99.0`. The real-canister suites use the audited
 PocketIC 15.0.0 Linux x86_64 binary. The first run downloads it into the
 ignored `target/tools` cache; later runs verify its version and SHA-256. Set
 `POCKET_IC_BIN=/path/to/pocket-ic` only for an explicitly managed binary.

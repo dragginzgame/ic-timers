@@ -43,6 +43,8 @@
   downstream recovery evidence, and measured costs.
 - [Canic adapter contract](adoption/canic.md): required pre-1.0 hard cut,
   identity/policy mapping, custody boundary, and parity gate.
+- [Toko Miner adoption evidence](adoption/toko-miner.md): published 0.8.0,
+  dated scoped composition receipts and remaining application work.
 - [Releasing](releasing.md): crate-impact classification, pre-1.0 SemVer, and
   version/release commands.
 - [Changelog lines](changelog/README.md): release-line working notes.

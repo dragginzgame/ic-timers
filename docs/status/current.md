@@ -1,6 +1,6 @@
 # Current status
 
-Last updated: 2026-09-25
+Last updated: 2026-10-02
 
 ## Purpose
 
@@ -16,10 +16,14 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 - Workspace package version: `0.8.0`.
 - Latest release line: `0.8.0`.
+- Named target release: `0.8.1` (targeted, unreleased).
 - Snapshot registration continuity and exact-deadline Watchdog scheduling are
   implemented, with validation recorded in the
   [0.8.0 release note](../changelog/0.8.0.md). The version bump and local
-  `v0.8.0` release tag are complete. Registry publication is not verified here.
+  `v0.8.0` release tag are complete. Publication is corroborated by the cached
+  registry package, its VCS commit and Toko Miner's registry lockfile; see the
+  [dated downstream record](../adoption/toko-miner.md). The 0.8.1 tooling and
+  lint-expectation changes remain unpublished.
 - Direct provider dependency: exact `ic-cdk-timers` 1.0.0.
 - Released in 0.7.1: exact `ic0` 1.2.0 in both lockfiles; existing
   platform bindings are unchanged upstream. See the
@@ -27,7 +31,9 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 - The nested test canisters use exact `ic-cdk` 0.20.3 (updated in 0.7.1);
   the published timer crate does not depend on `ic-cdk` itself.
 - Minimum supported Rust version: 1.88.0.
-- Development toolchain: Rust 1.98.1.
+- Development and hosted CI toolchain: Rust 1.99.0.
+- Hosted PR/main checks lint all supported nested probe configurations on
+  both Rust 1.99.0 and the Rust 1.88.0 MSRV.
 - The maintainer owns commits, tags, pushes, version bumps, and publication.
 
 ## Canonical runtime
@@ -121,11 +127,23 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Current evidence
 
+- The untagged Rust 1.99.0 update passes `make ci`, including all 105 native
+  tests, warning-denied Clippy/rustdoc, Wasm checking and offline package
+  verification. Rust 1.88.0 workspace checks and the changed inventory test
+  pass. All supported nested-probe lint configurations pass on both 1.99.0
+  and 1.88.0; the runtime probe also passes Wasm checking on 1.99.0. Workflow
+  syntax passes `actionlint`. PocketIC suites were not rerun for this update.
+- IC-TIMERS-001/002 fixes pass the same CI, MSRV and nested-probe gates, plus
+  strict production Wasm Clippy on both Rust 1.99.0 and 1.88.0. The nine active
+  lint expectations are fulfilled; the obsolete scheduler suppression is
+  removed. Supplemental root MSRV test lint complexity remains advisory as
+  recorded in the [0.8.1 note](../changelog/0.8.1.md).
 - Recorded 0.8.0 validation passes 105 native tests and nine audited
   PocketIC Watchdog subjects, plus warning-denied lint/docs, MSRV, Wasm, nested-probe lint,
   provider-boundary and package checks. Registration continuity, exact-deadline
   sleeping/replacement, reset/regrowth and interrupted deadline-proposal
-  recovery are covered. No downstream adoption or cost saving is claimed.
+  recovery are covered. Later owner-supplied downstream adoption evidence is
+  scoped separately below; no cost saving is claimed.
 - The remaining entries below retain earlier release evidence and performance
   observations; the policy size/performance cohorts were not rerun for 0.8.0.
 - Package validation passes with 94 native tests, warning-denied Clippy and
@@ -171,35 +189,37 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Downstream state
 
-- IcyDB has completed a hard-cut adoption of exact `ic-timers` 0.5.0. Its
-  maintained Rust 1.88, warning-denied lint, dependency, lifecycle, Candid,
-  and real-canister recovery evidence passes; the historical tagged 0.3.4 and
-  post-tag 0.3.8 subjects remain distinct in its adoption record.
-- Canic has completed a hard-cut adoption of exact `ic-timers` 0.5.0. Its
-  schema-3 runtime projection exports shared timer, instruction, and bounded
-  memory-page observations from one resolved package without a second
-  scheduler; its earlier exact-0.3.8/schema-2 subject remains historical.
-- This repository has not modified either downstream repository and does not
-  claim combined framework qualification.
-- A combined Canic/IcyDB/application Wasm must resolve exactly one `ic-timers`
-  package and show both owners in one inventory, synchronous lifecycle
-  reconstruction, IcyDB Watchdog recovery, and continued Canic timer progress.
-  The open blocker is Canic's lifecycle-composition seam, not `ic-timers`
-  scheduler correctness.
+- Read-only inspection on 2026-10-02 finds Toko Miner selecting registry
+  `ic-timers` 0.8.0, Canic 0.110.49 and IcyDB 0.262.2. Its lockfile contains
+  one timer package; the downstream owner reports `make timer-check` passing
+  for Game Shard and Translation. This is dependency evidence, not proof of
+  current deployment or recovery.
+- The retained 2026-09-20 receipt for Canic 0.110.33 and IcyDB 0.261.0 records
+  one 0.8.0 timer package in every role, shared gameplay timer inventory,
+  idle/wake behavior and scoped managed same-release state/timer recovery.
+  The old lifecycle-composition blocker is resolved for that recorded subject.
+  Concurrent gameplay changes were excluded; no current staging deployment,
+  general combined qualification or cost comparison follows from the receipt.
+- The [dated downstream record](../adoption/toko-miner.md) preserves source
+  identities, publication evidence and scope. Earlier exact-0.5.0 adoption
+  records for [IcyDB](../adoption/icydb.md) and [Canic](../adoption/canic.md)
+  remain historical. This repository did not rerun or modify downstream suites.
 - IcyDB owns any allocator-derived sub-page live-byte bound and its maximum
   64-index fanout probe; page extent alone cannot supply either result.
 
 ## Next action
 
-The documentation review aligns current guidance with the tagged 0.8.0 source
-and Rust 1.98.1 pin. These repository-only corrections remain untagged and are
-recorded under `Unreleased`; no next release target is selected.
+The Rust 1.99.0 update fixes Clippy's empty-collection assertions and extends
+hosted probe linting to both development and MSRV toolchains. Toko Miner's
+IC-TIMERS-001/002 feedback refreshes scoped downstream guidance and replaces
+active lint suppressions with expectations. These changes remain untagged and
+are staged in the undated `0.8.1` changelog section and
+[0.8.1 release note](../changelog/0.8.1.md). The package remains at 0.8.0;
+version mutation and the complete release gate await a maintainer bump request.
 
-Coordinate Canic/IcyDB/application adoption onto one resolved package:
-carry registration continuity through the existing metrics owner and remove Toko
-Miner's auxiliary deadline registration when adopting exact Watchdog schedules.
-The read-only downstream review found Toko Miner on ic-timers 0.7.1 with Canic
-0.110.32 adoption in progress; earlier downstream entries above are historical
-evidence, not a current dependency qualification. Actual downstream adapters,
-combined-Wasm tests, complete transfer evidence and live cost comparisons remain
-downstream work. No sibling repository was edited.
+Remaining application work is Toko Miner's auxiliary checkpoint deadline
+registration and diagnostic registration-sequence projection. The published
+exact Watchdog scheduling and `TimerSnapshot::registration_id()` APIs already
+support those changes; application owners must qualify them against their
+actual artifacts. Current deployment, complete transfer evidence and live cost
+comparisons remain downstream work. No sibling repository was edited.

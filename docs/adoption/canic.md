@@ -1,12 +1,12 @@
 # Canic adapter contract
 
-Status: Canic has completed a hard-cut adoption of exact `ic-timers` 0.5.0
-with runtime introspection schema 3. Combined Canic/IcyDB qualification remains
-open.
+Status: historical exact-0.5.0 adapter record with runtime introspection schema 3.
 
 This record preserves the supplied exact-0.5.0 evidence; it is not a fresh
 inspection of downstream HEAD or qualification of 0.8.0 adoption. See the
-[current handoff](../status/current.md) for later reported downstream context.
+[current handoff](../status/current.md) and
+[dated Toko Miner evidence](toko-miner.md) for later downstream context,
+including scoped 0.8.0 composition qualification.
 
 ## Recorded exact-0.5.0 adoption
 
@@ -216,9 +216,9 @@ authority-snapshot quiescence acts only on Canic-owned claims; lifecycle order
 is preserved; timer errors are typed; direct provider use is removed; and its
 graph resolves one exact package.
 
-Combined Canic+IcyDB qualification remains open. One final Wasm must prove one
-resolved registry, both owners in one inventory, synchronous lifecycle
-reconstruction, IcyDB Watchdog recovery, and continued Canic timer progress.
-The current blocker is Canic's lifecycle-composition seam, not an `ic-timers`
-scheduler defect. No combined-composition claim is made before that evidence
-exists.
+The lifecycle-composition seam was an open blocker at the time of this
+exact-0.5.0 record. The later [Toko Miner receipt](toko-miner.md) resolves that
+blocker for its recorded Canic 0.110.33/IcyDB 0.261.0/`ic-timers` 0.8.0
+subject. It is not general qualification of subsequent artifacts. New final
+Wasms still require one resolved registry and evidence for their actual
+inventory, lifecycle order, recovery and independent timer progress.

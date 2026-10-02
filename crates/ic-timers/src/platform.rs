@@ -41,7 +41,10 @@ pub fn set_timer(delay: Duration, task: impl Future<Output = ()> + 'static) -> T
 
 /// Clear one still-armed platform callback.
 #[cfg(not(test))]
-#[allow(clippy::needless_pass_by_value)] // Clearing consumes the linear handle.
+#[expect(
+    clippy::needless_pass_by_value,
+    reason = "Clearing consumes the linear handle."
+)]
 pub fn clear_timer(handle: TimerHandle) {
     cdk_clear_timer(handle.0);
 }
@@ -146,7 +149,10 @@ mod fake {
         TimerHandle(handle)
     }
 
-    #[allow(clippy::needless_pass_by_value)] // Clearing consumes the linear handle.
+    #[expect(
+        clippy::needless_pass_by_value,
+        reason = "Clearing consumes the linear handle."
+    )]
     pub fn clear_timer(handle: TimerHandle) {
         advance_instructions(2);
         TASKS.with(|tasks| {

@@ -2,7 +2,7 @@ name: CI
 
 env:
   IC_TIMERS_MSRV: 1.88.0
-  IC_TIMERS_INTERNAL_TOOLCHAIN: 1.97.1
+  IC_TIMERS_INTERNAL_TOOLCHAIN: 1.99.0
 
 permissions:
   contents: read
@@ -30,13 +30,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
         with:
           toolchain: ${{ env.IC_TIMERS_MSRV }}
+          components: clippy, rustfmt
       - name: Pin cargo and rustc to MSRV
         shell: bash
         run: echo "RUSTUP_TOOLCHAIN=$IC_TIMERS_MSRV" >> "$GITHUB_ENV"
       # Swatinem/rust-cache v2
       - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
-      - name: Check MSRV
-        run: make msrv
+      - name: Check MSRV and lint nested probes
+        run: make msrv testing-check
 
   checks:
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
@@ -59,6 +60,8 @@ jobs:
       - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
       - name: Run CI gate
         run: make ci
+      - name: Lint nested probes with internal toolchain
+        run: make testing-check MSRV="$IC_TIMERS_INTERNAL_TOOLCHAIN"
 
   # PR/main owns full validation. A tag at the same main commit only rechecks
   # release truth and tag identity, avoiding duplicate Rust builds while still

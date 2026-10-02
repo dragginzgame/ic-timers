@@ -62,8 +62,8 @@ fn initialization_is_required_and_idempotent() {
     let inventory = timer_inventory().expect("initialized inventory should be available");
     assert_eq!(inventory.epoch(), first);
     assert!(inventory.is_empty());
-    assert!(inventory.timers().is_empty());
-    assert!(inventory.into_timers().is_empty());
+    assert_eq!(inventory.timers(), []);
+    assert_eq!(inventory.into_timers(), []);
 }
 
 #[test]
@@ -1817,7 +1817,10 @@ fn icydb_watchdog_result(
 }
 
 #[test]
-#[allow(clippy::too_many_lines)] // One end-to-end IcyDB-shaped lifecycle fixture.
+#[expect(
+    clippy::too_many_lines,
+    reason = "One end-to-end IcyDB-shaped lifecycle fixture."
+)]
 fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idempotent() {
     setup();
     let timer = identity("icydb-startup-watchdog");

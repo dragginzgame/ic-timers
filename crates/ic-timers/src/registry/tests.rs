@@ -1058,7 +1058,10 @@ fn watchdog_running_immediate_request_replaces_exact_successor_and_beats_cadence
 }
 
 #[test]
-#[allow(clippy::too_many_lines)] // One precedence matrix over three independent declarations.
+#[expect(
+    clippy::too_many_lines,
+    reason = "One precedence matrix over three independent declarations."
+)]
 fn watchdog_completion_arbitrates_immediate_cancellation_and_unregistration() {
     let mut registry = registry();
     let continue_timer = identity("watchdog-decision-immediate");

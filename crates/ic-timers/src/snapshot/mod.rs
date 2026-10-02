@@ -116,7 +116,10 @@ pub struct TimerSnapshot {
 }
 
 impl TimerSnapshot {
-    #[allow(clippy::too_many_arguments)] // Registry-only constructor keeps one coherent boundary.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "Registry-only constructor keeps one coherent boundary."
+    )]
     pub(crate) const fn new(
         identity: TimerIdentity,
         registration_id: TimerRegistrationId,
