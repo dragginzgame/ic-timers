@@ -65,9 +65,13 @@ the [safety boundary](../../SAFETY.md).
   The suspension helper now carries a scoped `future_not_send` expectation for
   its intentional single-threaded `Rc` state, correcting the reported lint failure;
   the maintainer's rerun remains pending.
-- Real-canister fixtures hold an ordinary callback across a self-call await while
+- Real-canister fixtures keep ordinary work awaiting self-call gate replies while
   ingress and another Watchdog proceed. Provider-churn fixtures exercise distant
   replacement, bounded immediate work, cancellation and eventual deadline cleanup.
+  The stored-waker gate was replaced after the maintainer reported no committed
+  suspension. Closed-gate replies now lead to another call, and observations
+  expose completed gate replies and call/decode errors. The corrected subject
+  awaits the maintainer's rerun.
 - Release validators count markers independently of their value and reject
   conflicting workspace/latest-release markers, duplicated headings and statuses.
   Free-form prose remains advisory, never a post-mutation blocker.
@@ -86,6 +90,8 @@ PocketIC and shell fixtures are written and wired into existing gates but have n
 been run by the automated contributor. No new recovery, performance, allocator or
 memory-growth result is claimed. The native mock does not simulate IC rollback or
 provider heap allocation; real-canister subjects remain necessary for those facts.
+The maintainer reported ten PocketIC subjects passing and one ordinary-await
+subject failing before the gate correction; this does not qualify that correction.
 
 ## Downstream state
 

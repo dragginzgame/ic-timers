@@ -29,6 +29,9 @@ All notable changes to this project are recorded here.
   notifications so unrelated due timers can progress.
 - Document the suspension helper's intentionally non-`Send` future with a scoped
   Clippy expectation, matching the single-threaded runtime executor.
+- Keep the PocketIC ordinary-work gate pending through awaited self-call replies
+  instead of a stored waker across ingress contexts. Require an observed reply
+  before interleaving assertions and report gate errors in fixture observations.
 
 ### Evidence and documentation
 

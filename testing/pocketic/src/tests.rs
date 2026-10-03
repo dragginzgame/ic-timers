@@ -640,6 +640,8 @@ struct OrdinaryObservation {
     declared: bool,
     running: bool,
     waiting: bool,
+    gate_replies: u64,
+    gate_error: Option<String>,
     completed: u64,
     completed_at_ns: Option<u64>,
     next_deadline_ns: Option<u64>,
@@ -677,16 +679,19 @@ fn ordinary_await_allows_ingress_and_other_timers_before_completion() {
                 Encode!(&after_completion, &transient).unwrap(),
             )
             .unwrap();
-            let mut suspended = false;
+            let mut suspended = ordinary_observation(&pic, canister_id);
             for _ in 0..32 {
                 pic.tick();
-                let observed = ordinary_observation(&pic, canister_id);
-                if observed.running && observed.waiting {
-                    suspended = true;
+                suspended = ordinary_observation(&pic, canister_id);
+                if suspended.running && suspended.waiting && suspended.gate_replies > 0 {
                     break;
                 }
             }
-            assert!(suspended, "self-call must commit real suspension");
+            assert!(
+                suspended.running && suspended.waiting && suspended.gate_replies > 0,
+                "self-call must commit real suspension: after_completion={after_completion} command={command} observed={suspended:?}"
+            );
+            assert_eq!(suspended.gate_error, None);
             assert!(update_bool(&pic, canister_id, "start"));
             pic.advance_time(Duration::from_secs(2));
             drive_rounds(&pic, 16);
@@ -697,6 +702,8 @@ fn ordinary_await_allows_ingress_and_other_timers_before_completion() {
             );
             let waiting = ordinary_observation(&pic, canister_id);
             assert!(waiting.running);
+            assert!(waiting.waiting);
+            assert_eq!(waiting.gate_error, None);
             assert_eq!(waiting.completed, 0);
             assert_eq!(waiting.work_completed, 0);
             let exact_deadline =
@@ -719,6 +726,9 @@ fn ordinary_await_allows_ingress_and_other_timers_before_completion() {
             let completed = ordinary_observation(&pic, canister_id);
             assert_eq!(completed.completed, 1);
             assert!(!completed.running);
+            assert!(!completed.waiting);
+            assert_eq!(completed.gate_error, None);
+            assert!(completed.gate_replies > suspended.gate_replies);
             if matches!(command, "cancel" | "unregister") {
                 assert!(!completed.declared);
                 assert_eq!(completed.next_deadline_ns, None);

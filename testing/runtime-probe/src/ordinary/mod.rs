@@ -6,10 +6,7 @@ use ic_timers::{
     TimerCompletion, TimerDirective, TimerIdentity, TimerRegistrationStatus, TimerRunResult,
     TimerSchedule, register_after_completion, register_once, timer_snapshot,
 };
-use std::{
-    cell::{Cell, RefCell},
-    task::{Poll, Waker},
-};
+use std::cell::{Cell, RefCell};
 
 enum Registration {
     Once(OnceRegistration),
@@ -19,7 +16,9 @@ enum Registration {
 thread_local! {
     static REGISTRATION: RefCell<Option<Registration>> = const { RefCell::new(None) };
     static GATE_OPEN: Cell<bool> = const { Cell::new(false) };
-    static GATE_WAKER: RefCell<Option<Waker>> = const { RefCell::new(None) };
+    static GATE_WAITING: Cell<bool> = const { Cell::new(false) };
+    static GATE_REPLIES: Cell<u64> = const { Cell::new(0) };
+    static GATE_ERROR: RefCell<Option<String>> = const { RefCell::new(None) };
     static COMPLETIONS: Cell<u64> = const { Cell::new(0) };
     static COMPLETED_AT_NS: Cell<Option<u64>> = const { Cell::new(None) };
 }
@@ -29,6 +28,8 @@ struct Observation {
     declared: bool,
     running: bool,
     waiting: bool,
+    gate_replies: u64,
+    gate_error: Option<String>,
     completed: u64,
     completed_at_ns: Option<u64>,
     next_deadline_ns: Option<u64>,
@@ -69,12 +70,33 @@ fn start_ordinary(after_completion: bool, transient: bool) {
 }
 
 async fn work(recur: bool) -> TimerRunResult {
-    if ic_cdk::call::Call::unbounded_wait(ic_cdk::api::canister_self(), "ordinary_gate")
-        .await
-        .is_err()
-    {
-        return TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop);
+    GATE_WAITING.with(|waiting| waiting.set(true));
+    loop {
+        // Every closed-gate reply is followed by another real call await. A bare
+        // Pending future cannot keep the IC call context alive, and a protected
+        // CDK task cannot resume in the separate ingress that opens the gate.
+        let result =
+            ic_cdk::call::Call::unbounded_wait(ic_cdk::api::canister_self(), "ordinary_gate")
+                .await
+                .map_err(|error| error.to_string())
+                .and_then(|response| response.candid::<bool>().map_err(|error| error.to_string()));
+        let open = match result {
+            Ok(open) => open,
+            Err(error) => {
+                GATE_WAITING.with(|waiting| waiting.set(false));
+                GATE_ERROR.with_borrow_mut(|slot| *slot = Some(error));
+                return TimerRunResult::new(
+                    TimerCompletion::invariant_failure(0),
+                    TimerDirective::Stop,
+                );
+            }
+        };
+        GATE_REPLIES.with(|count| count.set(count.get().saturating_add(1)));
+        if open {
+            break;
+        }
     }
+    GATE_WAITING.with(|waiting| waiting.set(false));
     COMPLETIONS.with(|count| count.set(count.get() + 1));
     COMPLETED_AT_NS.with(|time| time.set(Some(ic_cdk::api::time())));
     TimerRunResult::new(
@@ -88,29 +110,18 @@ async fn work(recur: bool) -> TimerRunResult {
 }
 
 #[ic_cdk::update]
-async fn ordinary_gate() {
+fn ordinary_gate() -> bool {
     assert_eq!(
         ic_cdk::api::msg_caller(),
         ic_cdk::api::canister_self(),
         "self-call gate"
     );
-    std::future::poll_fn(|context| {
-        if GATE_OPEN.with(Cell::get) {
-            Poll::Ready(())
-        } else {
-            GATE_WAKER.with_borrow_mut(|slot| *slot = Some(context.waker().clone()));
-            Poll::Pending
-        }
-    })
-    .await;
+    GATE_OPEN.with(Cell::get)
 }
 
 #[ic_cdk::update]
 fn release_ordinary_work() {
     GATE_OPEN.with(|open| open.set(true));
-    if let Some(waker) = GATE_WAKER.with_borrow_mut(Option::take) {
-        waker.wake();
-    }
 }
 
 fn reconcile(registration: &Registration, desired: Option<TimerSchedule>) {
@@ -156,7 +167,9 @@ fn ordinary_observation() -> Observation {
         running: snapshot
             .as_ref()
             .is_some_and(|value| value.registration_status() == TimerRegistrationStatus::Running),
-        waiting: GATE_WAKER.with_borrow(Option::is_some),
+        waiting: GATE_WAITING.with(Cell::get),
+        gate_replies: GATE_REPLIES.with(Cell::get),
+        gate_error: GATE_ERROR.with_borrow(Clone::clone),
         completed: COMPLETIONS.with(Cell::get),
         completed_at_ns: COMPLETED_AT_NS.with(Cell::get),
         next_deadline_ns: snapshot.as_ref().and_then(|value| value.next_deadline_ns()),
