@@ -5,20 +5,23 @@ Last updated: 2026-10-03
 ## Purpose
 
 This is the compact session handoff. Historical implementation and validation
-detail belongs in [release notes](../changelog/README.md), [audits](../audits/code-hygiene.md)
+belongs in [release notes](../changelog/README.md), [audits](../audits/code-hygiene.md)
 and the [safety boundary](../../SAFETY.md).
 
 ## Release state
 
 - Workspace package version: `0.9.2`.
 - Latest release line: `0.9.2`.
-- The maintainer reports 0.9.1 live. Local release commit
-  `b51dae91b563e6d0e427950c89d8006c375162e0` has annotated `v0.9.1`; the existing
-  local `origin/main` ref points to the same commit. Cargo, both lockfiles and
-  the dated changelog match. See the [0.9.1 delivery record](../changelog/0.9.1.md).
-- The [0.9.0 note](../changelog/0.9.0.md) records the preceding ordinary-completion
-  semantic hard cut. Removing a public item or semantic contract still requires
-  the next minor line; private behavior-preserving simplifications may use a patch.
+- The maintainer reports 0.9.2 live. Release commit
+  `153770c004611a0c9020f36bfc95348ee5293a2e`, annotated `v0.9.2`, local
+  `origin/main`, Cargo, both lockfiles and the dated changelog agree. Cached
+  registry VCS metadata identifies the same commit. See the
+  [0.9.2 delivery record](../changelog/0.9.2.md).
+- Hosted main checks/MSRV and tag-truth jobs succeeded for that exact SHA.
+  They do not establish fresh downstream or PocketIC qualification.
+- The [0.9.0 note](../changelog/0.9.0.md) records the ordinary-completion
+  semantic hard cut. Removing a public item or semantic contract requires the
+  next minor line; private behavior-preserving simplifications may use a patch.
 - Version mutation, staging, commits, tags, pushes, publication, release commands,
   tests and build/lint gates are user-owned. Automated contributors implement
   requested changes and prepare changelogs/notes without executing those gates.
@@ -29,105 +32,91 @@ and the [safety boundary](../../SAFETY.md).
 
 - One volatile canister-local registry owns at most 64 structured identities,
   declaration claims, callback generations, policy states, pending commands,
-  callbacks, observations and provider handles.
+  callbacks, observations and provider handles. Entries own matching control,
+  callback and cadence in one typed payload; policy is derived.
 - Once and AfterCompletion accept async work. Watchdog accepts one synchronous
-  bounded unit in a work message after its scheduler commits a cadence successor.
+  bounded unit after its scheduler commits a cadence successor.
 - Only private `platform` calls the provider and IC system facts. Rust visibility
-  and forbidden private-interface leaks prevent public provider authority;
-  repository checks enforce direct-provider confinement and restricted declarations.
-- Snapshots and armed-wakeup observations are inert, not control authority or
-  delivery guarantees. Contexts expire with their exact work token; retained
-  registration claims own longer-lived control. Claims and generations do not wrap.
-- Consumer-owned durable authority reconstructs retained declarations synchronously
-  before downstream hooks. Timer authority is volatile, never restored from
-  persisted snapshots or handles. Shared-registry adoption remains atomic.
+  and repository checks enforce provider confinement and restricted declarations.
+- Snapshots and armed-wakeup observations are inert. Contexts expire with their
+  exact work token; retained claims own longer-lived control. Claims and generations
+  do not wrap. Consumer durable authority reconstructs volatile retained declarations
+  synchronously before downstream hooks; shared-registry adoption is atomic.
 - Ordinary exact reconciliation replaces a discarded callback scheduling proposal
   before validation. Invariant failure remains terminal; unregister is sticky;
-  ensure selects earliest demand. The latest directive projects an effective exact
-  ScheduleAt when reconciliation wins.
-- Registry and owned-handle bounds do not bound the pinned provider's heap.
-  Cancelled future deadline records remain queued until processing. Churn fixtures
-  observe page extents without promising global memory, allocator or cost bounds.
+  ensure selects earliest demand. The effective exact directive is observed.
+- Registry and owned-handle bounds do not bound the provider heap. Cancelled future
+  deadline records remain queued. Page extents do not establish allocator bounds.
 - Public control failures retire false scheduled state. Unexpected Watchdog work
   completion failures trap for IC rollback; detached handles are restored or cleared.
-  Effect confirmation remains idempotent with one validated wakeup-generation marker.
+  Effect confirmation uses one validated wakeup-generation marker.
 
-## Open work
+## Current follow-up
 
-- Ordinary control selects arm kind and allocates successor generations directly,
-  removing derived optional planning values. Stopping at generation exhaustion
-  remains possible; rearming fails before state mutation.
-- Instruction summaries use sample count as their sole empty marker. Public
-  latest/maximum getters preserve empty versus zero-valued samples and continue
-  after saturation. Boundary coverage is prepared.
-- Callback binding applies the existing role-specific recovery rule to all
-  unexpected errors without repeating the error-variant list.
-- Ordinary failed-completion paths share stop bookkeeping while preserving
-  distinct consumer-invariant and typed control-failure outcomes.
-  The maintainer reported Clippy rejecting the lifetime fixture's negated
-  initial-case branch and the shared stop helper's optional-failure match.
-  They now use an initial equality branch and `Option::map_or_else`, preserving
-  coverage and failure outcomes without lint suppressions.
-  The lint rerun remains user-owned and pending.
-- Registry entries own control, matching callback and cadence in one typed
-  payload; public policy is derived. Separate policy/callback discriminants and
-  the callback-absent state are removed. Pure fixtures use inert typed callbacks.
-  `Entry::new` is now const following the maintainer's Clippy report; rerun pending.
-- Release version display, mutation, staging, truth, commit and tag checks share
-  one workspace-package-scoped reader/writer. Locked metadata also checks the
-  resolved timer package version. Ordering, malformed metadata, rejected staging
-  and coherent-but-wrong-version fixtures are prepared.
-- PocketIC provisioning selection is exercised through the actual Make recipe
-  with a recording checker instead of source-line assertions. Audited pins and
-  independent binary verification remain. Staging ownership and the superseded
-  historical Watchdog restriction are clarified.
-- PocketIC cache and download checks share one hash-first verifier; diagnostics
-  no longer re-execute rejected candidates. Explicit overrides and temporary
-  download/cache cleanup rules are preserved, with extended fixtures prepared.
-- The 2026-10-03 GitHub review found one open issue, advisory
-  [#8](https://github.com/dragginzgame/ic-timers/issues/8). Its IcyDB-shaped test
-  cleanup separates readiness mapping, repeated message driving and measurement
-  checks while keeping the ordered lifecycle sequence. The issue remains open;
-  supplemental MSRV lint and unit execution await maintainer validation. Gate
-  scope is unchanged.
-- Target release: `0.9.2`. Its undated changelog section is directly below the
-  empty `Unreleased` heading. The [0.9.2 note](../changelog/0.9.2.md) records scope
-  and pending validation. Cargo and both lockfiles remain at 0.9.1 until the user
-  runs the patch bump.
+- GitHub [#8](https://github.com/dragginzgame/ic-timers/issues/8) is closed:
+  its fixture simplification and ordered-sequence rationale shipped in 0.9.2.
+  Supplemental root MSRV cognitive-complexity lint was not rerun here; no lower
+  numerical score is claimed and the maintained gate scope is unchanged.
+- [#3](https://github.com/dragginzgame/ic-timers/issues/3) is fixed in the local
+  worktree: the README now advertises API line 0.9 and exact timer 0.9.2. A small
+  projection helper uses workspace-version truth during bumps and release checks;
+  the existing bump rollback includes README.md. Existing fixtures are updated.
+  The issue remains open until the maintainer lands the fix.
+- The focused registry review removes ordinary completion's duplicate
+  missing-cadence check and shares effect-confirmation bookkeeping after its
+  role-specific validation. Typed failure, pending precedence, idempotent
+  counters and provider binding/recovery ordering are preserved. Existing
+  behavior fixtures were inspected; runtime validation remains user-owned.
+- Ordinary/Watchdog pending commands, the confirmation marker and the separate
+  binding/confirmation stages remain necessary for their distinct suspension,
+  cadence recovery and partial-binding failure contracts.
+- The combined follow-up now includes private crate changes alongside repository
+  tooling and documentation. Target release: `0.9.3`. Its undated changelog section
+  is directly below the empty `Unreleased` heading. The
+  [0.9.3 note](../changelog/0.9.3.md) records scope and pending maintainer validation.
+  Package versions and lockfiles remain unchanged. No compatibility path or new
+  public contract is added.
 
 ## Evidence
 
-The 0.9.1 release state combines local artifact inspection with the maintainer's
-live report. Exact final gate output and independent publication evidence were
-not inspected in this follow-up. The automated contributor has not run new
-test/build/lint gates. Earlier recorded evidence remains scoped to its subjects;
-release artifacts do not establish new recovery, performance or memory results.
-The audit follow-up formatted changed Rust and checked shell syntax and diff
-whitespace. Its registry and release-tooling changes await maintainer execution
-of the prepared fixtures and existing behavior gates; no new result is claimed.
+The released baseline combines the maintainer's live report, matching local
+artifacts, cached registry provenance and inspected hosted jobs. Current local
+follow-up checks cover shell syntax, read-only release metadata and diff whitespace.
+Changed Rust is formatted; no runtime test result is claimed for the refactor.
+The existing runtime fixtures, prepared release-tooling fixtures and deployment
+gates remain user-owned; no new suites, builds, lint gates or dependency resolution
+were run here.
 The native mock does not simulate IC rollback or provider heap allocation;
 maintained PocketIC subjects remain required for those claims.
 
 ## Downstream state
 
-The preceding 2026-10-03 inspection recorded Toko Miner at `3354dfc6`, selecting
-timers 0.8.1, Canic 0.110.51 and IcyDB 0.264.4 with one timer package. Canic's
-published exact 0.8.1 pin remained an adoption blocker under issue #33. Later
-inspected worktrees selected newer timer lines without proving publication or
-deployment. The dated [Toko record](../adoption/toko-miner.md),
-[Canic](../adoption/canic.md) and [IcyDB](../adoption/icydb.md) records remain
-scoped evidence; no sibling repository was edited.
+Read-only inspection on 2026-10-03 found:
 
-Application-owned work remains auxiliary checkpoint deadlines, registration
-identity projection and qualification against actual artifacts. Registration
-continuity does not prove balance attribution or complete-message costs;
-Wasm/stable page extents do not prove allocator live-byte bounds.
+- Canic HEAD `e327ed6f01a07f27f030eaf7e0dc04802e01c17c`, dirty, requests timer
+  0.9 and locks one 0.9.1 package. Its custody/suspension owner uses native claims;
+  it is not evidence of a newly published coherent consumer graph.
+- IcyDB HEAD `d35d8ffda192c52d2dfda183b55251fcbc5a0cee`, dirty, requests timer
+  0.9 and locks one 0.9.2 package. Its generator owns one retained startup Watchdog.
+- Toko Miner HEAD `dba00bbf3cb8faa6fa007ad23bdf5a67209a6c34`, with a dirty lock,
+  selects both 0.8.1 and 0.9.2. Application/Canic Core 0.110.51 use 0.8.1;
+  IcyDB 0.264.6 uses 0.9.2. Cached registry manifests confirm the incompatible
+  dependency requirements. This cannot qualify one shared timer registry.
+
+[Canic #33](https://github.com/dragginzgame/canic/issues/33) remains open for
+published graph alignment and composed lifecycle qualification. The
+[Toko Miner record](../adoption/toko-miner.md) records exact lock provenance,
+its still-separate checkpoint deadline/work registrations and required scheduling
+semantics. Package alignment comes before removing that auxiliary deadline.
+Historical [Canic](../adoption/canic.md), [IcyDB](../adoption/icydb.md) and Toko Miner
+receipts remain scoped to their subjects. No sibling files were edited or gates run.
 
 ## Next action
 
-0.9.1 is already bumped, committed and tagged; do not repeat its bump. The 0.9.2
-changelog and release note are prepared. The maintainer owns targeted checks,
-supplemental MSRV lint validation and the deployment gate, then the patch release.
-The bump helper dates the staged section and updates package/lockfile versions;
-the automated contributor has not executed it or staged any files. All release
-execution remains user-owned.
+0.9.2 is released; do not repeat its bump. The 0.9.3 changelog and release note are
+prepared. The maintainer owns validation and the patch bump, which dates the
+changelog and updates package/lockfile versions and the README example.
+Close #3 once the README fix lands. Toko Miner remains blocked until Canic pushes
+and publishes the aligned dependency update; then qualify one timer package across
+framework/database/application before checkpoint cleanup. All release execution
+remains user-owned.

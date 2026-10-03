@@ -1,9 +1,38 @@
 # Toko Miner adoption evidence
 
-Status: 0.8.1 publication and scoped owner-reported adoption recorded; dependency
-worktree inspected 2026-10-03. Earlier composition receipts remain historical.
+Status: current dirty graph selects two timer package identities; coordinated
+adoption is blocked. Earlier single-package composition receipts remain historical.
 
-## Published runtime and current dependency inspection
+## Current read-only dependency inspection — 2026-10-03
+
+Toko Miner HEAD `dba00bbf3cb8faa6fa007ad23bdf5a67209a6c34` has a dirty lockfile
+with SHA-256 `b6b9b99ed412ed8d580bd68e6514fa925bafd9ed58ee3263a50137115423e90a`.
+It selects both `ic-timers` 0.8.1 and 0.9.2. Game Shard, Translation and
+registry Canic Core 0.110.51 use 0.8.1; IcyDB 0.264.6 uses 0.9.2. The application
+manifest still requires timer `0.8.1`. Cached registry manifests confirm Canic
+Core's exact `=0.8.1` requirement and IcyDB's `0.9` requirement.
+
+This graph cannot establish one shared timer registry. The earlier aligned
+0.8.1 receipts do not qualify it. No fresh resolver, build, timer inventory or
+IC scenario was run; this is inspected lock/manifests, not deployment evidence.
+[Canic #33](https://github.com/dragginzgame/canic/issues/33) remains open for a
+published coherent graph and composed qualification. Current local Canic uses
+timer `0.9`, but its dirty worktree is not that published Core package.
+
+`apps/toko_miner/game_shard/src/action/checkpoint_timer.rs` still owns a retained
+Once deadline (`DEADLINE`) that wakes a retained Watchdog (`WORK`). The callback
+alone processes bounded checkpoint/recovery work. `active.rs` refreshes the
+deadline after replicated journal/cache changes; failed work uses the pre-armed
+retry, successful due debt drains immediately, future debt sleeps and quiescence
+stops. Any consolidation must preserve those distinctions, synchronous lifecycle
+reconstruction and the rollback boundary. Removing the auxiliary deadline is
+application-owned work, after package alignment, with bounded composed evidence.
+The two claims are not proof of two providers; the two package identities above
+are the separate shared-registry problem.
+
+No sibling file was edited. Concurrent downstream changes were preserved.
+
+## Earlier published runtime and dependency inspection — 2026-10-03
 
 Read-only inspection on 2026-10-03 finds Toko Miner HEAD
 `3354dfc6b9fe791884ec69e8dd344de313b36940` with registry Canic 0.110.51,

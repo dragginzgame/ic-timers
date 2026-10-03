@@ -1213,17 +1213,6 @@ impl TimerRegistry {
                 let remove = matches!(pending_command, Some(OrdinaryPending::Unregister))
                     || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
                 (transition, remove)
-            } else if cadence.is_none()
-                && matches!(effective_directive, TimerDirective::RecurAfterCompletion)
-            {
-                let transition = stop_ordinary_completion(
-                    entry,
-                    completion,
-                    now_ns,
-                    Some(TimerControlFailure::DirectiveNotAllowed),
-                );
-                let remove = matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
-                (transition, remove)
             } else {
                 let resolved = match effective_directive.resolve(now_ns, cadence) {
                     Ok(value) => value,
@@ -1879,8 +1868,8 @@ impl TimerRegistry {
         if !effect.has_valid_shape() {
             return Err(RegistryError::StaleCallback);
         }
-        match effect {
-            RegistryEffect::None | RegistryEffect::ClearCallbacks { .. } => Ok(()),
+        let (entry, callback_generation, delay_ns) = match effect {
+            RegistryEffect::None | RegistryEffect::ClearCallbacks { .. } => return Ok(()),
             RegistryEffect::ArmWakeup {
                 token, delay_ns, ..
             } => {
@@ -1907,13 +1896,7 @@ impl TimerRegistry {
                 if !valid_generation {
                     return Err(RegistryError::StaleCallback);
                 }
-                if entry.confirmed_wakeup_generation == Some(token.callback_generation) {
-                    return Ok(());
-                }
-                entry.confirmed_wakeup_generation = Some(token.callback_generation);
-                entry.latest_armed_delay_ns = Some(*delay_ns);
-                entry.observability.counters_mut().record_wakeup_armed();
-                Ok(())
+                (entry, token.callback_generation, *delay_ns)
             }
             RegistryEffect::DispatchWatchdog {
                 successor,
@@ -1922,8 +1905,7 @@ impl TimerRegistry {
                 ..
             } => {
                 let successor_callback_generation = successor.callback_generation;
-                let successor_role = successor.role;
-                let entry = self.entry_by_token_mut(successor, successor_role)?;
+                let entry = self.entry_by_token_mut(successor, CallbackRole::WatchdogScheduler)?;
                 let EntryKind::Watchdog { control, .. } = &entry.kind else {
                     return Err(RegistryError::StaleCallback);
                 };
@@ -1938,19 +1920,23 @@ impl TimerRegistry {
                 ) {
                     return Err(RegistryError::StaleCallback);
                 }
-                // Each dispatch advances the non-wrapping successor generation
-                // and binds it to the work attempt validated above. That one
-                // generation deduplicates both committed arm counters.
-                if entry.confirmed_wakeup_generation == Some(successor_callback_generation) {
-                    return Ok(());
-                }
-                entry.confirmed_wakeup_generation = Some(successor_callback_generation);
-                entry.latest_armed_delay_ns = Some(*successor_delay_ns);
-                entry.observability.counters_mut().record_wakeup_armed();
-                entry.observability.counters_mut().record_work_dispatched();
-                Ok(())
+                (entry, successor_callback_generation, *successor_delay_ns)
             }
+        };
+        // Validate state and both dispatch tokens before deduplicating. Each
+        // dispatch advances the non-wrapping wakeup generation and binds it to
+        // one work attempt, so one marker deduplicates both committed counters.
+        if entry.confirmed_wakeup_generation == Some(callback_generation) {
+            return Ok(());
         }
+        entry.confirmed_wakeup_generation = Some(callback_generation);
+        entry.latest_armed_delay_ns = Some(delay_ns);
+        let counters = entry.observability.counters_mut();
+        counters.record_wakeup_armed();
+        if matches!(effect, RegistryEffect::DispatchWatchdog { .. }) {
+            counters.record_work_dispatched();
+        }
+        Ok(())
     }
 
     fn entry(&self, claim: &RegistrationClaim) -> Result<&Entry, RegistryError> {

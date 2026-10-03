@@ -4,6 +4,39 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.9.3]
+
+### Changed
+
+- Remove ordinary completion's duplicate missing-cadence check. The directive
+  resolver remains authoritative; illegal Once recurrence keeps the same typed
+  terminal failure, Stop observation and declaration-lifetime behavior.
+- Share effect-confirmation deduplication, armed-delay observation and wakeup
+  counting after role-specific validation. Watchdog dispatch still validates its
+  paired work attempt before recording either counter, including on repeated
+  confirmation. Preserve provider binding and recovery ordering.
+
+### Fixed
+
+- Align the README API line and exact shared-registry dependency example with
+  the current workspace version, addressing
+  [GitHub issue #3](https://github.com/dragginzgame/ic-timers/issues/3).
+
+### Development
+
+- Project both README version fields from workspace truth during bumps, include
+  the README in metadata rollback and check it for release drift. Extend the
+  existing preparation and release-truth fixtures without changing gate scope.
+
+### Documentation
+
+- Record the live 0.9.2 release, successful hosted checks and MSRV/tag validation,
+  and the disposition of the lifecycle-test advisory in GitHub issue #8.
+- Refresh read-only downstream adoption evidence: Toko Miner's current dirty
+  lockfile selects both timer 0.8.1 and 0.9.2; coherent adoption remains blocked.
+- Record scope and pending maintainer validation in the
+  [0.9.3 release note](docs/changelog/0.9.3.md).
+
 ## [0.9.2] - 2026-10-03
 
 ### Changed

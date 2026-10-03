@@ -3,6 +3,7 @@
 Release-line notes track unfinished design and evidence across multiple
 changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 
+
 - [0.1 line](0.1.md)
 - [0.2 design slice](0.2.md)
 - [0.3 production runtime slice](0.3.md)
@@ -29,3 +30,4 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.9.0 ordinary arbitration and audit follow-up](0.9.0.md)
 - [0.9.1 implementation and release simplification](0.9.1.md)
 - [0.9.2 implementation and evidence-tooling simplification](0.9.2.md)
+- [0.9.3 registry validation and release metadata](0.9.3.md)

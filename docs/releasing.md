@@ -85,6 +85,13 @@ workspace metadata checks also require exactly one resolved `ic-timers` package
 at the workspace version; coherent lockfiles for a different package version
 are rejected.
 
+`scripts/release/readme-version.sh` projects that same workspace version into
+the README API line and exact shared-registry dependency example. Bump preflight
+checks those two fields before mutation; the bump updates them after the manifest
+and restores the README along with other metadata on failure or interruption.
+Release-truth checks reject drift. Only the two structured version fields are
+checked; historical links and free-form release prose are not version selectors.
+
 Combined release targets run `bump-version.sh --check` before deployment
 validation. This preflight checks the requested version, impact, changelog and
 release markers without changing version metadata or running tests. An empty

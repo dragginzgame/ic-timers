@@ -7,7 +7,7 @@ trap 'rm -rf -- "${temporary_root}"' EXIT
 git init -q "${temporary_root}"
 mkdir -p "${temporary_root}"/{scripts/release,docs/status,docs/changelog,crates/ic-timers/src,testing/probe/src}
 for script in bump-version finalize-changelog finalize-release-truth check-release-truth \
-    warn-release-prose check-bump-impact check-lockfiles workspace-version; do
+    warn-release-prose check-bump-impact check-lockfiles workspace-version readme-version; do
     cp "${repository_root}/scripts/release/${script}.sh" "${temporary_root}/scripts/release/"
 done
 # Classification is an isolated fixture input; preparation must not run tests.
@@ -70,7 +70,8 @@ cat > "${temporary_root}/docs/status/current.md" <<'EOF'
 EOF
 printf '%s\n' '# 0.1.1' '' 'Status: prepared for 0.1.1; delivery is user-owned.' \
     > "${temporary_root}/docs/changelog/0.1.1.md"
-printf '%s\n' '# Fixture' > "${temporary_root}/README.md"
+printf '%s\n' '# Fixture' '| API line | `0.1` |' 'ic-timers = "=0.1.0"' \
+    > "${temporary_root}/README.md"
 printf '%s\n' 'release-verify:' $'\t@touch unexpected-gate' $'\t@exit 1' \
     > "${temporary_root}/Makefile"
 printf '%s\n' 'Unrelated work must survive preparation.' > "${temporary_root}/unrelated.txt"
@@ -79,7 +80,7 @@ cargo generate-lockfile --offline --quiet
 cargo generate-lockfile --manifest-path testing/Cargo.toml --offline --quiet
 
 # Preflight validates metadata without running deployment tests or changing it.
-metadata_files=(Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md \
+metadata_files=(Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md \
     docs/status/current.md docs/changelog/0.1.1.md unrelated.txt)
 chmod 0640 CHANGELOG.md
 sha256sum "${metadata_files[@]}" > original.sha256
@@ -277,6 +278,8 @@ mv scripts/release/original-warn-release-prose.sh scripts/release/warn-release-p
 test ! -f unexpected-gate
 grep -Fqx '  version = "0.1.1" # Workspace truth; preserve spacing and this comment.' Cargo.toml
 test "$(bash scripts/release/workspace-version.sh)" = 0.1.1
+grep -Fqx 'ic-timers = "=0.1.1"' README.md
+grep -Fqx '| API line | `0.1` |' README.md
 # The earlier dependency version must survive the bump unchanged.
 grep -Fqx 'version = "0.1.0"' Cargo.toml
 bash scripts/release/check-lockfiles.sh

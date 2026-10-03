@@ -5,6 +5,7 @@ repository_root="$(git rev-parse --show-toplevel)"
 cd "${repository_root}"
 
 version="$(bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh")"
+bash "$(dirname -- "${BASH_SOURCE[0]}")/readme-version.sh" --check
 
 release_note="docs/changelog/${version}.md"
 if [[ ! -f "${release_note}" ]]; then

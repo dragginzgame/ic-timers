@@ -15,7 +15,7 @@ crate's `platform` module and is never re-exported.
 
 | | Current contract |
 | --- | --- |
-| 🧩 API line | `0.8` registration continuity and exact Watchdog deadlines |
+| 🧩 API line | `0.9` |
 | 🦀 Rust | Edition 2024; MSRV 1.88.0 |
 | ⚙️ Provider | Exact `ic-cdk-timers` 1.0.0, private and wrapped |
 | 🗂️ Capacity | 64 logical timers; at most 128 owned provider handles |
@@ -105,7 +105,7 @@ framework/application registry:
 
 ```toml
 [dependencies]
-ic-timers = "=0.8.0"
+ic-timers = "=0.9.2"
 ```
 
 Every framework and application crate linked into the same canister must use

@@ -81,6 +81,7 @@ bash scripts/release/check-bump-impact.sh "${release_impact}" "${previous_versio
 release_date="$(date +%F)"
 bash scripts/release/finalize-changelog.sh --check "${new_version}" "${release_date}"
 bash scripts/release/finalize-release-truth.sh --check "${previous_version}" "${new_version}"
+bash scripts/release/readme-version.sh --check
 if ! bash scripts/release/warn-release-prose.sh "${new_version}"; then
     echo "warning: advisory release-prose check could not run; continuing" >&2
 fi
@@ -93,7 +94,7 @@ fi
 # Capture only files this bump mutates, including any existing user edits.
 # Failed updates/checks and catchable interruptions restore that exact state.
 backup_directory="$(mktemp -d "${TMPDIR:-/tmp}/ic-timers-bump.XXXXXX")"
-metadata_files=(Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md \
+metadata_files=(Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md \
     docs/status/current.md "docs/changelog/${new_version}.md")
 mutation_started=false
 bump_completed=false
@@ -131,6 +132,7 @@ bash scripts/release/finalize-changelog.sh "${new_version}" "${release_date}"
 bash scripts/release/finalize-release-truth.sh "${previous_version}" "${new_version}"
 
 bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh" set "${previous_version}" "${new_version}"
+bash scripts/release/readme-version.sh --update
 cargo update --offline -p ic-timers
 cargo update --manifest-path testing/Cargo.toml --offline -p ic-timers
 
