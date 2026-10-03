@@ -10,8 +10,8 @@ and the [safety boundary](../../SAFETY.md).
 
 ## Release state
 
-- Workspace package version: `0.9.3`.
-- Latest release line: `0.9.3`.
+- Workspace package version: `0.9.4`.
+- Latest release line: `0.9.4`.
 - The maintainer reports 0.9.3 live. Release commit
   `0c004e55a931aadf0861e902b221938e0e7d9985`, annotated `v0.9.3`, local
   `origin/main`, Cargo, both lockfiles and the dated changelog agree. The README
