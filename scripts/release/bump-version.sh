@@ -73,7 +73,7 @@ if git rev-parse --verify --quiet "refs/tags/v${new_version}" >/dev/null; then
 fi
 
 release_impact="$(
-    bash scripts/release/classify-release-impact.sh "v${previous_version}"
+    bash scripts/release/classify-release-impact.sh
 )"
 bash scripts/release/check-bump-impact.sh "${release_impact}" "${previous_version}"
 

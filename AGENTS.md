@@ -73,8 +73,12 @@ This file is normative for automated contributors.
   an undated `## [x.y.z]` section directly below `## [Unreleased]`. Put that
   release's notes there and keep `Unreleased` empty; do not leave named-release
   notes only under `Unreleased`.
-- When the maintainer asks for the version bump, run the matching bump target.
-  The version helper must validate the staged section and add its date
+- For a new release request, automated contributors prepare only the next
+  changelog section and release-line note. Keep the section undated and
+  `Unreleased` empty once a target is selected. Do not mutate Cargo versions
+  or lockfiles, stage changes, or run version-bump or release targets.
+  The user runs the matching bump target. The version helper must validate the
+  staged section and add its date
   automatically without running tests. The user runs `release-verify` as part
   of deployment; it must retain the normal CI,
   MSRV, nested-probe lint, watchdog PocketIC, and policy-cohort gates; it fails
@@ -96,10 +100,14 @@ This file is normative for automated contributors.
   build/lint gates, or `release-verify` unless the user explicitly requests
   them. Cheap release-metadata and locked dependency checks remain part of
   requested version preparation.
-- Commits and pushes are user-owned. Automated contributors prepare and
-  validate changes, including requested version bumps, but do not commit or
-  push them. Leave release tagging and publication to the maintainer as well.
+- All release execution is user-owned: version bumps, `make release-*`,
+  deployment validation, Git staging, commits, tags, pushes and publication.
+  Automated contributors edit changelogs and release notes and leave these
+  commands to the user.
+- Combined release targets always run their requested version bump. Preparing
+  a changelog must not advance the workspace version or turn a release target
+  into a command that reuses an already prepared version.
 - Version-bump helpers must support preparing a release from the current
   worktree without requiring a preparatory commit. Preserve unrelated changes,
-  leave test execution to deployment, and stage only the release metadata.
+  leave test execution to deployment. The user stages release metadata.
 - Use Rust edition 2024 and directory modules when adding multi-file modules.

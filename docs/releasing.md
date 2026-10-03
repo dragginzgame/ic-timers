@@ -26,14 +26,18 @@ Run this before selecting a version:
 make release-impact
 ```
 
-The classifier compares the worktree with the tag matching the current
-workspace version and reports:
+The classifier compares the worktree with the most recent reachable canonical
+release tag and reports:
 
 - `crate` when the publishable crate's source or manifests changed;
 - `repository` when only paths outside the publishable crate source and
   manifests changed, such as documentation, evidence, external tests, CI, or
   release tooling; or
 - `none` when no path differs.
+
+The workspace may already have an untagged version, so its matching tag is not
+required. An explicit base passed to the classifier must still resolve to a
+commit. Missing release history, malformed tags and Git failures remain errors.
 
 This is a conservative mechanical boundary, not an API compatibility oracle.
 For `crate`, review the public API and semantic contract and choose patch or
@@ -44,8 +48,8 @@ exact-pinned shared-registry consumers to coordinate a package identity that
 does not change runtime behavior.
 
 An explicit maintainer-owned version-bump or release target overrides that
-default. For a `repository` subject, the helper prints an advisory and then
-runs the same complete release gate before continuing. It never invents crate
+default. For a `repository` subject, version preparation prints an advisory;
+the user-operated release targets retain the complete release gate. It never invents crate
 impact or silently weakens validation. A `none` subject is still rejected.
 
 As soon as a target version is known, keep completed user-visible changes in
@@ -66,7 +70,7 @@ remain supported and are promoted automatically when a version is selected.
 The helper refuses to continue if the changelog shape is ambiguous, the target
 notes are empty, the target is already dated, the requested version is not a
 strict canonical-SemVer increase, the exact release tag already exists, no
-changes exist since the current version tag. Version preparation accepts the
+changes exist since the release-impact base. Version preparation accepts the
 current worktree and does not require a preparatory commit. A
 repository-only subject emits an advisory but may proceed when the maintainer
 has explicitly invoked the bump or release target.
@@ -92,22 +96,31 @@ For an exact version, use:
 make release-x VERSION=0.3.0
 ```
 
-Commits, tags, pushes and publication are user-owned. Automated contributors
-use `make patch`, `make minor`, `make major`, or `make bump-x VERSION=...` to
-prepare requested releases from the current worktree, then `make release-stage`
-to stage release metadata for review. They leave commits, tags and pushes to
-the user.
+All release execution is user-owned: version bumps, tests, staging, commits,
+tags, pushes and publication. Automated contributors prepare only the next
+changelog section and release-line note. The user runs `make patch`, `make
+minor`, `make major`, or `make bump-x VERSION=...` when ready to update the
+workspace version and both lockfiles, and `make release-stage` to stage release
+metadata.
 
 The user-operated release targets run the complete release gate, update the
 workspace version plus both the root and nested testing lockfiles, commit,
-create an annotated `vX.Y.Z` tag, and push with tags. The non-release `make
-patch`, `make minor`, `make major`, and
+create an annotated `vX.Y.Z` tag, and push with tags. If the workspace version
+has no release tag yet, the requested bump still runs. `make release-patch`
+always advances the patch version; it never reuses the current version. For
+example, with Cargo at 0.8.2 and an undated 0.8.3 changelog, stage and commit
+the prepared changes, then run `make release-patch` to validate, bump and
+release 0.8.3. An exact `release-x` target must be a strict version increase.
+Release metadata and both lockfiles are checked before the release commit;
+unstaged and untracked work is rejected before committing or tagging.
+
+The non-release `make patch`, `make minor`, `make major`, and
 `make bump-x VERSION=...` targets stop after the version-file update for
 review without running build, lint or test suites.
 
 Deployment validation belongs to the user. The combined `release-*` targets
-run the complete release gate before preparing the version. If the version was
-already prepared, run the gate directly before committing, tagging and pushing:
+run the complete release gate before bumping the version. The
+gate can also be run directly before committing, tagging and pushing:
 
 ```text
 make release-verify

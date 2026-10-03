@@ -75,6 +75,22 @@ if [[ "$(classify)" != "crate" ]]; then
     exit 1
 fi
 
+# Default classification must work after a version advance without its tag.
+git -C "${temporary_root}" restore Cargo.toml
+sed -i 's/^version = "0.3.8"$/version = "0.3.9"/' "${temporary_root}/Cargo.toml"
+if [[ "$(cd "${temporary_root}" && bash "${classifier}")" != crate ]]; then
+    echo 'error: untagged workspace version did not use reachable release history' >&2
+    exit 1
+fi
+if output="$(cd "${temporary_root}" && bash "${classifier}" v0.3.9 2>&1)"; then
+    echo 'error: explicit missing release-impact base was accepted' >&2
+    exit 1
+fi
+if [[ "${output}" != *'base does not resolve to a commit: v0.3.9'* ]]; then
+    echo "error: explicit base rejection lost its reason: ${output}" >&2
+    exit 1
+fi
+
 real_git="$(command -v git)"
 mkdir -p "${temporary_root}/bin"
 cat > "${temporary_root}/bin/git" <<'EOF'
@@ -86,11 +102,13 @@ fi
 exec "${REAL_GIT}" "$@"
 EOF
 chmod +x "${temporary_root}/bin/git"
-for command in diff ls-files; do
+for command in diff ls-files describe; do
+    base_arguments=(v0.3.8)
+    if [[ "${command}" == describe ]]; then base_arguments=(); fi
     if output="$(
         cd "${temporary_root}"
         PATH="${temporary_root}/bin:${PATH}" REAL_GIT="${real_git}" \
-            FAIL_GIT_COMMAND="${command}" bash "${classifier}" v0.3.8 2>&1
+            FAIL_GIT_COMMAND="${command}" bash "${classifier}" "${base_arguments[@]}" 2>&1
     )"; then
         echo "error: impact classification accepted a failed git ${command}" >&2
         exit 1
@@ -100,5 +118,11 @@ for command in diff ls-files; do
         exit 1
     fi
 done
+
+git -C "${temporary_root}" tag -d v0.3.8 >/dev/null
+if (cd "${temporary_root}" && bash "${classifier}") >/dev/null 2>&1; then
+    echo 'error: default classification accepted missing release history' >&2
+    exit 1
+fi
 
 echo "Release-impact classification checks passed"

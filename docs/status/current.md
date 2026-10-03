@@ -16,6 +16,7 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 - Workspace package version: `0.8.2`.
 - Latest release line: `0.8.2`.
+- Named target release: `0.8.3` (unreleased).
 - Snapshot registration continuity and exact-deadline Watchdog scheduling are
   implemented, with validation recorded in the
   [0.8.0 release note](../changelog/0.8.0.md). The version bump and local
@@ -36,9 +37,9 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 - Hosted PR/main checks lint all supported nested probe configurations on
   both Rust 1.99.0 and the Rust 1.88.0 MSRV.
 - Commits, tags, pushes and publication are user-owned. Automated contributors
-  prepare requested version bumps without committing or pushing. Test, build
-  and lint gates run only when explicitly requested; deployment testing is
-  user-owned.
+  prepare only the next changelog section and release-line note. Version bumps,
+  staging and all `make release-*` commands are also user-owned. Test, build
+  and lint gates run only when explicitly requested.
 
 ## Canonical runtime
 
@@ -220,14 +221,15 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Next action
 
-Version 0.8.2 is prepared with a dated changelog and both workspace lockfiles
-updated. The complete release gate passed before the final workflow edits
-separating version preparation from user-owned deployment testing; those edits
-and their updated fixtures have not been rerun at the maintainer's request.
-Track scope and evidence in the
-[0.8.2 note](../changelog/0.8.2.md). Commits, release tags, pushes and registry
-publication remain user-owned; automated contributors only prepare and validate
-the release metadata.
+The maintainer selected 0.8.3 for release workflow fixes and clarified that
+`make release-patch` must always bump. Its undated changelog and
+[release-line note](../changelog/0.8.3.md) are prepared; Cargo and both lockfiles
+remain at 0.8.2. The user committed 0.8.2 at `9f4e1d5`, without a release tag.
+Impact classification now uses the most recent reachable release tag, so the
+absent `v0.8.2` does not block advancing to 0.8.3. The user stages and commits
+these changes, then runs `make release-patch` for the complete gate, bump,
+release commit, annotated tag and push. No tests or release commands were run
+for these follow-up tooling edits; deployment validation is user-owned.
 
 Remaining application work is Toko Miner's auxiliary checkpoint deadline
 registration and diagnostic registration-sequence projection. The published

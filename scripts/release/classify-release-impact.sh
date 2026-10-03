@@ -7,8 +7,13 @@ cd "${repository_root}"
 if [[ -n "${1:-}" ]]; then
     base_ref="${1}"
 else
-    version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"
-    base_ref="v${version}"
+    # Package metadata can advance before a release is tagged. Compare the
+    # entire pending subject with the most recent reachable release tag.
+    base_ref="$(git describe --tags --abbrev=0 --match 'v[0-9]*' HEAD)"
+    if [[ ! "${base_ref}" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+        echo "error: release-impact base is not a canonical release tag: ${base_ref}" >&2
+        exit 1
+    fi
 fi
 
 if ! git rev-parse --verify --quiet "${base_ref}^{commit}" >/dev/null; then

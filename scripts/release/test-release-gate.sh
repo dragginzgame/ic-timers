@@ -41,7 +41,7 @@ if ! grep -Fqx -- \
 fi
 
 if ! grep -Fq -- \
-    'bash scripts/release/classify-release-impact.sh "v${previous_version}"' \
+    'bash scripts/release/classify-release-impact.sh' \
     "${bump_script}" >/dev/null \
     || ! grep -Fqx -- \
         'bash scripts/release/check-bump-impact.sh "${release_impact}" "${previous_version}"' \
@@ -94,9 +94,20 @@ if grep -Fqx -- 'make --no-print-directory release-verify' "${bump_script}" >/de
     exit 1
 fi
 for target in release-patch release-minor release-major release-x; do
-    first_command="$(sed -n "/^${target}:/,/^$/p" "${makefile}" | sed -n '2p')"
+    recipe="$(sed -n "/^${target}:/,/^$/p" "${makefile}")"
+    first_command="$(printf '%s\n' "${recipe}" | sed -n '2p')"
     if [[ "${first_command}" != $'\t+$(MAKE) --no-print-directory release-verify' ]]; then
         echo "error: ${target} does not run the complete deployment gate first" >&2
+        exit 1
+    fi
+    case "${target}" in
+        release-patch) bump_command=$'\t+$(MAKE) --no-print-directory patch' ;;
+        release-minor) bump_command=$'\t+$(MAKE) --no-print-directory minor' ;;
+        release-major) bump_command=$'\t+$(MAKE) --no-print-directory major' ;;
+        release-x) bump_command=$'\t+$(MAKE) --no-print-directory bump-x VERSION="$(VERSION)"' ;;
+    esac
+    if ! printf '%s\n' "${recipe}" | grep -Fqx -- "${bump_command}"; then
+        echo "error: ${target} does not always invoke its matching bump target" >&2
         exit 1
     fi
 done

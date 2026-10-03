@@ -4,6 +4,25 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.8.3]
+
+### Development
+
+- Keep combined release targets explicit: `release-patch`, `release-minor`,
+  `release-major` and `release-x` always run their matching version bump after
+  deployment validation.
+- Classify pending release changes against the most recent reachable release
+  tag, so an untagged workspace version does not block the next bump. Explicit
+  missing bases and Git failures still fail validation.
+- Validate release metadata and both lockfiles before the release commit;
+  reject unstaged or untracked work before committing and tagging.
+
+### Documentation
+
+- Reserve version bumps, tests, staging, commits, tags, pushes and publication
+  for the maintainer. Automated contributors prepare only the next undated
+  changelog section and release-line note.
+
 ## [0.8.2] - 2026-10-03
 
 ### Fixed
