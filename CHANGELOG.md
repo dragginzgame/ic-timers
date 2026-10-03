@@ -26,8 +26,10 @@ All notable changes to this project are recorded here.
 
 ### Development
 
-- Use a positive initial-case branch in the ordinary terminal-failure fixture
-  to satisfy Clippy without changing its exhaustion or lifetime coverage.
+- Satisfy Clippy with a positive initial-case branch in the ordinary terminal
+  fixture, `Option::map_or_else` for optional completion failures and a const
+  private entry constructor. Preserve
+  exhaustion/lifetime coverage and distinct failure outcomes without suppressions.
 - Follow up [GitHub issue #8](https://github.com/dragginzgame/ic-timers/issues/8)
   by separating readiness mapping, repeated message driving and measurement
   assertions from the ordered IcyDB-shaped lifecycle fixture. Read callback

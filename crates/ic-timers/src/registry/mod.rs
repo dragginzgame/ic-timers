@@ -492,7 +492,7 @@ struct Entry {
 }
 
 impl Entry {
-    fn new(
+    const fn new(
         claim_generation: u64,
         kind: EntryKind,
         lifetime: DeclarationLifetime,
@@ -2142,18 +2142,22 @@ fn stop_ordinary_completion(
     now_ns: u64,
     failure: Option<TimerControlFailure>,
 ) -> RegistryTransition {
-    let (reason, completion, transition) = match failure {
-        Some(failure) => (
-            InactiveReason::ControlFailure(failure),
-            TimerCompletion::invariant_failure(completion.work_count()),
-            RegistryTransition::terminal(RegistryEffect::None, failure),
-        ),
-        None => (
-            InactiveReason::InvariantFailure,
-            completion,
-            RegistryTransition::normal(RegistryEffect::None),
-        ),
-    };
+    let (reason, completion, transition) = failure.map_or_else(
+        || {
+            (
+                InactiveReason::InvariantFailure,
+                completion,
+                RegistryTransition::normal(RegistryEffect::None),
+            )
+        },
+        |failure| {
+            (
+                InactiveReason::ControlFailure(failure),
+                TimerCompletion::invariant_failure(completion.work_count()),
+                RegistryTransition::terminal(RegistryEffect::None, failure),
+            )
+        },
+    );
     let EntryKind::Ordinary {
         control,
         pending,

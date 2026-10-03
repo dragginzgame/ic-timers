@@ -65,11 +65,14 @@ and the [safety boundary](../../SAFETY.md).
 - Ordinary failed-completion paths share stop bookkeeping while preserving
   distinct consumer-invariant and typed control-failure outcomes.
   The maintainer reported Clippy rejecting the lifetime fixture's negated
-  initial-case branch; it now tests equality and handles that case first.
+  initial-case branch and the shared stop helper's optional-failure match.
+  They now use an initial equality branch and `Option::map_or_else`, preserving
+  coverage and failure outcomes without lint suppressions.
   The lint rerun remains user-owned and pending.
 - Registry entries own control, matching callback and cadence in one typed
   payload; public policy is derived. Separate policy/callback discriminants and
   the callback-absent state are removed. Pure fixtures use inert typed callbacks.
+  `Entry::new` is now const following the maintainer's Clippy report; rerun pending.
 - Release version display, mutation, staging, truth, commit and tag checks share
   one workspace-package-scoped reader/writer. Locked metadata also checks the
   resolved timer package version. Ordering, malformed metadata, rejected staging
