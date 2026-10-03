@@ -26,7 +26,10 @@ The module hierarchy keeps six responsibilities separate:
    policy-specific state, the sole pending ordinary-command machine, nested
    arbitration, deterministic snapshots, and provider-neutral effects. It also
    owns every bound provider handle; only `runtime` invokes `platform` to
-   create or clear those handles.
+   create or clear those handles. Each entry has one policy-specific payload
+   containing its control and correctly typed callback. An ordinary payload
+   without cadence is Once; one with cadence is AfterCompletion. Public policy
+   observations are derived from that payload rather than stored separately.
 5. `platform` is the private direct boundary to `ic-cdk-timers` and required
    IC system facts. Its handle is linear and it owns no recurrence policy.
 6. `runtime` owns the one canister-local registry static, erases consumer

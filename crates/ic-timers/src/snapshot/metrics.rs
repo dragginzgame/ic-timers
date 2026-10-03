@@ -218,26 +218,23 @@ impl TimerCounters {
 pub struct MeasurementSummary {
     samples: u64,
     total: u64,
-    latest: Option<u64>,
-    maximum: Option<u64>,
+    latest: u64,
+    maximum: u64,
 }
 
 impl MeasurementSummary {
     const EMPTY: Self = Self {
         samples: 0,
         total: 0,
-        latest: None,
-        maximum: None,
+        latest: 0,
+        maximum: 0,
     };
 
     pub(crate) const fn record(&mut self, value: u64) {
         self.samples = self.samples.saturating_add(1);
         self.total = self.total.saturating_add(value);
-        self.latest = Some(value);
-        self.maximum = Some(match self.maximum {
-            Some(current) if current > value => current,
-            Some(_) | None => value,
-        });
+        self.latest = value;
+        self.maximum = max_u64(self.maximum, value);
     }
 
     /// Return the number of completed samples.
@@ -255,13 +252,21 @@ impl MeasurementSummary {
     /// Return the latest sample, if one exists.
     #[must_use]
     pub const fn latest(self) -> Option<u64> {
-        self.latest
+        if self.samples == 0 {
+            None
+        } else {
+            Some(self.latest)
+        }
     }
 
     /// Return the largest sample, if one exists.
     #[must_use]
     pub const fn maximum(self) -> Option<u64> {
-        self.maximum
+        if self.samples == 0 {
+            None
+        } else {
+            Some(self.maximum)
+        }
     }
 }
 
@@ -600,6 +605,34 @@ mod tests {
         assert_eq!(counters.coalesced(), u64::MAX);
         assert_eq!(counters.unacknowledged(), u64::MAX);
         assert!(counters.completion_partition_is_valid());
+    }
+
+    #[test]
+    fn instruction_measurements_preserve_empty_zero_and_saturated_observations() {
+        let mut summary = MeasurementSummary::EMPTY;
+        assert_eq!(summary.samples(), 0);
+        assert_eq!(summary.total(), 0);
+        assert_eq!(summary.latest(), None);
+        assert_eq!(summary.maximum(), None);
+
+        summary.record(0);
+        assert_eq!(summary.samples(), 1);
+        assert_eq!(summary.latest(), Some(0));
+        assert_eq!(summary.maximum(), Some(0));
+
+        summary.record(u64::MAX);
+        summary.record(1);
+        assert_eq!(summary.samples(), 3);
+        assert_eq!(summary.total(), u64::MAX);
+        assert_eq!(summary.latest(), Some(1));
+        assert_eq!(summary.maximum(), Some(u64::MAX));
+
+        summary.samples = u64::MAX;
+        summary.record(2);
+        assert_eq!(summary.samples(), u64::MAX);
+        assert_eq!(summary.total(), u64::MAX);
+        assert_eq!(summary.latest(), Some(2));
+        assert_eq!(summary.maximum(), Some(u64::MAX));
     }
 
     #[test]

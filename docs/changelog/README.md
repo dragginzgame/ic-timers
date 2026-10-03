@@ -28,3 +28,4 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.8.4 observation and release hardening](0.8.4.md)
 - [0.9.0 ordinary arbitration and audit follow-up](0.9.0.md)
 - [0.9.1 implementation and release simplification](0.9.1.md)
+- [0.9.2 implementation and evidence-tooling simplification](0.9.2.md)

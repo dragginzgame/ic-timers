@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"
-if [[ ! "${version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-    echo "error: failed to read a release version from Cargo.toml" >&2
-    exit 1
-fi
+version="$(bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh")"
+
 bash scripts/release/check-release-truth.sh
 bash scripts/release/check-lockfiles.sh
 if ! git diff --quiet || [[ -n "$(git ls-files --others --exclude-standard)" ]]; then

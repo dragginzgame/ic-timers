@@ -7,7 +7,7 @@ trap 'rm -rf -- "${temporary_root}"' EXIT
 git init -q "${temporary_root}"
 mkdir -p "${temporary_root}"/{scripts/release,docs/status,docs/changelog,crates/ic-timers/src,testing/probe/src}
 for script in bump-version finalize-changelog finalize-release-truth check-release-truth \
-    warn-release-prose check-bump-impact check-lockfiles; do
+    warn-release-prose check-bump-impact check-lockfiles workspace-version; do
     cp "${repository_root}/scripts/release/${script}.sh" "${temporary_root}/scripts/release/"
 done
 # Classification is an isolated fixture input; preparation must not run tests.
@@ -23,8 +23,10 @@ cat > "${temporary_root}/Cargo.toml" <<'EOF'
 [workspace]
 members = ["crates/ic-timers"]
 resolver = "3"
-[workspace.package]
+[workspace.dependencies.fixture]
 version = "0.1.0"
+[workspace.package]
+  version = "0.1.0" # Workspace truth; preserve spacing and this comment.
 EOF
 cat > "${temporary_root}/crates/ic-timers/Cargo.toml" <<'EOF'
 [package]
@@ -82,6 +84,38 @@ metadata_files=(Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md \
 chmod 0640 CHANGELOG.md
 sha256sum "${metadata_files[@]}" > original.sha256
 stat -c '%a %n' "${metadata_files[@]}" > original-modes
+# Version ownership is table-scoped and rejects ambiguity before mutation.
+cp Cargo.toml original-manifest.toml
+for invalid in missing-table missing-version duplicate-table duplicate-version leading-zero; do
+    cp original-manifest.toml Cargo.toml
+    case "${invalid}" in
+        missing-table) sed -i 's/\[workspace.package\]/[workspace.metadata]/' Cargo.toml ;;
+        missing-version) sed -i '/^\[workspace.package\]/,$ { /^[[:space:]]*version =/d; }' Cargo.toml ;;
+        duplicate-table) printf '%s\n' '[workspace.package]' 'version = "0.1.0"' >> Cargo.toml ;;
+        duplicate-version) printf '%s\n' 'version = "0.1.0"' >> Cargo.toml ;;
+        leading-zero) sed -i '/^\[workspace.package\]/,$ s/"0.1.0"/"00.1.0"/' Cargo.toml ;;
+    esac
+    cp Cargo.toml rejected-manifest.toml
+    for operation in read set; do
+        arguments=()
+        if [[ "${operation}" == set ]]; then arguments=(set 0.1.0 0.1.1); fi
+        if bash scripts/release/workspace-version.sh "${arguments[@]}" >/dev/null 2>&1; then
+            echo "error: workspace version ${operation} accepted ${invalid}" >&2
+            exit 1
+        fi
+        cmp rejected-manifest.toml Cargo.toml
+    done
+done
+cp original-manifest.toml Cargo.toml
+for arguments in '0.1.7 0.1.1' '0.1.0 00.1.1'; do
+    read -r previous candidate <<< "${arguments}"
+    if bash scripts/release/workspace-version.sh set "${previous}" "${candidate}" >/dev/null 2>&1; then
+        echo "error: workspace version accepted ${arguments}" >&2
+        exit 1
+    fi
+    cmp original-manifest.toml Cargo.toml
+done
+rm original-manifest.toml rejected-manifest.toml
 bash scripts/release/bump-version.sh --check patch
 sha256sum --check --quiet original.sha256
 
@@ -186,7 +220,7 @@ set -euo pipefail
 case "$*" in
     'update --offline -p ic-timers') stage=root-update ;;
     'update --manifest-path testing/Cargo.toml --offline -p ic-timers') stage=testing-update ;;
-    'metadata --locked --offline --format-version 1') stage=root-metadata ;;
+    'metadata --manifest-path Cargo.toml --locked --offline --format-version 1') stage=root-metadata ;;
     'metadata --manifest-path testing/Cargo.toml --locked --offline --format-version 1') stage=testing-metadata ;;
     *) stage=other ;;
 esac
@@ -230,7 +264,7 @@ mv scripts/release/original-release-truth.sh scripts/release/check-release-truth
 mv scripts/release/warn-release-prose.sh scripts/release/original-warn-release-prose.sh
 cat > scripts/release/warn-release-prose.sh <<'EOF'
 #!/usr/bin/env bash
-sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml > advisory-version
+bash scripts/release/workspace-version.sh > advisory-version
 exit 1
 EOF
 output="$(bash scripts/release/bump-version.sh patch 2>&1)"
@@ -241,7 +275,10 @@ fi
 grep -Fqx 0.1.0 advisory-version
 mv scripts/release/original-warn-release-prose.sh scripts/release/warn-release-prose.sh
 test ! -f unexpected-gate
-grep -Fqx 'version = "0.1.1"' Cargo.toml
+grep -Fqx '  version = "0.1.1" # Workspace truth; preserve spacing and this comment.' Cargo.toml
+test "$(bash scripts/release/workspace-version.sh)" = 0.1.1
+# The earlier dependency version must survive the bump unchanged.
+grep -Fqx 'version = "0.1.0"' Cargo.toml
 bash scripts/release/check-lockfiles.sh
 grep -Fqx 'Unrelated work must survive preparation.' unrelated.txt
 if git rev-parse --verify HEAD >/dev/null 2>&1 || [[ -n "$(git tag --list)" ]]; then
@@ -257,6 +294,16 @@ fi
 cp "${repository_root}/Makefile" Makefile
 mkdir -p docs/adoption
 printf '%s\n' '# Unrelated adoption edits' > docs/adoption/canic.md
+cp Cargo.toml valid-stage-manifest.toml
+sed -i 's/\[workspace.package\]/[workspace.metadata]/' Cargo.toml
+for target in version release-stage; do
+    if make --no-print-directory "${target}" >/dev/null 2>&1; then
+        echo "error: ${target} accepted missing workspace version ownership" >&2
+        exit 1
+    fi
+    test -z "$(git diff --cached --name-only)"
+done
+mv valid-stage-manifest.toml Cargo.toml
 make --no-print-directory release-stage >/dev/null
 expected_staged=(CHANGELOG.md Cargo.lock Cargo.toml README.md crates/ic-timers/Cargo.toml
     docs/changelog/0.1.1.md docs/status/current.md testing/Cargo.lock)

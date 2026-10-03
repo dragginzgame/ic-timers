@@ -12,42 +12,42 @@ if [[ -z "${pocket_ic_bin}" ]]; then
     exit 2
 fi
 
-binary_is_audited() {
-    local actual_sha256 actual_version
-    [[ -x "${pocket_ic_bin}" ]] || return 1
-    actual_sha256="$(sha256sum < "${pocket_ic_bin}")" || return 1
-    actual_sha256="${actual_sha256%% *}"
-    [[ "${actual_sha256}" == "${expected_sha256}" ]] || return 1
-    actual_version="$("${pocket_ic_bin}" --version 2>/dev/null)" || return 1
-    [[ "${actual_version}" == "${expected_version}" ]]
-}
-
-report_invalid_binary() {
-    if [[ ! -x "${pocket_ic_bin}" ]]; then
-        echo "error: POCKET_IC_BIN is not executable: ${pocket_ic_bin}" >&2
-        return
+verify_binary() {
+    local candidate="${1}"
+    if [[ ! -x "${candidate}" ]]; then
+        echo "error: PocketIC binary is not executable: ${candidate}" >&2
+        return 1
     fi
-    local actual_sha256 actual_version
-    actual_sha256="$(sha256sum < "${pocket_ic_bin}")" || actual_sha256='<unavailable>'
-    actual_sha256="${actual_sha256%% *}"
-    actual_version='<not executed: hash mismatch>'
-    if [[ "${actual_sha256}" == "${expected_sha256}" ]]; then
-        actual_version="$("${pocket_ic_bin}" --version 2>/dev/null || true)"
+    local actual_sha256='<unavailable>' actual_version='<not executed: hash mismatch>'
+    if actual_sha256="$(sha256sum < "${candidate}")"; then
+        actual_sha256="${actual_sha256%% *}"
+        if [[ "${actual_sha256}" == "${expected_sha256}" ]]; then
+            if actual_version="$("${candidate}" --version 2>/dev/null)"; then
+                if [[ "${actual_version}" == "${expected_version}" ]]; then
+                    return 0
+                fi
+            else
+                actual_version='<unavailable>'
+            fi
+        fi
+    else
+        actual_sha256='<unavailable>'
     fi
     echo "error: PocketIC evidence binary does not match the audited artifact" >&2
     echo "expected version: ${expected_version}" >&2
     echo "actual version:   ${actual_version:-<unavailable>}" >&2
     echo "expected SHA-256: ${expected_sha256}" >&2
     echo "actual SHA-256:   ${actual_sha256}" >&2
+    return 1
 }
 
-if binary_is_audited; then
+if verification_error="$(verify_binary "${pocket_ic_bin}" 2>&1)"; then
     echo "PocketIC evidence binary verified: ${expected_version} (${expected_sha256})"
     exit 0
 fi
 
 if [[ "${auto_install}" != "1" ]]; then
-    report_invalid_binary
+    printf '%s\n' "${verification_error}" >&2
     exit 1
 fi
 
@@ -72,21 +72,8 @@ curl --fail --location --silent --show-error --output "${archive}" "${expected_u
 gzip --decompress --stdout "${archive}" > "${binary}"
 chmod 0755 "${binary}"
 
-downloaded_sha256="$(sha256sum < "${binary}")"
-downloaded_sha256="${downloaded_sha256%% *}"
-if [[ "${downloaded_sha256}" != "${expected_sha256}" ]]; then
-    echo "error: downloaded PocketIC artifact failed hash verification" >&2
-    echo "expected SHA-256: ${expected_sha256}" >&2
-    echo "actual SHA-256:   ${downloaded_sha256}" >&2
-    exit 1
-fi
-downloaded_version="$("${binary}" --version)"
-if [[ "${downloaded_version}" != "${expected_version}" ]]; then
-    echo "error: downloaded PocketIC artifact failed version verification" >&2
-    echo "expected version: ${expected_version}" >&2
-    echo "actual version:   ${downloaded_version}" >&2
-    echo "expected SHA-256: ${expected_sha256}" >&2
-    echo "actual SHA-256:   ${downloaded_sha256}" >&2
+if ! verify_binary "${binary}"; then
+    echo "error: downloaded PocketIC artifact failed verification" >&2
     exit 1
 fi
 
@@ -95,4 +82,4 @@ rm -f -- "${archive}"
 rmdir -- "${install_directory}"
 trap - EXIT
 
-echo "PocketIC evidence binary verified: ${downloaded_version} (${downloaded_sha256})"
+echo "PocketIC evidence binary verified: ${expected_version} (${expected_sha256})"

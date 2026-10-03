@@ -162,16 +162,15 @@ impl TimerControl {
         deadline_ns: u64,
         selection: DeadlineSelection,
     ) -> Result<TimerControlAction, TimerControlError> {
-        let replace = match self.registration {
-            TimerRegistration::Unregistered => Some(false),
+        let kind = match self.registration {
+            TimerRegistration::Unregistered => WakeupArm::Initial,
             TimerRegistration::Scheduled {
                 deadline_ns: current_deadline_ns,
                 ..
-            } if selection.replaces(current_deadline_ns, deadline_ns) => Some(true),
-            TimerRegistration::Scheduled { .. } | TimerRegistration::Running { .. } => None,
-        };
-        let Some(replace) = replace else {
-            return Ok(TimerControlAction::None);
+            } if selection.replaces(current_deadline_ns, deadline_ns) => WakeupArm::Replacement,
+            TimerRegistration::Scheduled { .. } | TimerRegistration::Running { .. } => {
+                return Ok(TimerControlAction::None);
+            }
         };
 
         let generation = self.next_generation()?;
@@ -183,11 +182,7 @@ impl TimerControl {
         Ok(TimerControlAction::Arm {
             generation,
             deadline_ns,
-            kind: if replace {
-                WakeupArm::Replacement
-            } else {
-                WakeupArm::Initial
-            },
+            kind,
         })
     }
 
@@ -219,13 +214,8 @@ impl TimerControl {
             return Err(TimerControlError::StaleCompletion);
         }
 
-        let next_generation = if next_deadline_ns.is_some() {
-            Some(self.next_generation()?)
-        } else {
-            None
-        };
-
-        if let (Some(deadline_ns), Some(next_generation)) = (next_deadline_ns, next_generation) {
+        if let Some(deadline_ns) = next_deadline_ns {
+            let next_generation = self.next_generation()?;
             self.generation = next_generation;
             self.registration = TimerRegistration::Scheduled {
                 generation: next_generation,
@@ -380,7 +370,7 @@ mod tests {
     }
 
     #[test]
-    fn exhausted_generation_fails_without_replacing_current_handle() {
+    fn exhausted_generation_rejects_successors_without_preventing_stop() {
         let mut control = TimerControl {
             generation: u64::MAX,
             registration: TimerRegistration::Scheduled {
@@ -400,5 +390,24 @@ mod tests {
                 deadline_ns: 100
             }
         );
+
+        assert!(control.begin(u64::MAX));
+        assert_eq!(
+            control.complete(u64::MAX, Some(200), false),
+            Err(TimerControlError::GenerationExhausted)
+        );
+        assert_eq!(
+            control.registration(),
+            TimerRegistration::Running {
+                generation: u64::MAX
+            }
+        );
+        assert_eq!(
+            control.complete(u64::MAX, None, true),
+            Ok(TimerControlAction::Disarm { cancelled: true }),
+            "stopping does not allocate a successor generation"
+        );
+        assert_eq!(control.generation(), u64::MAX);
+        assert_eq!(control.registration(), TimerRegistration::Unregistered);
     }
 }

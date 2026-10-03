@@ -1,6 +1,19 @@
 use super::*;
 use crate::{TimerLastOutcome, TimerProcessCondition, TimerRegistrationStatus};
 use std::time::Duration;
+// Pure transition fixtures install real typed payloads but never execute work.
+pub(super) fn ordinary_callback_fixture() -> OrdinaryCallback {
+    Rc::new(RefCell::new(Box::new(|_| {
+        panic!("pure registry fixture must not execute ordinary work")
+    })))
+}
+
+pub(super) fn watchdog_callback_fixture() -> WatchdogCallback {
+    Rc::new(RefCell::new(Box::new(|_| {
+        panic!("pure registry fixture must not execute watchdog work")
+    })))
+}
+
 fn identity(name: &str) -> TimerIdentity {
     TimerIdentity::try_new("test", "registry", name).expect("fixture identity should be valid")
 }
@@ -947,8 +960,6 @@ fn illegal_once_recurrence_and_invariant_result_stop_truthfully() {
             reason: InactiveReason::ControlFailure(TimerControlFailure::DirectiveNotAllowed,),
         }
     );
-    assert_eq!(snapshot.observability().counters().invariant_failure(), 1);
-
     let invariant_id = identity("invariant");
     let invariant = registry
         .register_once(invariant_id.clone(), DeclarationLifetime::Retained)
@@ -977,6 +988,28 @@ fn illegal_once_recurrence_and_invariant_result_stop_truthfully() {
             reason: InactiveReason::InvariantFailure,
         })
     );
+    for (timer, work_count) in [(illegal_id, 1), (invariant_id, 3)] {
+        let snapshot = registry
+            .snapshot(&timer)
+            .expect("retained declaration should exist");
+        assert_eq!(
+            snapshot.latest_directive(),
+            Some(TimerDirectiveSnapshot::Stop)
+        );
+        let counters = snapshot.observability().counters();
+        assert_eq!(counters.work_completed(), 1);
+        assert_eq!(counters.invariant_failure(), 1);
+        assert_eq!(counters.cancelled(), 0);
+        let outcomes = snapshot.observability().outcomes();
+        assert_eq!(
+            outcomes.last_outcome(),
+            Some(TimerLastOutcome::Completed(
+                TimerCompletionOutcome::InvariantFailure
+            ))
+        );
+        assert_eq!(outcomes.last_work_count(), Some(work_count));
+        assert_eq!(outcomes.last_failure_at_ns(), Some(2));
+    }
 }
 
 #[test]
@@ -1572,7 +1605,7 @@ fn watchdog_checked_generation_exhaustion_is_terminal_and_atomic() {
             .entries
             .get_mut(&timer)
             .expect("fixture entry should exist");
-        let EntryControl::Watchdog(control) = &mut entry.control else {
+        let EntryKind::Watchdog { control, .. } = &mut entry.kind else {
             panic!("fixture should be watchdog control");
         };
         control.scheduler_generation = u64::MAX;
@@ -1608,7 +1641,7 @@ fn watchdog_checked_generation_exhaustion_is_terminal_and_atomic() {
             .entries
             .get_mut(&attempt_timer)
             .expect("attempt-overflow entry should exist");
-        let EntryControl::Watchdog(control) = &mut entry.control else {
+        let EntryKind::Watchdog { control, .. } = &mut entry.kind else {
             panic!("fixture should be watchdog control");
         };
         control.attempt_generation = u64::MAX;
@@ -1630,7 +1663,7 @@ fn watchdog_checked_generation_exhaustion_is_terminal_and_atomic() {
         .entries
         .get(&attempt_timer)
         .expect("retained attempt-overflow entry should remain");
-    let EntryControl::Watchdog(control) = &entry.control else {
+    let EntryKind::Watchdog { control, .. } = &entry.kind else {
         panic!("fixture should remain watchdog control");
     };
     assert_eq!(
@@ -1672,7 +1705,7 @@ fn watchdog_checked_deadline_overflow_is_terminal() {
         .entries
         .get(&deadline_timer)
         .expect("retained deadline-overflow entry should remain");
-    let EntryControl::Watchdog(control) = &entry.control else {
+    let EntryKind::Watchdog { control, .. } = &entry.kind else {
         panic!("fixture should remain watchdog control");
     };
     assert_eq!(control.state, WatchdogState::Inactive);
@@ -1691,7 +1724,7 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
                 cadence: cadence(1),
             },
         ] {
-            for subject in ["initial", "replacement", "cancel"] {
+            for subject in ["initial", "replacement", "cancel", "completion"] {
                 let mut registry = registry();
                 let timer = identity(subject);
                 let claim = match policy {
@@ -1701,18 +1734,38 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
                         .unwrap(),
                     TimerPolicy::Watchdog { .. } => unreachable!("ordinary fixture policies"),
                 };
-                if subject != "initial" {
-                    registry
+                let token = if subject != "initial" {
+                    let (token, _, _) = arm(registry
                         .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(10)))
-                        .unwrap();
-                }
+                        .unwrap());
+                    if subject == "completion" {
+                        assert_eq!(
+                            registry.begin_ordinary(&token),
+                            CallbackAcceptance::Accepted
+                        );
+                    }
+                    Some(token)
+                } else {
+                    None
+                };
                 let entry = registry.entries.get_mut(&timer).unwrap();
-                let EntryControl::Ordinary { control, .. } = &mut entry.control else {
+                let EntryKind::Ordinary { control, .. } = &mut entry.kind else {
                     panic!("fixture must be ordinary control");
                 };
                 control.exhaust_generation_for_test();
                 let transition = if subject == "cancel" {
                     registry.cancel(&claim).unwrap()
+                } else if subject == "completion" {
+                    registry
+                        .complete_ordinary(
+                            token.as_ref().expect("completion has a running token"),
+                            10,
+                            TimerRunResult::new(
+                                TimerCompletion::success(3),
+                                TimerDirective::ContinueImmediately,
+                            ),
+                        )
+                        .unwrap()
                 } else {
                     registry
                         .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(1)))
@@ -1723,14 +1776,22 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
                     Some(TimerControlFailure::GenerationExhausted)
                 );
                 if lifetime == DeclarationLifetime::Retained {
+                    let snapshot = registry.snapshot(&timer).unwrap();
                     assert_eq!(
-                        registry.snapshot(&timer).unwrap().state(),
+                        snapshot.state(),
                         TimerRuntimeStateSnapshot::Inactive {
                             reason: InactiveReason::ControlFailure(
                                 TimerControlFailure::GenerationExhausted,
                             ),
                         }
                     );
+                    if subject == "completion" {
+                        assert_eq!(snapshot.observability().counters().work_completed(), 1);
+                        assert_eq!(
+                            snapshot.observability().outcomes().last_work_count(),
+                            Some(3)
+                        );
+                    }
                 } else {
                     assert!(registry.is_empty(), "{subject} retained a transient entry");
                     assert_eq!(
@@ -1767,7 +1828,7 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
                 Some(arm(registry.ensure_recurring(&claim, 0).unwrap()).0)
             };
             let entry = registry.entries.get_mut(&timer).unwrap();
-            let EntryControl::Watchdog(control) = &mut entry.control else {
+            let EntryKind::Watchdog { control, .. } = &mut entry.kind else {
                 panic!("fixture must be a watchdog");
             };
             match subject {
@@ -1976,7 +2037,7 @@ fn watchdog_exact_replacement_rejects_stale_delivery_and_generation_exhaustion()
         registry.begin_watchdog_work(&work),
         CallbackAcceptance::Accepted
     );
-    let EntryControl::Watchdog(control) = &mut registry.entries.get_mut(&timer).unwrap().control
+    let EntryKind::Watchdog { control, .. } = &mut registry.entries.get_mut(&timer).unwrap().kind
     else {
         panic!("watchdog")
     };

@@ -4,6 +4,54 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.9.2]
+
+### Changed
+
+- Select ordinary arm kinds and allocate completion generations directly,
+  removing derived optional planning values while preserving checked transitions.
+- Use instruction sample count as the sole empty-summary marker. Public latest
+  and maximum getters still distinguish no sample from a zero-valued sample;
+  latest and maximum observations continue after count or total saturation.
+  Derived Debug output reflects the new private field representation.
+- Apply callback-role recovery to every unexpected binding error without repeating
+  the complete error-variant list. Watchdog work still traps for rollback;
+  ordinary callbacks and scheduler binding failures retain their cleanup paths.
+- Share ordinary failed-completion bookkeeping between consumer invariant failures
+  and checked control failures. Preserve their distinct inactive reasons, error
+  results and reported work counts.
+- Store each registry entry's control, callback and cadence in one policy-specific
+  payload. Derive policy observations from it and remove the independent callback
+  variants and missing-callback state. Preserve scheduling and recovery contracts.
+
+### Development
+
+- Follow up [GitHub issue #8](https://github.com/dragginzgame/ic-timers/issues/8)
+  by separating readiness mapping, repeated message driving and measurement
+  assertions from the ordered IcyDB-shaped lifecycle fixture. Read callback
+  readiness once. Preserve lifecycle coverage and gate scope; supplemental MSRV
+  lint validation remains pending.
+- Verify cached and downloaded PocketIC artifacts through one hash-first path.
+  Rejection diagnostics use that verification result without hashing or executing
+  the rejected binary again. Explicit overrides remain untouched; rejected
+  downloads preserve the cache and clean temporary artifacts.
+- Give workspace-version reading and mutation one table-scoped owner across
+  version display, bumping, staging, release-truth, commit and tag checks. Preserve
+  dependency versions and reject failed version selection before staging. Require
+  both locked workspaces to resolve one timer package at the workspace version.
+- Exercise PocketIC path and automatic-install selection through the actual Make
+  recipe instead of matching its source layout. Cover default, environment,
+  command-line, identical-path and empty overrides while retaining audited pins.
+
+### Documentation
+
+- Record the maintainer-reported live 0.9.1 release and matching local artifacts,
+  removing obsolete bump instructions from the handoff and preparation note.
+- Clarify user-owned lockfile staging and mark the original 0.5 Watchdog
+  reconciliation restriction as superseded by the 0.8 deadline contract.
+- Track the next private implementation changes and pending validation in the
+  [0.9.2 simplification note](docs/changelog/0.9.2.md).
+
 ## [0.9.1] - 2026-10-03
 
 ### Changed

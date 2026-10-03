@@ -18,6 +18,7 @@ if [[ "${FIXTURE_VERSION_OK:-1}" == 1 ]]; then
 else
     echo 'wrong version'
 fi
+exit "${FIXTURE_VERSION_STATUS:-0}"
 EOF
 chmod +x "${temporary_root}/candidate"
 gzip -c "${temporary_root}/candidate" > "${IC_TIMERS_FIXTURE_ARCHIVE}"
@@ -79,12 +80,35 @@ fi
 : > "${IC_TIMERS_FIXTURE_LOG}"
 FIXTURE_HASH_OK=1 bash "${checker}"
 test "$(cat "${IC_TIMERS_FIXTURE_LOG}")" == $'hash\nexecute'
+for result in wrong-version failed-command; do
+    : > "${IC_TIMERS_FIXTURE_LOG}"
+    version_ok=1
+    version_status=0
+    if [[ "${result}" == wrong-version ]]; then version_ok=0; else version_status=1; fi
+    if output="$(FIXTURE_HASH_OK=1 FIXTURE_VERSION_OK="${version_ok}" \
+        FIXTURE_VERSION_STATUS="${version_status}" bash "${checker}" 2>&1)"; then
+        echo "error: accepted a hash-matching binary with ${result}" >&2
+        exit 1
+    fi
+    test "$(cat "${IC_TIMERS_FIXTURE_LOG}")" == $'hash\nexecute'
+    if [[ "${result}" == wrong-version && "${output}" != *'actual version:   wrong version'* ]]; then
+        echo 'error: rejection did not report the observed version' >&2
+        exit 1
+    fi
+done
+
+# The same verification applies before replacing the cache with a download.
 : > "${IC_TIMERS_FIXTURE_LOG}"
-if FIXTURE_HASH_OK=1 FIXTURE_VERSION_OK=0 bash "${checker}" >/dev/null 2>&1; then
-    echo 'error: accepted a hash-matching binary with the wrong version' >&2
+if FIXTURE_HASH_OK=1 FIXTURE_VERSION_OK=0 POCKET_IC_AUTO_INSTALL=1 \
+    bash "${checker}" >/dev/null 2>&1; then
+    echo 'error: downloaded a hash-matching binary with the wrong version' >&2
     exit 1
 fi
-test "$(head -n 1 "${IC_TIMERS_FIXTURE_LOG}")" == hash
+cmp "${temporary_root}/candidate" "${POCKET_IC_BIN}"
+if [[ -n "$(find "${temporary_root}/cache" -name '.pocket-ic-install.*' -print)" ]]; then
+    echo 'error: rejected version left installation debris' >&2
+    exit 1
+fi
 rm -- "${POCKET_IC_BIN}"
 : > "${IC_TIMERS_FIXTURE_LOG}"
 FIXTURE_HASH_OK=1 POCKET_IC_AUTO_INSTALL=1 bash "${checker}"

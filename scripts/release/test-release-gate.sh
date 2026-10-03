@@ -70,22 +70,48 @@ if ! grep -Fqx -- \
     exit 1
 fi
 
-if ! grep -Fqx -- \
-    'POCKET_IC_BIN ?= $(CURDIR)/target/tools/pocket-ic/$(POCKET_IC_VERSION)/pocket-ic' \
-    "${makefile}" >/dev/null \
-    || ! grep -Fqx -- \
-        $'\t\tPOCKET_IC_AUTO_INSTALL="$(POCKET_IC_AUTO_INSTALL)" \\' \
-        "${makefile}" >/dev/null; then
-    echo "error: default release flow does not provision the pinned PocketIC binary" >&2
-    exit 1
-fi
-
 # Execute the real orchestration with cheap leaf targets. Expected checks remain
 # independent of Makefile variables; their spelling and recipe layout do not.
 temporary_root="$(mktemp -d)"
 trap 'rm -rf -- "${temporary_root}"' EXIT
 cp "${makefile}" "${temporary_root}/Makefile"
 cd "${temporary_root}"
+# Exercise the actual recipe and Make variable origins without provisioning.
+mkdir -p scripts/ci
+cat > scripts/ci/check-pocketic.sh <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n%s\n' "${POCKET_IC_BIN}" "${POCKET_IC_AUTO_INSTALL}" > provisioning
+if [[ -z "${POCKET_IC_BIN}" ]]; then exit 2; fi
+EOF
+default_binary="${temporary_root}/target/tools/pocket-ic/15.0.0/pocket-ic"
+for source in default environment command-line same-as-default empty; do
+    case "${source}" in
+        default)
+            env -u POCKET_IC_BIN make --no-print-directory pocketic-check >/dev/null
+            expected_path="${default_binary}"; expected_install=1 ;;
+        environment)
+            POCKET_IC_BIN=/explicit/environment make --no-print-directory pocketic-check >/dev/null
+            expected_path=/explicit/environment; expected_install=0 ;;
+        command-line)
+            make --no-print-directory pocketic-check POCKET_IC_BIN=/explicit/command-line >/dev/null
+            expected_path=/explicit/command-line; expected_install=0 ;;
+        same-as-default)
+            make --no-print-directory pocketic-check "POCKET_IC_BIN=${default_binary}" >/dev/null
+            expected_path="${default_binary}"; expected_install=0 ;;
+        empty)
+            if make --no-print-directory pocketic-check POCKET_IC_BIN= >/dev/null 2>&1; then
+                echo 'error: empty PocketIC override was accepted' >&2
+                exit 1
+            fi
+            expected_path=''; expected_install=0 ;;
+    esac
+    mapfile -t actual < provisioning
+    if [[ "${actual[0]}" != "${expected_path}" || "${actual[1]}" != "${expected_install}" ]]; then
+        echo "error: ${source} PocketIC selection was incorrect: ${actual[*]}" >&2
+        exit 1
+    fi
+done
+rm provisioning
 cat > overrides.mk <<'EOF'
 actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package pocketic-check msrv testing-check pocketic-watchdog pocketic-cohorts:
 	@printf '%s\n' '$@' >> checks-ran

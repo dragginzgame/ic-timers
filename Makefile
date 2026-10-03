@@ -44,7 +44,7 @@ help:
 	@echo "  release-x VERSION=x.y.z      Commit, tag, and push an exact release"
 
 version:
-	@sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1
+	@bash scripts/release/workspace-version.sh
 
 fmt:
 	cargo fmt --all
@@ -229,7 +229,7 @@ release-x:
 	+$(MAKE) --no-print-directory release-push
 
 release-stage:
-	@version="$$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"; \
+	@set -e; version="$$(bash scripts/release/workspace-version.sh)"; \
 		git add Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md \
 			crates/ic-timers/Cargo.toml docs/status/current.md \
 			"docs/changelog/$${version}.md"

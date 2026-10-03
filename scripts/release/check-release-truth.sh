@@ -4,12 +4,7 @@ set -euo pipefail
 repository_root="$(git rev-parse --show-toplevel)"
 cd "${repository_root}"
 
-semver_pattern='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
-version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"
-if [[ ! "${version}" =~ ${semver_pattern} ]]; then
-    echo "error: failed to read a canonical workspace version" >&2
-    exit 1
-fi
+version="$(bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh")"
 
 release_note="docs/changelog/${version}.md"
 if [[ ! -f "${release_note}" ]]; then

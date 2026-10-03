@@ -50,11 +50,7 @@ case "${requested}" in
         ;;
 esac
 
-previous_version="$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"
-if [[ ! "${previous_version}" =~ ${semver_pattern} ]]; then
-    echo "error: failed to read a SemVer workspace version" >&2
-    exit 1
-fi
+previous_version="$(bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh")"
 
 if [[ "${requested}" =~ ^[0-9] ]]; then
     new_version="${requested}"
@@ -134,11 +130,7 @@ mutation_started=true
 bash scripts/release/finalize-changelog.sh "${new_version}" "${release_date}"
 bash scripts/release/finalize-release-truth.sh "${previous_version}" "${new_version}"
 
-IC_TIMERS_PREVIOUS_VERSION="${previous_version}" \
-IC_TIMERS_NEW_VERSION="${new_version}" \
-perl -0pi -e '
-    s/^version = "\Q$ENV{IC_TIMERS_PREVIOUS_VERSION}\E"$/version = "$ENV{IC_TIMERS_NEW_VERSION}"/m
-' Cargo.toml
+bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh" set "${previous_version}" "${new_version}"
 cargo update --offline -p ic-timers
 cargo update --manifest-path testing/Cargo.toml --offline -p ic-timers
 

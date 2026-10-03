@@ -9,7 +9,8 @@ git init -q "${temporary_root}"
 cd "${temporary_root}"
 git config user.name 'ic-timers release test'
 git config user.email 'release-test@example.invalid'
-printf '%s\n' '[workspace.package]' 'version = "0.1.0"' > Cargo.toml
+printf '%s\n' '[workspace.dependencies.fixture]' 'version = "0.2.0"' \
+    '[workspace.package]' 'version = "0.1.0"' > Cargo.toml
 git add Cargo.toml
 git commit -qm fixture
 

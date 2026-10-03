@@ -75,6 +75,16 @@ current worktree and does not require a preparatory commit. A
 repository-only subject emits an advisory but may proceed when the maintainer
 has explicitly invoked the bump or release target.
 
+One helper, `scripts/release/workspace-version.sh`, owns reading and changing
+`[workspace.package].version`. The repository manifest uses one literal,
+double-quoted canonical SemVer field in that table. Table order, indentation
+and trailing comments do not select a dependency version. Missing, duplicate
+or noncanonical workspace versions fail before mutation or staging. The writer
+requires the expected previous version and changes only that value. Both locked
+workspace metadata checks also require exactly one resolved `ic-timers` package
+at the workspace version; coherent lockfiles for a different package version
+are rejected.
+
 Combined release targets run `bump-version.sh --check` before deployment
 validation. This preflight checks the requested version, impact, changelog and
 release markers without changing version metadata or running tests. An empty

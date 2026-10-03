@@ -2109,9 +2109,51 @@ fn icydb_watchdog_result(
 }
 
 #[test]
+fn icydb_shaped_readiness_selects_work_outcomes_and_watchdog_decisions() {
+    for (readiness, work_count, completion, decision) in [
+        (
+            StartupReadiness::Recovering,
+            1,
+            TimerCompletion::success(1),
+            WatchdogDecision::ContinueImmediately,
+        ),
+        (
+            StartupReadiness::RetryableFailure,
+            0,
+            TimerCompletion::retryable_failure(0),
+            WatchdogDecision::Continue,
+        ),
+        (
+            StartupReadiness::Ready,
+            0,
+            TimerCompletion::no_work(),
+            WatchdogDecision::Stop,
+        ),
+        (
+            StartupReadiness::Ready,
+            1,
+            TimerCompletion::success(1),
+            WatchdogDecision::Stop,
+        ),
+        (
+            StartupReadiness::TerminalFailure,
+            0,
+            TimerCompletion::invariant_failure(0),
+            WatchdogDecision::Stop,
+        ),
+    ] {
+        assert_eq!(
+            icydb_watchdog_result(readiness, work_count),
+            WatchdogRunResult::new(completion, decision),
+            "{readiness:?} with {work_count} work"
+        );
+    }
+}
+
+#[test]
 #[expect(
     clippy::too_many_lines,
-    reason = "One end-to-end IcyDB-shaped lifecycle fixture."
+    reason = "One ordered IcyDB-shaped reconstruction and commit-guard sequence."
 )]
 fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idempotent() {
     setup();
@@ -2120,36 +2162,6 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
     let readiness = Rc::new(Cell::new(StartupReadiness::Recovering));
     let pages = Rc::new(Cell::new(0_u64));
     let mut registration = None;
-
-    assert_eq!(
-        icydb_watchdog_result(StartupReadiness::Recovering, 1),
-        WatchdogRunResult::new(
-            TimerCompletion::success(1),
-            WatchdogDecision::ContinueImmediately,
-        )
-    );
-    assert_eq!(
-        icydb_watchdog_result(StartupReadiness::RetryableFailure, 0),
-        WatchdogRunResult::new(
-            TimerCompletion::retryable_failure(0),
-            WatchdogDecision::Continue,
-        )
-    );
-    assert_eq!(
-        icydb_watchdog_result(StartupReadiness::Ready, 0),
-        WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
-    );
-    assert_eq!(
-        icydb_watchdog_result(StartupReadiness::Ready, 1),
-        WatchdogRunResult::new(TimerCompletion::success(1), WatchdogDecision::Stop)
-    );
-    assert_eq!(
-        icydb_watchdog_result(StartupReadiness::TerminalFailure, 0),
-        WatchdogRunResult::new(
-            TimerCompletion::invariant_failure(0),
-            WatchdogDecision::Stop,
-        )
-    );
 
     let callback_readiness = Rc::clone(&readiness);
     let callback_pages = Rc::clone(&pages);
@@ -2160,17 +2172,12 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         WatchdogReconcileState::ScheduledImmediately,
         move |_context| {
             advance_instructions(13);
-            match callback_readiness.get() {
-                StartupReadiness::Recovering => {
-                    callback_pages.set(callback_pages.get().saturating_add(1));
-                }
-                StartupReadiness::Ready
-                | StartupReadiness::RetryableFailure
-                | StartupReadiness::TerminalFailure => {}
+            let readiness = callback_readiness.get();
+            let completed_work_count = u64::from(readiness == StartupReadiness::Recovering);
+            if completed_work_count != 0 {
+                callback_pages.set(callback_pages.get().saturating_add(completed_work_count));
             }
-            let completed_work_count =
-                u64::from(callback_readiness.get() == StartupReadiness::Recovering);
-            icydb_watchdog_result(callback_readiness.get(), completed_work_count)
+            icydb_watchdog_result(readiness, completed_work_count)
         },
     )
     .expect("fresh reconstruction should register and schedule");
@@ -2189,18 +2196,12 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
     .expect("repeated reconstruction should reuse the original callback claim");
     assert_eq!(timer_count(), 1);
 
-    set_time(15);
-    assert!(run_next_due());
-    assert!(run_next_due());
-    assert_eq!(pages.get(), 1);
-    assert_eq!(timer_count(), 1);
+    run_icydb_watchdog_round(15);
+    assert_eq!((pages.get(), timer_count()), (1, 1));
 
     readiness.set(StartupReadiness::RetryableFailure);
-    set_time(20);
-    assert!(run_next_due());
-    assert!(run_next_due());
-    assert_eq!(pages.get(), 1);
-    assert_eq!(timer_count(), 1);
+    run_icydb_watchdog_round(20);
+    assert_eq!((pages.get(), timer_count()), (1, 1));
     let retrying = timer_snapshot(&timer)
         .expect("snapshot lookup should succeed")
         .expect("retryable failure must retain the watchdog");
@@ -2213,26 +2214,12 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
     assert_eq!(retrying_counters.retryable_failure(), 1);
 
     readiness.set(StartupReadiness::Ready);
-    set_time(25);
-    assert!(run_next_due());
-    assert!(run_next_due());
-    assert_eq!(pages.get(), 1);
-    assert_eq!(timer_count(), 0);
+    run_icydb_watchdog_round(25);
+    assert_eq!((pages.get(), timer_count()), (1, 0));
     let stopped = timer_snapshot(&timer)
         .expect("snapshot lookup should succeed")
         .expect("retained watchdog should remain declared");
-    let performance = stopped.observability().performance();
-    assert_eq!(performance.scheduler_instructions().samples(), 3);
-    assert_eq!(performance.scheduler_instructions().latest(), Some(10));
-    assert_eq!(performance.work_instructions().samples(), 3);
-    assert_eq!(performance.scheduler_memory_pages().samples(), 3);
-    assert_eq!(performance.work_memory_pages().samples(), 3);
-    assert!(
-        performance
-            .work_instructions()
-            .latest()
-            .is_some_and(|value| value >= 13)
-    );
+    assert_icydb_lifecycle_measurements(&stopped);
 
     readiness.set(StartupReadiness::RetryableFailure);
     reconcile_watchdog(
@@ -2296,6 +2283,43 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
     );
     assert!(matches!(mismatch, Err(TimerError::ReconciliationConflict)));
+}
+
+fn run_icydb_watchdog_round(now_ns: u64) {
+    set_time(now_ns);
+    assert!(run_next_due(), "scheduler message must run at {now_ns}");
+    assert!(run_next_due(), "work message must run at {now_ns}");
+}
+
+fn assert_icydb_lifecycle_measurements(snapshot: &TimerSnapshot) {
+    let performance = snapshot.observability().performance();
+    for (measurement, samples) in [
+        (
+            "scheduler instructions",
+            performance.scheduler_instructions().samples(),
+        ),
+        (
+            "work instructions",
+            performance.work_instructions().samples(),
+        ),
+        (
+            "scheduler memory",
+            performance.scheduler_memory_pages().samples(),
+        ),
+        ("work memory", performance.work_memory_pages().samples()),
+    ] {
+        assert_eq!(
+            samples, 3,
+            "{measurement} after three completed work rounds"
+        );
+    }
+    assert_eq!(performance.scheduler_instructions().latest(), Some(10));
+    assert!(
+        performance
+            .work_instructions()
+            .latest()
+            .is_some_and(|value| value >= 13)
+    );
 }
 
 #[test]

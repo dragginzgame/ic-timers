@@ -56,11 +56,10 @@ impl From<RegistryError> for TimerError {
             RegistryError::UnknownRegistration
             | RegistryError::StaleRegistration
             | RegistryError::StaleCallback => Self::RegistrationExpired,
-            RegistryError::PolicyMismatch { .. } => Self::OwnershipInvariant,
-            RegistryError::Schedule(error) => Self::Schedule(error),
-            RegistryError::MissingCallback | RegistryError::ProviderHandleAlreadyOwned => {
+            RegistryError::PolicyMismatch { .. } | RegistryError::ProviderHandleAlreadyOwned => {
                 Self::OwnershipInvariant
             }
+            RegistryError::Schedule(error) => Self::Schedule(error),
         }
     }
 }
@@ -1268,17 +1267,11 @@ fn finish_callback_transition(
     transition: RegistryTransition,
     handles: ProviderHandles,
 ) {
+    // Registry control failures are already finalized. Other binding failures
+    // follow the callback role's cleanup or rollback rule.
     match finish_transition(transition, handles) {
         Ok(()) | Err(TimerError::ControlFailure(_)) => {}
-        Err(
-            error @ (TimerError::NotInitialized
-            | TimerError::RuntimeBusy
-            | TimerError::Register(_)
-            | TimerError::Schedule(_)
-            | TimerError::RegistrationExpired
-            | TimerError::OwnershipInvariant
-            | TimerError::ReconciliationConflict),
-        ) => {
+        Err(error) => {
             if token.role() == CallbackRole::WatchdogWork {
                 trap_callback_failure("watchdog provider-handle completion", &error);
             }
