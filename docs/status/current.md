@@ -64,6 +64,9 @@ and the [safety boundary](../../SAFETY.md).
   unexpected errors without repeating the error-variant list.
 - Ordinary failed-completion paths share stop bookkeeping while preserving
   distinct consumer-invariant and typed control-failure outcomes.
+  The maintainer reported Clippy rejecting the lifetime fixture's negated
+  initial-case branch; it now tests equality and handles that case first.
+  The lint rerun remains user-owned and pending.
 - Registry entries own control, matching callback and cadence in one typed
   payload; public policy is derived. Separate policy/callback discriminants and
   the callback-absent state are removed. Pure fixtures use inert typed callbacks.

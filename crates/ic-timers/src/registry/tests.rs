@@ -1734,7 +1734,9 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
                         .unwrap(),
                     TimerPolicy::Watchdog { .. } => unreachable!("ordinary fixture policies"),
                 };
-                let token = if subject != "initial" {
+                let token = if subject == "initial" {
+                    None
+                } else {
                     let (token, _, _) = arm(registry
                         .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(10)))
                         .unwrap());
@@ -1745,8 +1747,6 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
                         );
                     }
                     Some(token)
-                } else {
-                    None
                 };
                 let entry = registry.entries.get_mut(&timer).unwrap();
                 let EntryKind::Ordinary { control, .. } = &mut entry.kind else {
