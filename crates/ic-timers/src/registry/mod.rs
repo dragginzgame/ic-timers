@@ -613,6 +613,36 @@ impl Entry {
     const fn owns_token_claim(&self, token: &CallbackToken) -> bool {
         self.claim_generation == token.claim_generation
     }
+
+    // Registry lookups select this entry by token identity first.
+    const fn owns_running_work(&self, token: &CallbackToken) -> bool {
+        if !self.owns_token_claim(token) {
+            return false;
+        }
+        match (&self.kind, token.role) {
+            (EntryKind::Ordinary { control, .. }, CallbackRole::OrdinaryWork) => matches!(
+                control.registration(),
+                TimerRegistration::Running { generation }
+                    if generation == token.callback_generation
+            ),
+            (EntryKind::Watchdog { control, .. }, CallbackRole::WatchdogWork) => matches!(
+                control.state,
+                WatchdogState::AwaitingWork {
+                    attempt_generation,
+                    attempt_status: WatchdogAttemptStatus::Running,
+                    ..
+                } if attempt_generation == token.callback_generation
+            ),
+            (
+                EntryKind::Ordinary { .. },
+                CallbackRole::WatchdogScheduler | CallbackRole::WatchdogWork,
+            )
+            | (
+                EntryKind::Watchdog { .. },
+                CallbackRole::OrdinaryWork | CallbackRole::WatchdogScheduler,
+            ) => false,
+        }
+    }
 }
 
 /// Pure, fixed-capacity canonical registry.
@@ -1178,7 +1208,7 @@ impl TimerRegistry {
     ) -> Result<RegistryTransition, RegistryError> {
         let identity = token.identity.clone();
         let (transition, remove) = {
-            let entry = self.entry_by_token_mut(token, CallbackRole::OrdinaryWork)?;
+            let entry = self.running_work_entry_mut(token)?;
             let EntryKind::Ordinary {
                 cadence,
                 control,
@@ -1190,14 +1220,6 @@ impl TimerRegistry {
                 return Err(RegistryError::StaleCallback);
             };
             let cadence = *cadence;
-            if control.registration()
-                != (TimerRegistration::Running {
-                    generation: token.callback_generation,
-                })
-            {
-                return Err(RegistryError::StaleCallback);
-            }
-
             let completion = result.completion();
             let pending_command = *pending;
             let terminal_pending = matches!(
@@ -1465,7 +1487,7 @@ impl TimerRegistry {
     ) -> Result<RegistryTransition, RegistryError> {
         let identity = token.identity.clone();
         let (transition, remove) = {
-            let entry = self.entry_by_token_mut(token, CallbackRole::WatchdogWork)?;
+            let entry = self.running_work_entry_mut(token)?;
             let EntryKind::Watchdog {
                 cadence, control, ..
             } = &mut entry.kind
@@ -1473,20 +1495,13 @@ impl TimerRegistry {
                 return Err(RegistryError::StaleCallback);
             };
             let cadence = *cadence;
-            let (successor_generation, successor_deadline_ns) = match control.state {
-                WatchdogState::AwaitingWork {
-                    successor_generation,
-                    successor_deadline_ns,
-                    attempt_generation,
-                    attempt_status: WatchdogAttemptStatus::Running,
-                } if attempt_generation == token.callback_generation => {
-                    (successor_generation, successor_deadline_ns)
-                }
-                WatchdogState::Inactive
-                | WatchdogState::Scheduled { .. }
-                | WatchdogState::AwaitingWork { .. } => {
-                    return Err(RegistryError::StaleCallback);
-                }
+            let WatchdogState::AwaitingWork {
+                successor_generation,
+                successor_deadline_ns,
+                ..
+            } = control.state
+            else {
+                return Err(RegistryError::StaleCallback);
             };
 
             let completion = result.completion();
@@ -1976,33 +1991,22 @@ impl TimerRegistry {
             .entries
             .get(token.identity())
             .ok_or(RegistryError::StaleCallback)?;
-        if !entry.owns_token_claim(token) {
-            return Err(RegistryError::StaleCallback);
+        if entry.owns_running_work(token) {
+            Ok(entry)
+        } else {
+            Err(RegistryError::StaleCallback)
         }
-        let active = match (&entry.kind, token.role) {
-            (EntryKind::Ordinary { control, .. }, CallbackRole::OrdinaryWork) => matches!(
-                control.registration(),
-                TimerRegistration::Running { generation }
-                    if generation == token.callback_generation
-            ),
-            (EntryKind::Watchdog { control, .. }, CallbackRole::WatchdogWork) => matches!(
-                control.state,
-                WatchdogState::AwaitingWork {
-                    attempt_generation,
-                    attempt_status: WatchdogAttemptStatus::Running,
-                    ..
-                } if attempt_generation == token.callback_generation
-            ),
-            (
-                EntryKind::Ordinary { .. },
-                CallbackRole::WatchdogScheduler | CallbackRole::WatchdogWork,
-            )
-            | (
-                EntryKind::Watchdog { .. },
-                CallbackRole::OrdinaryWork | CallbackRole::WatchdogScheduler,
-            ) => false,
-        };
-        if active {
+    }
+
+    fn running_work_entry_mut(
+        &mut self,
+        token: &CallbackToken,
+    ) -> Result<&mut Entry, RegistryError> {
+        let entry = self
+            .entries
+            .get_mut(token.identity())
+            .ok_or(RegistryError::StaleCallback)?;
+        if entry.owns_running_work(token) {
             Ok(entry)
         } else {
             Err(RegistryError::StaleCallback)

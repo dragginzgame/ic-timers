@@ -55,6 +55,137 @@ fn confirm(registry: &mut TimerRegistry, transition: &RegistryTransition) {
         .expect("fixture provider effect should apply");
 }
 
+fn assert_running_work_rejected(registry: &mut TimerRegistry, token: &CallbackToken) {
+    let before = registry.inventory();
+    assert_eq!(
+        registry.validate_running_context(token),
+        Err(RegistryError::StaleCallback)
+    );
+    assert!(matches!(
+        registry.ordinary_callback(token),
+        Err(RegistryError::StaleCallback)
+    ));
+    assert!(matches!(
+        registry.watchdog_callback(token),
+        Err(RegistryError::StaleCallback)
+    ));
+    assert_eq!(
+        registry.complete_ordinary(
+            token,
+            20,
+            TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop),
+        ),
+        Err(RegistryError::StaleCallback)
+    );
+    assert_eq!(
+        registry.complete_watchdog_work(
+            token,
+            20,
+            WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
+        ),
+        Err(RegistryError::StaleCallback)
+    );
+    assert_eq!(registry.inventory(), before);
+}
+
+#[test]
+fn running_work_boundaries_reject_unstarted_stale_and_completed_tokens() {
+    for policy in [
+        TimerPolicy::Once,
+        TimerPolicy::AfterCompletion {
+            cadence: cadence(5),
+        },
+        TimerPolicy::Watchdog {
+            cadence: cadence(5),
+        },
+    ] {
+        let mut registry = registry();
+        let timer = identity("running-work-authority");
+        let claim = match policy {
+            TimerPolicy::Once => registry.register_once(timer, DeclarationLifetime::Retained),
+            TimerPolicy::AfterCompletion { cadence } => {
+                registry.register_after_completion(timer, cadence, DeclarationLifetime::Retained)
+            }
+            TimerPolicy::Watchdog { cadence } => {
+                registry.register_watchdog(timer, cadence, DeclarationLifetime::Retained)
+            }
+        }
+        .unwrap();
+        let watchdog = matches!(policy, TimerPolicy::Watchdog { .. });
+        let token = if watchdog {
+            let (scheduler, _) = arm(registry.ensure_recurring(&claim, 0).unwrap());
+            let (_, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 5));
+            work
+        } else {
+            let (work, _) = arm(registry
+                .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(5)))
+                .unwrap());
+            work
+        };
+        assert_running_work_rejected(&mut registry, &token);
+        let accepted = if watchdog {
+            registry.begin_watchdog_work(&token)
+        } else {
+            registry.begin_ordinary(&token)
+        };
+        assert_eq!(accepted, CallbackAcceptance::Accepted);
+        assert_eq!(registry.validate_running_context(&token), Ok(()));
+
+        for role in [
+            CallbackRole::OrdinaryWork,
+            CallbackRole::WatchdogScheduler,
+            CallbackRole::WatchdogWork,
+        ] {
+            if role == token.role() {
+                continue;
+            }
+            assert_running_work_rejected(
+                &mut registry,
+                &CallbackToken {
+                    role,
+                    ..token.clone()
+                },
+            );
+        }
+        for (claim_generation, callback_generation) in [
+            (token.claim_generation + 1, token.callback_generation),
+            (token.claim_generation, token.callback_generation + 1),
+        ] {
+            assert_running_work_rejected(
+                &mut registry,
+                &CallbackToken {
+                    claim_generation,
+                    callback_generation,
+                    ..token.clone()
+                },
+            );
+        }
+
+        if watchdog {
+            assert!(registry.watchdog_callback(&token).is_ok());
+            registry
+                .complete_watchdog_work(
+                    &token,
+                    20,
+                    WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
+                )
+                .unwrap();
+        } else {
+            assert!(registry.ordinary_callback(&token).is_ok());
+            registry
+                .complete_ordinary(
+                    &token,
+                    20,
+                    TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop),
+                )
+                .unwrap();
+        }
+        assert_running_work_rejected(&mut registry, &token);
+        registry.unregister(&claim).unwrap();
+        assert_running_work_rejected(&mut registry, &token);
+    }
+}
+
 #[test]
 fn duplicate_registration_and_capacity_fail_without_partial_state() {
     let mut registry = registry();

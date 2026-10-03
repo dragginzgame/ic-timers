@@ -50,26 +50,25 @@ and the [safety boundary](../../SAFETY.md).
 
 ## Current follow-up
 
-The maintainer reports 0.10.1 live. Local HEAD, the peeled 0.10.1 tag and origin/main
-agree at `3a536a586410eb55de48df0abad2676057cca3b4`. The completed resolved-schedule
-cleanup is recorded in the [0.10.1 note](../changelog/0.10.1.md).
+The maintainer reports 0.10.2 pushed. Local HEAD, the peeled 0.10.2 tag and origin/main
+agree at `dca0a8f64d8769b91fbf55a075ffbeccb5abb5bd`. The completed provider-binding
+cleanup is recorded in the [0.10.2 note](../changelog/0.10.2.md).
 
-The [0.10.2 note](../changelog/0.10.2.md) records the prepared private cleanup.
-Runtime provider binding now consumes a handle by installing it or clearing it
-on rejection after releasing the registry borrow. Initial/replacement arms,
-Watchdog successor/work dispatch and detached-handle restoration use this one
-operation. The old handle-returning runtime operation and caller cleanup branches
-are deleted; the registry retains provider-neutral validation and handle return.
-Public API, typed errors, effect confirmation, successor-before-work ordering,
-partial-dispatch cleanup, restoration draining and callback rollback rules remain
-unchanged.
+The [0.10.3 note](../changelog/0.10.3.md) records the prepared private cleanup.
+Each registry entry owns one predicate for exact running-work authority. Callback
+lookup, delegated control and ordinary/Watchdog completion share claim, work role,
+generation and running-state validation. Separate completion checks for the same
+invariant are deleted; completion still extracts its policy-specific control and
+Watchdog successor. Acceptance, armed-provider validation, checked control
+transitions and post-completion measurements keep their distinct responsibilities.
+Public API, typed errors, command ordering, counters, lifetimes and rollback rules
+remain unchanged.
 
-A focused native fixture checks rejected binding with a busy or missing runtime
-and an expired claim. Existing installation, restoration, confirmation and Watchdog
-failure fixtures remain. Watchdog work binding and confirmation share one cleanup
-exit; the existing dispatch fixture covers both failures and checks that no
-provider handles, queued work or confirmed work remain. Test execution stays
-maintainer-owned.
+A focused native matrix covers all policies and rejects unstarted, wrong-role,
+stale-claim, stale-generation, completed and removed work tokens at every running
+boundary. Inventory equality checks preserve observations on rejection. Existing
+completion, context-expiration, identity-reuse and Watchdog arbitration fixtures
+remain. Test execution stays maintainer-owned.
 
 Ordinary/Watchdog command machines, effect confirmation and handle-restoration
 stages remain required by their distinct suspension and recovery contracts.
@@ -80,7 +79,7 @@ composed qualification.
 ## Evidence
 
 The latest inspected hosted validation remains scoped to 0.9.4 as recorded in
-its delivery note; the maintainer's 0.10.1 live report and local references do not
+its delivery note; the maintainer's 0.10.2 push report and local references do not
 establish new hosted or PocketIC results. No new runtime, recovery or performance
 result is claimed for this cleanup. Changed Rust is formatted. Diff whitespace,
 current release-truth and target-note structural preflight checks passed during

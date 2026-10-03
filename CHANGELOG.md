@@ -4,6 +4,25 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.3]
+
+### Changed
+
+- Give each registry entry one predicate for exact running-work ownership.
+  Callback lookup, delegated control and ordinary/Watchdog completion share
+  claim, role, generation and running-state validation; remove the separate
+  completion checks for the same invariant.
+- Keep callback acceptance, provider binding and post-completion measurements
+  on their distinct validation boundaries.
+
+### Development
+
+- Cover rejection of unstarted, wrong-role, stale-claim, stale-generation,
+  completed and removed work tokens across every policy without observation
+  changes. Existing context-expiration and identity-reuse fixtures remain.
+- Record the maintainer-reported pushed 0.10.2 baseline and this cleanup in the
+  [0.10.3 release note](docs/changelog/0.10.3.md).
+
 ## [0.10.2] - 2026-10-03
 
 ### Changed

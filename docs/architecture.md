@@ -70,6 +70,11 @@ The module hierarchy keeps six responsibilities separate:
    callback acceptance, measurements, provider installation, and handle
    consumption, so identity reuse cannot transfer handle authority to a stale
    callback.
+   Callback lookup, delegated control and both work-completion paths share one
+   entry-local running-work predicate for the exact claim, work role, generation
+   and running state. Completion checks it before any mutation. Callback acceptance
+   transitions into that state; provider binding and completed measurements retain
+   their distinct validation boundaries.
 
 Absolute deadlines remain authoritative in policy control state and its snapshot
 projection. Provider arm effects carry only the resolved delay, callback authority
