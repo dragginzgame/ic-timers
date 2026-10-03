@@ -149,13 +149,10 @@ impl RegistryEffect {
     pub(crate) fn has_valid_shape(&self) -> bool {
         match self {
             Self::None | Self::ClearCallbacks { .. } => true,
-            Self::ArmWakeup { token, arm, .. } => match token.role {
-                CallbackRole::OrdinaryWork => true,
-                CallbackRole::WatchdogScheduler => {
-                    matches!(arm, WakeupArm::Initial | WakeupArm::Replacement)
-                }
-                CallbackRole::WatchdogWork => false,
-            },
+            Self::ArmWakeup { token, .. } => matches!(
+                token.role,
+                CallbackRole::OrdinaryWork | CallbackRole::WatchdogScheduler
+            ),
             Self::DispatchWatchdog {
                 successor, work, ..
             } => {
@@ -951,14 +948,11 @@ impl TimerRegistry {
                 actual: entry.policy.label(),
             });
         }
-        entry.observability.counters_mut().record_schedule_request();
         let requested_delay_ns = match request {
             WatchdogScheduleRequest::Cadence => Some(cadence.as_nanos()),
             WatchdogScheduleRequest::Immediate => Some(0),
             WatchdogScheduleRequest::Reconcile(requested) => requested.requested_delay_ns,
         };
-        entry.latest_requested_delay_ns = requested_delay_ns;
-
         let EntryControl::Watchdog(control) = &mut entry.control else {
             return Err(RegistryError::PolicyMismatch {
                 actual: entry.policy.label(),
@@ -1029,6 +1023,8 @@ impl TimerRegistry {
                 RegistryTransition::normal(RegistryEffect::None)
             }
         };
+        entry.observability.counters_mut().record_schedule_request();
+        entry.latest_requested_delay_ns = requested_delay_ns;
         Ok(self.remove_transient_on_failure(claim.identity(), transition))
     }
 

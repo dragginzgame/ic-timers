@@ -1,8 +1,43 @@
 # Toko Miner adoption evidence
 
-Status: scoped 0.8.0 composition evidence recorded; inspected 2026-10-02.
+Status: 0.8.1 publication and scoped owner-reported adoption recorded; dependency
+worktree inspected 2026-10-03. Earlier composition receipts remain historical.
 
 ## Published runtime and current dependency inspection
+
+Read-only inspection on 2026-10-03 finds Toko Miner HEAD
+`3354dfc6b9fe791884ec69e8dd344de313b36940` with registry Canic 0.110.51,
+IcyDB 0.264.4 and one `ic-timers` package at 0.8.1. The inspected Cargo.lock
+SHA-256 is `c51b916a0ae31b82e575558df5facd3352c213487a926b961ff1e9d061277b22`.
+This identifies the inspected worktree dependency selection, not a frozen
+deployed artifact; dirty downstream state was preserved.
+
+The cached registry `ic-timers` 0.8.1 package's `.cargo_vcs_info.json`
+identifies release commit `c27f54ae64d1c667e9563925a9d7e4791d9359e3`.
+The selected registry checksum is
+`3e39ee0103132c90c69818c422ba5aea8f68f5eab96f543cf85bfd4175554405`.
+This corroborates publication, consistent with the
+[IcyDB consumer report](https://github.com/dragginzgame/ic-timers/issues/6#issuecomment-5948345356).
+The later resolver-3 commit `f7a4f27cc786afff1df2098f09c21aef0c291642`
+is separate from that published package.
+
+## Owner-reported adoption — 2026-10-02
+
+Toko Miner's `docs/upstream/ic-timers.md` and the Canic 0.110.50 adoption entry
+in `docs/upstream/scan-log.md` record an aligned graph of Canic 0.110.50,
+IcyDB 0.264.3 and one timer 0.8.1. The former Canic 0.110.49 exact-pin blocker
+is resolved in that graph. The owner reports native and application CI gates
+passing, with eight managed artifacts and seven bounded scenarios qualifying
+composed startup and same-release timer/database recovery.
+
+The later Canic 0.110.51 adoption entry in the same scan log records seven
+bounded scenarios against its exact artifacts with IcyDB 0.264.3. It also retains
+an unrelated browser failure; full application CI is not a pass for that subject.
+These owner-reported results do not qualify the subsequently inspected IcyDB
+0.264.4 selection, prove current deployment or establish a matched cost saving.
+This repository did not rerun any downstream scenario or change any sibling.
+
+## Earlier dependency inspection — 2026-10-02
 
 The read-only Toko Miner worktree at
 `5e7f675dddd5bf2126e5d3068c2fe75776e4a2a9` selects registry `ic-timers`
@@ -14,8 +49,8 @@ The cached registry `ic-timers` 0.8.0 package's `.cargo_vcs_info.json`
 identifies commit `fba369df1a31b2c37ce31f4f775f816a7c9de1f9`, matching the
 local release tag. The registry lock checksum is
 `c1474fd7c9bcc237404173c2689c4175e61ef2c9670bccf539ca10ccd193d132`.
-These artifacts corroborate publication of 0.8.0. The targeted 0.8.1 tooling,
-documentation and lint-expectation changes remain unpublished.
+These artifacts corroborate publication of 0.8.0 for that earlier subject.
+The subsequent 0.8.1 publication and adoption evidence is recorded above.
 
 Inspection provenance: Toko Miner's `docs/upstream/ic-timers.md` and the
 2026-10-02 local ic-timers audit in `docs/upstream/scan-log.md`. The inspected

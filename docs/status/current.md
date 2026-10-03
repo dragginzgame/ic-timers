@@ -16,6 +16,14 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 - Workspace package version: `0.8.3`.
 - Latest release line: `0.8.3`.
+- Next target: `0.8.4`, with an undated changelog section and
+  [release note](../changelog/0.8.4.md) prepared. Version mutation and deployment
+  validation remain user-owned.
+- The maintainer reports 0.8.3 live. Its completed local release commit is
+  `a0a19c7`, with an annotated `v0.8.3` tag, dated changelog and matching root
+  and testing lockfiles. Read-only inspection on 2026-10-03 corroborates registry
+  publication through cached package VCS metadata and IcyDB's registry lockfile;
+  see the [0.8.3 note](../changelog/0.8.3.md).
 - Snapshot registration continuity and exact-deadline Watchdog scheduling are
   implemented, with validation recorded in the
   [0.8.0 release note](../changelog/0.8.0.md). The version bump and local
@@ -23,8 +31,11 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
   registry package, its VCS commit and Toko Miner's registry lockfile; see the
   [dated downstream record](../adoption/toko-miner.md).
 - The 0.8.1 tooling and lint-expectation changes have a completed version bump,
-  dated changelog and local `v0.8.1` release tag. Registry publication was not
-  checked in the 2026-10-03 repository review.
+  dated changelog and local `v0.8.1` release tag. Cached registry VCS metadata
+  identifies release commit `c27f54ae64d1c667e9563925a9d7e4791d9359e3`, and
+  Toko Miner's inspected lockfile selects one registry timer 0.8.1. Publication
+  and scoped downstream adoption are recorded in the
+  [dated downstream record](../adoption/toko-miner.md).
 - Direct provider dependency: exact `ic-cdk-timers` 1.0.0.
 - Released in 0.7.1: exact `ic0` 1.2.0 in both lockfiles; existing
   platform bindings are unchanged upstream. See the
@@ -131,6 +142,18 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Current evidence
 
+- The follow-up to the live 0.8.3 release fixes rejected Watchdog request
+  observations, binary verification order, annotated-tag validation, release
+  preflight and bump rollback. Regression fixtures are written but unexecuted;
+  tests and deployment validation remain user-owned. Track pending evidence in
+  the [0.8.4 note](../changelog/0.8.4.md).
+- The feedback follow-up refreshes publication and downstream dependency
+  provenance and updates both Rust-toolchain action pins to the revision in
+  Dependabot PR #5. No fresh CI or downstream scenario run is claimed. The
+  original issue #6 lint changes are released in 0.8.1; issue #6 is closed with
+  the pending documentation delivery recorded in its resolution comment.
+  Issue #7's observation repair remains unvalidated and unreleased, with its
+  implementation handoff posted and the issue left open for validation/release.
 - The 2026-10-03 follow-up now includes transient terminal-failure cleanup,
   shared control detachment and Watchdog arming, and stronger release/provider
   validation. `make ci` passes with 108 native tests, as do MSRV checks,
@@ -200,11 +223,16 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Downstream state
 
-- Read-only inspection on 2026-10-02 finds Toko Miner selecting registry
-  `ic-timers` 0.8.0, Canic 0.110.49 and IcyDB 0.262.2. Its lockfile contains
-  one timer package; the downstream owner reports `make timer-check` passing
-  for Game Shard and Translation. This is dependency evidence, not proof of
-  current deployment or recovery.
+- Read-only inspection on 2026-10-03 finds Toko Miner at
+  `3354dfc6b9fe791884ec69e8dd344de313b36940`, selecting registry `ic-timers`
+  0.8.1, Canic 0.110.51 and IcyDB 0.264.4. Its inspected lockfile contains one
+  timer package. This is worktree dependency evidence, not a deployed-artifact
+  identity or a fresh qualification of this graph.
+- The downstream owner's 2026-10-02 feedback records completed bounded managed
+  qualification of Canic 0.110.50 / IcyDB 0.264.3 / timers 0.8.1, followed by
+  seven bounded scenarios on the 0.110.51 / 0.264.3 graph. The latter run retains
+  an unrelated browser failure, so full application CI is not a pass. Neither
+  receipt qualifies the later IcyDB 0.264.4 selection or current deployment.
 - The retained 2026-09-20 receipt for Canic 0.110.33 and IcyDB 0.261.0 records
   one 0.8.0 timer package in every role, shared gameplay timer inventory,
   idle/wake behavior and scoped managed same-release state/timer recovery.
@@ -220,15 +248,15 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Next action
 
-The maintainer selected 0.8.3 for release workflow fixes and clarified that
-`make release-patch` must always bump. Its undated changelog and
-[release-line note](../changelog/0.8.3.md) are prepared; Cargo and both lockfiles
-remain at 0.8.2. The user committed 0.8.2 at `9f4e1d5`, without a release tag.
-Impact classification now uses the most recent reachable release tag, so the
-absent `v0.8.2` does not block advancing to 0.8.3. The user stages and commits
-these changes, then runs `make release-patch` for the complete gate, bump,
-release commit, annotated tag and push. No tests or release commands were run
-for these follow-up tooling edits; deployment validation is user-owned.
+Version 0.8.3 is complete and publication is corroborated. The seven audit
+follow-ups and feedback maintenance are prepared for 0.8.4 in its undated
+changelog section and release note; `Unreleased` is empty. Cargo and both
+lockfiles remain at 0.8.3. Deployment validation of the new native and shell
+fixtures belongs to the user. The user stages and commits the prepared work,
+then runs `make release-patch`, which always performs its matching bump after
+cheap preflight and the full deployment gate. Version mutation, staging,
+commits, tags, pushes and publication remain user-owned. Issue #7 remains open
+until the observation repair has validation and a released version recorded.
 
 Remaining application work is Toko Miner's auxiliary checkpoint deadline
 registration and diagnostic registration-sequence projection. The published

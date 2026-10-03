@@ -23,6 +23,54 @@ fn setup() -> TimerEpoch {
     initialize_runtime().expect("runtime initialization should succeed")
 }
 
+#[test]
+fn rejected_watchdog_cadence_preserves_the_complete_snapshot() {
+    for lifetime in [
+        DeclarationLifetime::Retained,
+        DeclarationLifetime::RemoveWhenStopped,
+    ] {
+        setup();
+        let timer = identity("rejected-watchdog-cadence");
+        let registration = register_watchdog(
+            timer.clone(),
+            TimerCadence::from_nanos(u64::MAX).expect("positive cadence is valid"),
+            lifetime,
+            |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
+        )
+        .expect("declaration should register without arming");
+        let before = timer_snapshot(&timer).expect("snapshot should be readable");
+
+        assert!(matches!(
+            registration.ensure_scheduled(),
+            Err(TimerError::Schedule(ScheduleError::DeadlineOverflow))
+        ));
+        assert_eq!(
+            timer_snapshot(&timer).expect("snapshot should be readable"),
+            before
+        );
+        assert_eq!(timer_count(), 0);
+        assert!(
+            !registration
+                .has_armed_wakeup()
+                .expect("claim remains valid")
+        );
+
+        registration
+            .ensure_scheduled_immediately()
+            .expect("a valid request remains possible after rejection");
+        assert_eq!(timer_count(), 1);
+        assert_eq!(
+            timer_snapshot(&timer)
+                .expect("snapshot should be readable")
+                .expect("armed declaration exists")
+                .observability()
+                .counters()
+                .schedule_requests(),
+            1
+        );
+    }
+}
+
 fn assert_retained_provider_binding_failure(
     timer: &TimerIdentity,
     schedule_requests: u64,

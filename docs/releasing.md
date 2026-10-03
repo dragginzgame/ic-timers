@@ -75,6 +75,12 @@ current worktree and does not require a preparatory commit. A
 repository-only subject emits an advisory but may proceed when the maintainer
 has explicitly invoked the bump or release target.
 
+Combined release targets run `bump-version.sh --check` before deployment
+validation. This preflight checks the requested version, impact, changelog and
+release markers without changing version metadata or running tests. An empty
+exact `VERSION` is rejected before the gate. The real bump repeats these cheap
+checks afterward and always advances the requested version.
+
 Before version mutation, the helper also scans
 the compact status for target-version wording likely to become stale, such as
 `candidate`, `unreleased`, or a next action to publish after release. This is
@@ -130,8 +136,9 @@ That gate includes `make ci`, the Rust 1.88 MSRV check, warning-denied linting
 of every supported nested probe configuration, the nine-test watchdog/recovery
 PocketIC suite, and the four policy cohorts. If `POCKET_IC_BIN` is unset, the
 gate installs the pinned PocketIC 15.0.0 Linux x86_64 artifact into the ignored
-`target/tools` cache. It verifies the downloaded or cached binary's version
-and audited SHA-256 before use. An explicitly supplied `POCKET_IC_BIN` remains
+`target/tools` cache. It verifies the audited SHA-256 before executing any
+downloaded, cached or overridden binary, then checks its version. Diagnostic
+paths also leave hash-mismatched binaries unexecuted. An explicitly supplied `POCKET_IC_BIN` remains
 a strict override: a missing or mismatched override fails and is never
 replaced automatically.
 
@@ -142,14 +149,22 @@ stale path-package versions without building either workspace or repeating
 the evidence suite. `--no-deps` is not sufficient because it skips lockfile
 validation. `release-stage` stages both lockfiles automatically.
 
+Before mutation, the helper backs up only its six output files: the workspace
+manifest, both lockfiles, changelog, status and target release note. Failed
+commands and handled `INT`/`TERM` interruptions restore their pre-bump contents
+and modes, including existing user edits. If restoration fails, the backup is
+retained and its path is reported. These shell traps do not cover a forced kill
+or machine failure. Unrelated files and Git staging are untouched by the bump.
+
 After the release tag is pushed, publish the crate with:
 
 ```text
 make publish
 ```
 
-The publish target requires a clean worktree with the current version tag at
-`HEAD`, verifies the package, and then publishes `ic-timers` to crates.io.
+The publish target requires a clean worktree with an annotated tag in the exact
+`refs/tags/vX.Y.Z` namespace at `HEAD`, verifies the package, and then publishes
+`ic-timers` to crates.io. A same-named branch or lightweight tag is rejected.
 
 Hosted full CI and MSRV validation run on pull requests and `main`. A tag push
 at the same commit does not repeat those Rust builds. Its small tag-only job

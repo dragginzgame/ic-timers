@@ -132,6 +132,8 @@ release-check:
 	bash scripts/release/test-release-prose-warning.sh
 	bash scripts/release/test-release-gate.sh
 	bash scripts/release/test-version-preparation.sh
+	bash scripts/release/test-tag-at-head.sh
+	bash scripts/ci/test-pocketic-verification.sh
 	bash scripts/ci/test-repository-checks.sh
 	bash scripts/release/check-release-truth.sh
 
@@ -192,6 +194,7 @@ bump-x:
 	bash scripts/release/bump-version.sh "$(VERSION)"
 
 release-patch:
+	bash scripts/release/bump-version.sh --check patch
 	+$(MAKE) --no-print-directory release-verify
 	+$(MAKE) --no-print-directory patch
 	+$(MAKE) --no-print-directory release-stage
@@ -199,6 +202,7 @@ release-patch:
 	+$(MAKE) --no-print-directory release-push
 
 release-minor:
+	bash scripts/release/bump-version.sh --check minor
 	+$(MAKE) --no-print-directory release-verify
 	+$(MAKE) --no-print-directory minor
 	+$(MAKE) --no-print-directory release-stage
@@ -206,6 +210,7 @@ release-minor:
 	+$(MAKE) --no-print-directory release-push
 
 release-major:
+	bash scripts/release/bump-version.sh --check major
 	+$(MAKE) --no-print-directory release-verify
 	+$(MAKE) --no-print-directory major
 	+$(MAKE) --no-print-directory release-stage
@@ -213,6 +218,8 @@ release-major:
 	+$(MAKE) --no-print-directory release-push
 
 release-x:
+	@if [ -z "$(VERSION)" ]; then echo "error: VERSION=x.y.z is required" >&2; exit 2; fi
+	bash scripts/release/bump-version.sh --check "$(VERSION)"
 	+$(MAKE) --no-print-directory release-verify
 	+$(MAKE) --no-print-directory bump-x VERSION="$(VERSION)"
 	+$(MAKE) --no-print-directory release-stage

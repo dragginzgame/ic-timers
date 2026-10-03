@@ -95,11 +95,6 @@ if grep -Fqx -- 'make --no-print-directory release-verify' "${bump_script}" >/de
 fi
 for target in release-patch release-minor release-major release-x; do
     recipe="$(sed -n "/^${target}:/,/^$/p" "${makefile}")"
-    first_command="$(printf '%s\n' "${recipe}" | sed -n '2p')"
-    if [[ "${first_command}" != $'\t+$(MAKE) --no-print-directory release-verify' ]]; then
-        echo "error: ${target} does not run the complete deployment gate first" >&2
-        exit 1
-    fi
     case "${target}" in
         release-patch) bump_command=$'\t+$(MAKE) --no-print-directory patch' ;;
         release-minor) bump_command=$'\t+$(MAKE) --no-print-directory minor' ;;
@@ -108,6 +103,13 @@ for target in release-patch release-minor release-major release-x; do
     esac
     if ! printf '%s\n' "${recipe}" | grep -Fqx -- "${bump_command}"; then
         echo "error: ${target} does not always invoke its matching bump target" >&2
+        exit 1
+    fi
+    preflight_line="$(printf '%s\n' "${recipe}" | grep -nF 'bash scripts/release/bump-version.sh --check ')"
+    gate_line="$(printf '%s\n' "${recipe}" | grep -nF $'\t+$(MAKE) --no-print-directory release-verify')"
+    bump_line="$(printf '%s\n' "${recipe}" | grep -nFx -- "${bump_command}")"
+    if (( ${preflight_line%%:*} >= ${gate_line%%:*} || ${gate_line%%:*} >= ${bump_line%%:*} )); then
+        echo "error: ${target} does not preflight before validation and bump afterward" >&2
         exit 1
     fi
 done

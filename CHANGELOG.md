@@ -4,6 +4,39 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.8.4]
+
+### Fixed
+
+- Preserve the complete Watchdog snapshot when an initial cadence request
+  fails deadline validation, including its validated-request counter.
+- Verify PocketIC binary hashes before executing cached, overridden or
+  downloaded binaries, including diagnostic paths.
+- Require an annotated release tag in the exact `refs/tags/` namespace at
+  `HEAD`; reject same-named branches and lightweight tags.
+- Restore pre-bump release metadata and both lockfiles when version preparation
+  fails or receives a handled interruption, preserving existing user edits.
+
+### Development
+
+- Update both pinned Rust-toolchain action references to the revision proposed
+  by Dependabot PR #5, retaining the existing toolchains and validation gates.
+- Preflight the requested version, impact, changelog and release markers before
+  the deployment gate. Combined release targets still always bump afterward.
+- Remove the redundant arm-variant check and add regression fixtures for
+  rejected requests, tag identity, binary verification order, preflight and
+  bump rollback. Test execution remains user-owned.
+
+### Documentation
+
+- Corroborate 0.8.1 and 0.8.3 registry publication and refresh Toko Miner's dated
+  dependency record without extending earlier managed evidence to its later graph.
+- Record the decision to retain the coherent lifecycle fixture and current MSRV
+  lint scope for advisory IC-TIMERS-003.
+- Refresh the handoff and 0.8.3 note to reflect the completed release. Track
+  follow-up scope and pending validation in the
+  [0.8.4 release note](docs/changelog/0.8.4.md).
+
 ## [0.8.3] - 2026-10-03
 
 ### Development

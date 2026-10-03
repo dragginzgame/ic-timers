@@ -2,7 +2,7 @@
 set -euo pipefail
 
 usage() {
-    echo "Usage: $0 patch|minor|major|x.y.z" >&2
+    echo "Usage: $0 [--check] patch|minor|major|x.y.z" >&2
 }
 
 semver_pattern='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
@@ -34,6 +34,11 @@ semver_greater_than() {
     return 1
 }
 
+check_only=false
+if [[ "${1:-}" == --check ]]; then
+    check_only=true
+    shift
+fi
 requested="${1:-}"
 case "${requested}" in
     patch | minor | major) ;;
@@ -84,6 +89,48 @@ if ! bash scripts/release/warn-release-prose.sh "${new_version}"; then
     echo "warning: advisory release-prose check could not run; continuing" >&2
 fi
 
+if [[ "${check_only}" == true ]]; then
+    echo "Release preflight passed: ${previous_version} -> ${new_version}"
+    exit 0
+fi
+
+# Capture only files this bump mutates, including any existing user edits.
+# Failed updates/checks and catchable interruptions restore that exact state.
+backup_directory="$(mktemp -d "${TMPDIR:-/tmp}/ic-timers-bump.XXXXXX")"
+metadata_files=(Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md \
+    docs/status/current.md "docs/changelog/${new_version}.md")
+mutation_started=false
+bump_completed=false
+cleanup() {
+    local exit_status=$?
+    local rollback_failed=false
+    local path
+    trap - EXIT
+    if [[ "${mutation_started}" == true && "${bump_completed}" != true ]]; then
+        echo 'error: version preparation failed; restoring release metadata' >&2
+        for path in "${metadata_files[@]}"; do
+            if ! cp -p -- "${backup_directory}/${path}" "${path}"; then
+                rollback_failed=true
+            fi
+        done
+        if [[ "${rollback_failed}" == true ]]; then
+            echo "error: rollback incomplete; originals preserved in ${backup_directory}" >&2
+            exit 1
+        fi
+        if [[ "${exit_status}" == 0 ]]; then exit_status=1; fi
+    fi
+    rm -rf -- "${backup_directory}"
+    exit "${exit_status}"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+for path in "${metadata_files[@]}"; do
+    mkdir -p -- "${backup_directory}/$(dirname -- "${path}")"
+    cp -p -- "${path}" "${backup_directory}/${path}"
+done
+mutation_started=true
+
 bash scripts/release/finalize-changelog.sh "${new_version}" "${release_date}"
 bash scripts/release/finalize-release-truth.sh "${previous_version}" "${new_version}"
 
@@ -99,6 +146,7 @@ cargo update --manifest-path testing/Cargo.toml --offline -p ic-timers
 # Behavioral evidence belongs to the user-operated deployment release gate.
 bash scripts/release/check-lockfiles.sh
 bash scripts/release/check-release-truth.sh
+bump_completed=true
 
 echo "Bumped: ${previous_version} -> ${new_version}"
 echo "Review with git diff; deployment validation, commits, tags, and pushes are user-owned."
