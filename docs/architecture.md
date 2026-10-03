@@ -10,7 +10,11 @@ nor `snapshot` is a consumer import path.
 The module hierarchy keeps six responsibilities separate:
 
 1. `schedule` owns validated cadence, requested schedules, post-run
-   directives, and checked nanosecond/deadline conversion.
+   directives, and checked nanosecond/deadline conversion. Explicit requests
+   and ordinary directives resolve to one private `ResolvedSchedule` carrying
+   deadline, requested delay and mode; Stop resolves to no successor. Pending
+   commands retain that value directly, and completion does not derive control
+   metadata from a directive snapshot.
 2. `snapshot` owns inert public identity and observation values. Its private
    `identity`, `model`, and `metrics` children separate validation, closed
    state/outcome types, and saturating measurements. Only the registry builds

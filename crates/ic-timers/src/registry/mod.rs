@@ -7,7 +7,10 @@
 use crate::{
     control::{TimerControl, TimerControlError, TimerRegistration, WakeupArm},
     platform::{MemoryPages, TimerHandle},
-    schedule::{DirectiveError, ScheduleError, TimerCadence, TimerDirective, TimerSchedule},
+    schedule::{
+        DirectiveError, ResolvedSchedule, ScheduleError, TimerCadence, TimerDirective,
+        TimerSchedule,
+    },
     snapshot::{
         DeclarationLifetime, InactiveReason, MemoryPageExtent, MemoryPageSample,
         OrdinaryRuntimeStateSnapshot, TimerCompletion, TimerCompletionOutcome, TimerControlFailure,
@@ -288,32 +291,11 @@ impl ProviderHandles {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-struct PendingSchedule {
-    deadline_ns: u64,
-    requested_delay_ns: Option<u64>,
-    mode: TimerSchedulingMode,
-}
-
-impl PendingSchedule {
-    fn resolve(schedule: TimerSchedule, now_ns: u64) -> Result<Self, ScheduleError> {
-        let resolved = schedule.resolve(now_ns)?;
-        Ok(Self {
-            deadline_ns: resolved.deadline_ns,
-            requested_delay_ns: resolved.requested_delay_ns,
-            mode: match schedule {
-                TimerSchedule::After(_) => TimerSchedulingMode::Once,
-                TimerSchedule::At(_) => TimerSchedulingMode::Deadline,
-            },
-        })
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum OrdinaryPending {
     Cancel,
-    Reconcile(PendingSchedule),
+    Reconcile(ResolvedSchedule),
     Unregister,
-    Schedule(PendingSchedule),
+    Schedule(ResolvedSchedule),
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -328,7 +310,7 @@ enum WatchdogPending {
     Cancel,
     Ensure,
     EnsureImmediately,
-    Reconcile(PendingSchedule),
+    Reconcile(ResolvedSchedule),
     Unregister,
 }
 
@@ -336,7 +318,7 @@ enum WatchdogPending {
 enum WatchdogScheduleRequest {
     Cadence,
     Immediate,
-    Reconcile(PendingSchedule),
+    Reconcile(ResolvedSchedule),
 }
 
 // One payload owns policy, callback type and control together. An ordinary
@@ -774,7 +756,7 @@ impl TimerRegistry {
         self.request_ordinary(
             claim,
             now_ns,
-            PendingSchedule::resolve(schedule, now_ns)?,
+            schedule.resolve(now_ns)?,
             OrdinaryRequest::EnsureOnce,
         )
     }
@@ -797,7 +779,7 @@ impl TimerRegistry {
         self.request_ordinary(
             claim,
             now_ns,
-            PendingSchedule::resolve(schedule, now_ns)?,
+            schedule.resolve(now_ns)?,
             OrdinaryRequest::Reconcile,
         )
     }
@@ -845,7 +827,7 @@ impl TimerRegistry {
                 self.request_ordinary(
                     claim,
                     now_ns,
-                    PendingSchedule {
+                    ResolvedSchedule {
                         deadline_ns,
                         requested_delay_ns: Some(cadence.as_nanos()),
                         mode: TimerSchedulingMode::AfterCompletion,
@@ -882,7 +864,7 @@ impl TimerRegistry {
         let Some(schedule) = schedule else {
             return self.cancel(claim);
         };
-        let requested = PendingSchedule::resolve(schedule, now_ns)?;
+        let requested = schedule.resolve(now_ns)?;
         self.ensure_watchdog(claim, now_ns, WatchdogScheduleRequest::Reconcile(requested))
     }
 
@@ -890,7 +872,7 @@ impl TimerRegistry {
         &mut self,
         claim: &RegistrationClaim,
         now_ns: u64,
-        requested: PendingSchedule,
+        requested: ResolvedSchedule,
         request: OrdinaryRequest,
     ) -> Result<RegistryTransition, RegistryError> {
         let entry = self.entry_mut(claim)?;
@@ -1258,15 +1240,7 @@ impl TimerRegistry {
                 };
                 let directive_snapshot = TimerDirectiveSnapshot::try_from(effective_directive)
                     .map_err(RegistryError::Schedule)?;
-                let callback_schedule = resolved.deadline_ns.map(|deadline_ns| PendingSchedule {
-                    deadline_ns,
-                    requested_delay_ns: resolved.requested_delay_ns,
-                    mode: directive_snapshot
-                        .scheduling_mode()
-                        .unwrap_or(entry.scheduling_mode),
-                });
-                let selected_schedule =
-                    select_completion_schedule(pending_command, callback_schedule);
+                let selected_schedule = select_completion_schedule(pending_command, resolved);
                 match control.complete(
                     token.callback_generation,
                     selected_schedule.map(|value| value.deadline_ns),
@@ -2170,8 +2144,8 @@ const fn map_directive_failure(error: DirectiveError) -> TimerControlFailure {
 
 const fn select_completion_schedule(
     pending: Option<OrdinaryPending>,
-    callback: Option<PendingSchedule>,
-) -> Option<PendingSchedule> {
+    callback: Option<ResolvedSchedule>,
+) -> Option<ResolvedSchedule> {
     match pending {
         Some(OrdinaryPending::Cancel | OrdinaryPending::Unregister) => None,
         Some(OrdinaryPending::Reconcile(pending)) => Some(pending),
@@ -2186,7 +2160,7 @@ const fn select_completion_schedule(
 const fn select_pending_ordinary(
     current: Option<OrdinaryPending>,
     request: OrdinaryRequest,
-    requested: PendingSchedule,
+    requested: ResolvedSchedule,
 ) -> OrdinaryPending {
     if matches!(current, Some(OrdinaryPending::Unregister)) {
         return OrdinaryPending::Unregister;

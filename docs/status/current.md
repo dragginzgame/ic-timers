@@ -50,22 +50,23 @@ and the [safety boundary](../../SAFETY.md).
 
 ## Current follow-up
 
-The maintainer reports 0.9.5 pushed. Local HEAD, the peeled 0.9.5 tag and origin/main
-agree at `8ac92764a327277bd27bdd028dd6c6d9909b78d6`. Its completed private cleanup
-is recorded in the [0.9.5 note](../changelog/0.9.5.md).
+The maintainer reports 0.10.0 live. Local HEAD, the peeled 0.10.0 tag and origin/main
+agree at `11edb5286b7d8853496da29d50a49201a3f3aa58`. Its arbitration hard cut,
+ordinary action-model deletion and derived provider roles are recorded in the
+[0.10.0 note](../changelog/0.10.0.md).
 
-The [0.10.0 note](../changelog/0.10.0.md) records the prepared follow-up. Watchdog
-invariant failure now wins inactive-reason classification over pending cancellation,
-reporting `Failed` without counting the losing cancel. This observable change uses
-the next minor line; successor cleanup and declaration lifetimes remain unchanged.
-The extended arbitration matrix and native runtime fixture await maintainer execution.
+The [0.10.1 note](../changelog/0.10.1.md) records the prepared private cleanup.
+Explicit schedules and ordinary directives now resolve to one `ResolvedSchedule`
+carrying deadline, requested relative delay and scheduling mode. Pending commands
+retain it directly; Stop resolves to no successor. The separate directive result,
+registry wrapper, completion conversion and snapshot-derived mode fallback are
+deleted. Public API, snapshot shape, ordering, typed failures and request-time
+relative resolution remain unchanged.
 
-Ordinary scheduling returns only an optional arm kind. The action model and
-generation/deadline copies are removed; effects read authoritative control state.
-Owned provider roles derive from immutable policy and slot, with explicit role,
-claim and generation validation. Detached handles retain complete tokens.
-Existing control fixtures are updated and a provider-role regression fixture
-covers same-claim mismatches and detach/restore. No compatibility path is retained.
+Existing schedule fixtures cover every resolved mode and Stop. Snapshot conversion
+keeps independent public duration-range validation with a negative fixture. Existing
+registry tests cover completion, exact/earliest arbitration, discarded proposals
+and Watchdog metadata. Test execution remains maintainer-owned.
 
 Ordinary/Watchdog command machines, effect confirmation and handle-restoration
 stages remain required by their distinct suspension and recovery contracts.
@@ -76,7 +77,7 @@ composed qualification.
 ## Evidence
 
 The latest inspected hosted validation remains scoped to 0.9.4 as recorded in
-its delivery note; the maintainer's 0.9.5 push report and local references do not
+its delivery note; the maintainer's 0.10.0 live report and local references do not
 establish new hosted or PocketIC results. No new runtime, recovery or performance
 result is claimed for this cleanup. Changed Rust is formatted. Diff whitespace,
 current release-truth and target-note structural preflight checks passed during

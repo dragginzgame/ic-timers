@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    TimerCadence, TimerDirective, TimerRunResult, TimerSchedule,
+    ScheduleError, TimerCadence, TimerDirective, TimerRunResult, TimerSchedule,
     registry::{CallbackAcceptance, RegistryEffect, TimerRegistry},
 };
 use std::time::Duration;
@@ -108,25 +108,11 @@ fn identities_validate_components_and_order_deterministically() {
 }
 
 #[test]
-fn policies_and_directives_have_one_cadence_owner() {
+fn policies_and_directive_snapshots_preserve_validated_values() {
     let cadence = TimerCadence::from_nanos(5_000).expect("fixture cadence should be valid");
     let policy = TimerPolicy::Watchdog { cadence };
     assert_eq!(policy.label(), "watchdog");
     assert_eq!(policy.cadence().map(TimerCadence::as_nanos), Some(5_000));
-
-    assert_eq!(
-        TimerDirectiveSnapshot::RetryAfter { delay_ns: 10 }.scheduling_mode(),
-        Some(TimerSchedulingMode::Retry)
-    );
-    assert_eq!(
-        TimerDirectiveSnapshot::ContinueImmediately.scheduling_mode(),
-        Some(TimerSchedulingMode::Continuation)
-    );
-    assert_eq!(
-        TimerDirectiveSnapshot::RecurAfterCompletion.scheduling_mode(),
-        Some(TimerSchedulingMode::AfterCompletion)
-    );
-    assert_eq!(TimerDirectiveSnapshot::Stop.scheduling_mode(), None);
 
     let directive = TimerDirective::RetryAfter(Duration::from_millis(25));
     let snapshot = TimerDirectiveSnapshot::try_from(directive)
@@ -136,6 +122,10 @@ fn policies_and_directives_have_one_cadence_owner() {
         TimerDirectiveSnapshot::RetryAfter {
             delay_ns: 25_000_000,
         }
+    );
+    assert_eq!(
+        TimerDirectiveSnapshot::try_from(TimerDirective::RetryAfter(Duration::MAX)),
+        Err(ScheduleError::DelayOutOfRange)
     );
 }
 

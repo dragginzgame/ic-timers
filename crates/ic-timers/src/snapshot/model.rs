@@ -106,18 +106,6 @@ pub enum TimerDirectiveSnapshot {
     RecurAfterCompletion,
 }
 
-impl TimerDirectiveSnapshot {
-    pub(crate) const fn scheduling_mode(self) -> Option<TimerSchedulingMode> {
-        match self {
-            Self::Stop => None,
-            Self::ContinueImmediately => Some(TimerSchedulingMode::Continuation),
-            Self::RetryAfter { .. } => Some(TimerSchedulingMode::Retry),
-            Self::ScheduleAt { .. } => Some(TimerSchedulingMode::Deadline),
-            Self::RecurAfterCompletion => Some(TimerSchedulingMode::AfterCompletion),
-        }
-    }
-}
-
 impl TryFrom<TimerDirective> for TimerDirectiveSnapshot {
     type Error = ScheduleError;
 

@@ -4,6 +4,24 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.1]
+
+### Changed
+
+- Use one private resolved schedule for explicit requests, ordinary completion
+  directives and pending commands. Resolve deadline, requested delay and scheduling
+  mode together; remove duplicate intermediate models and registry conversions.
+- Represent Stop as the absence of a successor schedule. Remove the private
+  directive-snapshot mode mapping and its fallback to earlier entry metadata;
+  public snapshots remain inert observations.
+
+### Development
+
+- Update existing schedule fixtures to check resolved scheduling metadata and
+  preserve public snapshot conversion and validation coverage.
+- Record the maintainer-reported live 0.10.0 baseline and this cleanup in the
+  [0.10.1 release note](docs/changelog/0.10.1.md).
+
 ## [0.10.0] - 2026-10-03
 
 ### Fixed

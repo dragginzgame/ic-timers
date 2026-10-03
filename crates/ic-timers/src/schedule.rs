@@ -1,5 +1,6 @@
 //! Checked cadence and scheduling decisions.
 
+use crate::snapshot::TimerSchedulingMode;
 use std::time::Duration;
 use thiserror::Error;
 
@@ -45,7 +46,7 @@ pub enum TimerSchedule {
 }
 
 impl TimerSchedule {
-    /// Resolve the request to an absolute deadline and optional relative delay.
+    /// Resolve the request with its absolute deadline, relative delay and mode.
     pub(super) fn resolve(self, now_ns: u64) -> Result<ResolvedSchedule, ScheduleError> {
         match self {
             Self::After(delay) => {
@@ -53,11 +54,13 @@ impl TimerSchedule {
                 Ok(ResolvedSchedule {
                     deadline_ns: checked_deadline_after(now_ns, delay_ns)?,
                     requested_delay_ns: Some(delay_ns),
+                    mode: TimerSchedulingMode::Once,
                 })
             }
             Self::At(deadline_ns) => Ok(ResolvedSchedule {
                 deadline_ns,
                 requested_delay_ns: None,
+                mode: TimerSchedulingMode::Deadline,
             }),
         }
     }
@@ -83,33 +86,34 @@ impl TimerDirective {
         self,
         now_ns: u64,
         cadence: Option<TimerCadence>,
-    ) -> Result<ResolvedDirective, DirectiveError> {
+    ) -> Result<Option<ResolvedSchedule>, DirectiveError> {
         match self {
-            Self::Stop => Ok(ResolvedDirective {
-                deadline_ns: None,
-                requested_delay_ns: None,
-            }),
-            Self::ContinueImmediately => Ok(ResolvedDirective {
-                deadline_ns: Some(now_ns),
+            Self::Stop => Ok(None),
+            Self::ContinueImmediately => Ok(Some(ResolvedSchedule {
+                deadline_ns: now_ns,
                 requested_delay_ns: Some(0),
-            }),
+                mode: TimerSchedulingMode::Continuation,
+            })),
             Self::RetryAfter(delay) => {
                 let delay_ns = duration_ns(delay)?;
-                Ok(ResolvedDirective {
-                    deadline_ns: Some(checked_deadline_after(now_ns, delay_ns)?),
+                Ok(Some(ResolvedSchedule {
+                    deadline_ns: checked_deadline_after(now_ns, delay_ns)?,
                     requested_delay_ns: Some(delay_ns),
-                })
+                    mode: TimerSchedulingMode::Retry,
+                }))
             }
-            Self::ScheduleAt(deadline_ns) => Ok(ResolvedDirective {
-                deadline_ns: Some(deadline_ns),
+            Self::ScheduleAt(deadline_ns) => Ok(Some(ResolvedSchedule {
+                deadline_ns,
                 requested_delay_ns: None,
-            }),
+                mode: TimerSchedulingMode::Deadline,
+            })),
             Self::RecurAfterCompletion => {
                 let cadence = cadence.ok_or(DirectiveError::MissingCadence)?;
-                Ok(ResolvedDirective {
-                    deadline_ns: Some(cadence.deadline_after(now_ns)?),
+                Ok(Some(ResolvedSchedule {
+                    deadline_ns: cadence.deadline_after(now_ns)?,
                     requested_delay_ns: Some(cadence.as_nanos()),
-                })
+                    mode: TimerSchedulingMode::AfterCompletion,
+                }))
             }
         }
     }
@@ -146,12 +150,7 @@ impl From<ScheduleError> for DirectiveError {
 pub struct ResolvedSchedule {
     pub(crate) deadline_ns: u64,
     pub(crate) requested_delay_ns: Option<u64>,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct ResolvedDirective {
-    pub(crate) deadline_ns: Option<u64>,
-    pub(crate) requested_delay_ns: Option<u64>,
+    pub(crate) mode: TimerSchedulingMode,
 }
 
 const fn checked_deadline_after(now_ns: u64, delay_ns: u64) -> Result<u64, ScheduleError> {
@@ -197,6 +196,7 @@ mod tests {
             Ok(ResolvedSchedule {
                 deadline_ns: 15,
                 requested_delay_ns: Some(5),
+                mode: TimerSchedulingMode::Once,
             })
         );
         assert_eq!(
@@ -204,16 +204,43 @@ mod tests {
             Ok(ResolvedSchedule {
                 deadline_ns: 7,
                 requested_delay_ns: None,
+                mode: TimerSchedulingMode::Deadline,
             })
+        );
+        assert_eq!(TimerDirective::Stop.resolve(10, None), Ok(None));
+        assert_eq!(
+            TimerDirective::ContinueImmediately.resolve(10, None),
+            Ok(Some(ResolvedSchedule {
+                deadline_ns: 10,
+                requested_delay_ns: Some(0),
+                mode: TimerSchedulingMode::Continuation,
+            }))
+        );
+        assert_eq!(
+            TimerDirective::RetryAfter(Duration::from_nanos(5)).resolve(10, None),
+            Ok(Some(ResolvedSchedule {
+                deadline_ns: 15,
+                requested_delay_ns: Some(5),
+                mode: TimerSchedulingMode::Retry,
+            }))
+        );
+        assert_eq!(
+            TimerDirective::ScheduleAt(7).resolve(10, None),
+            Ok(Some(ResolvedSchedule {
+                deadline_ns: 7,
+                requested_delay_ns: None,
+                mode: TimerSchedulingMode::Deadline,
+            }))
         );
 
         let cadence = TimerCadence::from_nanos(9).expect("fixture cadence should be valid");
         assert_eq!(
             TimerDirective::RecurAfterCompletion.resolve(10, Some(cadence)),
-            Ok(ResolvedDirective {
-                deadline_ns: Some(19),
+            Ok(Some(ResolvedSchedule {
+                deadline_ns: 19,
                 requested_delay_ns: Some(9),
-            })
+                mode: TimerSchedulingMode::AfterCompletion,
+            }))
         );
         assert_eq!(
             TimerDirective::RecurAfterCompletion.resolve(10, None),
