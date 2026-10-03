@@ -4,7 +4,7 @@ set -euo pipefail
 repository_root="$(git rev-parse --show-toplevel)"
 temporary_root="$(mktemp -d)"
 trap 'rm -rf -- "${temporary_root}"' EXIT
-mkdir -p "${temporary_root}"/{scripts/{ci,release},docs/{status,changelog,adoption},bin}
+mkdir -p "${temporary_root}"/{scripts/{ci,release},docs/{status,changelog},bin}
 for script in commit-release check-release-truth check-tag-at-head; do
     cp "${repository_root}/scripts/release/${script}.sh" "${temporary_root}/scripts/release/"
 done
@@ -20,7 +20,6 @@ printf '%s\n' '[workspace.package]' 'version = "0.1.0"' > Cargo.toml
 printf '%s\n' '# Changelog' '' '## [Unreleased]' '' '## [0.1.0] - 2026-10-03' '' '- Fixture release.' > CHANGELOG.md
 printf '%s\n' '# 0.1.0' '' 'Status: released 0.1.0.' > docs/changelog/0.1.0.md
 printf '%s\n' '- Workspace package version: `0.1.0`.' '- Latest release line: `0.1.0`.' > docs/status/current.md
-printf '%s\n' 'Status: fixture.' > docs/adoption/canic.md
 printf '%s\n' '# Fixture' > README.md
 git add .
 git commit -qm fixture

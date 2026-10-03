@@ -50,8 +50,8 @@ The current runtime provides:
   provider handles clear before transient scheduler failure removal;
 - exact ordinary reconciliation whose pending command has one canonical owner
   in the registry and can replace a live deadline in either direction. The
-  prepared 0.9.0 arbitration hard cut discards overridden callback scheduling
-  proposals before validation; its new precedence fixtures await maintainer
+  0.9.0 arbitration hard cut discards overridden callback scheduling proposals
+  before validation; its new precedence fixtures require recorded successful
   execution before being treated as evidence;
 - exact Watchdog reconciliation and `ScheduleAt` completion through the same
   successor owner, preserving the cadence recovery wake-up until normal work
@@ -160,9 +160,10 @@ the idempotent ensure operation whenever their authority requires a wake-up.
   deadlines or rapidly continuing a Watchdog can accumulate cancelled records,
   extra cleanup work and a larger memory high-water extent. The native mock does
   not model provider heap allocation. A maintained churn fixture records this
-  subject on real Wasm; its prepared 0.9.0 assertions remain unexecuted. This
-  wrapper has no provider-heap compaction authority and supplies no global memory
-  cap. See the [pinned provider cancellation source](https://docs.rs/ic-cdk-timers/1.0.0/src/ic_cdk_timers/lib.rs.html#197).
+  subject on real Wasm in 0.9.0. The maintainer reported ten PocketIC subjects
+  passing before the ordinary-await correction, but supplied no page measurements
+  in that report. This wrapper has no provider-heap compaction authority and
+  supplies no global memory cap. See the [pinned provider cancellation source](https://docs.rs/ic-cdk-timers/1.0.0/src/ic_cdk_timers/lib.rs.html#197).
 - The current evidence uses the pinned PocketIC 15.0.0 binary and
   `ic-cdk-timers` 1.0.0 provider. A provider or evidence-binary change requires
   a renewed source and recovery audit.

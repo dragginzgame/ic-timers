@@ -80,30 +80,16 @@ cat > crates/ic-timers/src/platform.rs <<'EOF'
 use ic_cdk_timers::TimerId;
 pub(crate) struct TimerHandle(TimerId);
 EOF
-printf '%s\n' 'mod platform;' > crates/ic-timers/src/lib.rs
+facade_header=('#![forbid(private_interfaces)]' 'mod platform;')
+printf '%s\n' "${facade_header[@]}" > crates/ic-timers/src/lib.rs
 bash scripts/ci/check-provider-boundary.sh >/dev/null
-for export in \
-    'pub use platform::TimerHandle;' \
-    'pub use crate::platform::TimerHandle;' \
-    'pub use crate::platform::TimerHandle as PublicHandle;' \
-    'pub use crate::platform::*;' \
-    'pub use self::platform::{TimerHandle, set_timer};' \
-    'pub use crate::{snapshot::TimerEpoch, platform::{TimerHandle}};' \
-    'use crate::platform as p; pub use p::TimerHandle;' \
-    'use crate::platform as p; use p as q; pub use q::TimerHandle;' \
-    'use crate::platform::{TimerHandle as H}; pub use H;' \
-    'pub type PublicHandle = crate::platform::TimerHandle;' \
-    'use crate::platform as p; pub type PublicHandle = p::TimerHandle;' \
-    $'pub\nuse crate::{\n    platform::{TimerHandle},\n};' \
-    'pub mod platform;'; do
-    printf '%s\n' 'mod platform;' "${export}" > crates/ic-timers/src/lib.rs
-    expect_failure 'public export' bash scripts/ci/check-provider-boundary.sh
-done
+printf '%s\n' 'mod platform;' > crates/ic-timers/src/lib.rs
+expect_failure 'public interfaces' bash scripts/ci/check-provider-boundary.sh
 for export in 'pub use ic_cdk_timers::TimerId;' 'pub extern crate ic_cdk_timers;'; do
-    printf '%s\n' 'mod platform;' "${export}" > crates/ic-timers/src/lib.rs
+    printf '%s\n' "${facade_header[@]}" "${export}" > crates/ic-timers/src/lib.rs
     expect_failure 'direct ic-cdk-timers use' bash scripts/ci/check-provider-boundary.sh
 done
-printf '%s\n' 'mod platform;' 'pub(crate) use crate::platform::TimerHandle;' > crates/ic-timers/src/lib.rs
+printf '%s\n' "${facade_header[@]}" 'pub(crate) use crate::platform::TimerHandle;' > crates/ic-timers/src/lib.rs
 bash scripts/ci/check-provider-boundary.sh >/dev/null
 printf '%s\n' 'pub(super) use super::platform::TimerHandle;' > crates/ic-timers/src/runtime.rs
 bash scripts/ci/check-provider-boundary.sh >/dev/null
@@ -112,23 +98,63 @@ bash scripts/ci/check-provider-boundary.sh >/dev/null
 printf '%s\n' 'use ic_cdk_timers::TimerId;' > crates/ic-timers/src/runtime.rs
 expect_failure 'direct ic-cdk-timers use' bash scripts/ci/check-provider-boundary.sh
 rm -- crates/ic-timers/src/runtime.rs
-printf '%s\n' 'pub mod platform;' > crates/ic-timers/src/lib.rs
+printf '%s\n' '#![forbid(private_interfaces)]' 'pub mod platform;' > crates/ic-timers/src/lib.rs
 expect_failure 'private module' bash scripts/ci/check-provider-boundary.sh
 
-printf '%s\n' 'mod platform;' > crates/ic-timers/src/lib.rs
-printf '%s\n' 'pub fn leaked() {}' >> crates/ic-timers/src/platform.rs
-expect_failure 'restricted visibility' bash scripts/ci/check-provider-boundary.sh
+printf '%s\n' "${facade_header[@]}" > crates/ic-timers/src/lib.rs
+cp crates/ic-timers/src/platform.rs private-platform.rs
+for declaration in 'pub fn leaked() {}' 'pub async fn leaked() {}' \
+    'pub mod leaked {}' 'pub extern crate ic_cdk_timers as provider;'; do
+    cp private-platform.rs crates/ic-timers/src/platform.rs
+    printf '%s\n' "${declaration}" >> crates/ic-timers/src/platform.rs
+    expect_failure 'restricted visibility' bash scripts/ci/check-provider-boundary.sh
+done
 
-# Compile indirect leaks against a crate-visible handle. This independently
-# exercises Rust visibility and warning-denied type-alias validation.
-printf '%s\n' 'pub(crate) struct TimerHandle;' > crates/ic-timers/src/platform.rs
-printf '%s\n' 'mod platform;' 'use crate::platform as p; pub use p::TimerHandle;' \
-    > crates/ic-timers/src/lib.rs
-expect_failure 'cannot be re-exported' rustc --edition=2024 --crate-type=lib -D warnings \
-    crates/ic-timers/src/lib.rs -o visibility-fixture.rlib
-printf '%s\n' 'mod platform;' 'pub type PublicHandle = crate::platform::TimerHandle;' \
-    > crates/ic-timers/src/lib.rs
-expect_failure 'private_interfaces' rustc --edition=2024 --crate-type=lib -D warnings \
-    crates/ic-timers/src/lib.rs -o visibility-fixture.rlib
+# Rust resolves direct, grouped and chained aliases. No warning-denial flag is
+# needed: private-interface leaks are forbidden by the facade itself.
+printf '%s\n' 'pub(crate) struct TimerHandle;' 'pub(crate) fn set_timer() {}' > crates/ic-timers/src/platform.rs
+facade_header+=('mod snapshot { pub struct TimerEpoch; }' 'pub fn public_api() {}')
+fixture_rustc=(rustc --edition=2024 --crate-type=lib --crate-name boundary_fixture
+    -A dead_code -A unused_imports crates/ic-timers/src/lib.rs -o libboundary_fixture.rlib)
+for export in \
+    'pub use platform::TimerHandle;' \
+    'pub use crate::platform::TimerHandle;' \
+    'pub use crate::platform::TimerHandle as PublicHandle;' \
+    'pub use self::platform::{TimerHandle, set_timer};' \
+    'pub use crate::{snapshot::TimerEpoch, platform::{TimerHandle}};' \
+    'use crate::platform as p; pub use p::TimerHandle;' \
+    'use crate::platform as p; use p as q; pub use q::TimerHandle;' \
+    'use crate::platform::{TimerHandle as H}; pub use H;' \
+    'use crate::platform as p; pub use p as PublicPlatform;' \
+    'use crate::platform::set_timer as arm; pub use arm as public_arm;' \
+    'pub type PublicHandle = crate::platform::TimerHandle;' \
+    'use crate::platform as p; pub type PublicHandle = p::TimerHandle;' \
+    $'pub\nuse crate::{\n    platform::{TimerHandle},\n};'; do
+    printf '%s\n' "${facade_header[@]}" "${export}" > crates/ic-timers/src/lib.rs
+    case "${export}" in
+        *'pub type'*) expected=private_interfaces ;;
+        *) expected='cannot be re-exported' ;;
+    esac
+    expect_failure "${expected}" "${fixture_rustc[@]}"
+done
+for suppression in allow expect; do
+    printf '%s\n' "${facade_header[@]}" "#[${suppression}(private_interfaces)]" \
+        'pub type PublicHandle = crate::platform::TimerHandle;' > crates/ic-timers/src/lib.rs
+    expect_failure 'forbid' "${fixture_rustc[@]}"
+done
+
+# A glob cannot widen the crate-visible items. Internal imports still work;
+# an external caller can reach the normal API but neither provider item.
+printf '%s\n' "${facade_header[@]}" 'pub use crate::platform::*;' \
+    'pub(crate) use crate::platform::TimerHandle as InternalHandle;' > crates/ic-timers/src/lib.rs
+"${fixture_rustc[@]}"
+consumer_rustc=(rustc --edition=2024 --crate-type=lib
+    --extern boundary_fixture=libboundary_fixture.rlib consumer.rs -o consumer.rlib)
+printf '%s\n' 'pub fn check() { boundary_fixture::public_api(); }' > consumer.rs
+"${consumer_rustc[@]}"
+for item in TimerHandle set_timer; do
+    printf 'use boundary_fixture::%s;\n' "${item}" > consumer.rs
+    expect_failure "${item}" "${consumer_rustc[@]}"
+done
 
 echo 'Repository check regression tests passed'

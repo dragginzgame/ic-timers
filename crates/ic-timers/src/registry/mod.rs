@@ -458,7 +458,6 @@ struct Entry {
     latest_requested_delay_ns: Option<u64>,
     latest_armed_delay_ns: Option<u64>,
     confirmed_wakeup_generation: Option<u64>,
-    confirmed_work_generation: Option<u64>,
     callback: EntryCallback,
     wakeup: Option<OwnedProviderHandle>,
     work: Option<OwnedProviderHandle>,
@@ -497,7 +496,6 @@ impl Entry {
             latest_requested_delay_ns: None,
             latest_armed_delay_ns: None,
             confirmed_wakeup_generation: None,
-            confirmed_work_generation: None,
             callback,
             wakeup: None,
             work: None,
@@ -1126,79 +1124,27 @@ impl TimerRegistry {
         claim: &RegistrationClaim,
     ) -> Result<RegistryTransition, RegistryError> {
         let identity = claim.identity.clone();
-        let running_role = {
-            let entry = self.entry(claim)?;
-            match &entry.control {
-                EntryControl::Ordinary { control, .. }
-                    if matches!(control.registration(), TimerRegistration::Running { .. }) =>
-                {
-                    Some(CallbackRole::OrdinaryWork)
-                }
-                EntryControl::Watchdog(control)
-                    if matches!(
-                        control.state,
-                        WatchdogState::AwaitingWork {
-                            attempt_status: WatchdogAttemptStatus::Running,
-                            ..
-                        }
-                    ) =>
-                {
-                    Some(CallbackRole::WatchdogWork)
-                }
-                EntryControl::Ordinary { .. } | EntryControl::Watchdog(_) => None,
+        let entry = self.entry_mut(claim)?;
+        match &mut entry.control {
+            EntryControl::Ordinary {
+                control, pending, ..
+            } if matches!(control.registration(), TimerRegistration::Running { .. }) => {
+                *pending = Some(OrdinaryPending::Unregister);
+                Ok(RegistryTransition::normal(RegistryEffect::None))
             }
-        };
-
-        match running_role {
-            Some(CallbackRole::OrdinaryWork) => {
-                let entry = self.entry_mut(claim)?;
-                let EntryControl::Ordinary {
-                    control,
-                    pending,
-                    inactive_reason,
-                } = &mut entry.control
-                else {
-                    return Err(RegistryError::PolicyMismatch {
-                        actual: entry.policy.label(),
-                    });
-                };
-                let transition = match control.cancel() {
-                    Ok(TimerControlAction::None) => {
-                        *pending = Some(OrdinaryPending::Unregister);
-                        RegistryTransition::normal(RegistryEffect::None)
+            EntryControl::Watchdog(control)
+                if matches!(
+                    control.state,
+                    WatchdogState::AwaitingWork {
+                        attempt_status: WatchdogAttemptStatus::Running,
+                        ..
                     }
-                    Ok(_) => RegistryTransition::terminal(
-                        RegistryEffect::None,
-                        TimerControlFailure::DirectiveNotAllowed,
-                    ),
-                    Err(error) => {
-                        let failure = map_control_failure(error);
-                        let clear_wakeup = control.terminate();
-                        *pending = None;
-                        *inactive_reason = InactiveReason::ControlFailure(failure);
-                        RegistryTransition::terminal(
-                            clear_wakeup_if(identity.clone(), clear_wakeup),
-                            failure,
-                        )
-                    }
-                };
-                if transition.failure().is_some() {
-                    self.entries.remove(&identity);
-                }
-                Ok(transition)
-            }
-            Some(CallbackRole::WatchdogWork) => {
-                let entry = self.entry_mut(claim)?;
-                let EntryControl::Watchdog(control) = &mut entry.control else {
-                    return Err(RegistryError::PolicyMismatch {
-                        actual: entry.policy.label(),
-                    });
-                };
+                ) =>
+            {
                 control.pending = Some(WatchdogPending::Unregister);
                 Ok(RegistryTransition::normal(RegistryEffect::None))
             }
-            Some(CallbackRole::WatchdogScheduler) => Err(RegistryError::StaleCallback),
-            None => {
+            EntryControl::Ordinary { .. } | EntryControl::Watchdog(_) => {
                 let transition = self.cancel(claim)?;
                 self.entries.remove(&identity);
                 Ok(transition)
@@ -2008,13 +1954,13 @@ impl TimerRegistry {
                 ) {
                     return Err(RegistryError::StaleCallback);
                 }
-                if entry.confirmed_wakeup_generation == Some(successor_callback_generation)
-                    && entry.confirmed_work_generation == Some(work.callback_generation)
-                {
+                // Each dispatch advances the non-wrapping successor generation
+                // and binds it to the work attempt validated above. That one
+                // generation deduplicates both committed arm counters.
+                if entry.confirmed_wakeup_generation == Some(successor_callback_generation) {
                     return Ok(());
                 }
                 entry.confirmed_wakeup_generation = Some(successor_callback_generation);
-                entry.confirmed_work_generation = Some(work.callback_generation);
                 entry.latest_armed_delay_ns = Some(*successor_delay_ns);
                 entry.observability.counters_mut().record_wakeup_armed();
                 entry.observability.counters_mut().record_work_dispatched();

@@ -12,18 +12,19 @@ the [safety boundary](../../SAFETY.md).
 
 ## Release state
 
-- Workspace package version: `0.9.0`.
-- Latest release line: `0.9.0`.
-- The maintainer reports 0.8.4 live. Its release commit is
-  `058f968d012168bdae69d23f9ddb5cc46d9e34dd`, with annotated `v0.8.4`, dated
-  changelog and matching root/testing lockfiles. The preceding feedback review
-  corroborated registry publication and successful hosted CI/MSRV/tag checks;
-  see the [0.8.4 note](../changelog/0.8.4.md).
-- The in-depth audit follow-up is prepared for 0.9.0. Exact ordinary completion
+- Workspace package version: `0.9.1`.
+- Latest release line: `0.9.1`.
+- Local release commit `9afb9a1be93c159400c1ff3cb63515f73d2a1d7e` has annotated
+  `v0.9.0`, a dated changelog and matching root/testing lockfiles. The existing
+  local `origin/main` ref points to the same commit. Publication and successful
+  final deployment output were not verified in this review. See the
+  [0.9.0 note](../changelog/0.9.0.md).
+- The preceding feedback review corroborated 0.8.4 publication and hosted checks;
+  those are historical baseline evidence in the [0.8.4 note](../changelog/0.8.4.md).
+- The in-depth audit follow-up is included in 0.9.0. Exact ordinary completion
   arbitration and its directive observation change public semantics, requiring
   the next minor line. No legacy switch, alias or alternate contract remains.
-  Cargo and both lockfiles have not been bumped. See the
-  [undated 0.9.0 note](../changelog/0.9.0.md).
+  Cargo and both lockfiles now select 0.9.0.
 - Version mutation, staging, commits, tags, pushes, publication, all release
   commands, tests and build/lint gates are user-owned. Automated contributors
   implement requested work and prepare changelogs/notes without executing those
@@ -57,7 +58,7 @@ the [safety boundary](../../SAFETY.md).
   compaction authority here. Prepared churn fixtures measure page extents without
   promising a global memory or cost bound.
 
-## Prepared audit follow-up
+## 0.9.0 audit follow-up
 
 - Native suspended futures use wake notifications and no longer block unrelated
   due timers. New fixtures cover suspension, outside control, context expiry and
@@ -81,6 +82,30 @@ the [safety boundary](../../SAFETY.md).
   annotated tag. Arbitrary commits and conflicting tags are rejected. Combined
   release targets still always bump; interrupted final phases use their documented
   phase targets. Full deployment gates and pinned PocketIC verification remain.
+
+## 0.9.1 simplification follow-up
+
+- Running unregistration records the registry's pending request directly;
+  unreachable ordinary control-failure and scheduler-role branches are removed.
+  Control tests cover local transitions; registry arbitration coverage remains.
+- Effect confirmation retains idempotence with one wakeup-generation marker.
+  The redundant Watchdog work-generation marker is removed; work-token validation
+  precedes replay deduplication. Existing fixtures cover repeated dispatch
+  confirmations and malformed work after a valid confirmation.
+- Release truth and automatic staging no longer depend on the historical Canic
+  adoption document. Make fixtures now observe gate execution, phase order and
+  repeated bumps for every release flavour instead of matching recipe text.
+- Rust owns provider alias/export visibility. The facade forbids private-interface
+  leaks; the checker retains direct-provider confinement and restricted platform
+  declarations. Compiler fixtures include suppression and external glob access,
+  and hosted CI runs them on the current toolchain and MSRV.
+- Probe output deserialization and its direct serde dependency are removed.
+  The nested lockfile changes only that dependency edge; versions are unchanged.
+- Architecture prose scopes the old composition blocker and later frozen receipt.
+- These changes await maintainer validation. The
+  [0.9.1 note](../changelog/0.9.1.md) records scope and evidence.
+  Formatting, shell syntax, diff whitespace and both locked offline metadata
+  checks passed; test, build and lint gates were not run.
 
 ## Evidence
 
@@ -111,9 +136,17 @@ Wasm/stable page extents do not prove allocator live-byte bounds.
 
 ## Next action
 
-Review the prepared 0.9.0 implementation and unexecuted fixtures. The maintainer
-stages and commits the work, then runs `make release-minor` to execute the full
-deployment gate and bump 0.8.4 to 0.9.0. The helper dates the changelog and updates
-both lockfiles. This semantic hard cut cannot be released as a patch. If release
-execution stops after the bump, use the phase recovery in
-[releasing](../releasing.md) rather than requesting another bump.
+0.9.0 has already been bumped, committed and tagged; do not repeat its bump.
+Successful output for the corrected ordinary-await subject has not been supplied
+in this conversation. The maintainer owns any further validation and publication.
+Use the phase recovery in [releasing](../releasing.md) when finishing an existing
+release; combined release targets always request a new bump.
+
+The earlier release-prose correction is retained alongside the private runtime,
+boundary-enforcement, probe and release-tooling simplifications. Their notes are
+under an undated `0.9.1` section immediately below the empty `Unreleased`
+heading. The maintainer owns validation and the patch release. Stage and commit
+the prepared work, then run `make release-patch` to validate and bump to 0.9.1.
+No package version was changed; the nested lockfile only drops the removed direct
+probe dependency. The automated contributor did not stage, commit, tag or push
+this follow-up.

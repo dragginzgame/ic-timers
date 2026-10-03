@@ -24,37 +24,18 @@ if ! grep -Fqx -- 'mod platform;' crates/ic-timers/src/lib.rs >/dev/null; then
     exit 1
 fi
 
-# Follow local import aliases and inspect complete export/type-alias statements.
-# Crate visibility also lets Rust reject indirect platform re-exports.
-# Perl, rather than the shell, expands its variables.
+if ! grep -Fqx -- '#![forbid(private_interfaces)]' crates/ic-timers/src/lib.rs >/dev/null; then
+    echo "error: private platform types must not leak through public interfaces" >&2
+    exit 1
+fi
+
+# Rust owns alias resolution and export visibility. Keep platform declarations
+# crate-visible and forbid private-interface leaks even under local lint allows.
 # shellcheck disable=SC2016
-find crates/ic-timers/src -name '*.rs' -print0 | xargs -0 perl -0777 -ne '
-    my %boundary = map { $_ => 1 } qw(ic_cdk_timers platform);
-    my @imports = /\buse\s+([^;]+);/sg;
-    my $previous = 0;
-    while ($previous != scalar keys %boundary) {
-        $previous = scalar keys %boundary;
-        my $names = join "|", map { quotemeta $_ } keys %boundary;
-        for my $import (@imports) {
-            next unless $import =~ /\b(?:$names)\b/;
-            $boundary{$1} = 1 while $import =~ /\bas\s+(\w+)/g;
-            $boundary{$1} = 1 while $import =~ /\b(?:$names)\s*::\s*(\w+)/g;
-            while ($import =~ /\b(?:$names)\s*::\s*\{([^{}]+)\}/g) {
-                my $group = $1;
-                $boundary{$1} = 1 while $group =~ /\b(\w+)\b/g;
-            }
-        }
-    }
-    my $names = join "|", map { quotemeta $_ } keys %boundary;
-    if (/\bpub\s+use\s+[^;]*\b(?:$names)\b/s
-        || /\bpub\s+type\s+\w+[^;]*=\s*[^;]*\b(?:$names)\b/s
-        || /\bpub\s+(?:extern\s+crate|mod)\s+(?:ic_cdk_timers|platform)\b/) {
-        die "error: provider/platform public export in $ARGV\n";
-    }
-    if ($ARGV eq "crates/ic-timers/src/platform.rs"
-        && /\bpub\s+(?:struct|enum|type|fn|use)\b/) {
+perl -0777 -ne '
+    if (/\bpub\s+(?:(?:async|unsafe)\s+)*(?:struct|enum|type|fn|use|mod|trait|const|static|extern)\b/) {
         die "error: platform items must have restricted visibility in $ARGV\n";
     }
-'
+' "${expected_source}"
 
 echo "Provider boundary checks passed"

@@ -231,7 +231,7 @@ release-x:
 release-stage:
 	@version="$$(sed -n 's/^version = "\(.*\)"/\1/p' Cargo.toml | head -n 1)"; \
 		git add Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md \
-			crates/ic-timers/Cargo.toml docs/status/current.md docs/adoption/canic.md \
+			crates/ic-timers/Cargo.toml docs/status/current.md \
 			"docs/changelog/$${version}.md"
 
 release-commit:

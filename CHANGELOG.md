@@ -4,6 +4,42 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-10-03
+
+### Changed
+
+- Record running unregistration directly in the registry's pending command,
+  removing unreachable control actions and error branches. Consolidate control
+  tests around their local transitions; registry tests retain command arbitration.
+- Deduplicate Watchdog effect confirmation with its unique successor generation,
+  removing the redundant work-generation marker. Preserve idempotent arm and dispatch
+  counters and validate work tokens before accepting a repeated confirmation.
+- Let Rust enforce provider export and alias visibility, with non-suppressible
+  private-interface checks. Keep direct-provider confinement and restricted
+  platform declarations enforced by the repository checker.
+
+### Development
+
+- Remove historical Canic adoption status from release validation and automatic
+  staging. Release truth remains owned by current package and release metadata.
+- Use Make execution fixtures for release gates and all combined release flavours
+  instead of recipe-text matching. Cover failure ordering, repeated
+  bump invocation, metadata-only staging and the exact tag namespace.
+- Exercise provider visibility fixtures on both hosted Rust toolchains, including
+  alias leaks, local lint suppression and external access through glob imports.
+- Remove unused deserialization derives and the runtime probe's direct `serde`
+  dependency; query encoding, host decoding and stable state remain unchanged.
+
+### Documentation
+
+- Refresh the handoff, safety evidence wording and 0.9.0 delivery record for the
+  tagged release, removing obsolete instructions to bump from 0.8.4. Release
+  artifacts do not substitute for missing validation output.
+- Scope the historical lifecycle-composition blocker to its original adoption
+  subject and distinguish the later frozen receipt from current qualification.
+- Track this work and pending maintainer validation in the
+  [0.9.1 simplification note](docs/changelog/0.9.1.md).
+
 ## [0.9.0] - 2026-10-03
 
 ### Changed

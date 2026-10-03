@@ -49,10 +49,4 @@ if grep -Eq -- '^Version [0-9]+\.[0-9]+\.[0-9]+ is the current published release
     echo "error: README.md duplicates mutable release-version truth" >&2
     exit 1
 fi
-canic_status_count="$(grep -c '^Status:' docs/adoption/canic.md || true)"
-if [[ "${canic_status_count}" != "1" ]]; then
-    echo "error: Canic contract must have exactly one status marker" >&2
-    exit 1
-fi
-
 echo "Release truth checks passed for ${version}"

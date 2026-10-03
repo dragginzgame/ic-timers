@@ -5,7 +5,6 @@ use ic_timers::{
     WatchdogRegistration, WatchdogRunResult, initialize_runtime, register_watchdog,
     timer_inventory, timer_snapshot,
 };
-use serde::Deserialize;
 use std::cell::{Cell, RefCell};
 
 const CADENCE_NS: u64 = 1_000_000_000;
@@ -29,7 +28,7 @@ thread_local! {
     static POST_UPGRADE_RECONSTRUCTED: Cell<bool> = const { Cell::new(false) };
 }
 
-#[derive(CandidType, Debug, Deserialize, Eq, PartialEq)]
+#[derive(CandidType, Debug, Eq, PartialEq)]
 struct ProbeMemorySummary {
     samples: u64,
     latest_wasm_start_pages: u64,
@@ -40,7 +39,7 @@ struct ProbeMemorySummary {
     maximum_stable_growth_pages: u64,
 }
 
-#[derive(CandidType, Debug, Deserialize, Eq, PartialEq)]
+#[derive(CandidType, Debug, Eq, PartialEq)]
 struct ProbeSnapshot {
     registration_id: Option<(u64, u64, u64)>,
     registered: bool,

@@ -305,7 +305,7 @@ fn watchdog_dispatch_confirmation_rejects_cross_claim_work() {
     let (second_scheduler, _, _) = arm(registry
         .ensure_recurring(&second, 0)
         .expect("second ensure should succeed"));
-    let (first_successor, first_deadline, _) =
+    let (first_successor, first_deadline, first_work) =
         dispatch(registry.begin_watchdog_scheduler(&first_scheduler, 5));
     let (_, _, second_work) = dispatch(registry.begin_watchdog_scheduler(&second_scheduler, 5));
     let malformed_arm = RegistryEffect::ArmWakeup {
@@ -329,7 +329,7 @@ fn watchdog_dispatch_confirmation_rejects_cross_claim_work() {
         Err(RegistryError::StaleCallback)
     );
     let malformed = RegistryEffect::DispatchWatchdog {
-        successor: first_successor,
+        successor: first_successor.clone(),
         successor_deadline_ns: first_deadline,
         successor_delay_ns: 5,
         work: second_work,
@@ -346,6 +346,40 @@ fn watchdog_dispatch_confirmation_rejects_cross_claim_work() {
         .counters();
     assert_eq!(counters.wakeups_armed(), 0);
     assert_eq!(counters.work_dispatched(), 0);
+
+    let valid = RegistryEffect::DispatchWatchdog {
+        successor: first_successor.clone(),
+        successor_deadline_ns: first_deadline,
+        successor_delay_ns: 5,
+        work: first_work.clone(),
+    };
+    registry
+        .confirm_effect_applied(&valid)
+        .expect("valid dispatch should confirm");
+    registry
+        .confirm_effect_applied(&valid)
+        .expect("duplicate confirmation should be inert");
+    let wrong_attempt = RegistryEffect::DispatchWatchdog {
+        successor: first_successor,
+        successor_deadline_ns: first_deadline,
+        successor_delay_ns: 5,
+        work: CallbackToken {
+            callback_generation: first_work.callback_generation + 1,
+            ..first_work
+        },
+    };
+    assert_eq!(
+        registry.confirm_effect_applied(&wrong_attempt),
+        Err(RegistryError::StaleCallback),
+        "matching confirmed successor must not bypass work validation"
+    );
+    let counters = registry
+        .snapshot(&first_id)
+        .expect("confirmed snapshot should remain")
+        .observability()
+        .counters();
+    assert_eq!(counters.wakeups_armed(), 1);
+    assert_eq!(counters.work_dispatched(), 1);
 }
 
 #[test]
@@ -961,6 +995,7 @@ fn watchdog_dispatches_successor_first_and_retires_unacknowledged_attempt() {
 
     let first_dispatch = registry.begin_watchdog_scheduler(&scheduler, 20);
     confirm(&mut registry, &first_dispatch);
+    confirm(&mut registry, &first_dispatch);
     let (successor, deadline, work) = dispatch(first_dispatch);
     assert_eq!(deadline, 25);
     let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
@@ -999,6 +1034,7 @@ fn watchdog_dispatches_successor_first_and_retires_unacknowledged_attempt() {
         .expect("watchdog completion should succeed");
 
     let second_dispatch = registry.begin_watchdog_scheduler(&successor, 30);
+    confirm(&mut registry, &second_dispatch);
     confirm(&mut registry, &second_dispatch);
     let (next_successor, deadline, delayed_work) = dispatch(second_dispatch);
     assert_eq!(deadline, 35);

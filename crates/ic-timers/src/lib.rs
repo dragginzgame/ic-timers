@@ -16,6 +16,7 @@
 //! timer set, including for an initialized empty registry.
 
 #![forbid(unsafe_code)]
+#![forbid(private_interfaces)]
 #![deny(rustdoc::broken_intra_doc_links)]
 mod control;
 mod platform;

@@ -11,8 +11,7 @@ trap cleanup EXIT
 git init -q "${temporary_root}"
 mkdir -p \
     "${temporary_root}/docs/status" \
-    "${temporary_root}/docs/changelog" \
-    "${temporary_root}/docs/adoption"
+    "${temporary_root}/docs/changelog"
 cat > "${temporary_root}/Cargo.toml" <<'EOF'
 [workspace.package]
 version = "0.3.3"
@@ -46,12 +45,6 @@ cat > "${temporary_root}/docs/changelog/0.3.4.md" <<'EOF'
 
 Status: prepared for 0.3.4; validation and delivery are user-owned.
 EOF
-cat > "${temporary_root}/docs/adoption/canic.md" <<'EOF'
-# Canic adapter contract
-
-Status: validated downstream adoption worktree; Canic release remains pending.
-EOF
-
 # Preflight accepts normal release-note wording without another target marker
 # in the handoff, and does not mutate either document.
 (

@@ -13,7 +13,6 @@ crate-type = ["cdylib"]
 candid.workspace = true
 ic-cdk.workspace = true
 ic-timers.workspace = true
-serde = { workspace = true, features = ["derive"] }
 
 [lints]
 workspace = true

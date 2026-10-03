@@ -182,8 +182,10 @@ not a current downstream dependency audit or qualification of 0.8.0:
 The combined downstream gate must prove one resolved `ic-timers` package ID,
 both owners in one inventory, synchronous lifecycle reconstruction, IcyDB
 Watchdog recovery, continued Canic timer progress, and no remaining direct
-`ic-cdk-timers` calls across the complete canister. That evidence is currently
-blocked on Canic's lifecycle-composition seam, not the timer scheduler.
+`ic-cdk-timers` calls across the complete canister. The lifecycle-composition
+blocker in the original 0.5.0 records was resolved within the frozen 0.8.0
+subject described in the [Toko Miner receipt](adoption/toko-miner.md).
+That receipt does not qualify later dependency combinations or deployments.
 The provider's 250 outstanding-dispatch limit is canister-wide; the registry's
 128-handle maximum bounds only handles owned by this crate. Canic must also
 retain the validated hard cut that makes its application timer facade return
@@ -210,6 +212,7 @@ IcyDB's exact dependency, removed parallel timer state, and downstream
 real-canister evidence are recorded in the
 [IcyDB adoption record](adoption/icydb.md). The
 [Canic adapter contract](adoption/canic.md) records its exact-0.5.0/schema-3
-adoption. Both recorded subjects independently resolve 0.5.0; combined qualification
-remains open until Canic's lifecycle-composition seam can host one final
-single-registry Wasm subject.
+adoption. Both original subjects independently resolve 0.5.0; the later combined
+0.8.0 subject is recorded separately in the [Toko record](adoption/toko-miner.md).
+Qualification of a new combined subject requires evidence against its actual
+dependency graph and Wasm artifact.

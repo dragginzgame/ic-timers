@@ -311,89 +311,47 @@ mod tests {
     }
 
     #[test]
-    fn completion_uses_the_registrys_authoritative_deadline() {
+    fn running_requests_leave_completion_selection_to_the_registry() {
         let mut control = TimerControl::default();
         let generation = arm(&mut control, 100);
         assert!(control.begin(generation));
         assert_eq!(control.reconcile(300), Ok(TimerControlAction::None));
-        assert_eq!(
-            control.complete(generation, Some(300), false),
-            Ok(TimerControlAction::Arm {
-                generation: 2,
-                deadline_ns: 300,
-                kind: WakeupArm::Initial,
-            })
-        );
-    }
-
-    #[test]
-    fn completion_uses_the_registrys_pending_schedule() {
-        let mut control = TimerControl::default();
-        let generation = arm(&mut control, 100);
-        assert!(control.begin(generation));
         assert_eq!(control.schedule(90), Ok(TimerControlAction::None));
+        assert_eq!(control.cancel(), Ok(TimerControlAction::None));
         assert_eq!(
-            control.complete(generation, Some(90), false),
-            Ok(TimerControlAction::Arm {
-                generation: 2,
-                deadline_ns: 90,
-                kind: WakeupArm::Initial,
-            })
+            control.registration(),
+            TimerRegistration::Running { generation }
         );
+        assert_eq!(control.generation(), generation);
     }
 
     #[test]
-    fn running_callback_can_request_its_own_cancellation() {
+    fn completion_arms_the_supplied_deadline() {
+        for deadline_ns in [90, 300] {
+            let mut control = TimerControl::default();
+            let generation = arm(&mut control, 100);
+            assert!(control.begin(generation));
+            assert_eq!(
+                control.complete(generation, Some(deadline_ns), false),
+                Ok(TimerControlAction::Arm {
+                    generation: 2,
+                    deadline_ns,
+                    kind: WakeupArm::Initial,
+                })
+            );
+        }
+    }
+
+    #[test]
+    fn cancelled_completion_disarms_running_work() {
         let mut control = TimerControl::default();
         let generation = arm(&mut control, 100);
         assert!(control.begin(generation));
-        assert_eq!(control.cancel(), Ok(TimerControlAction::None));
         assert_eq!(
             control.complete(generation, None, true),
             Ok(TimerControlAction::Disarm { cancelled: true })
         );
         assert_eq!(control.registration(), TimerRegistration::Unregistered);
-    }
-
-    #[test]
-    fn completion_arms_the_registrys_selected_earliest_deadline() {
-        let mut control = TimerControl::default();
-        let generation = arm(&mut control, 100);
-        assert!(control.begin(generation));
-        assert_eq!(
-            control.complete(generation, Some(250), false),
-            Ok(TimerControlAction::Arm {
-                generation: 2,
-                deadline_ns: 250,
-                kind: WakeupArm::Initial,
-            })
-        );
-    }
-
-    #[test]
-    fn completion_honors_the_registrys_cancellation() {
-        let mut control = TimerControl::default();
-        let generation = arm(&mut control, 100);
-        assert!(control.begin(generation));
-        assert_eq!(
-            control.complete(generation, None, true),
-            Ok(TimerControlAction::Disarm { cancelled: true })
-        );
-    }
-
-    #[test]
-    fn completion_honors_the_registrys_later_schedule() {
-        let mut control = TimerControl::default();
-        let generation = arm(&mut control, 100);
-        assert!(control.begin(generation));
-        assert_eq!(
-            control.complete(generation, Some(90), false),
-            Ok(TimerControlAction::Arm {
-                generation: 2,
-                deadline_ns: 90,
-                kind: WakeupArm::Initial,
-            })
-        );
     }
 
     #[test]

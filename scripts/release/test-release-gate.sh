@@ -6,7 +6,6 @@ makefile="${repository_root}/Makefile"
 bump_script="${repository_root}/scripts/release/bump-version.sh"
 impact_checker="${repository_root}/scripts/release/check-bump-impact.sh"
 pocketic_check="${repository_root}/scripts/ci/check-pocketic.sh"
-lockfile_checker="${repository_root}/scripts/release/check-lockfiles.sh"
 
 if grep -RE --include='*.sh' \
     '(^|[;&|[:space:]])rg([[:space:]]|$)' \
@@ -30,23 +29,6 @@ if invalid_output="$(bash "${bump_script}" 00.4.0 2>&1)"; then
 fi
 if [[ "${invalid_output}" != Usage:* ]]; then
     echo "error: version bump did not reject invalid SemVer before release work" >&2
-    exit 1
-fi
-
-if ! grep -Fqx -- \
-    'if git rev-parse --verify --quiet "refs/tags/v${new_version}" >/dev/null; then' \
-    "${bump_script}" >/dev/null; then
-    echo "error: version bump does not use the exact release-tag namespace" >&2
-    exit 1
-fi
-
-if ! grep -Fq -- \
-    'bash scripts/release/classify-release-impact.sh' \
-    "${bump_script}" >/dev/null \
-    || ! grep -Fqx -- \
-        'bash scripts/release/check-bump-impact.sh "${release_impact}" "${previous_version}"' \
-        "${bump_script}" >/dev/null; then
-    echo "error: version bump does not validate the classified release impact" >&2
     exit 1
 fi
 
@@ -76,91 +58,6 @@ if bash "${impact_checker}" unexpected 0.6.0 >/dev/null 2>&1; then
     exit 1
 fi
 
-expected_ci_targets="CI_TARGETS := actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package"
-if ! grep -Fqx -- "${expected_ci_targets}" "${makefile}" >/dev/null; then
-    echo "error: normal CI does not enforce the complete required target sequence" >&2
-    exit 1
-fi
-
-expected_targets="RELEASE_TARGETS := pocketic-check ci msrv testing-check pocketic-watchdog pocketic-cohorts"
-if ! grep -Fqx -- "${expected_targets}" "${makefile}" >/dev/null; then
-    echo "error: release gate does not contain the complete required target sequence" >&2
-    exit 1
-fi
-
-if grep -Fqx -- 'make --no-print-directory release-verify' "${bump_script}" >/dev/null \
-    || grep -Fqx -- 'make --no-print-directory ensure-clean' "${bump_script}" >/dev/null; then
-    echo "error: version preparation requires deployment validation or a clean worktree" >&2
-    exit 1
-fi
-for target in release-patch release-minor release-major release-x; do
-    recipe="$(sed -n "/^${target}:/,/^$/p" "${makefile}")"
-    case "${target}" in
-        release-patch) bump_command=$'\t+$(MAKE) --no-print-directory patch' ;;
-        release-minor) bump_command=$'\t+$(MAKE) --no-print-directory minor' ;;
-        release-major) bump_command=$'\t+$(MAKE) --no-print-directory major' ;;
-        release-x) bump_command=$'\t+$(MAKE) --no-print-directory bump-x VERSION="$(VERSION)"' ;;
-    esac
-    if ! printf '%s\n' "${recipe}" | grep -Fqx -- "${bump_command}"; then
-        echo "error: ${target} does not always invoke its matching bump target" >&2
-        exit 1
-    fi
-    preflight_line="$(printf '%s\n' "${recipe}" | grep -nF 'bash scripts/release/bump-version.sh --check ')"
-    gate_line="$(printf '%s\n' "${recipe}" | grep -nF $'\t+$(MAKE) --no-print-directory release-verify')"
-    bump_line="$(printf '%s\n' "${recipe}" | grep -nFx -- "${bump_command}")"
-    if (( ${preflight_line%%:*} >= ${gate_line%%:*} || ${gate_line%%:*} >= ${bump_line%%:*} )); then
-        echo "error: ${target} does not preflight before validation and bump afterward" >&2
-        exit 1
-    fi
-done
-
-if ! grep -Fqx -- \
-    'bash scripts/release/finalize-release-truth.sh --check "${previous_version}" "${new_version}"' \
-    "${bump_script}" >/dev/null \
-    || ! grep -Fqx -- \
-        'bash scripts/release/check-release-truth.sh' "${bump_script}" >/dev/null; then
-    echo "error: version bump does not finalize and validate release truth" >&2
-    exit 1
-fi
-
-if ! grep -Fqx -- \
-    'if ! bash scripts/release/warn-release-prose.sh "${new_version}"; then' \
-    "${bump_script}" >/dev/null; then
-    echo "error: version bump does not run the fail-open prose advisory" >&2
-    exit 1
-fi
-
-if ! grep -Fqx -- 'pocketic-watchdog: pocketic-check' "${makefile}" >/dev/null \
-    || ! grep -Fqx -- 'pocketic-cohorts: pocketic-check' "${makefile}" >/dev/null; then
-    echo "error: PocketIC suites do not verify the evidence binary first" >&2
-    exit 1
-fi
-
-if grep -Fqx -- 'make --no-print-directory ci' "${bump_script}" >/dev/null; then
-    echo "error: version bump bypasses release-verify with the narrower CI gate" >&2
-    exit 1
-fi
-
-if ! grep -Fqx -- \
-    'cargo update --manifest-path testing/Cargo.toml --offline -p ic-timers' \
-    "${bump_script}" >/dev/null; then
-    echo "error: version bump does not update the nested testing lockfile" >&2
-    exit 1
-fi
-
-if ! grep -Fqx -- 'bash scripts/release/check-lockfiles.sh' "${bump_script}" >/dev/null \
-    || ! grep -Fqx -- \
-        'cargo metadata --locked --offline --format-version 1 >/dev/null' \
-        "${lockfile_checker}" >/dev/null \
-    || ! grep -Fq -- 'cargo metadata --manifest-path testing/Cargo.toml' \
-        "${lockfile_checker}" >/dev/null \
-    || ! grep -Fqx -- \
-        '    --locked --offline --format-version 1 >/dev/null' \
-        "${lockfile_checker}" >/dev/null; then
-    echo "error: version bump does not verify nested locked metadata after mutation" >&2
-    exit 1
-fi
-
 if ! grep -Fqx -- \
     'expected_version="pocket-ic-server 15.0.0"' "${pocketic_check}" >/dev/null \
     || ! grep -Fqx -- \
@@ -183,15 +80,52 @@ if ! grep -Fqx -- \
     exit 1
 fi
 
-if ! grep -Fq -- \
-    'git add Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md' \
-    "${makefile}" >/dev/null \
-    || ! grep -Fq -- \
-        'crates/ic-timers/Cargo.toml docs/status/current.md docs/adoption/canic.md' \
-        "${makefile}" >/dev/null \
-    || ! grep -Fqx -- $'\t\t\t"docs/changelog/$${version}.md"' "${makefile}" >/dev/null; then
-    echo "error: release staging omits required lockfiles or release-truth documents" >&2
-    exit 1
-fi
+# Execute the real orchestration with cheap leaf targets. Expected checks remain
+# independent of Makefile variables; their spelling and recipe layout do not.
+temporary_root="$(mktemp -d)"
+trap 'rm -rf -- "${temporary_root}"' EXIT
+cp "${makefile}" "${temporary_root}/Makefile"
+cd "${temporary_root}"
+cat > overrides.mk <<'EOF'
+actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package pocketic-check msrv testing-check pocketic-watchdog pocketic-cohorts:
+	@printf '%s\n' '$@' >> checks-ran
+	@if [ '$@' = '$(FAIL_TARGET)' ]; then echo 'failed $@' >&2; exit 1; fi
+EOF
+fixture_make=(make --no-print-directory -f Makefile -f overrides.mk
+    'MAKE=make --no-print-directory -f Makefile -f overrides.mk')
+ci_targets=(actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package)
+release_targets=(pocketic-check "${ci_targets[@]}" msrv testing-check
+    pocketic-check pocketic-watchdog pocketic-check pocketic-cohorts)
+for gate in ci release-verify pocketic-watchdog pocketic-cohorts; do
+    case "${gate}" in
+        ci) expected=("${ci_targets[@]}") ;;
+        release-verify) expected=("${release_targets[@]}") ;;
+        *) expected=(pocketic-check "${gate}") ;;
+    esac
+    "${fixture_make[@]}" "${gate}" >/dev/null 2>&1
+    mapfile -t actual < checks-ran
+    if [[ "${actual[*]}" != "${expected[*]}" ]]; then
+        echo "error: ${gate} ran unexpected checks: ${actual[*]}" >&2
+        exit 1
+    fi
+    rm checks-ran
+    for target in "${expected[@]}"; do
+        if "${fixture_make[@]}" "${gate}" "FAIL_TARGET=${target}" >/dev/null 2>&1; then
+            echo "error: ${gate} ignored failed ${target}" >&2
+            exit 1
+        fi
+        mapfile -t actual < checks-ran
+        prefix=()
+        for check in "${expected[@]}"; do
+            prefix+=("${check}")
+            if [[ "${check}" == "${target}" ]]; then break; fi
+        done
+        if [[ "${actual[*]}" != "${prefix[*]}" ]]; then
+            echo "error: ${gate} skipped checks or continued after failed ${target}" >&2
+            exit 1
+        fi
+        rm checks-ran
+    done
+done
 
-echo "Release gate wiring checks passed"
+echo "Release gate execution checks passed"
