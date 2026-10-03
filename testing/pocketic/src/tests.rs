@@ -634,3 +634,176 @@ fn update_deadline(pic: &PocketIc, canister_id: Principal, method: &str, deadlin
         .expect("deadline update");
     Decode!(&result, ()).expect("decode unit");
 }
+
+#[derive(CandidType, Debug, Deserialize)]
+struct OrdinaryObservation {
+    declared: bool,
+    running: bool,
+    waiting: bool,
+    completed: u64,
+    completed_at_ns: Option<u64>,
+    next_deadline_ns: Option<u64>,
+    work_completed: u64,
+}
+
+fn ordinary_observation(pic: &PocketIc, canister_id: Principal) -> OrdinaryObservation {
+    let bytes = pic
+        .query_call(
+            canister_id,
+            Principal::anonymous(),
+            "ordinary_observation",
+            Encode!().unwrap(),
+        )
+        .unwrap();
+    Decode!(&bytes, OrdinaryObservation).unwrap()
+}
+
+#[test]
+fn ordinary_await_allows_ingress_and_other_timers_before_completion() {
+    for after_completion in [false, true] {
+        for command in ["cancel", "reconcile", "unregister", "recur"] {
+            if command == "recur" && !after_completion {
+                continue;
+            }
+            let pic = PocketIc::new();
+            let canister_id = pic.create_canister();
+            pic.add_cycles(canister_id, INIT_CYCLES);
+            pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
+            let transient = command == "cancel";
+            pic.update_call(
+                canister_id,
+                Principal::anonymous(),
+                "start_ordinary",
+                Encode!(&after_completion, &transient).unwrap(),
+            )
+            .unwrap();
+            let mut suspended = false;
+            for _ in 0..32 {
+                pic.tick();
+                let observed = ordinary_observation(&pic, canister_id);
+                if observed.running && observed.waiting {
+                    suspended = true;
+                    break;
+                }
+            }
+            assert!(suspended, "self-call must commit real suspension");
+            assert!(update_bool(&pic, canister_id, "start"));
+            pic.advance_time(Duration::from_secs(2));
+            drive_rounds(&pic, 16);
+            assert_eq!(
+                snapshot(&pic, canister_id).completed_work,
+                1,
+                "other timer must progress while ordinary work awaits"
+            );
+            let waiting = ordinary_observation(&pic, canister_id);
+            assert!(waiting.running);
+            assert_eq!(waiting.completed, 0);
+            assert_eq!(waiting.work_completed, 0);
+            let exact_deadline =
+                snapshot(&pic, canister_id).next_deadline_ns.unwrap() + 60_000_000_000;
+            match command {
+                "cancel" => update_unit(&pic, canister_id, "cancel_ordinary"),
+                "reconcile" => {
+                    update_deadline(&pic, canister_id, "reconcile_ordinary_at", exact_deadline)
+                }
+                "unregister" => update_unit(&pic, canister_id, "unregister_ordinary"),
+                "recur" => {}
+                _ => unreachable!("fixed command matrix"),
+            }
+            assert!(
+                ordinary_observation(&pic, canister_id).running,
+                "control does not interrupt consumer work"
+            );
+            update_unit(&pic, canister_id, "release_ordinary_work");
+            drive_rounds(&pic, 16);
+            let completed = ordinary_observation(&pic, canister_id);
+            assert_eq!(completed.completed, 1);
+            assert!(!completed.running);
+            if matches!(command, "cancel" | "unregister") {
+                assert!(!completed.declared);
+                assert_eq!(completed.next_deadline_ns, None);
+            } else {
+                assert!(completed.declared);
+                assert_eq!(completed.work_completed, 1);
+                let expected = if command == "reconcile" {
+                    exact_deadline
+                } else {
+                    completed.completed_at_ns.unwrap() + 1_000_000_000
+                };
+                assert_eq!(completed.next_deadline_ns, Some(expected));
+            }
+        }
+    }
+}
+
+#[derive(CandidType, Debug, Deserialize)]
+struct ChurnObservation {
+    wasm_pages: u64,
+    inventory_len: u64,
+    armed: bool,
+    completed: u64,
+}
+
+fn churn_observation(pic: &PocketIc, canister_id: Principal) -> ChurnObservation {
+    let bytes = pic
+        .query_call(
+            canister_id,
+            Principal::anonymous(),
+            "churn_observation",
+            Encode!().unwrap(),
+        )
+        .unwrap();
+    Decode!(&bytes, ChurnObservation).unwrap()
+}
+
+#[test]
+fn provider_replacement_churn_records_memory_beyond_live_handle_bounds() {
+    let pic = PocketIc::new();
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, INIT_CYCLES);
+    pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
+    let before = churn_observation(&pic, canister_id);
+    pic.update_call(
+        canister_id,
+        Principal::anonymous(),
+        "replace_distant_deadlines",
+        Encode!(&32_768_u32).unwrap(),
+    )
+    .unwrap();
+    let replaced = churn_observation(&pic, canister_id);
+    assert_eq!(replaced.inventory_len, 1);
+    assert!(!replaced.armed);
+    assert_eq!(replaced.completed, 0);
+    assert!(
+        replaced.wasm_pages > before.wasm_pages,
+        "many cancelled future deadlines can grow memory despite zero owned handles"
+    );
+    update_unit(&pic, canister_id, "start_immediate_churn");
+    for _ in 0..768 {
+        pic.tick();
+        if churn_observation(&pic, canister_id).completed == 64 {
+            break;
+        }
+    }
+    let immediate = churn_observation(&pic, canister_id);
+    assert_eq!(immediate.completed, 64);
+    assert_eq!(immediate.inventory_len, 1);
+    assert!(!immediate.armed);
+    assert!(immediate.wasm_pages >= replaced.wasm_pages);
+    pic.advance_time(Duration::from_secs(3_601));
+    drive_rounds(&pic, 16);
+    let drained = churn_observation(&pic, canister_id);
+    assert_eq!(
+        drained.completed, 64,
+        "cancelled deadlines cannot run consumer work"
+    );
+    assert!(!drained.armed);
+    println!(
+        "ic_timers_churn initial_pages={} replaced_pages={} immediate_pages={} drained_pages={} registrations={} owned_wakeups=0 replacements=32768 immediate_steps=64",
+        before.wasm_pages,
+        replaced.wasm_pages,
+        immediate.wasm_pages,
+        drained.wasm_pages,
+        drained.inventory_len
+    );
+}

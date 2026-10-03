@@ -26,3 +26,4 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.8.2 runtime and validation hardening](0.8.2.md)
 - [0.8.3 release workflow](0.8.3.md)
 - [0.8.4 observation and release hardening](0.8.4.md)
+- [0.9.0 ordinary arbitration and audit follow-up](0.9.0.md)

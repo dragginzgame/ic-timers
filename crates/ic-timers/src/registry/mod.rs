@@ -1262,15 +1262,23 @@ impl TimerRegistry {
                 pending_command,
                 Some(OrdinaryPending::Cancel | OrdinaryPending::Unregister)
             );
+            // Arbitrate authoritative commands before resolving a discarded
+            // callback proposal. Explicit consumer invariant failure still wins.
+            let effective_directive = match pending_command {
+                Some(OrdinaryPending::Cancel | OrdinaryPending::Unregister) => TimerDirective::Stop,
+                Some(OrdinaryPending::Reconcile(requested)) => {
+                    TimerDirective::ScheduleAt(requested.deadline_ns)
+                }
+                Some(OrdinaryPending::Schedule(_)) | None => result.directive(),
+            };
             if completion.outcome() == TimerCompletionOutcome::InvariantFailure {
                 let transition =
                     invariant_completion(entry, token.callback_generation, completion, now_ns);
                 let remove = matches!(pending_command, Some(OrdinaryPending::Unregister))
                     || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
                 (transition, remove)
-            } else if !terminal_pending
-                && matches!(entry.policy, TimerPolicy::Once)
-                && matches!(result.directive(), TimerDirective::RecurAfterCompletion)
+            } else if matches!(entry.policy, TimerPolicy::Once)
+                && matches!(effective_directive, TimerDirective::RecurAfterCompletion)
             {
                 let transition = terminal_completion(
                     entry,
@@ -1282,11 +1290,6 @@ impl TimerRegistry {
                 let remove = matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
                 (transition, remove)
             } else {
-                let effective_directive = if terminal_pending {
-                    TimerDirective::Stop
-                } else {
-                    result.directive()
-                };
                 let cadence = match entry.policy {
                     TimerPolicy::AfterCompletion { cadence } => Some(cadence),
                     TimerPolicy::Once => None,

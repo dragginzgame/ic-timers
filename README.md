@@ -87,6 +87,12 @@ replicated message; it never calls consumer work synchronously. The scheduler
 still pre-arms the cadence successor before every work attempt, and normal
 `ContinueImmediately` replaces that exact successor rather than adding one.
 
+The 64-registration and 128-owned-handle limits bound this runtime's inventory
+and live capabilities. They do not cap the provider's queue memory: the pinned
+provider keeps cancelled deadline records until those deadlines are processed.
+Frequent deadline replacement and immediate continuation can therefore grow
+memory and incur later cleanup work. See [the safety limits](SAFETY.md).
+
 Ordinary recurrence is cheaper and is the correct default when work must
 finish normally before another invocation is allowed. Use `Watchdog` only
 when committing the next wake-up before fallible synchronous work is the

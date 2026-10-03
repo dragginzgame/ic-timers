@@ -1,42 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT="$(git rev-parse --show-toplevel)"
-cd "${ROOT}"
+repository_root="$(git rev-parse --show-toplevel)"
+cd "${repository_root}"
 
-partially_staged=()
-while IFS= read -r -d '' path; do
-    if ! git diff --quiet --no-ext-diff -- "${path}"; then
-        partially_staged+=("${path}")
-    fi
-done < <(git diff --cached --name-only -z --diff-filter=ACMR)
-
-if [[ "${#partially_staged[@]}" -ne 0 ]]; then
-    echo "Pre-commit formatting requires staged files to match their working copies:" >&2
-    printf '  %s\n' "${partially_staged[@]}" >&2
-    echo "Finish or discard those files' unstaged edits, then commit again." >&2
+# Check the exact index snapshot. Neither formatting nor unrelated dirty or
+# partially staged working copies may be changed by a commit hook.
+snapshot="$(mktemp -d "${TMPDIR:-/tmp}/ic-timers-pre-commit.XXXXXX")"
+trap 'rm -rf -- "${snapshot}"' EXIT
+git checkout-index --all --prefix="${snapshot}/"
+if ! make --no-print-directory -C "${snapshot}" fmt-check >"${snapshot}/format.log" 2>&1; then
+    sed -n '1,240p' "${snapshot}/format.log" >&2
+    echo 'Staged formatting check failed. Format and stage the intended changes, then retry.' >&2
     exit 1
 fi
 
-before="$(mktemp "${TMPDIR:-/tmp}/ic-timers-pre-commit-before.XXXXXX")"
-after="$(mktemp "${TMPDIR:-/tmp}/ic-timers-pre-commit-after.XXXXXX")"
-format_log="$(mktemp "${TMPDIR:-/tmp}/ic-timers-pre-commit-format.XXXXXX")"
-trap 'rm -f -- "${before}" "${after}" "${format_log}"' EXIT
-
-git diff --binary --no-ext-diff >"${before}"
-
-if ! make fmt >"${format_log}" 2>&1; then
-    sed -n '1,240p' "${format_log}" >&2
-    echo "Pre-commit formatting failed; inspect the output above." >&2
-    exit 1
-fi
-
-git diff --binary --no-ext-diff >"${after}"
-if ! cmp -s "${before}" "${after}"; then
-    echo "Formatting changed working-tree files." >&2
-    echo "Review and stage the formatted changes, then commit again." >&2
-    git status --short >&2
-    exit 1
-fi
-
-echo "Pre-commit formatting passed."
+echo 'Staged formatting check passed.'

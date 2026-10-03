@@ -84,7 +84,8 @@ impl TimerSchedulingMode {
     }
 }
 
-/// Portable representation of the latest ordinary scheduling directive.
+/// Portable representation of the effective ordinary scheduling directive
+/// after authoritative completion commands have been applied.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum TimerDirectiveSnapshot {
     /// Stop after the completed invocation.
@@ -460,8 +461,9 @@ impl TimerCompletion {
 
 /// Ordinary callback result with one scheduling proposal.
 ///
-/// The registry validates that the proposal is legal for the configured
-/// policy.
+/// The registry validates proposals participating in scheduling against the
+/// configured policy. A winning exact reconciliation or terminal pending command
+/// discards the proposal before validation. Explicit invariant failure stops.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TimerRunResult {
     completion: TimerCompletion,

@@ -492,6 +492,156 @@ fn nested_cancel_and_ensure_use_latest_request_order() {
 }
 
 #[test]
+fn exact_ordinary_reconciliation_discards_invalid_callback_proposals() {
+    for directive in [
+        TimerDirective::RetryAfter(Duration::MAX),
+        TimerDirective::RetryAfter(Duration::from_nanos(10)),
+        TimerDirective::RecurAfterCompletion,
+    ] {
+        for once in [false, true] {
+            let mut registry = registry();
+            let timer = identity("discarded-directive");
+            let claim = if once {
+                registry
+                    .register_once(timer.clone(), DeclarationLifetime::Retained)
+                    .unwrap()
+            } else {
+                registry
+                    .register_after_completion(
+                        timer.clone(),
+                        cadence(10),
+                        DeclarationLifetime::Retained,
+                    )
+                    .unwrap()
+            };
+            let (token, _, _) = arm(registry
+                .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(1)))
+                .unwrap());
+            assert_eq!(
+                registry.begin_ordinary(&token),
+                CallbackAcceptance::Accepted
+            );
+            registry
+                .reconcile_ordinary(&claim, u64::MAX - 5, Some(TimerSchedule::At(u64::MAX)))
+                .unwrap();
+            let transition = registry
+                .complete_ordinary(
+                    &token,
+                    u64::MAX - 5,
+                    TimerRunResult::new(TimerCompletion::success(1), directive),
+                )
+                .unwrap();
+            assert_eq!(transition.failure(), None);
+            assert_eq!(arm(transition).1, u64::MAX);
+            let snapshot = registry.snapshot(&timer).unwrap();
+            assert_eq!(
+                snapshot.latest_directive(),
+                Some(TimerDirectiveSnapshot::ScheduleAt {
+                    deadline_ns: u64::MAX
+                })
+            );
+            assert_eq!(snapshot.observability().counters().succeeded(), 1);
+            assert_eq!(snapshot.observability().counters().invariant_failure(), 0);
+        }
+    }
+}
+
+#[test]
+fn relative_exact_reconciliation_preserves_request_observations_after_suspension() {
+    let mut registry = registry();
+    let timer = identity("relative-exact-completion");
+    let claim = registry
+        .register_after_completion(timer.clone(), cadence(5), DeclarationLifetime::Retained)
+        .unwrap();
+    let (token, _, _) = arm(registry
+        .reconcile_ordinary(&claim, 10, Some(TimerSchedule::At(10)))
+        .unwrap());
+    assert_eq!(
+        registry.begin_ordinary(&token),
+        CallbackAcceptance::Accepted
+    );
+    registry
+        .reconcile_ordinary(
+            &claim,
+            10,
+            Some(TimerSchedule::After(Duration::from_nanos(3))),
+        )
+        .unwrap();
+    let transition = registry
+        .complete_ordinary(
+            &token,
+            20,
+            TimerRunResult::new(
+                TimerCompletion::success(1),
+                TimerDirective::RetryAfter(Duration::MAX),
+            ),
+        )
+        .unwrap();
+    assert_eq!(transition.failure(), None);
+    assert!(matches!(
+        transition.effect(),
+        RegistryEffect::ArmWakeup {
+            deadline_ns: 13,
+            delay_ns: 0,
+            ..
+        }
+    ));
+    confirm(&mut registry, &transition);
+    let snapshot = registry.snapshot(&timer).unwrap();
+    assert_eq!(
+        snapshot.latest_directive(),
+        Some(TimerDirectiveSnapshot::ScheduleAt { deadline_ns: 13 })
+    );
+    assert_eq!(snapshot.scheduling_mode(), TimerSchedulingMode::Once);
+    assert_eq!(snapshot.latest_requested_delay_ns(), Some(3));
+    assert_eq!(snapshot.latest_armed_delay_ns(), Some(0));
+}
+
+#[test]
+fn explicit_invariant_failure_still_overrides_exact_ordinary_reconciliation() {
+    for lifetime in [
+        DeclarationLifetime::Retained,
+        DeclarationLifetime::RemoveWhenStopped,
+    ] {
+        let mut registry = registry();
+        let timer = identity("invariant-overrides-exact");
+        let claim = registry.register_once(timer.clone(), lifetime).unwrap();
+        let (token, _, _) = arm(registry
+            .ensure_once(&claim, 0, TimerSchedule::At(1))
+            .unwrap());
+        assert_eq!(
+            registry.begin_ordinary(&token),
+            CallbackAcceptance::Accepted
+        );
+        registry
+            .reconcile_ordinary(&claim, 1, Some(TimerSchedule::At(50)))
+            .unwrap();
+        let transition = registry
+            .complete_ordinary(
+                &token,
+                2,
+                TimerRunResult::new(
+                    TimerCompletion::invariant_failure(1),
+                    TimerDirective::ContinueImmediately,
+                ),
+            )
+            .unwrap();
+        assert_eq!(transition.effect(), &RegistryEffect::None);
+        let snapshot = registry.snapshot(&timer);
+        if lifetime == DeclarationLifetime::Retained {
+            assert_eq!(
+                snapshot.unwrap().state(),
+                TimerRuntimeStateSnapshot::Inactive {
+                    reason: InactiveReason::InvariantFailure
+                }
+            );
+        } else {
+            assert!(snapshot.is_none());
+        }
+    }
+}
+
+#[test]
 fn ordinary_reconciliation_is_authoritative_and_registry_pending_is_ordered() {
     let mut registry = registry();
     let timer = identity("reconcile-ordinary");

@@ -10,6 +10,9 @@ use std::cell::{Cell, RefCell};
 
 const CADENCE_NS: u64 = 1_000_000_000;
 
+mod churn;
+mod ordinary;
+
 thread_local! {
     static REGISTRATION: RefCell<Option<WatchdogRegistration>> = const { RefCell::new(None) };
     static SECONDARY_REGISTRATION: RefCell<Option<WatchdogRegistration>> = const { RefCell::new(None) };

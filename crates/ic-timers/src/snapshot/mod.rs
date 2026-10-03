@@ -191,7 +191,11 @@ impl TimerSnapshot {
         self.scheduling_mode
     }
 
-    /// Return the latest completed ordinary directive.
+    /// Return the latest effective ordinary directive at completion.
+    ///
+    /// A winning exact reconciliation projects `ScheduleAt`, even if the
+    /// callback returned a different or invalid proposal. Cancellation and
+    /// explicit invariant failure project `Stop`.
     #[must_use]
     pub const fn latest_directive(&self) -> Option<TimerDirectiveSnapshot> {
         self.latest_directive

@@ -157,6 +157,9 @@ impl OnceContext {
 
     /// Reconcile the executing declaration to one exact schedule.
     ///
+    /// A winning exact schedule replaces the returned scheduling proposal
+    /// before validation. Explicit consumer invariant failure still stops.
+    ///
     /// `None` requests inactive state at normal completion. Retained callback
     /// authority remains; a remove-on-stop declaration is removed when that
     /// cancellation wins arbitration. A stored context cannot mutate the
@@ -205,6 +208,9 @@ impl AfterCompletionContext {
 
     /// Reconcile the executing declaration to one exact schedule without
     /// changing its configured after-completion cadence.
+    ///
+    /// A winning exact schedule replaces the returned scheduling proposal
+    /// before validation. Explicit consumer invariant failure still stops.
     ///
     /// `None` requests inactive state at normal completion. A retained
     /// declaration keeps its callback authority; a remove-on-stop declaration
@@ -314,6 +320,9 @@ impl OnceRegistration {
 
     /// Reconcile to one exact desired schedule, replacing a later or earlier
     /// live deadline as necessary.
+    ///
+    /// During running work, a winning exact schedule replaces the callback
+    /// scheduling proposal before validation; explicit invariant failure stops.
     ///
     /// `None` leaves a retained declaration inactive after any running work
     /// completes. A remove-on-stop declaration is removed and this claim
@@ -491,6 +500,9 @@ impl AfterCompletionRegistration {
     /// after-completion cadence. `None` makes a retained declaration inactive
     /// after any running work completes; it removes a remove-on-stop
     /// declaration and expires this claim when the transition finalizes.
+    ///
+    /// During running work, a winning exact schedule replaces the callback
+    /// scheduling proposal before validation; explicit invariant failure stops.
     pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
         reconcile_ordinary_claim(&self.claim, None, schedule)
     }

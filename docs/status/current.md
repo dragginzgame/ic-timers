@@ -4,264 +4,107 @@ Last updated: 2026-10-03
 
 ## Purpose
 
-This is the compact handoff for a new session. `ic-timers` is a higher-level
-wrapper around `ic-cdk-timers`: the CDK crate remains the low-level provider,
-while this crate owns bounded identity, policy, arbitration, observation, and
-lifecycle reconstruction.
-
-Historical implementation and release detail belongs in `CHANGELOG.md`,
-`docs/changelog/`, and `docs/audits/`, not in this handoff.
+This is the compact handoff for a new session. `ic-timers` wraps the CDK timer
+provider with one bounded registry, policy arbitration, observations and explicit
+lifecycle reconstruction. Historical implementation and validation detail belongs
+in [release notes](../changelog/README.md), [audits](../audits/code-hygiene.md) and
+the [safety boundary](../../SAFETY.md).
 
 ## Release state
 
 - Workspace package version: `0.8.4`.
 - Latest release line: `0.8.4`.
-- The maintainer reports 0.8.3 live. Its completed local release commit is
-  `a0a19c7`, with an annotated `v0.8.3` tag, dated changelog and matching root
-  and testing lockfiles. Read-only inspection on 2026-10-03 corroborates registry
-  publication through cached package VCS metadata and IcyDB's registry lockfile;
-  see the [0.8.3 note](../changelog/0.8.3.md).
-- Snapshot registration continuity and exact-deadline Watchdog scheduling are
-  implemented, with validation recorded in the
-  [0.8.0 release note](../changelog/0.8.0.md). The version bump and local
-  `v0.8.0` release tag are complete. Publication is corroborated by the cached
-  registry package, its VCS commit and Toko Miner's registry lockfile; see the
-  [dated downstream record](../adoption/toko-miner.md).
-- The 0.8.1 tooling and lint-expectation changes have a completed version bump,
-  dated changelog and local `v0.8.1` release tag. Cached registry VCS metadata
-  identifies release commit `c27f54ae64d1c667e9563925a9d7e4791d9359e3`, and
-  Toko Miner's inspected lockfile selects one registry timer 0.8.1. Publication
-  and scoped downstream adoption are recorded in the
-  [dated downstream record](../adoption/toko-miner.md).
-- Direct provider dependency: exact `ic-cdk-timers` 1.0.0.
-- Released in 0.7.1: exact `ic0` 1.2.0 in both lockfiles; existing
-  platform bindings are unchanged upstream. See the
-  [0.7.1 release note](../changelog/0.7.1.md).
-- The nested test canisters use exact `ic-cdk` 0.20.3 (updated in 0.7.1);
-  the published timer crate does not depend on `ic-cdk` itself.
-- Minimum supported Rust version: 1.88.0.
-- Development and hosted CI toolchain: Rust 1.99.0.
-- Hosted PR/main checks lint all supported nested probe configurations on
-  both Rust 1.99.0 and the Rust 1.88.0 MSRV.
-- Commits, tags, pushes and publication are user-owned. Automated contributors
-  prepare only the next changelog section and release-line note. Version bumps,
-  staging and all `make release-*` commands are also user-owned. Test, build
-  and lint gates run only when explicitly requested.
+- The maintainer reports 0.8.4 live. Its release commit is
+  `058f968d012168bdae69d23f9ddb5cc46d9e34dd`, with annotated `v0.8.4`, dated
+  changelog and matching root/testing lockfiles. The preceding feedback review
+  corroborated registry publication and successful hosted CI/MSRV/tag checks;
+  see the [0.8.4 note](../changelog/0.8.4.md).
+- The in-depth audit follow-up is prepared for 0.9.0. Exact ordinary completion
+  arbitration and its directive observation change public semantics, requiring
+  the next minor line. No legacy switch, alias or alternate contract remains.
+  Cargo and both lockfiles have not been bumped. See the
+  [undated 0.9.0 note](../changelog/0.9.0.md).
+- Version mutation, staging, commits, tags, pushes, publication, all release
+  commands, tests and build/lint gates are user-owned. Automated contributors
+  implement requested work and prepare changelogs/notes without executing those
+  gates unless explicitly requested.
+- Direct provider: exact `ic-cdk-timers` 1.0.0; exact `ic0` 1.2.0. Probe canisters
+  use exact `ic-cdk` 0.20.3. MSRV is Rust 1.88.0; development/hosted CI uses 1.99.0.
 
 ## Canonical runtime
 
-- One volatile canister-local runtime owns a fixed-capacity registry of 64
-  deterministic structured identities.
-- The crate supports asynchronous `Once`, asynchronous `AfterCompletion`, and
-  synchronous pre-armed `Watchdog` policies.
-- The registry owns claim generations, callback generations, policy state,
-  pending-command arbitration, callbacks, observations, and every provider
-  handle. It emits effects but makes no provider calls.
-- The private `platform` module is the only direct `ic-cdk-timers` and IC
-  system-fact boundary. Repository checks forbid provider re-export or a
-  second direct provider path.
-- The runtime binds registry effects, executes callbacks without retaining a
-  registry borrow, and owns the two-message Watchdog protocol. The scheduler
-  commits the cadence successor before separately queued consumer work runs.
-- Synchronous, idempotent lifecycle helpers reconstruct retained declarations
-  from consumer-owned durable authority. The library persists no timer policy,
-  handle, generation, snapshot, or consumer recovery state.
-- Every registration exposes claim-scoped `has_armed_wakeup()` observation.
-  It reports canonical provider-handle ownership, not durable demand or a
-  delivery guarantee.
-- Snapshots are inert provider-neutral values. They contain closed
-  policy-specific state, outcomes, counters, instruction aggregates, bounded
-  memory-page observations, and an explicit runtime epoch.
+- One volatile canister-local runtime owns at most 64 structured identities,
+  declaration claims, callback generations, policy states, pending commands,
+  callbacks, observations and provider handles.
+- Once and AfterCompletion accept asynchronous work. Watchdog accepts one
+  synchronous bounded unit and uses two messages: the scheduler commits the
+  cadence successor before separately queued consumer work.
+- Only the private platform module calls the provider and IC system facts.
+  Snapshots and `has_armed_wakeup()` are inert observations, never scheduling
+  authority or delivery guarantees. Callback contexts expire with their exact
+  work token; retained registration claims own longer-lived control.
+- Consumer-owned durable authority reconstructs retained declarations through
+  synchronous lifecycle helpers before downstream hooks. Timer authority is
+  volatile and never restored from persisted snapshots or handles.
+- Ordinary exact reconciliation now replaces a discarded callback scheduling
+  proposal before validation. Explicit invariant failure remains terminal;
+  unregister is sticky. The latest directive projects the effective exact
+  ScheduleAt value when reconciliation wins. Ensure still selects earliest
+  demand. New precedence assertions await maintainer execution.
+- Registry/handle bounds do not cap the pinned provider's heap. Cancelled future
+  deadline records remain queued until processing. Frequent replacement and
+  immediate continuation can grow memory and cleanup cost; there is no provider
+  compaction authority here. Prepared churn fixtures measure page extents without
+  promising a global memory or cost bound.
 
-## 0.6 hard cut
+## Prepared audit follow-up
 
-- `timer_inventory()` returns one `TimerInventorySnapshot` with the runtime
-  epoch and complete deterministic timer vector. An initialized empty registry
-  now exposes its counter-reset boundary atomically.
-- The superseded bare-vector `timer_snapshots()` function is removed. No alias,
-  deprecated forwarder, or second inventory shape is retained.
-- `timer_snapshot()` remains the focused lookup for one known identity.
-- Public measurement documentation defines scheduler/work values as the
-  accepted `ic-timers` execution interval, not application-only work or the
-  complete IC message. Provider entry/exit work, page reads, and the bounded
-  summary write remain outside the instruction delta. A terminal
-  `RemoveWhenStopped` declaration may disappear before its final measurement
-  is retained because no timer remains to expose it.
+- Native suspended futures use wake notifications and no longer block unrelated
+  due timers. New fixtures cover suspension, outside control, context expiry and
+  completion-time recurrence, plus exact-command precedence over invalid proposals.
+- Real-canister fixtures hold an ordinary callback across a self-call await while
+  ingress and another Watchdog proceed. Provider-churn fixtures exercise distant
+  replacement, bounded immediate work, cancellation and eventual deadline cleanup.
+- Release validators count markers independently of their value and reject
+  conflicting workspace/latest-release markers, duplicated headings and statuses.
+  Free-form prose remains advisory, never a post-mutation blocker.
+- The commit hook checks an index snapshot without rewriting working copies or
+  staging files. Partial staging is allowed when the staged snapshot is formatted.
+- Release commit/tag retries verify the matching clean release commit and exact
+  annotated tag. Arbitrary commits and conflicting tags are rejected. Combined
+  release targets still always bump; interrupted final phases use their documented
+  phase targets. Full deployment gates and pinned PocketIC verification remain.
 
-## 0.7.0 immediate Watchdog continuation
+## Evidence
 
-- `WatchdogDecision::ContinueImmediately` replaces the exact cadence successor
-  committed before work with one scheduler deadline at current IC time. It
-  remains a later replicated scheduler message and never recurses into work.
-- `WatchdogRegistration` and `WatchdogContext` expose
-  `ensure_scheduled_immediately()`. Inactive immediate demand arms one
-  zero-delay scheduler; a later cadence deadline is replaced; equivalent,
-  earlier, repeated, and dispatched demand coalesces; a running request applies
-  to that exact attempt's successor.
-- `reconcile_watchdog` hard-cuts its desired state to the policy-specific
-  `WatchdogReconcileState`, whose `ScheduledImmediately` variant covers the
-  first actionable wake-up. No compatibility alias or dual reconciliation path
-  remains. This public pre-1.0 hard cut was released in `0.7.0`.
-- Continue stays cadence-based. Invariant failure, stop, cancellation, and
-  unregistration remain terminal; unregistration is sticky, later cancellation
-  wins, later ensure can re-enable cancellation as before, and immediate demand
-  cannot be downgraded by cadence ensure.
-- The runtime state variants, snapshot fields, persistence count, provider
-  boundary, callback roles, registry/handle bounds, and two-message protocol
-  are unchanged. Immediate state projects through existing continuation mode,
-  zero delay, deadline, request, arm, and coalescing observations.
-
-## 0.5 hard cut
-
-- The shared public `TimerContext` is removed. `OnceContext`,
-  `AfterCompletionContext`, and `WatchdogContext` expose only policy-valid
-  nested control operations while sharing one private exact-token mechanism.
-- Public `TimerError::WrongPolicy` is removed; an invalid cross-policy context
-  operation is no longer expressible. Defensive internal mismatches fail as
-  ownership invariants.
-- Unused request-sequence counters and
-  `TimerControlFailure::RequestSequenceExhausted` are removed. Callback
-  generations and the registry's sole pending command remain the actual stale
-  delivery and request-order authorities.
-- Normally completed scheduler and work callbacks sample Wasm and stable
-  memory extents in 64 KiB pages at start and end. Each role retains only a
-  saturating sample count, the latest extent pair, and maximum observed growth.
-- Absolute memory extents are never totaled. Trapped or instruction-exhausted
-  work commits no sample. Page extent is a runtime-epoch-local high-water
-  observation, not exact live bytes or sub-page allocator liveness.
-- Async ordinary measurements can include canister activity interleaved while
-  the callback future awaits; they are not exclusive allocation attribution.
-- Paired instruction/page measurements follow the callback token's canonical
-  role through one registry path. Contradictory policy/role input fails as an
-  ownership invariant rather than silently losing accounting.
-- No compatibility alias, deprecated forwarder, legacy feature, alternate
-  registry, provider fallback, or second pending-command machine is retained.
-
-## Current evidence
-
-- The follow-up to the live 0.8.3 release fixes rejected Watchdog request
-  observations, binary verification order, annotated-tag validation, release
-  preflight and bump rollback. Regression fixtures are written but unexecuted;
-  tests and deployment validation remain user-owned. Track pending evidence in
-  the [0.8.4 note](../changelog/0.8.4.md).
-- The feedback follow-up refreshes publication and downstream dependency
-  provenance and updates both Rust-toolchain action pins to the revision in
-  Dependabot PR #5. No fresh CI or downstream scenario run is claimed. The
-  original issue #6 lint changes are released in 0.8.1; issue #6 is closed with
-  the pending documentation delivery recorded in its resolution comment.
-  Issue #7's observation repair remains unvalidated and unreleased, with its
-  implementation handoff posted and the issue left open for validation/release.
-- The 0.8.4 preparation also removes redundant release target-marker and
-  status-word requirements after the maintainer's preflight was rejected.
-  Target selection belongs to the requested bump and changelog; structural
-  metadata checks remain. New regression fixtures are unexecuted.
-- The 2026-10-03 follow-up now includes transient terminal-failure cleanup,
-  shared control detachment and Watchdog arming, and stronger release/provider
-  validation. `make ci` passes with 108 native tests, as do MSRV checks,
-  nested-probe linting and strict production Wasm Clippy on both toolchains.
-  The nine audited PocketIC Watchdog subjects and four policy cohorts pass
-  after the runtime changes. Track the native boundary and compiler fixtures in the
-  [0.8.2 note](../changelog/0.8.2.md). No performance improvement is claimed.
-- The recorded 0.8.1 Rust 1.99.0 update passes `make ci`, including all 105 native
-  tests, warning-denied Clippy/rustdoc, Wasm checking and offline package
-  verification. Rust 1.88.0 workspace checks and the changed inventory test
-  pass. All supported nested-probe lint configurations pass on both 1.99.0
-  and 1.88.0; the runtime probe also passes Wasm checking on 1.99.0. Workflow
-  syntax passes `actionlint`. PocketIC suites were not rerun for this update.
-- IC-TIMERS-001/002 fixes pass the same CI, MSRV and nested-probe gates, plus
-  strict production Wasm Clippy on both Rust 1.99.0 and 1.88.0. The nine active
-  lint expectations are fulfilled; the obsolete scheduler suppression is
-  removed. Supplemental root MSRV test lint complexity remains advisory as
-  recorded in the [0.8.1 note](../changelog/0.8.1.md).
-- Recorded 0.8.0 validation passes 105 native tests and nine audited
-  PocketIC Watchdog subjects, plus warning-denied lint/docs, MSRV, Wasm, nested-probe lint,
-  provider-boundary and package checks. Registration continuity, exact-deadline
-  sleeping/replacement, reset/regrowth and interrupted deadline-proposal
-  recovery are covered. Later owner-supplied downstream adoption evidence is
-  scoped separately below; no cost saving is claimed.
-- The remaining entries below retain earlier release evidence and performance
-  observations; the policy size/performance cohorts were not rerun for 0.8.0.
-- Package validation passes with 94 native tests, warning-denied Clippy and
-  rustdoc, Wasm compilation, offline package verification, formatting,
-  provider-boundary checks, Rust 1.88 workspace checking, and every supported
-  nested-probe lint configuration.
-- Pinned PocketIC 15 passes eight Watchdog subjects. New zero-delay initial and
-  successful immediate-continuation subjects execute without cadence-time
-  advancement; the existing explicit trap and actual 40-billion-instruction
-  exhaustion recovery, lifecycle, isolation, capacity, and cancellation
-  subjects remain green.
-- One same-callback PocketIC observation reports an immediate-replacement work
-  interval of 27,811 instructions versus 19,451 for cadence retention, with
-  scheduler/work cycle deltas of 30,742,889 and 30,732,414. These are accepted
-  runtime intervals and pair-level cycle deltas, not complete-message totals.
-- The 0.7.0 optimized size cohorts report 262,791 bytes for Watchdog versus
-  261,914 for after-completion: +877 bytes (0.335%). Registry capacity and the
-  at-most-two Watchdog handle bound do not change.
-- Rust 1.88 passes the complete workspace and every supported nested probe
-  configuration.
-- The root dependency graph contains no duplicate packages.
-- Focused PocketIC 15.0.0 tests execute the real Wasm memory-size operations.
-  An explicit trap and actual 40-billion-instruction exhaustion each leave a
-  coherent scheduler sample, no work sample, a committed successor, and later
-  normal work with one coherent sample.
-- A focused optimized Watchdog cohort reports 200 call-context instructions
-  for both an empty bracket and the four start/end Wasm/stable page reads: an
-  observed sampling delta of zero, kept outside callback aggregates. This is a
-  PocketIC regression subject, not a future metering guarantee.
-- A bounded minimal-versus-representative Watchdog calibration records the
-  available scheduler/work instruction intervals and cycle deltas. PocketIC
-  15 does not expose a per-message update instruction total through its public
-  test API, so the complete-message total and unaccounted difference remain
-  explicitly unavailable rather than being inferred from cycles.
-- The 0.6 inventory subject reruns the complete PocketIC watchdog matrix and
-  all policy cohorts successfully. The inventory hard cut does not change
-  provider binding or the two-message protocol.
-- Release truth, the root and testing lockfiles, and each dedicated release
-  note are mechanically checked for agreement.
-- Explicit maintainer-owned bumps may release a repository-only patch after a
-  clear advisory. Empty subjects remain rejected, and the complete CI, MSRV,
-  nested-probe, and PocketIC release gates still run.
+The 0.8.4 note records published baseline evidence. Its hosted checks and earlier
+native/PocketIC results do not qualify these subsequent changes. The new native,
+PocketIC and shell fixtures are written and wired into existing gates but have not
+been run by the automated contributor. No new recovery, performance, allocator or
+memory-growth result is claimed. The native mock does not simulate IC rollback or
+provider heap allocation; real-canister subjects remain necessary for those facts.
 
 ## Downstream state
 
-- Read-only inspection on 2026-10-03 finds Toko Miner at
-  `3354dfc6b9fe791884ec69e8dd344de313b36940`, selecting registry `ic-timers`
-  0.8.1, Canic 0.110.51 and IcyDB 0.264.4. Its inspected lockfile contains one
-  timer package. This is worktree dependency evidence, not a deployed-artifact
-  identity or a fresh qualification of this graph.
-- The downstream owner's 2026-10-02 feedback records completed bounded managed
-  qualification of Canic 0.110.50 / IcyDB 0.264.3 / timers 0.8.1, followed by
-  seven bounded scenarios on the 0.110.51 / 0.264.3 graph. The latter run retains
-  an unrelated browser failure, so full application CI is not a pass. Neither
-  receipt qualifies the later IcyDB 0.264.4 selection or current deployment.
-- The retained 2026-09-20 receipt for Canic 0.110.33 and IcyDB 0.261.0 records
-  one 0.8.0 timer package in every role, shared gameplay timer inventory,
-  idle/wake behavior and scoped managed same-release state/timer recovery.
-  The old lifecycle-composition blocker is resolved for that recorded subject.
-  Concurrent gameplay changes were excluded; no current staging deployment,
-  general combined qualification or cost comparison follows from the receipt.
-- The [dated downstream record](../adoption/toko-miner.md) preserves source
-  identities, publication evidence and scope. Earlier exact-0.5.0 adoption
-  records for [IcyDB](../adoption/icydb.md) and [Canic](../adoption/canic.md)
-  remain historical. This repository did not rerun or modify downstream suites.
-- IcyDB owns any allocator-derived sub-page live-byte bound and its maximum
-  64-index fanout probe; page extent alone cannot supply either result.
+The preceding 2026-10-03 inspection recorded Toko Miner at `3354dfc6`, selecting
+registry timers 0.8.1, Canic 0.110.51 and IcyDB 0.264.4 with one timer package.
+Canic's published exact 0.8.1 timer pin remained an adoption blocker under issue
+#33. Later inspected Canic and IcyDB worktrees selected newer timer lines; that
+does not establish their publication or a deployed Toko artifact. The dated
+[Toko record](../adoption/toko-miner.md) separates source inspection from earlier
+managed qualification. [Canic](../adoption/canic.md) and [IcyDB](../adoption/icydb.md)
+adoption records remain scoped evidence. No sibling repository was edited.
+
+Application-owned work remains auxiliary checkpoint deadlines, registration
+identity projection and qualification against actual artifacts. Registration
+continuity alone proves neither balance attribution nor complete-message costs;
+Wasm/stable page extents do not prove allocator live-byte bounds.
 
 ## Next action
 
-Version 0.8.3 is complete and publication is corroborated. The seven audit
-follow-ups and feedback maintenance are prepared for 0.8.4 in its undated
-changelog section and release note; `Unreleased` is empty. Cargo and both
-lockfiles remain at 0.8.3. Deployment validation of the new native and shell
-fixtures belongs to the user. The user stages and commits the prepared work,
-then runs `make release-patch`, which always performs its matching bump after
-cheap preflight and the full deployment gate. Version mutation, staging,
-commits, tags, pushes and publication remain user-owned. Issue #7 remains open
-until the observation repair has validation and a released version recorded.
-
-Remaining application work is Toko Miner's auxiliary checkpoint deadline
-registration and diagnostic registration-sequence projection. The published
-exact Watchdog scheduling and `TimerSnapshot::registration_id()` APIs already
-support those changes; application owners must qualify them against their
-actual artifacts. Current deployment, complete transfer evidence and live cost
-comparisons remain downstream work. No sibling repository was edited.
+Review the prepared 0.9.0 implementation and unexecuted fixtures. The maintainer
+stages and commits the work, then runs `make release-minor` to execute the full
+deployment gate and bump 0.8.4 to 0.9.0. The helper dates the changelog and updates
+both lockfiles. This semantic hard cut cannot be released as a patch. If release
+execution stops after the bump, use the phase recovery in
+[releasing](../releasing.md) rather than requesting another bump.

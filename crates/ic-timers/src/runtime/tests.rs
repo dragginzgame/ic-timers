@@ -12,7 +12,184 @@ use std::{
     cell::{Cell, RefCell},
     panic::{AssertUnwindSafe, catch_unwind},
     rc::Rc,
+    task::{Poll, Waker},
 };
+
+#[derive(Clone, Default)]
+struct SuspendedWork {
+    ready: Rc<Cell<bool>>,
+    waker: Rc<RefCell<Option<Waker>>>,
+    polls: Rc<Cell<u64>>,
+}
+
+impl SuspendedWork {
+    async fn wait(&self) {
+        std::future::poll_fn(|context| {
+            self.polls.set(self.polls.get() + 1);
+            if self.ready.get() {
+                Poll::Ready(())
+            } else {
+                *self.waker.borrow_mut() = Some(context.waker().clone());
+                Poll::Pending
+            }
+        })
+        .await;
+    }
+
+    fn resume(&self) {
+        self.ready.set(true);
+        self.waker
+            .borrow_mut()
+            .take()
+            .expect("work suspended")
+            .wake();
+    }
+}
+
+#[test]
+fn suspended_once_work_allows_other_timers_and_arbitrates_external_commands() {
+    for command in ["cancel", "reconcile", "ensure", "unregister"] {
+        for lifetime in [
+            DeclarationLifetime::Retained,
+            DeclarationLifetime::RemoveWhenStopped,
+        ] {
+            setup();
+            let timer = identity("suspended-once");
+            let gate = SuspendedWork::default();
+            let callback_gate = gate.clone();
+            let context_slot = Rc::new(RefCell::new(None));
+            let callback_slot = Rc::clone(&context_slot);
+            let registration = register_once(timer.clone(), lifetime, move |context| {
+                let gate = callback_gate.clone();
+                *callback_slot.borrow_mut() = Some(context);
+                async move {
+                    gate.wait().await;
+                    TimerRunResult::new(TimerCompletion::success(1), TimerDirective::ScheduleAt(80))
+                }
+            })
+            .unwrap();
+            registration
+                .ensure_scheduled(TimerSchedule::At(15))
+                .unwrap();
+            let unrelated_calls = Rc::new(Cell::new(0));
+            let callback_calls = Rc::clone(&unrelated_calls);
+            let unrelated = register_watchdog(
+                identity("unrelated-watchdog"),
+                TimerCadence::from_nanos(5).unwrap(),
+                DeclarationLifetime::Retained,
+                move |_| {
+                    callback_calls.set(callback_calls.get() + 1);
+                    WatchdogRunResult::new(TimerCompletion::success(1), WatchdogDecision::Stop)
+                },
+            )
+            .unwrap();
+            unrelated.ensure_scheduled().unwrap();
+            set_time(15);
+            assert!(run_next_due()); // Ordinary work suspends without an armed handle.
+            assert!(!registration.has_armed_wakeup().unwrap());
+            assert_eq!(timer_count(), 1);
+            assert!(run_next_due()); // Unrelated scheduler and work must still run.
+            assert!(run_next_due());
+            assert_eq!(unrelated_calls.get(), 1);
+            assert!(!run_next_due());
+            assert_eq!(
+                gate.polls.get(),
+                1,
+                "sleeping work must not be polled again"
+            );
+            match command {
+                "cancel" => registration.cancel().unwrap(),
+                "reconcile" => {
+                    registration.cancel().unwrap();
+                    registration
+                        .reconcile_schedule(Some(TimerSchedule::At(50)))
+                        .unwrap();
+                }
+                "ensure" => registration
+                    .ensure_scheduled(TimerSchedule::At(40))
+                    .unwrap(),
+                "unregister" => registration.unregister().unwrap(),
+                _ => unreachable!("fixed command matrix"),
+            }
+            set_time(30);
+            gate.resume();
+            assert!(run_next_due());
+            let observed = timer_snapshot(&timer).unwrap();
+            match command {
+                "reconcile" | "ensure" => {
+                    let snapshot = observed.unwrap();
+                    assert_eq!(
+                        snapshot.next_deadline_ns(),
+                        Some(if command == "ensure" { 40 } else { 50 })
+                    );
+                    assert_eq!(snapshot.observability().counters().work_completed(), 1);
+                    assert_eq!(timer_count(), 1);
+                }
+                "cancel" if lifetime == DeclarationLifetime::Retained => {
+                    assert_eq!(
+                        observed.unwrap().state(),
+                        TimerRuntimeStateSnapshot::Inactive {
+                            reason: InactiveReason::Cancelled
+                        }
+                    );
+                    assert_eq!(timer_count(), 0);
+                }
+                _ => {
+                    assert!(observed.is_none());
+                    assert_eq!(timer_count(), 0);
+                }
+            }
+            assert!(matches!(
+                context_slot.borrow().as_ref().unwrap().cancel(),
+                Err(TimerError::RegistrationExpired)
+            ));
+        }
+    }
+}
+
+#[test]
+fn suspended_after_completion_uses_completion_time_and_exact_reconciliation() {
+    for reconcile in [false, true] {
+        setup();
+        let timer = identity("suspended-after-completion");
+        let gate = SuspendedWork::default();
+        let callback_gate = gate.clone();
+        let registration = register_after_completion(
+            timer.clone(),
+            TimerCadence::from_nanos(5).unwrap(),
+            DeclarationLifetime::Retained,
+            move |_| {
+                let gate = callback_gate.clone();
+                async move {
+                    gate.wait().await;
+                    TimerRunResult::new(
+                        TimerCompletion::success(1),
+                        TimerDirective::RecurAfterCompletion,
+                    )
+                }
+            },
+        )
+        .unwrap();
+        registration.ensure_scheduled().unwrap();
+        set_time(15);
+        assert!(run_next_due());
+        assert!(!run_next_due());
+        assert_eq!(timer_count(), 0);
+        if reconcile {
+            registration
+                .reconcile_schedule(Some(TimerSchedule::At(50)))
+                .unwrap();
+        }
+        set_time(30);
+        gate.resume();
+        assert!(run_next_due());
+        assert_eq!(
+            timer_snapshot(&timer).unwrap().unwrap().next_deadline_ns(),
+            Some(if reconcile { 50 } else { 35 })
+        );
+        assert_eq!(timer_count(), 1);
+    }
+}
 
 fn identity(name: &str) -> TimerIdentity {
     TimerIdentity::try_new("test", "runtime", name).expect("fixture identity should be valid")

@@ -107,7 +107,11 @@ mod fake {
         cell::{Cell, RefCell},
         collections::BTreeMap,
         pin::Pin,
-        task::{Context, Poll, Waker},
+        sync::{
+            Arc,
+            atomic::{AtomicBool, Ordering},
+        },
+        task::{Context, Poll, Wake, Waker},
     };
 
     type Task = Pin<Box<dyn Future<Output = ()>>>;
@@ -115,6 +119,20 @@ mod fake {
     struct ScheduledTask {
         deadline_ns: u64,
         task: Task,
+        started: bool,
+        ready: Arc<TaskReady>,
+    }
+
+    struct TaskReady(AtomicBool);
+
+    impl Wake for TaskReady {
+        fn wake(self: Arc<Self>) {
+            self.wake_by_ref();
+        }
+
+        fn wake_by_ref(self: &Arc<Self>) {
+            self.0.store(true, Ordering::Relaxed);
+        }
     }
 
     #[must_use = "bind or clear the platform timer handle"]
@@ -151,6 +169,8 @@ mod fake {
                 ScheduledTask {
                     deadline_ns,
                     task: Box::pin(task),
+                    started: false,
+                    ready: Arc::new(TaskReady(AtomicBool::new(false))),
                 },
             );
         });
@@ -217,7 +237,7 @@ mod fake {
     }
 
     pub(crate) fn timer_count() -> usize {
-        TASKS.with(|tasks| tasks.borrow().len())
+        TASKS.with(|tasks| tasks.borrow().values().filter(|task| !task.started).count())
     }
 
     pub(crate) fn run_next_due() -> bool {
@@ -231,7 +251,10 @@ mod fake {
             return false;
         };
 
-        let mut context = Context::from_waker(Waker::noop());
+        scheduled.started = true;
+        scheduled.ready.0.store(false, Ordering::Relaxed);
+        let waker = Waker::from(Arc::clone(&scheduled.ready));
+        let mut context = Context::from_waker(&waker);
         if matches!(scheduled.task.as_mut().poll(&mut context), Poll::Pending) {
             TASKS.with(|tasks| {
                 tasks.borrow_mut().insert(next_handle, scheduled);
@@ -252,7 +275,13 @@ mod fake {
             tasks
                 .borrow()
                 .iter()
-                .filter(|(_, scheduled)| scheduled.deadline_ns <= now_ns)
+                .filter(|(_, scheduled)| {
+                    if scheduled.started {
+                        scheduled.ready.0.load(Ordering::Relaxed)
+                    } else {
+                        scheduled.deadline_ns <= now_ns
+                    }
+                })
                 .min_by_key(|(handle, scheduled)| (scheduled.deadline_ns, **handle))
                 .map(|(handle, _)| *handle)
         })

@@ -133,7 +133,9 @@ release-check:
 	bash scripts/release/test-release-gate.sh
 	bash scripts/release/test-version-preparation.sh
 	bash scripts/release/test-tag-at-head.sh
+	bash scripts/release/test-commit-release.sh
 	bash scripts/ci/test-pocketic-verification.sh
+	bash scripts/ci/test-git-hook.sh
 	bash scripts/ci/test-repository-checks.sh
 	bash scripts/release/check-release-truth.sh
 

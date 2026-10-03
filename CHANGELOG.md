@@ -4,6 +4,41 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.9.0]
+
+### Changed
+
+- Hard-cut ordinary completion arbitration: a pending exact reconciliation
+  replaces the callback scheduling proposal before policy and deadline validation.
+  Discarded proposals cannot terminate a valid exact successor. Explicit consumer
+  invariant failure remains terminal. `latest_directive()` projects the effective
+  exact `ScheduleAt` directive when reconciliation wins.
+- Check formatting against a temporary snapshot of staged files during commit.
+  The hook no longer formats working copies or rejects partial staging itself.
+
+### Fixed
+
+- Reject conflicting or duplicated workspace/latest-release markers, release-note
+  headings/statuses, and current-release changelog headings, even when a correct
+  marker also exists. Free-form release prose remains advisory.
+- Resume an interrupted release commit/tag phase from the matching clean release
+  commit without creating another commit. Validate an existing annotated tag at
+  `HEAD`; reject arbitrary commits, conflicting tags and additional staged changes
+  for an already tagged release. Combined release targets still always bump.
+- Replace unconditional native polling of suspended futures with real wake
+  notifications so unrelated due timers can progress.
+
+### Evidence and documentation
+
+- Add native suspended-work/control and exact-reconciliation precedence matrices,
+  real-canister await/ingress interleaving and provider-churn PocketIC fixtures,
+  and shell regression fixtures for release recovery, contradictory metadata and
+  preservation of staged/unstaged files by the hook. Execution remains user-owned.
+- Document that registry and owned-handle bounds do not bound provider queue
+  memory: cancellation in the pinned provider retains future deadline entries.
+  Update the released 0.8.4 handoff and separate recorded release evidence from
+  unexecuted 0.9.0 fixtures. See the [0.9.0 note](docs/changelog/0.9.0.md).
+
 ## [0.8.4] - 2026-10-03
 
 ### Fixed

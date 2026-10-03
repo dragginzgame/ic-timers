@@ -63,6 +63,13 @@ behavior. The latest directive should retain deadline, retry, immediate
 continuation, recurrence, and stop decisions without pretending that a retry
 temporarily changes the timer's configured policy.
 
+In the prepared 0.9.0 hard cut, an ordinary exact reconciliation winning at
+completion replaces the callback proposal before validation. `latest_directive`
+then projects the effective absolute `ScheduleAt` directive. A relative exact
+request still retains its once-resolved deadline, scheduling mode and requested
+delay through the selected registry command. Cancellation and explicit invariant
+failure project `Stop`. Overridden proposals are not separately retained.
+
 For a Watchdog whose cadence successor has been moved to now,
 `scheduling_mode` is `Continuation`, its authoritative next deadline is the
 immediate deadline, and the latest requested/armed delays are zero. The

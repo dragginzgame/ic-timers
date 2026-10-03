@@ -64,14 +64,21 @@ EOF
 # Structural errors still fail before mutation.
 cp "${temporary_root}/docs/status/current.md" "${temporary_root}/original-status.md"
 cp "${temporary_root}/docs/changelog/0.3.4.md" "${temporary_root}/original-note.md"
-for invalid in duplicate-status empty-status wrong-heading duplicate-workspace finalized-note missing-note; do
+for invalid in duplicate-status empty-status blank-second-status wrong-heading duplicate-heading \
+    duplicate-workspace conflicting-workspace wrong-workspace conflicting-latest wrong-latest finalized-note missing-note; do
     cp "${temporary_root}/original-status.md" "${temporary_root}/docs/status/current.md"
     cp "${temporary_root}/original-note.md" "${temporary_root}/docs/changelog/0.3.4.md"
     case "${invalid}" in
         duplicate-status) printf '%s\n' 'Status: another status.' >> "${temporary_root}/docs/changelog/0.3.4.md" ;;
         empty-status) sed -i 's/^Status: .*/Status:   /' "${temporary_root}/docs/changelog/0.3.4.md" ;;
+        blank-second-status) printf '%s\n' 'Status:' >> "${temporary_root}/docs/changelog/0.3.4.md" ;;
         wrong-heading) sed -i 's/^# 0.3.4$/# 0.3.5/' "${temporary_root}/docs/changelog/0.3.4.md" ;;
+        duplicate-heading) printf '%s\n' '# 0.3.5' >> "${temporary_root}/docs/changelog/0.3.4.md" ;;
         duplicate-workspace) printf '%s\n' '- Workspace package version: `0.3.3`.' >> "${temporary_root}/docs/status/current.md" ;;
+        conflicting-workspace) printf '%s\n' '- Workspace package version: `0.3.2`.' >> "${temporary_root}/docs/status/current.md" ;;
+        wrong-workspace) sed -i 's/Workspace package version: `0.3.3`/Workspace package version: `0.3.2`/' "${temporary_root}/docs/status/current.md" ;;
+        conflicting-latest) printf '%s\n' '- Latest release line: `0.3.2`.' >> "${temporary_root}/docs/status/current.md" ;;
+        wrong-latest) sed -i 's/Latest release line: `0.3.3`/Latest release line: `0.3.2`/' "${temporary_root}/docs/status/current.md" ;;
         finalized-note) sed -i 's/^Status: .*/Status: released 0.3.4./' "${temporary_root}/docs/changelog/0.3.4.md" ;;
         missing-note) rm "${temporary_root}/docs/changelog/0.3.4.md" ;;
     esac
@@ -109,5 +116,29 @@ if (
     echo "error: finalized release truth was accepted as a candidate" >&2
     exit 1
 fi
+
+# Final validation must reject contradictory fields even if a correct marker
+# is also present. Free-form prose remains outside this structural gate.
+cp "${temporary_root}/docs/status/current.md" "${temporary_root}/released-status.md"
+cp "${temporary_root}/docs/changelog/0.3.4.md" "${temporary_root}/released-note.md"
+cp "${temporary_root}/CHANGELOG.md" "${temporary_root}/released-changelog.md"
+for invalid in conflicting-workspace conflicting-latest wrong-latest duplicate-status blank-status duplicate-heading duplicate-release; do
+    cp "${temporary_root}/released-status.md" "${temporary_root}/docs/status/current.md"
+    cp "${temporary_root}/released-note.md" "${temporary_root}/docs/changelog/0.3.4.md"
+    cp "${temporary_root}/released-changelog.md" "${temporary_root}/CHANGELOG.md"
+    case "${invalid}" in
+        conflicting-workspace) printf '%s\n' '- Workspace package version: `0.3.3`.' >> "${temporary_root}/docs/status/current.md" ;;
+        conflicting-latest) printf '%s\n' '- Latest release line: `0.3.3`.' >> "${temporary_root}/docs/status/current.md" ;;
+        wrong-latest) sed -i 's/Latest release line: `0.3.4`/Latest release line: `0.3.3`/' "${temporary_root}/docs/status/current.md" ;;
+        duplicate-status) printf '%s\n' 'Status: prepared.' >> "${temporary_root}/docs/changelog/0.3.4.md" ;;
+        blank-status) printf '%s\n' 'Status:' >> "${temporary_root}/docs/changelog/0.3.4.md" ;;
+        duplicate-heading) printf '%s\n' '# 0.3.5' >> "${temporary_root}/docs/changelog/0.3.4.md" ;;
+        duplicate-release) printf '%s\n' '## [0.3.4]' >> "${temporary_root}/CHANGELOG.md" ;;
+    esac
+    if (cd "${temporary_root}"; bash "${repository_root}/scripts/release/check-release-truth.sh") >/dev/null 2>&1; then
+        echo "error: finalized release accepted ${invalid}" >&2
+        exit 1
+    fi
+done
 
 echo "Release-truth finalization checks passed"

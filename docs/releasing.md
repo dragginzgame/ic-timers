@@ -127,6 +127,30 @@ release 0.8.3. An exact `release-x` target must be a strict version increase.
 Release metadata and both lockfiles are checked before the release commit;
 unstaged and untracked work is rejected before committing or tagging.
 
+If a combined release stops after the version bump, finish that version with
+the phase targets instead of rerunning the combined target, which always bumps:
+
+```text
+make release-stage
+make release-commit
+make release-push
+make publish
+```
+
+`release-commit` commits staged release metadata when the version is untagged.
+If the release commit already exists, it requires a clean `HEAD` whose subject
+is exactly `Release X.Y.Z`, verifies metadata and both lockfiles, then creates
+the missing annotated tag. A retry with an existing tag verifies that tag's
+type and commit. Arbitrary clean commits, conflicting tags and new staged
+changes for a tagged version are rejected. A push-only failure can be retried
+with `make release-push`. These phase targets do not repeat deployment tests;
+the completed pre-bump gate remains the evidence for the prepared code.
+
+The formatting hook checks the staged snapshot in a temporary directory.
+It never formats or stages files. Unrelated working edits and partial staging
+are preserved; unformatted staged Rust is rejected even when its working copy
+is formatted. Run formatting and stage the intended content before retrying.
+
 The non-release `make patch`, `make minor`, `make major`, and
 `make bump-x VERSION=...` targets stop after the version-file update for
 review without running build, lint or test suites.
@@ -140,8 +164,9 @@ make release-verify
 ```
 
 That gate includes `make ci`, the Rust 1.88 MSRV check, warning-denied linting
-of every supported nested probe configuration, the nine-test watchdog/recovery
-PocketIC suite, and the four policy cohorts. If `POCKET_IC_BIN` is unset, the
+of every supported nested probe configuration, the maintained watchdog/recovery,
+ordinary-await and provider-churn PocketIC subjects, and the four policy cohorts.
+If `POCKET_IC_BIN` is unset, the
 gate installs the pinned PocketIC 15.0.0 Linux x86_64 artifact into the ignored
 `target/tools` cache. It verifies the audited SHA-256 before executing any
 downloaded, cached or overridden binary, then checks its version. Diagnostic
