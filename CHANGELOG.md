@@ -8,6 +8,8 @@ All notable changes to this project are recorded here.
 
 ### Fixed
 
+- Select the release target from the requested bump and changelog without
+  requiring duplicate handoff markers or particular release-note status words.
 - Preserve the complete Watchdog snapshot when an initial cadence request
   fails deadline validation, including its validated-request counter.
 - Verify PocketIC binary hashes before executing cached, overridden or

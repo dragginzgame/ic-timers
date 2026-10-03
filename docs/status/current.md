@@ -16,9 +16,6 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 - Workspace package version: `0.8.3`.
 - Latest release line: `0.8.3`.
-- Next target: `0.8.4`, with an undated changelog section and
-  [release note](../changelog/0.8.4.md) prepared. Version mutation and deployment
-  validation remain user-owned.
 - The maintainer reports 0.8.3 live. Its completed local release commit is
   `a0a19c7`, with an annotated `v0.8.3` tag, dated changelog and matching root
   and testing lockfiles. Read-only inspection on 2026-10-03 corroborates registry
@@ -154,6 +151,10 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
   the pending documentation delivery recorded in its resolution comment.
   Issue #7's observation repair remains unvalidated and unreleased, with its
   implementation handoff posted and the issue left open for validation/release.
+- The 0.8.4 preparation also removes redundant release target-marker and
+  status-word requirements after the maintainer's preflight was rejected.
+  Target selection belongs to the requested bump and changelog; structural
+  metadata checks remain. New regression fixtures are unexecuted.
 - The 2026-10-03 follow-up now includes transient terminal-failure cleanup,
   shared control detachment and Watchdog arming, and stronger release/provider
   validation. `make ci` passes with 108 native tests, as do MSRV checks,

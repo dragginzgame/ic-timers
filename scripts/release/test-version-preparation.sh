@@ -59,9 +59,8 @@ cat > "${temporary_root}/docs/status/current.md" <<'EOF'
 
 - Workspace package version: `0.1.0`.
 - Latest release line: `0.1.0`.
-- Named target release: `0.1.1` (unreleased).
 EOF
-printf '%s\n' '# 0.1.1' '' 'Status: targeted unreleased 0.1.1.' \
+printf '%s\n' '# 0.1.1' '' 'Status: prepared for 0.1.1; delivery is user-owned.' \
     > "${temporary_root}/docs/changelog/0.1.1.md"
 printf '%s\n' '# Fixture' > "${temporary_root}/README.md"
 printf '%s\n' '# Adoption' '' 'Status: fixture.' > "${temporary_root}/docs/adoption/canic.md"

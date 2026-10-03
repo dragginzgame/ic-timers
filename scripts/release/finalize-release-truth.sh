@@ -46,22 +46,17 @@ perl -0 -e '
     die "error: current status latest-release marker is missing or duplicated\n"
         if (() = $status =~ /^\Q$latest_marker\E$/mg) != 1;
 
-    my @targets = $status =~ /^- Named target release: (.+)$/mg;
-    die "error: current status target-release marker is missing or duplicated\n"
-        if @targets != 1;
-    die "error: current status target release does not match $new\n"
-        if $targets[0] !~ /^`\Q$new\E`(?:\s|$)/;
-    die "error: current status target release is not marked unreleased\n"
-        if $targets[0] !~ /\bunreleased\b/i;
-
+    # The requested bump and changelog own target selection. Handoff prose
+    # must not duplicate that authority or require particular English words.
     die "error: release-note heading is missing or duplicated for $new\n"
         if (() = $note =~ /^# \Q$new\E(?:\s|$)/mg) != 1;
     my @note_statuses = $note =~ /^Status: (.+)$/mg;
     die "error: release-note status is missing or duplicated\n"
         if @note_statuses != 1;
-    die "error: release-note status is not a targeted unreleased state\n"
-        if $note_statuses[0] !~ /\btargeted\b/i
-            || $note_statuses[0] !~ /\bunreleased\b/i;
+    die "error: release-note status is empty\n"
+        if $note_statuses[0] !~ /\S/;
+    die "error: release note is already finalized for $new\n"
+        if $note_statuses[0] eq "released $new.";
 ' "${status_file}" "${release_note}"
 
 if [[ "${check_only}" == true ]]; then
@@ -75,7 +70,6 @@ perl -0pi -e '
     my $new = $ENV{IC_TIMERS_NEW_VERSION};
     s/^\Q- Workspace package version: `$previous`.\E$/- Workspace package version: `$new`./m;
     s/^\Q- Latest release line: `$previous`.\E$/- Latest release line: `$new`./m;
-    s/^- Named target release: .+(?:\n|\z)//m;
     s/^Status: .+$/Status: released $new./m;
 ' "${status_file}" "${release_note}"
 

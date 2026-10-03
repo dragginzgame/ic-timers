@@ -81,6 +81,13 @@ release markers without changing version metadata or running tests. An empty
 exact `VERSION` is rejected before the gate. The real bump repeats these cheap
 checks afterward and always advances the requested version.
 
+The requested bump and changelog determine the target. The handoff does not
+need a second target-release marker, and release-note status prose does not
+need particular words such as `targeted` or `unreleased`. Preflight still
+requires a note headed with the requested version and one nonempty `Status:`
+line, rejects an already-finalized note, and checks the current workspace and
+latest-release markers. The bump writes the canonical released status itself.
+
 Before version mutation, the helper also scans
 the compact status for target-version wording likely to become stale, such as
 `candidate`, `unreleased`, or a next action to publish after release. This is
