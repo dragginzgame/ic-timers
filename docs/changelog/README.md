@@ -35,3 +35,4 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.9.5 timer control and release handoff](0.9.5.md)
 - [0.10.0 Watchdog failure classification and control ownership](0.10.0.md)
 - [0.10.1 resolved schedule ownership](0.10.1.md)
+- [0.10.2 provider binding ownership](0.10.2.md)

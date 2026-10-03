@@ -4,6 +4,27 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.2]
+
+### Changed
+
+- Give runtime provider binding sole ownership of clearing rejected handles.
+  Initial arms, Watchdog successor/work dispatch and detached-handle restoration
+  use the same consuming operation instead of repeating rejection cleanup.
+- Use one Watchdog dispatch cleanup exit for work-binding and confirmation
+  failures, confirming the dispatch only after work installation succeeds.
+- Preserve registry validation, successor-before-work ordering, partial-dispatch
+  cleanup, effect confirmation and callback rollback rules.
+
+### Development
+
+- Add focused binding coverage for unavailable runtime state and expired claims;
+  retain installation and restoration fixtures. Extend the Watchdog dispatch
+  fixture to cover work-binding and confirmation failures, complete handle cleanup
+  and the absence of confirmed or started work.
+- Record the live 0.10.1 baseline and this private cleanup in the
+  [0.10.2 release note](docs/changelog/0.10.2.md).
+
 ## [0.10.1] - 2026-10-03
 
 ### Changed

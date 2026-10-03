@@ -971,10 +971,7 @@ fn arm_wakeup(effect: &RegistryEffect) -> Result<(), TimerError> {
     let handle = platform::set_timer(Duration::from_nanos(*delay_ns), async move {
         dispatch_wakeup(task_token).await;
     });
-    if let Err((error, handle)) = install_provider_handle(token, handle) {
-        platform::clear_timer(handle);
-        return Err(error);
-    }
+    bind_provider_handle(token, handle)?;
     if let Err(error) = confirm_effect(effect) {
         let handle = with_registry_mut(|registry| {
             registry
@@ -1002,47 +999,45 @@ fn dispatch_watchdog_effect(effect: &RegistryEffect) -> Result<(), TimerError> {
         platform::set_timer(Duration::from_nanos(*successor_delay_ns), async move {
             dispatch_watchdog_scheduler(&successor_token);
         });
-    if let Err((error, handle)) = install_provider_handle(successor, successor_handle) {
-        platform::clear_timer(handle);
-        return Err(error);
-    }
+    bind_provider_handle(successor, successor_handle)?;
 
     let work_token = work.clone();
     let work_handle = platform::set_timer(Duration::ZERO, async move {
         dispatch_watchdog_work(&work_token);
     });
-    if let Err((error, handle)) = install_provider_handle(work, work_handle) {
-        platform::clear_timer(handle);
-        clear_entry_provider_handles(successor.identity())?;
-        return Err(error);
-    }
-    if let Err(error) = confirm_effect(effect) {
+    if let Err(error) =
+        bind_provider_handle(work, work_handle).and_then(|()| confirm_effect(effect))
+    {
         clear_entry_provider_handles(successor.identity())?;
         return Err(error);
     }
     Ok(())
 }
 
-fn install_provider_handle(
-    token: &CallbackToken,
-    handle: TimerHandle,
-) -> Result<(), (TimerError, TimerHandle)> {
-    #[cfg(test)]
-    if take_provider_install_fault() {
-        return Err((TimerError::OwnershipInvariant, handle));
-    }
-    RUNTIME.with(|runtime| {
-        let Ok(mut runtime) = runtime.try_borrow_mut() else {
-            return Err((TimerError::RuntimeBusy, handle));
-        };
-        let Some(registry) = runtime.as_mut() else {
-            return Err((TimerError::NotInitialized, handle));
-        };
-        match registry.install_provider_handle(token, handle) {
-            Ok(()) => Ok(()),
-            Err((error, handle)) => Err((TimerError::from(error), handle)),
-        }
-    })
+/// Consume a provider handle by installing it or clearing it on rejection.
+fn bind_provider_handle(token: &CallbackToken, handle: TimerHandle) -> Result<(), TimerError> {
+    RUNTIME
+        .with(|runtime| {
+            #[cfg(test)]
+            if take_provider_install_fault() {
+                return Err((TimerError::OwnershipInvariant, handle));
+            }
+            let Ok(mut runtime) = runtime.try_borrow_mut() else {
+                return Err((TimerError::RuntimeBusy, handle));
+            };
+            let Some(registry) = runtime.as_mut() else {
+                return Err((TimerError::NotInitialized, handle));
+            };
+            match registry.install_provider_handle(token, handle) {
+                Ok(()) => Ok(()),
+                Err((error, handle)) => Err((TimerError::from(error), handle)),
+            }
+        })
+        .map_err(|(error, handle)| {
+            // Release the registry borrow before calling the provider.
+            platform::clear_timer(handle);
+            error
+        })
 }
 
 fn confirm_effect(effect: &RegistryEffect) -> Result<(), TimerError> {
@@ -1071,13 +1066,7 @@ fn restore_provider_handles(mut handles: ProviderHandles) -> Result<(), TimerErr
 
 fn restore_provider_handle(handle: ProviderHandle) -> Result<(), TimerError> {
     let (token, handle) = handle.into_parts();
-    match install_provider_handle(&token, handle) {
-        Ok(()) => Ok(()),
-        Err((error, handle)) => {
-            platform::clear_timer(handle);
-            Err(error)
-        }
-    }
+    bind_provider_handle(&token, handle)
 }
 
 fn clear_provider_handle(handle: ProviderHandle) {

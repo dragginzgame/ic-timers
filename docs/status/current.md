@@ -50,23 +50,26 @@ and the [safety boundary](../../SAFETY.md).
 
 ## Current follow-up
 
-The maintainer reports 0.10.0 live. Local HEAD, the peeled 0.10.0 tag and origin/main
-agree at `11edb5286b7d8853496da29d50a49201a3f3aa58`. Its arbitration hard cut,
-ordinary action-model deletion and derived provider roles are recorded in the
-[0.10.0 note](../changelog/0.10.0.md).
+The maintainer reports 0.10.1 live. Local HEAD, the peeled 0.10.1 tag and origin/main
+agree at `3a536a586410eb55de48df0abad2676057cca3b4`. The completed resolved-schedule
+cleanup is recorded in the [0.10.1 note](../changelog/0.10.1.md).
 
-The [0.10.1 note](../changelog/0.10.1.md) records the prepared private cleanup.
-Explicit schedules and ordinary directives now resolve to one `ResolvedSchedule`
-carrying deadline, requested relative delay and scheduling mode. Pending commands
-retain it directly; Stop resolves to no successor. The separate directive result,
-registry wrapper, completion conversion and snapshot-derived mode fallback are
-deleted. Public API, snapshot shape, ordering, typed failures and request-time
-relative resolution remain unchanged.
+The [0.10.2 note](../changelog/0.10.2.md) records the prepared private cleanup.
+Runtime provider binding now consumes a handle by installing it or clearing it
+on rejection after releasing the registry borrow. Initial/replacement arms,
+Watchdog successor/work dispatch and detached-handle restoration use this one
+operation. The old handle-returning runtime operation and caller cleanup branches
+are deleted; the registry retains provider-neutral validation and handle return.
+Public API, typed errors, effect confirmation, successor-before-work ordering,
+partial-dispatch cleanup, restoration draining and callback rollback rules remain
+unchanged.
 
-Existing schedule fixtures cover every resolved mode and Stop. Snapshot conversion
-keeps independent public duration-range validation with a negative fixture. Existing
-registry tests cover completion, exact/earliest arbitration, discarded proposals
-and Watchdog metadata. Test execution remains maintainer-owned.
+A focused native fixture checks rejected binding with a busy or missing runtime
+and an expired claim. Existing installation, restoration, confirmation and Watchdog
+failure fixtures remain. Watchdog work binding and confirmation share one cleanup
+exit; the existing dispatch fixture covers both failures and checks that no
+provider handles, queued work or confirmed work remain. Test execution stays
+maintainer-owned.
 
 Ordinary/Watchdog command machines, effect confirmation and handle-restoration
 stages remain required by their distinct suspension and recovery contracts.
@@ -77,7 +80,7 @@ composed qualification.
 ## Evidence
 
 The latest inspected hosted validation remains scoped to 0.9.4 as recorded in
-its delivery note; the maintainer's 0.10.0 live report and local references do not
+its delivery note; the maintainer's 0.10.1 live report and local references do not
 establish new hosted or PocketIC results. No new runtime, recovery or performance
 result is claimed for this cleanup. Changed Rust is formatted. Diff whitespace,
 current release-truth and target-note structural preflight checks passed during

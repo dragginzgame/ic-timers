@@ -56,6 +56,11 @@ The module hierarchy keeps six responsibilities separate:
    than reconstructing authority from a snapshot. Synchronous operations that
    detach handles restore all of them before returning an unexpected registry
    error, retiring the exact claim if restoration cannot recover ownership.
+   One consuming binding operation installs a raw provider handle or clears it
+   on rejection after releasing the registry borrow. Arm and restoration callers
+   receive only the typed error; Watchdog dispatch separately clears its installed
+   successor if later work binding fails. Work binding and dispatch confirmation
+   share a cleanup exit, with confirmation strictly after successful installation.
    Each provider binding consumes one complete registry effect; its shape is
    validated before cleanup or platform calls rather than duplicating token
    and delay arguments beside the canonical effect. One initial/replacement
