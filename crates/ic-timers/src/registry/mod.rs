@@ -1059,8 +1059,7 @@ impl TimerRegistry {
                             ))
                         }
                         (TimerRegistration::Scheduled { .. }, TimerControlAction::None)
-                        | (_, TimerControlAction::Arm { .. } | TimerControlAction::Disarm { .. }) =>
-                        {
+                        | (_, TimerControlAction::Arm { .. }) => {
                             let clear_wakeup = control.terminate();
                             *pending = None;
                             *inactive_reason = InactiveReason::ControlFailure(
@@ -1244,12 +1243,11 @@ impl TimerRegistry {
                 });
                 let selected_schedule =
                     select_completion_schedule(pending_command, callback_schedule);
-                let action = match control.complete(
+                match control.complete(
                     token.callback_generation,
                     selected_schedule.map(|value| value.deadline_ns),
-                    terminal_pending,
                 ) {
-                    Ok(action) => action,
+                    Ok(()) => {}
                     Err(TimerControlError::StaleCompletion) => {
                         return Err(RegistryError::StaleCallback);
                     }
@@ -1269,23 +1267,20 @@ impl TimerRegistry {
                             remove,
                         ));
                     }
-                };
+                }
                 *pending = None;
                 entry.latest_directive = Some(directive_snapshot);
                 entry.observability.record_completion(completion, now_ns);
 
                 let mut remove = false;
-                let transition = match action {
-                    TimerControlAction::Arm {
-                        generation,
-                        deadline_ns,
-                        kind,
-                    } => {
-                        let selected = selected_schedule.unwrap_or(PendingSchedule {
+                let transition = match (control.registration(), selected_schedule) {
+                    (
+                        TimerRegistration::Scheduled {
+                            generation,
                             deadline_ns,
-                            requested_delay_ns: None,
-                            mode: entry.scheduling_mode,
-                        });
+                        },
+                        Some(selected),
+                    ) => {
                         entry.scheduling_mode = selected.mode;
                         entry.latest_requested_delay_ns = selected.requested_delay_ns;
                         RegistryTransition::normal(RegistryEffect::ArmWakeup {
@@ -1297,11 +1292,11 @@ impl TimerRegistry {
                             ),
                             deadline_ns,
                             delay_ns: deadline_ns.saturating_sub(now_ns),
-                            arm: kind,
+                            arm: WakeupArm::Initial,
                         })
                     }
-                    TimerControlAction::Disarm { cancelled } => {
-                        *inactive_reason = if cancelled {
+                    (TimerRegistration::Unregistered, None) => {
+                        *inactive_reason = if terminal_pending {
                             entry.observability.counters_mut().record_cancellation();
                             InactiveReason::Cancelled
                         } else {
@@ -1311,7 +1306,7 @@ impl TimerRegistry {
                             || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
                         RegistryTransition::normal(RegistryEffect::None)
                     }
-                    TimerControlAction::None | TimerControlAction::Clear => {
+                    _ => {
                         let clear_wakeup = control.terminate();
                         *inactive_reason = InactiveReason::ControlFailure(
                             TimerControlFailure::DirectiveNotAllowed,
@@ -2093,7 +2088,7 @@ fn apply_ordinary_action(
             entry.observability.counters_mut().record_coalesced();
             RegistryTransition::normal(RegistryEffect::None)
         }
-        TimerControlAction::Clear | TimerControlAction::Disarm { .. } => {
+        TimerControlAction::Clear => {
             terminal_ordinary(entry, identity, TimerControlError::StaleCompletion)
         }
     }

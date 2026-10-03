@@ -12,11 +12,11 @@ and the [safety boundary](../../SAFETY.md).
 
 - Workspace package version: `0.9.3`.
 - Latest release line: `0.9.3`.
-- The maintainer reports 0.9.2 live. Release commit
-  `153770c004611a0c9020f36bfc95348ee5293a2e`, annotated `v0.9.2`, local
-  `origin/main`, Cargo, both lockfiles and the dated changelog agree. Cached
-  registry VCS metadata identifies the same commit. See the
-  [0.9.2 delivery record](../changelog/0.9.2.md).
+- The maintainer reports 0.9.3 live. Release commit
+  `0c004e55a931aadf0861e902b221938e0e7d9985`, annotated `v0.9.3`, local
+  `origin/main`, Cargo, both lockfiles and the dated changelog agree. The README
+  example was updated by the actual bump. See the
+  [0.9.3 delivery record](../changelog/0.9.3.md).
 - Hosted main checks/MSRV and tag-truth jobs succeeded for that exact SHA.
   They do not establish fresh downstream or PocketIC qualification.
 - The [0.9.0 note](../changelog/0.9.0.md) records the ordinary-completion
@@ -53,39 +53,38 @@ and the [safety boundary](../../SAFETY.md).
 
 ## Current follow-up
 
-- GitHub [#8](https://github.com/dragginzgame/ic-timers/issues/8) is closed:
-  its fixture simplification and ordered-sequence rationale shipped in 0.9.2.
-  Supplemental root MSRV cognitive-complexity lint was not rerun here; no lower
-  numerical score is claimed and the maintained gate scope is unchanged.
-- [#3](https://github.com/dragginzgame/ic-timers/issues/3) is fixed in the local
-  worktree: the README now advertises API line 0.9 and exact timer 0.9.2. A small
-  projection helper uses workspace-version truth during bumps and release checks;
-  the existing bump rollback includes README.md. Existing fixtures are updated.
-  The issue remains open until the maintainer lands the fix.
-- The focused registry review removes ordinary completion's duplicate
-  missing-cadence check and shares effect-confirmation bookkeeping after its
-  role-specific validation. Typed failure, pending precedence, idempotent
-  counters and provider binding/recovery ordering are preserved. Existing
-  behavior fixtures were inspected; runtime validation remains user-owned.
-- Ordinary/Watchdog pending commands, the confirmation marker and the separate
-  binding/confirmation stages remain necessary for their distinct suspension,
-  cadence recovery and partial-binding failure contracts.
-- The combined follow-up now includes private crate changes alongside repository
-  tooling and documentation. Target release: `0.9.3`. Its undated changelog section
-  is directly below the empty `Unreleased` heading. The
-  [0.9.3 note](../changelog/0.9.3.md) records scope and pending maintainer validation.
-  Package versions and lockfiles remain unchanged. No compatibility path or new
-  public contract is added.
+- GitHub [#3](https://github.com/dragginzgame/ic-timers/issues/3) is closed:
+  the README projection and rollback fix shipped in 0.9.3. The actual release
+  README advertises API line 0.9 and exact timer 0.9.3. The subsequent issue scan
+  found no open ic-timers issues. [#8](https://github.com/dragginzgame/ic-timers/issues/8)
+  remains closed for the 0.9.2 fixture simplification and documented rationale.
+- Ordinary completion now returns a checked state change without a separate
+  completion action or pass-through cancellation argument. The registry builds
+  its effect from the resulting control state and selected schedule. Fabricated
+  fallback schedule metadata is removed; unexpected state/metadata pairs keep
+  typed terminal cleanup. Public contracts and failure/lifetime rules are preserved.
+- Existing control fixtures observe resulting registration/generation rather than
+  the removed action. The nested cancellation/ensure fixture now checks counter
+  ownership too. These changes are formatted and inspected, not test-executed.
+- Ordinary/Watchdog pending commands, the confirmation marker and separate
+  binding/confirmation stages remain necessary for their suspension, cadence
+  recovery and partial-binding failure contracts. The previous focused validation
+  and confirmation simplifications shipped in 0.9.3.
+- Target release: `0.9.4`. Its undated changelog section is directly below the
+  empty `Unreleased` heading. The [0.9.4 note](../changelog/0.9.4.md) records this
+  private crate cleanup, focused review and pending maintainer validation.
+  The review found no additional confirmed fix for this patch. Versions and
+  lockfiles remain unchanged; no public or compatibility path is added.
 
 ## Evidence
 
-The released baseline combines the maintainer's live report, matching local
-artifacts, cached registry provenance and inspected hosted jobs. Current local
-follow-up checks cover shell syntax, read-only release metadata and diff whitespace.
-Changed Rust is formatted; no runtime test result is claimed for the refactor.
-The existing runtime fixtures, prepared release-tooling fixtures and deployment
-gates remain user-owned; no new suites, builds, lint gates or dependency resolution
-were run here.
+The 0.9.3 baseline combines the maintainer's live report, matching local artifacts
+and successful inspected hosted jobs. Independent registry publication evidence
+was not inspected for this release. Changed Rust is formatted; current local
+follow-up checks cover read-only metadata, links and diff whitespace. No runtime
+test result is claimed for the new completion refactor. Focused fixtures and
+deployment gates remain user-owned; no new suites, builds, lint gates or dependency
+resolution were run here.
 The native mock does not simulate IC rollback or provider heap allocation;
 maintained PocketIC subjects remain required for those claims.
 
@@ -113,10 +112,9 @@ receipts remain scoped to their subjects. No sibling files were edited or gates 
 
 ## Next action
 
-0.9.2 is released; do not repeat its bump. The 0.9.3 changelog and release note are
-prepared. The maintainer owns validation and the patch bump, which dates the
-changelog and updates package/lockfile versions and the README example.
-Close #3 once the README fix lands. Toko Miner remains blocked until Canic pushes
-and publishes the aligned dependency update; then qualify one timer package across
-framework/database/application before checkpoint cleanup. All release execution
-remains user-owned.
+0.9.3 is released; do not repeat its bump. The 0.9.4 changelog and release note
+are prepared. The maintainer owns validation, the patch bump and release execution;
+the automated contributor has not changed versions, lockfiles or Git release state.
+Toko Miner remains blocked until Canic pushes and publishes the aligned dependency
+update; then qualify one timer package across framework/database/application
+before checkpoint cleanup. All release execution remains user-owned.

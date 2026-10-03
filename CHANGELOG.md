@@ -4,6 +4,29 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.9.4]
+
+### Changed
+
+- Build ordinary completion effects from the checked control state and selected
+  schedule. Remove the duplicate completion-action translation, pass-through
+  cancellation flag and fabricated fallback schedule metadata. Keep cancellation
+  policy in the registry, checked generations and existing failure/lifetime rules.
+
+### Development
+
+- Update control fixtures to observe resulting state and generations. Extend the
+  existing nested cancellation/ensure fixture to check that only a winning
+  cancellation increments its counter.
+
+### Documentation
+
+- Record the maintainer-reported live 0.9.3 release, matching artifacts and
+  successful hosted checks/MSRV/tag validation. Close the shipped README issue
+  [#3](https://github.com/dragginzgame/ic-timers/issues/3).
+- Track scope and pending maintainer validation in the
+  [0.9.4 release note](docs/changelog/0.9.4.md).
+
 ## [0.9.3] - 2026-10-03
 
 ### Changed

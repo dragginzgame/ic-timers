@@ -20,7 +20,10 @@ The module hierarchy keeps six responsibilities separate:
 3. `control` is the private ordinary generation/registration state machine. It
    owns checked callback generations, immediate schedule, reconciliation and
    cancellation transitions, and stale completion rejection. It owns no
-   pending command.
+   pending command. Completion applies the registry-selected successor and
+   returns success or a typed error. The registry builds its provider effect
+   from the resulting registration and retains cancellation policy; control
+   does not echo that policy through a separate completion action.
 4. `registry` is the provider-call-free fixed-capacity canonical owner for
    structured identities, callback closures, claim generations,
    policy-specific state, the sole pending ordinary-command machine, nested

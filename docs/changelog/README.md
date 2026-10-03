@@ -31,3 +31,4 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.9.1 implementation and release simplification](0.9.1.md)
 - [0.9.2 implementation and evidence-tooling simplification](0.9.2.md)
 - [0.9.3 registry validation and release metadata](0.9.3.md)
+- [0.9.4 ordinary completion ownership](0.9.4.md)

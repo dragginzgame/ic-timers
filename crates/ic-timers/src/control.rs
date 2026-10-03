@@ -41,11 +41,6 @@ pub enum TimerControlAction {
     },
     /// Clear the existing scheduled handle.
     Clear,
-    /// The completed run leaves no scheduled successor.
-    Disarm {
-        /// Whether an explicit cancellation won over the run's directive.
-        cancelled: bool,
-    },
 }
 
 /// Whether one arm fills an empty wake-up slot or replaces its current handle.
@@ -203,13 +198,13 @@ impl TimerControl {
     }
 
     /// Complete the running generation with the registry's already-arbitrated
-    /// successor decision.
+    /// successor decision. The registry observes the resulting registration;
+    /// cancellation policy and provider effects remain its responsibility.
     pub(crate) fn complete(
         &mut self,
         generation: u64,
         next_deadline_ns: Option<u64>,
-        cancelled: bool,
-    ) -> Result<TimerControlAction, TimerControlError> {
+    ) -> Result<(), TimerControlError> {
         if self.registration != (TimerRegistration::Running { generation }) {
             return Err(TimerControlError::StaleCompletion);
         }
@@ -221,15 +216,10 @@ impl TimerControl {
                 generation: next_generation,
                 deadline_ns,
             };
-            Ok(TimerControlAction::Arm {
-                generation: next_generation,
-                deadline_ns,
-                kind: WakeupArm::Initial,
-            })
         } else {
             self.registration = TimerRegistration::Unregistered;
-            Ok(TimerControlAction::Disarm { cancelled })
         }
+        Ok(())
     }
 
     fn next_generation(&self) -> Result<u64, TimerControlError> {
@@ -321,26 +311,24 @@ mod tests {
             let mut control = TimerControl::default();
             let generation = arm(&mut control, 100);
             assert!(control.begin(generation));
+            assert_eq!(control.complete(generation, Some(deadline_ns)), Ok(()));
             assert_eq!(
-                control.complete(generation, Some(deadline_ns), false),
-                Ok(TimerControlAction::Arm {
+                control.registration(),
+                TimerRegistration::Scheduled {
                     generation: 2,
                     deadline_ns,
-                    kind: WakeupArm::Initial,
-                })
+                }
             );
+            assert_eq!(control.generation(), 2);
         }
     }
 
     #[test]
-    fn cancelled_completion_disarms_running_work() {
+    fn completion_without_a_successor_stops_running_work() {
         let mut control = TimerControl::default();
         let generation = arm(&mut control, 100);
         assert!(control.begin(generation));
-        assert_eq!(
-            control.complete(generation, None, true),
-            Ok(TimerControlAction::Disarm { cancelled: true })
-        );
+        assert_eq!(control.complete(generation, None), Ok(()));
         assert_eq!(control.registration(), TimerRegistration::Unregistered);
     }
 
@@ -360,7 +348,7 @@ mod tests {
         let generation = arm(&mut control, 100);
         assert!(control.begin(generation));
         assert_eq!(
-            control.complete(generation + 1, None, false),
+            control.complete(generation + 1, None),
             Err(TimerControlError::StaleCompletion)
         );
         assert_eq!(
@@ -393,7 +381,7 @@ mod tests {
 
         assert!(control.begin(u64::MAX));
         assert_eq!(
-            control.complete(u64::MAX, Some(200), false),
+            control.complete(u64::MAX, Some(200)),
             Err(TimerControlError::GenerationExhausted)
         );
         assert_eq!(
@@ -403,8 +391,8 @@ mod tests {
             }
         );
         assert_eq!(
-            control.complete(u64::MAX, None, true),
-            Ok(TimerControlAction::Disarm { cancelled: true }),
+            control.complete(u64::MAX, None),
+            Ok(()),
             "stopping does not allocate a successor generation"
         );
         assert_eq!(control.generation(), u64::MAX);

@@ -508,12 +508,16 @@ fn nested_cancel_and_ensure_use_latest_request_order() {
         )
         .expect("completion should succeed");
     assert_eq!(cancelled.effect(), &RegistryEffect::None);
+    let cancelled_snapshot = registry
+        .snapshot(&timer)
+        .expect("retained timer should exist");
     assert_eq!(
-        registry.snapshot(&timer).map(|value| value.state()),
-        Some(TimerRuntimeStateSnapshot::Inactive {
+        cancelled_snapshot.state(),
+        TimerRuntimeStateSnapshot::Inactive {
             reason: InactiveReason::Cancelled,
-        })
+        }
     );
+    assert_eq!(cancelled_snapshot.observability().counters().cancelled(), 1);
 
     let (second, _, _) = arm(registry
         .ensure_once(&claim, 20, TimerSchedule::At(40))
@@ -536,6 +540,16 @@ fn nested_cancel_and_ensure_use_latest_request_order() {
         )
         .expect("later ensure should override cancellation"));
     assert_eq!(deadline, 50);
+    assert_eq!(
+        registry
+            .snapshot(&timer)
+            .expect("later ensure should keep the retained timer")
+            .observability()
+            .counters()
+            .cancelled(),
+        1,
+        "a later ensure supersedes cancellation without counting another cancel"
+    );
 }
 
 #[test]
