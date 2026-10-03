@@ -75,4 +75,30 @@ if [[ "$(classify)" != "crate" ]]; then
     exit 1
 fi
 
+real_git="$(command -v git)"
+mkdir -p "${temporary_root}/bin"
+cat > "${temporary_root}/bin/git" <<'EOF'
+#!/usr/bin/env bash
+if [[ "${1:-}" == "${FAIL_GIT_COMMAND}" ]]; then
+    echo "injected ${FAIL_GIT_COMMAND} failure" >&2
+    exit 1
+fi
+exec "${REAL_GIT}" "$@"
+EOF
+chmod +x "${temporary_root}/bin/git"
+for command in diff ls-files; do
+    if output="$(
+        cd "${temporary_root}"
+        PATH="${temporary_root}/bin:${PATH}" REAL_GIT="${real_git}" \
+            FAIL_GIT_COMMAND="${command}" bash "${classifier}" v0.3.8 2>&1
+    )"; then
+        echo "error: impact classification accepted a failed git ${command}" >&2
+        exit 1
+    fi
+    if [[ "${output}" != *"injected ${command} failure"* ]]; then
+        echo "error: impact classification lost git ${command} failure: ${output}" >&2
+        exit 1
+    fi
+done
+
 echo "Release-impact classification checks passed"

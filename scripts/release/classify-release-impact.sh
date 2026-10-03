@@ -16,6 +16,12 @@ if ! git rev-parse --verify --quiet "${base_ref}^{commit}" >/dev/null; then
     exit 1
 fi
 
+# Command substitution propagates producer failures; process substitution would
+# turn a failed Git command into an empty, apparently unchanged release subject.
+tracked_paths="$(git diff --no-renames --name-only --diff-filter=ACDMRTUXB "${base_ref}" --)"
+untracked_paths="$(git ls-files --others --exclude-standard)"
+changed_paths="$(printf '%s\n' "${tracked_paths}" "${untracked_paths}" | sort -u)"
+
 impact="none"
 while IFS= read -r path; do
     [[ -z "${path}" ]] && continue
@@ -26,11 +32,6 @@ while IFS= read -r path; do
             break
             ;;
     esac
-done < <(
-    {
-        git diff --no-renames --name-only --diff-filter=ACDMRTUXB "${base_ref}" --
-        git ls-files --others --exclude-standard
-    } | sort -u
-)
+done <<< "${changed_paths}"
 
 printf '%s\n' "${impact}"

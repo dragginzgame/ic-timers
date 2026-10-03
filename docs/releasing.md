@@ -66,11 +66,12 @@ remain supported and are promoted automatically when a version is selected.
 The helper refuses to continue if the changelog shape is ambiguous, the target
 notes are empty, the target is already dated, the requested version is not a
 strict canonical-SemVer increase, the exact release tag already exists, no
-changes exist since the current version tag, or the worktree is not clean. A
+changes exist since the current version tag. Version preparation accepts the
+current worktree and does not require a preparatory commit. A
 repository-only subject emits an advisory but may proceed when the maintainer
 has explicitly invoked the bump or release target.
 
-Before the clean-worktree and expensive evidence gates, the helper also scans
+Before version mutation, the helper also scans
 the compact status for target-version wording likely to become stale, such as
 `candidate`, `unreleased`, or a next action to publish after release. This is
 advisory: it prints a warning and always continues. Free-form prose is never a
@@ -91,15 +92,22 @@ For an exact version, use:
 make release-x VERSION=0.3.0
 ```
 
-These maintainer-owned targets run the complete release gate, update the
+Commits, tags, pushes and publication are user-owned. Automated contributors
+use `make patch`, `make minor`, `make major`, or `make bump-x VERSION=...` to
+prepare requested releases from the current worktree, then `make release-stage`
+to stage release metadata for review. They leave commits, tags and pushes to
+the user.
+
+The user-operated release targets run the complete release gate, update the
 workspace version plus both the root and nested testing lockfiles, commit,
 create an annotated `vX.Y.Z` tag, and push with tags. The non-release `make
 patch`, `make minor`, `make major`, and
 `make bump-x VERSION=...` targets stop after the version-file update for
-review.
+review without running build, lint or test suites.
 
-Before changing any version file, every bump target runs the complete release
-gate:
+Deployment validation belongs to the user. The combined `release-*` targets
+run the complete release gate before preparing the version. If the version was
+already prepared, run the gate directly before committing, tagging and pushing:
 
 ```text
 make release-verify
@@ -115,10 +123,11 @@ a strict override: a missing or mismatched override fails and is never
 replaced automatically.
 
 After the version changes, the helper updates `Cargo.lock` and
-`testing/Cargo.lock`, then runs offline `cargo metadata --locked` against both
-manifests. This cheap structural check catches stale path-package versions
-without repeating the expensive evidence suite. `release-stage` stages both
-lockfiles automatically.
+`testing/Cargo.lock`, then runs offline `cargo metadata --locked` with dependency
+resolution against both manifests through `check-lockfiles.sh`. This catches
+stale path-package versions without building either workspace or repeating
+the evidence suite. `--no-deps` is not sufficient because it skips lockfile
+validation. `release-stage` stages both lockfiles automatically.
 
 After the release tag is pushed, publish the crate with:
 

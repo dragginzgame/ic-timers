@@ -102,6 +102,11 @@ impl TimerControl {
         self.generation
     }
 
+    #[cfg(test)]
+    pub(crate) const fn exhaust_generation_for_test(&mut self) {
+        self.generation = u64::MAX;
+    }
+
     /// Return the current logical registration.
     #[must_use]
     pub(crate) const fn registration(&self) -> TimerRegistration {

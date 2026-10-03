@@ -44,6 +44,10 @@ The current runtime provides:
   `RemoveWhenStopped` declarations whose capability expires on terminal
   completion or cancellation, including cancellation before the first
   provider wake-up is armed;
+- native boundary evidence that checked terminal control failures also expire
+  transient declarations and release capacity, with retained declarations
+  staying inactive and observable; a queued-work fixture verifies that actual
+  provider handles clear before transient scheduler failure removal;
 - exact ordinary reconciliation whose pending command has one canonical owner
   in the registry and can replace a live deadline in either direction;
 - exact Watchdog reconciliation and `ScheduleAt` completion through the same

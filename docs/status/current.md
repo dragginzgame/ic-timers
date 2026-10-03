@@ -1,6 +1,6 @@
 # Current status
 
-Last updated: 2026-10-02
+Last updated: 2026-10-03
 
 ## Purpose
 
@@ -14,15 +14,17 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Release state
 
-- Workspace package version: `0.8.1`.
-- Latest release line: `0.8.1`.
+- Workspace package version: `0.8.2`.
+- Latest release line: `0.8.2`.
 - Snapshot registration continuity and exact-deadline Watchdog scheduling are
   implemented, with validation recorded in the
   [0.8.0 release note](../changelog/0.8.0.md). The version bump and local
   `v0.8.0` release tag are complete. Publication is corroborated by the cached
   registry package, its VCS commit and Toko Miner's registry lockfile; see the
-  [dated downstream record](../adoption/toko-miner.md). The 0.8.1 tooling and
-  lint-expectation changes remain unpublished.
+  [dated downstream record](../adoption/toko-miner.md).
+- The 0.8.1 tooling and lint-expectation changes have a completed version bump,
+  dated changelog and local `v0.8.1` release tag. Registry publication was not
+  checked in the 2026-10-03 repository review.
 - Direct provider dependency: exact `ic-cdk-timers` 1.0.0.
 - Released in 0.7.1: exact `ic0` 1.2.0 in both lockfiles; existing
   platform bindings are unchanged upstream. See the
@@ -33,7 +35,10 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 - Development and hosted CI toolchain: Rust 1.99.0.
 - Hosted PR/main checks lint all supported nested probe configurations on
   both Rust 1.99.0 and the Rust 1.88.0 MSRV.
-- The maintainer owns commits, tags, pushes, version bumps, and publication.
+- Commits, tags, pushes and publication are user-owned. Automated contributors
+  prepare requested version bumps without committing or pushing. Test, build
+  and lint gates run only when explicitly requested; deployment testing is
+  user-owned.
 
 ## Canonical runtime
 
@@ -126,7 +131,14 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Current evidence
 
-- The untagged Rust 1.99.0 update passes `make ci`, including all 105 native
+- The 2026-10-03 follow-up now includes transient terminal-failure cleanup,
+  shared control detachment and Watchdog arming, and stronger release/provider
+  validation. `make ci` passes with 108 native tests, as do MSRV checks,
+  nested-probe linting and strict production Wasm Clippy on both toolchains.
+  The nine audited PocketIC Watchdog subjects and four policy cohorts pass
+  after the runtime changes. Track the native boundary and compiler fixtures in the
+  [0.8.2 note](../changelog/0.8.2.md). No performance improvement is claimed.
+- The recorded 0.8.1 Rust 1.99.0 update passes `make ci`, including all 105 native
   tests, warning-denied Clippy/rustdoc, Wasm checking and offline package
   verification. Rust 1.88.0 workspace checks and the changed inventory test
   pass. All supported nested-probe lint configurations pass on both 1.99.0
@@ -208,13 +220,14 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Next action
 
-The Rust 1.99.0 update fixes Clippy's empty-collection assertions and extends
-hosted probe linting to both development and MSRV toolchains. Toko Miner's
-IC-TIMERS-001/002 feedback refreshes scoped downstream guidance and replaces
-active lint suppressions with expectations. These changes remain untagged and
-are staged in the undated `0.8.1` changelog section and
-[0.8.1 release note](../changelog/0.8.1.md). The package remains at 0.8.0;
-version mutation and the complete release gate await a maintainer bump request.
+Version 0.8.2 is prepared with a dated changelog and both workspace lockfiles
+updated. The complete release gate passed before the final workflow edits
+separating version preparation from user-owned deployment testing; those edits
+and their updated fixtures have not been rerun at the maintainer's request.
+Track scope and evidence in the
+[0.8.2 note](../changelog/0.8.2.md). Commits, release tags, pushes and registry
+publication remain user-owned; automated contributors only prepare and validate
+the release metadata.
 
 Remaining application work is Toko Miner's auxiliary checkpoint deadline
 registration and diagnostic registration-sequence projection. The published

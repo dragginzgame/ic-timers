@@ -1436,6 +1436,69 @@ fn detached_provider_selection_does_not_reborrow_the_registry() {
 }
 
 #[test]
+fn terminal_scheduler_failure_clears_queued_work_before_transient_removal() {
+    for lifetime in [
+        DeclarationLifetime::Retained,
+        DeclarationLifetime::RemoveWhenStopped,
+    ] {
+        setup();
+        let timer = identity("terminal-scheduler-cleanup");
+        let work = Rc::new(Cell::new(0));
+        let observed_work = Rc::clone(&work);
+        let registration = register_watchdog(
+            timer.clone(),
+            TimerCadence::from_nanos(5).unwrap(),
+            lifetime,
+            move |_| {
+                observed_work.set(observed_work.get() + 1);
+                WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue)
+            },
+        )
+        .unwrap();
+        registration.ensure_scheduled().unwrap();
+        set_time(15);
+        assert!(run_next_due());
+        assert_eq!(timer_count(), 2);
+
+        // Deliver the successor before its deferred work. Consume the fake
+        // provider callback exactly as a scheduler entry would, retaining work.
+        let wakeup = with_registry_mut(|registry| Ok(registry.take_wakeup_handle(&timer)))
+            .unwrap()
+            .unwrap();
+        let (scheduler, handle) = wakeup.into_parts();
+        platform::clear_timer(handle);
+        assert_eq!(timer_count(), 1);
+        set_time(u64::MAX);
+        dispatch_watchdog_scheduler(&scheduler);
+
+        assert_eq!(timer_count(), 0);
+        assert_eq!(work.get(), 0);
+        assert!(!run_next_due());
+        if lifetime == DeclarationLifetime::Retained {
+            assert!(!registration.has_armed_wakeup().unwrap());
+            assert_eq!(
+                timer_snapshot(&timer).unwrap().unwrap().state(),
+                TimerRuntimeStateSnapshot::Inactive {
+                    reason: InactiveReason::ControlFailure(TimerControlFailure::DeadlineOverflow),
+                }
+            );
+        } else {
+            assert!(timer_snapshot(&timer).unwrap().is_none());
+            assert!(matches!(
+                registration.has_armed_wakeup(),
+                Err(TimerError::RegistrationExpired)
+            ));
+            assert!(
+                register_once(timer, DeclarationLifetime::Retained, |_| async {
+                    TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop)
+                })
+                .is_ok()
+            );
+        }
+    }
+}
+
+#[test]
 fn transition_error_restores_detached_claim_handles() {
     setup();
     let timer = identity("transition-error-restore");

@@ -6,6 +6,7 @@ makefile="${repository_root}/Makefile"
 bump_script="${repository_root}/scripts/release/bump-version.sh"
 impact_checker="${repository_root}/scripts/release/check-bump-impact.sh"
 pocketic_check="${repository_root}/scripts/ci/check-pocketic.sh"
+lockfile_checker="${repository_root}/scripts/release/check-lockfiles.sh"
 
 if grep -RE --include='*.sh' \
     '(^|[;&|[:space:]])rg([[:space:]]|$)' \
@@ -87,10 +88,18 @@ if ! grep -Fqx -- "${expected_targets}" "${makefile}" >/dev/null; then
     exit 1
 fi
 
-if ! grep -Fqx -- 'make --no-print-directory release-verify' "${bump_script}" >/dev/null; then
-    echo "error: version bump does not invoke the complete release gate" >&2
+if grep -Fqx -- 'make --no-print-directory release-verify' "${bump_script}" >/dev/null \
+    || grep -Fqx -- 'make --no-print-directory ensure-clean' "${bump_script}" >/dev/null; then
+    echo "error: version preparation requires deployment validation or a clean worktree" >&2
     exit 1
 fi
+for target in release-patch release-minor release-major release-x; do
+    first_command="$(sed -n "/^${target}:/,/^$/p" "${makefile}" | sed -n '2p')"
+    if [[ "${first_command}" != $'\t+$(MAKE) --no-print-directory release-verify' ]]; then
+        echo "error: ${target} does not run the complete deployment gate first" >&2
+        exit 1
+    fi
+done
 
 if ! grep -Fqx -- \
     'bash scripts/release/finalize-release-truth.sh --check "${previous_version}" "${new_version}"' \
@@ -126,14 +135,15 @@ if ! grep -Fqx -- \
     exit 1
 fi
 
-if ! grep -Fqx -- \
-    'cargo metadata --locked --offline --no-deps --format-version 1 >/dev/null' \
-    "${bump_script}" >/dev/null \
-    || ! grep -Fq -- 'cargo metadata --manifest-path testing/Cargo.toml' \
-    "${bump_script}" >/dev/null \
+if ! grep -Fqx -- 'bash scripts/release/check-lockfiles.sh' "${bump_script}" >/dev/null \
     || ! grep -Fqx -- \
-        '    --locked --offline --no-deps --format-version 1 >/dev/null' \
-        "${bump_script}" >/dev/null; then
+        'cargo metadata --locked --offline --format-version 1 >/dev/null' \
+        "${lockfile_checker}" >/dev/null \
+    || ! grep -Fq -- 'cargo metadata --manifest-path testing/Cargo.toml' \
+        "${lockfile_checker}" >/dev/null \
+    || ! grep -Fqx -- \
+        '    --locked --offline --format-version 1 >/dev/null' \
+        "${lockfile_checker}" >/dev/null; then
     echo "error: version bump does not verify nested locked metadata after mutation" >&2
     exit 1
 fi

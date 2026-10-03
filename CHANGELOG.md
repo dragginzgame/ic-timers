@@ -4,6 +4,51 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.8.2] - 2026-10-03
+
+### Fixed
+
+- Remove transient declarations on checked terminal control failures, including
+  Watchdog scheduling generation exhaustion and scheduler deadline overflow.
+  Clear owned provider callbacks before removing the declaration; retained
+  declarations remain observable and inactive.
+- Resolve both workspace dependency graphs when checking locked metadata after
+  a version bump, so stale root or testing lockfiles fail validation.
+- Propagate Git failures during release-impact classification and stop
+  repository validation when classification or a required check fails.
+
+### Changed
+
+- Use one public-control handle-detachment path and one Watchdog scheduler-arm
+  implementation, removing the duplicated reconciliation and completion flows.
+- Restrict private platform items to crate visibility, preventing indirect
+  public re-exports of timer authority.
+
+### Development
+
+- Check every shell script individually for syntax errors.
+- Prepare versions from the current worktree without a preparatory commit or
+  test run. Keep the complete gate in user-operated release targets. Tests,
+  commits, release tags and pushes remain user-owned.
+- Reject qualified, grouped, multiline and locally aliased public platform
+  exports, including type aliases. Add executable regression fixtures for
+  provider visibility, validation failures and stale lockfiles.
+
+### Evidence
+
+- Pass 108 native tests, including terminal transient cleanup and queued
+  callback removal. These boundary-failure cases have native coverage.
+- Pass all nine maintained PocketIC Watchdog subjects and all four policy
+  cohorts with the audited PocketIC 15.0.0 binary. CI, Rust 1.88.0 MSRV,
+  nested-probe lint, strict Wasm Clippy and package checks pass.
+
+### Documentation
+
+- Correct stale 0.8.1 pre-bump wording in the handoff and release note, and
+  document the scope of native cleanup evidence in `SAFETY.md`.
+- Record the runtime and tooling changes and validation results in the
+  [0.8.2 release note](docs/changelog/0.8.2.md).
+
 ## [0.8.1] - 2026-10-02
 
 ### Development

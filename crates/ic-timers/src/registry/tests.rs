@@ -1494,6 +1494,145 @@ fn watchdog_checked_deadline_overflow_is_terminal() {
 }
 
 #[test]
+fn ordinary_terminal_failures_respect_declaration_lifetime() {
+    for lifetime in [
+        DeclarationLifetime::Retained,
+        DeclarationLifetime::RemoveWhenStopped,
+    ] {
+        for policy in [
+            TimerPolicy::Once,
+            TimerPolicy::AfterCompletion {
+                cadence: cadence(1),
+            },
+        ] {
+            for subject in ["initial", "replacement", "cancel"] {
+                let mut registry = registry();
+                let timer = identity(subject);
+                let claim = match policy {
+                    TimerPolicy::Once => registry.register_once(timer.clone(), lifetime).unwrap(),
+                    TimerPolicy::AfterCompletion { cadence } => registry
+                        .register_after_completion(timer.clone(), cadence, lifetime)
+                        .unwrap(),
+                    TimerPolicy::Watchdog { .. } => unreachable!("ordinary fixture policies"),
+                };
+                if subject != "initial" {
+                    registry
+                        .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(10)))
+                        .unwrap();
+                }
+                let entry = registry.entries.get_mut(&timer).unwrap();
+                let EntryControl::Ordinary { control, .. } = &mut entry.control else {
+                    panic!("fixture must be ordinary control");
+                };
+                control.exhaust_generation_for_test();
+                let transition = if subject == "cancel" {
+                    registry.cancel(&claim).unwrap()
+                } else {
+                    registry
+                        .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(1)))
+                        .unwrap()
+                };
+                assert_eq!(
+                    transition.failure(),
+                    Some(TimerControlFailure::GenerationExhausted)
+                );
+                if lifetime == DeclarationLifetime::Retained {
+                    assert_eq!(
+                        registry.snapshot(&timer).unwrap().state(),
+                        TimerRuntimeStateSnapshot::Inactive {
+                            reason: InactiveReason::ControlFailure(
+                                TimerControlFailure::GenerationExhausted,
+                            ),
+                        }
+                    );
+                } else {
+                    assert!(registry.is_empty(), "{subject} retained a transient entry");
+                    assert_eq!(
+                        registry.has_armed_wakeup(&claim),
+                        Err(RegistryError::UnknownRegistration)
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn watchdog_terminal_failures_respect_declaration_lifetime() {
+    for lifetime in [
+        DeclarationLifetime::Retained,
+        DeclarationLifetime::RemoveWhenStopped,
+    ] {
+        for subject in [
+            "initial",
+            "replacement",
+            "dispatch-generation",
+            "dispatch-attempt",
+            "dispatch-deadline",
+        ] {
+            let mut registry = registry();
+            let timer = identity(subject);
+            let claim = registry
+                .register_watchdog(timer.clone(), cadence(1), lifetime)
+                .unwrap();
+            let scheduler = if subject == "initial" {
+                None
+            } else {
+                Some(arm(registry.ensure_recurring(&claim, 0).unwrap()).0)
+            };
+            let entry = registry.entries.get_mut(&timer).unwrap();
+            let EntryControl::Watchdog(control) = &mut entry.control else {
+                panic!("fixture must be a watchdog");
+            };
+            match subject {
+                "initial" | "replacement" | "dispatch-generation" => {
+                    control.scheduler_generation = u64::MAX;
+                }
+                "dispatch-attempt" => control.attempt_generation = u64::MAX,
+                "dispatch-deadline" => {}
+                _ => unreachable!("closed fixture subjects"),
+            }
+            let transition = match subject {
+                "initial" => registry.ensure_recurring(&claim, 0).unwrap(),
+                "replacement" => registry.ensure_watchdog_immediately(&claim, 0).unwrap(),
+                _ => registry.begin_watchdog_scheduler(
+                    scheduler.as_ref().unwrap(),
+                    if subject == "dispatch-deadline" {
+                        u64::MAX
+                    } else {
+                        1
+                    },
+                ),
+            };
+            let failure = if subject == "dispatch-deadline" {
+                TimerControlFailure::DeadlineOverflow
+            } else {
+                TimerControlFailure::GenerationExhausted
+            };
+            assert_eq!(transition.failure(), Some(failure));
+            if lifetime == DeclarationLifetime::Retained {
+                assert_eq!(
+                    registry.snapshot(&timer).unwrap().state(),
+                    TimerRuntimeStateSnapshot::Inactive {
+                        reason: InactiveReason::ControlFailure(failure),
+                    }
+                );
+            } else {
+                assert!(registry.is_empty(), "{subject} retained a transient entry");
+                assert_eq!(
+                    registry.has_armed_wakeup(&claim),
+                    Err(RegistryError::UnknownRegistration)
+                );
+                let replacement = registry
+                    .register_once(timer, DeclarationLifetime::Retained)
+                    .unwrap();
+                assert!(replacement.claim_generation() > claim.claim_generation());
+            }
+        }
+    }
+}
+
+#[test]
 fn initial_snapshots_are_policy_specific_and_coherent() {
     let mut registry = registry();
     let once_id = identity("a-once");

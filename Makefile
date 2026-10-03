@@ -39,7 +39,7 @@ help:
 	@echo "  msrv                Check with the minimum supported Rust version"
 	@echo "  ci                  Run the local CI gate"
 	@echo "  update-dev          Install the pinned Rust tools, Wasm target, and hook"
-	@echo "  patch|minor|major   Validate and update version files for review"
+	@echo "  patch|minor|major   Prepare version metadata without deployment tests"
 	@echo "  release-{patch,minor,major}  Commit, tag, and push a SemVer release"
 	@echo "  release-x VERSION=x.y.z      Commit, tag, and push an exact release"
 
@@ -120,14 +120,19 @@ actions-check:
 	bash scripts/ci/check-github-actions-pinned.sh
 
 shell-check:
-	bash -n .githooks/pre-commit scripts/ci/*.sh scripts/dev/*.sh scripts/release/*.sh
+	@set -e; for script in .githooks/pre-commit scripts/ci/*.sh scripts/dev/*.sh scripts/release/*.sh; do \
+		bash -n "$$script"; \
+	done
 
 release-check:
 	bash scripts/release/test-finalize-changelog.sh
 	bash scripts/release/test-finalize-release-truth.sh
 	bash scripts/release/test-release-impact.sh
+	bash scripts/release/test-lockfiles.sh
 	bash scripts/release/test-release-prose-warning.sh
 	bash scripts/release/test-release-gate.sh
+	bash scripts/release/test-version-preparation.sh
+	bash scripts/ci/test-repository-checks.sh
 	bash scripts/release/check-release-truth.sh
 
 provider-check:
@@ -144,11 +149,11 @@ release-verify:
 	done
 
 release-impact:
-	@impact="$$(bash scripts/release/classify-release-impact.sh)"; \
+	@set -e; impact="$$(bash scripts/release/classify-release-impact.sh)"; \
 		echo "Release impact: $$impact"
 
 repository-check:
-	+@impact="$$(bash scripts/release/classify-release-impact.sh)"; \
+	+@set -e; impact="$$(bash scripts/release/classify-release-impact.sh)"; \
 		if [ "$$impact" = "crate" ]; then \
 			echo "error: crate-impacting changes require the release validation path" >&2; \
 			exit 1; \
@@ -187,24 +192,28 @@ bump-x:
 	bash scripts/release/bump-version.sh "$(VERSION)"
 
 release-patch:
+	+$(MAKE) --no-print-directory release-verify
 	+$(MAKE) --no-print-directory patch
 	+$(MAKE) --no-print-directory release-stage
 	+$(MAKE) --no-print-directory release-commit
 	+$(MAKE) --no-print-directory release-push
 
 release-minor:
+	+$(MAKE) --no-print-directory release-verify
 	+$(MAKE) --no-print-directory minor
 	+$(MAKE) --no-print-directory release-stage
 	+$(MAKE) --no-print-directory release-commit
 	+$(MAKE) --no-print-directory release-push
 
 release-major:
+	+$(MAKE) --no-print-directory release-verify
 	+$(MAKE) --no-print-directory major
 	+$(MAKE) --no-print-directory release-stage
 	+$(MAKE) --no-print-directory release-commit
 	+$(MAKE) --no-print-directory release-push
 
 release-x:
+	+$(MAKE) --no-print-directory release-verify
 	+$(MAKE) --no-print-directory bump-x VERSION="$(VERSION)"
 	+$(MAKE) --no-print-directory release-stage
 	+$(MAKE) --no-print-directory release-commit

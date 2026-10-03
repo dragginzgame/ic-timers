@@ -74,8 +74,9 @@ This file is normative for automated contributors.
   release's notes there and keep `Unreleased` empty; do not leave named-release
   notes only under `Unreleased`.
 - When the maintainer asks for the version bump, run the matching bump target.
-  The release helper must validate the staged section, run `release-verify`,
-  and add its date automatically. `release-verify` must retain the normal CI,
+  The version helper must validate the staged section and add its date
+  automatically without running tests. The user runs `release-verify` as part
+  of deployment; it must retain the normal CI,
   MSRV, nested-probe lint, watchdog PocketIC, and policy-cohort gates; it fails
   closed unless `POCKET_IC_BIN` matches the exact audited PocketIC version and
   hash. When no override is supplied, provision that pinned artifact in the
@@ -91,8 +92,14 @@ This file is normative for automated contributors.
   push may use a smaller release-truth job only when it also verifies the exact
   version tag and that the tagged commit is reachable from `main`; do not
   duplicate identical full builds for a same-SHA main-and-tag push.
-- Run targeted checks for changed behavior. Do not run broad external suites
-  unless the maintainer requests them.
-- Release targets are maintainer-owned: do not commit, tag, push, or publish
-  unless explicitly asked.
+- Tests and deployment validation are user-owned. Do not run test suites,
+  build/lint gates, or `release-verify` unless the user explicitly requests
+  them. Cheap release-metadata and locked dependency checks remain part of
+  requested version preparation.
+- Commits and pushes are user-owned. Automated contributors prepare and
+  validate changes, including requested version bumps, but do not commit or
+  push them. Leave release tagging and publication to the maintainer as well.
+- Version-bump helpers must support preparing a release from the current
+  worktree without requiring a preparatory commit. Preserve unrelated changes,
+  leave test execution to deployment, and stage only the release metadata.
 - Use Rust edition 2024 and directory modules when adding multi-file modules.

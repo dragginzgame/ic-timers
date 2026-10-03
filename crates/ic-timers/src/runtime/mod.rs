@@ -758,11 +758,17 @@ fn apply_claim_transition(
     context: Option<&CallbackToken>,
     operation: impl FnOnce(&mut TimerRegistry) -> Result<RegistryTransition, RegistryError>,
 ) -> Result<(), TimerError> {
-    let transition = with_registry_mut(|registry| {
+    let (handles, transition) = with_registry_mut(|registry| {
         validate_context(registry, context)?;
-        operation(registry).map_err(TimerError::from)
+        // A terminal transition may remove a transient declaration. Detach its
+        // capabilities first so every owned provider timer is restored or cleared.
+        let handles = registry
+            .take_provider_handles_for_claim(claim)
+            .map_err(TimerError::from)?;
+        let transition = operation(registry).map_err(TimerError::from);
+        Ok((handles, transition))
     })?;
-    finish_claim_transition(claim, transition, ProviderHandles::default())
+    finish_detached_claim_transition(claim, handles, transition)
 }
 
 fn ensure_once_claim(
@@ -780,22 +786,6 @@ fn reconcile_ordinary_claim(
     context: Option<&CallbackToken>,
     schedule: Option<TimerSchedule>,
 ) -> Result<(), TimerError> {
-    if schedule.is_none() {
-        let (handles, transition) = with_registry_mut(|registry| {
-            validate_context(registry, context)?;
-            registry
-                .validate_ordinary_claim(claim)
-                .map_err(TimerError::from)?;
-            let handles = registry
-                .take_provider_handles_for_claim(claim)
-                .map_err(TimerError::from)?;
-            let transition = registry
-                .reconcile_ordinary(claim, platform::time_ns(), None)
-                .map_err(TimerError::from);
-            Ok((handles, transition))
-        })?;
-        return finish_detached_claim_transition(claim, handles, transition);
-    }
     apply_claim_transition(claim, context, |registry| {
         registry.reconcile_ordinary(claim, platform::time_ns(), schedule)
     })
@@ -824,11 +814,6 @@ fn reconcile_watchdog_claim(
     context: Option<&CallbackToken>,
     schedule: Option<TimerSchedule>,
 ) -> Result<(), TimerError> {
-    if schedule.is_none() {
-        return apply_detached_claim_transition(claim, context, |registry| {
-            registry.reconcile_watchdog_schedule(claim, platform::time_ns(), None)
-        });
-    }
     apply_claim_transition(claim, context, |registry| {
         registry.reconcile_watchdog_schedule(claim, platform::time_ns(), schedule)
     })
@@ -838,7 +823,7 @@ fn cancel_claim(
     claim: &RegistrationClaim,
     context: Option<&CallbackToken>,
 ) -> Result<(), TimerError> {
-    apply_detached_claim_transition(claim, context, |registry| registry.cancel(claim))
+    apply_claim_transition(claim, context, |registry| registry.cancel(claim))
 }
 
 fn validate_context(
@@ -853,23 +838,7 @@ fn validate_context(
 }
 
 fn unregister_claim(claim: &RegistrationClaim) -> Result<(), TimerError> {
-    apply_detached_claim_transition(claim, None, |registry| registry.unregister(claim))
-}
-
-fn apply_detached_claim_transition(
-    claim: &RegistrationClaim,
-    context: Option<&CallbackToken>,
-    operation: impl FnOnce(&mut TimerRegistry) -> Result<RegistryTransition, RegistryError>,
-) -> Result<(), TimerError> {
-    let (handles, transition) = with_registry_mut(|registry| {
-        validate_context(registry, context)?;
-        let handles = registry
-            .take_provider_handles_for_claim(claim)
-            .map_err(TimerError::from)?;
-        let transition = operation(registry).map_err(TimerError::from);
-        Ok((handles, transition))
-    })?;
-    finish_detached_claim_transition(claim, handles, transition)
+    apply_claim_transition(claim, None, |registry| registry.unregister(claim))
 }
 
 fn finish_detached_claim_transition(
@@ -1200,14 +1169,26 @@ fn fail_ordinary_dispatch(token: &CallbackToken) {
 
 fn dispatch_watchdog_scheduler(token: &CallbackToken) {
     let measurement = CallbackMeasurementStart::capture();
-    let transition = with_registry_mut(|registry| {
+    let dispatched = with_registry_mut(|registry| {
         registry.consume_provider_handle(token);
-        Ok(registry.begin_watchdog_scheduler(token, platform::time_ns()))
+        let claim = RegistrationClaim::from_callback(token);
+        let handles = match registry.take_provider_handles_for_claim(&claim) {
+            Ok(handles) => handles,
+            // An already removed or superseded claim is a normal stale delivery.
+            Err(RegistryError::UnknownRegistration | RegistryError::StaleRegistration) => {
+                ProviderHandles::default()
+            }
+            Err(error) => return Err(TimerError::from(error)),
+        };
+        Ok((
+            registry.begin_watchdog_scheduler(token, platform::time_ns()),
+            handles,
+        ))
     });
-    let transition = transition
+    let (transition, handles) = dispatched
         .unwrap_or_else(|error| trap_callback_failure("watchdog scheduler transition", &error));
     let accepted = !matches!(transition.effect(), RegistryEffect::None);
-    finish_callback_transition(token, transition, ProviderHandles::default());
+    finish_callback_transition(token, transition, handles);
     if accepted {
         record_callback_measurements(token, measurement.finish());
     }

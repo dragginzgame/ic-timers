@@ -84,9 +84,6 @@ if ! bash scripts/release/warn-release-prose.sh "${new_version}"; then
     echo "warning: advisory release-prose check could not run; continuing" >&2
 fi
 
-make --no-print-directory ensure-clean
-make --no-print-directory release-verify
-
 bash scripts/release/finalize-changelog.sh "${new_version}" "${release_date}"
 bash scripts/release/finalize-release-truth.sh "${previous_version}" "${new_version}"
 
@@ -99,11 +96,9 @@ cargo update --offline -p ic-timers
 cargo update --manifest-path testing/Cargo.toml --offline -p ic-timers
 
 # Version mutation must leave both independently locked workspaces coherent.
-# The expensive behavioral evidence ran before mutation and is not repeated.
-cargo metadata --locked --offline --no-deps --format-version 1 >/dev/null
-cargo metadata --manifest-path testing/Cargo.toml \
-    --locked --offline --no-deps --format-version 1 >/dev/null
+# Behavioral evidence belongs to the user-operated deployment release gate.
+bash scripts/release/check-lockfiles.sh
 bash scripts/release/check-release-truth.sh
 
 echo "Bumped: ${previous_version} -> ${new_version}"
-echo "Review with git diff, then use release-stage, release-commit, and release-push."
+echo "Review with git diff; deployment validation, commits, tags, and pushes are user-owned."

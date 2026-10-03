@@ -921,7 +921,8 @@ impl TimerRegistry {
         let action = match action {
             Ok(action) => action,
             Err(error) => {
-                return Ok(terminal_ordinary(entry, claim.identity.clone(), error));
+                let transition = terminal_ordinary(entry, claim.identity.clone(), error);
+                return Ok(self.remove_transient_on_failure(claim.identity(), transition));
             }
         };
 
@@ -932,13 +933,9 @@ impl TimerRegistry {
             entry.scheduling_mode = requested.mode;
         }
 
-        Ok(apply_ordinary_action(
-            entry,
-            claim.identity.clone(),
-            now_ns,
-            action,
-            requested,
-        ))
+        let transition =
+            apply_ordinary_action(entry, claim.identity.clone(), now_ns, action, requested);
+        Ok(self.remove_transient_on_failure(claim.identity(), transition))
     }
 
     fn ensure_watchdog(
@@ -967,7 +964,7 @@ impl TimerRegistry {
                 actual: entry.policy.label(),
             });
         };
-        match control.state {
+        let transition = match control.state {
             WatchdogState::Inactive => {
                 let deadline_ns = match request {
                     WatchdogScheduleRequest::Cadence => cadence.deadline_after(now_ns)?,
@@ -983,7 +980,7 @@ impl TimerRegistry {
                         WatchdogScheduleRequest::Reconcile(requested) => requested.mode,
                     };
                 }
-                Ok(transition)
+                transition
             }
             WatchdogState::Scheduled { deadline_ns, .. }
                 if match request {
@@ -1007,11 +1004,11 @@ impl TimerRegistry {
                 if transition.failure().is_none() {
                     entry.scheduling_mode = mode;
                 }
-                Ok(transition)
+                transition
             }
             WatchdogState::Scheduled { .. } => {
                 entry.observability.counters_mut().record_coalesced();
-                Ok(RegistryTransition::normal(RegistryEffect::None))
+                RegistryTransition::normal(RegistryEffect::None)
             }
             WatchdogState::AwaitingWork {
                 attempt_status: WatchdogAttemptStatus::Dispatched,
@@ -1021,7 +1018,7 @@ impl TimerRegistry {
                     control.pending = Some(WatchdogPending::Reconcile(requested));
                 }
                 entry.observability.counters_mut().record_coalesced();
-                Ok(RegistryTransition::normal(RegistryEffect::None))
+                RegistryTransition::normal(RegistryEffect::None)
             }
             WatchdogState::AwaitingWork {
                 attempt_status: WatchdogAttemptStatus::Running,
@@ -1029,9 +1026,10 @@ impl TimerRegistry {
             } => {
                 control.pending = Some(select_pending_watchdog(control.pending, request, now_ns));
                 entry.observability.counters_mut().record_coalesced();
-                Ok(RegistryTransition::normal(RegistryEffect::None))
+                RegistryTransition::normal(RegistryEffect::None)
             }
-        }
+        };
+        Ok(self.remove_transient_on_failure(claim.identity(), transition))
     }
 
     pub(crate) fn cancel(
@@ -1051,7 +1049,8 @@ impl TimerRegistry {
                     let action = match control.cancel() {
                         Ok(action) => action,
                         Err(error) => {
-                            return Ok(terminal_ordinary(entry, identity.clone(), error));
+                            let transition = terminal_ordinary(entry, identity.clone(), error);
+                            return Ok(self.remove_transient_on_failure(&identity, transition));
                         }
                     };
                     let mut remove = false;
@@ -1118,7 +1117,7 @@ impl TimerRegistry {
         if remove {
             self.entries.remove(&identity);
         }
-        Ok(transition)
+        Ok(self.remove_transient_on_failure(&identity, transition))
     }
 
     /// Remove the declaration owned by one exact logical claim.
@@ -1474,16 +1473,18 @@ impl TimerRegistry {
         }
         let Some((successor_generation, attempt_generation)) = control.next_dispatch_generations()
         else {
-            return control.terminate(
+            let transition = control.terminate(
                 clear_callbacks(token.identity.clone(), CallbacksToClear::Work),
                 TimerControlFailure::GenerationExhausted,
             );
+            return self.remove_transient_on_failure(token.identity(), transition);
         };
         let Ok(successor_deadline_ns) = cadence.deadline_after(now_ns) else {
-            return control.terminate(
+            let transition = control.terminate(
                 clear_callbacks(token.identity.clone(), CallbacksToClear::Work),
                 TimerControlFailure::DeadlineOverflow,
             );
+            return self.remove_transient_on_failure(token.identity(), transition);
         };
 
         control.scheduler_generation = successor_generation;
@@ -1638,34 +1639,17 @@ impl TimerRegistry {
                             deadline_ns: successor_deadline_ns,
                         };
                         (RegistryTransition::normal(RegistryEffect::None), false)
-                    } else if let Some(generation) = control.scheduler_generation.checked_add(1) {
-                        control.scheduler_generation = generation;
-                        control.state = WatchdogState::Scheduled {
-                            scheduler_generation: generation,
-                            deadline_ns,
-                        };
-                        (
-                            RegistryTransition::normal(RegistryEffect::ArmWakeup {
-                                token: CallbackToken::new(
-                                    identity.clone(),
-                                    entry.claim_generation,
-                                    generation,
-                                    CallbackRole::WatchdogScheduler,
-                                ),
-                                deadline_ns,
-                                delay_ns: deadline_ns.saturating_sub(now_ns),
-                                arm: WakeupArm::Replacement,
-                            }),
-                            false,
-                        )
                     } else {
-                        (
-                            control.terminate(
-                                clear_callbacks(identity.clone(), CallbacksToClear::Wakeup),
-                                TimerControlFailure::GenerationExhausted,
-                            ),
-                            matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped),
-                        )
+                        let claim = RegistrationClaim::from_callback(token);
+                        let transition = control.arm_scheduler(
+                            &claim,
+                            now_ns,
+                            deadline_ns,
+                            WakeupArm::Replacement,
+                        );
+                        let remove = transition.failure().is_some()
+                            && matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
+                        (transition, remove)
                     }
                 }
                 WatchdogDecision::Stop => {
@@ -1696,6 +1680,20 @@ impl TimerRegistry {
             transition,
             remove,
         ))
+    }
+
+    /// Remove a terminal transient whose provider handles the runtime detached
+    /// before invoking the policy transition.
+    fn remove_transient_on_failure(
+        &mut self,
+        identity: &TimerIdentity,
+        transition: RegistryTransition,
+    ) -> RegistryTransition {
+        let remove = transition.failure().is_some()
+            && self.entries.get(identity).is_some_and(|entry| {
+                matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped)
+            });
+        remove_after(&mut self.entries, identity, transition, remove)
     }
 
     pub(crate) fn snapshot(&self, identity: &TimerIdentity) -> Option<TimerSnapshot> {

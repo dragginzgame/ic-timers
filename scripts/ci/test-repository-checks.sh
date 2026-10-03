@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+repository_root="$(git rev-parse --show-toplevel)"
+temporary_root="$(mktemp -d)"
+trap 'rm -rf -- "${temporary_root}"' EXIT
+
+git init -q "${temporary_root}"
+mkdir -p "${temporary_root}"/{.githooks,scripts/{ci,dev,release},crates/ic-timers/src}
+cp "${repository_root}/Makefile" "${temporary_root}/Makefile"
+cp "${repository_root}/scripts/ci/check-provider-boundary.sh" "${temporary_root}/scripts/ci/"
+cd "${temporary_root}"
+
+for script in .githooks/pre-commit scripts/ci/valid.sh scripts/dev/valid.sh scripts/release/valid.sh; do
+    printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "${script}"
+done
+
+expect_failure() {
+    local expected="${1}"
+    shift
+    local output
+    if output="$("$@" 2>&1)"; then
+        echo "error: unexpectedly accepted: $*" >&2
+        exit 1
+    fi
+    if [[ "${output}" != *"${expected}"* ]]; then
+        echo "error: failure did not contain ${expected}: ${output}" >&2
+        exit 1
+    fi
+}
+
+make --no-print-directory shell-check >/dev/null
+for directory in ci dev release; do
+    broken="scripts/${directory}/broken.sh"
+    printf '%s\n' 'if then' > "${broken}"
+    expect_failure "${broken}" make --no-print-directory shell-check
+    rm -- "${broken}"
+done
+
+cat > scripts/release/classify-release-impact.sh <<'EOF'
+#!/usr/bin/env bash
+if [[ "${CLASSIFICATION:-repository}" == error ]]; then
+    echo 'classification failed' >&2
+    exit 1
+fi
+printf '%s\n' "${CLASSIFICATION:-repository}"
+EOF
+cat > overrides.mk <<'EOF'
+actions-check shell-check release-check provider-check fmt-check:
+	@printf '%s\n' '$@' >> checks-ran
+	@if [ '$@' = '$(FAIL_TARGET)' ]; then echo 'failed $@' >&2; exit 1; fi
+EOF
+fixture_make=(make --no-print-directory -f Makefile -f overrides.mk
+    'MAKE=make --no-print-directory -f Makefile -f overrides.mk')
+
+"${fixture_make[@]}" repository-check > /dev/null 2>&1
+mapfile -t targets < checks-ran
+if [[ "${targets[*]}" != 'actions-check shell-check release-check provider-check fmt-check' ]]; then
+    echo "error: repository-check skipped a required check" >&2
+    exit 1
+fi
+for target in "${targets[@]}"; do
+    rm -- checks-ran
+    expect_failure "failed ${target}" "${fixture_make[@]}" repository-check "FAIL_TARGET=${target}"
+    if [[ "$(tail -n 1 checks-ran)" != "${target}" ]]; then
+        echo "error: repository-check continued after ${target} failed" >&2
+        exit 1
+    fi
+done
+rm -- checks-ran
+expect_failure 'classification failed' env CLASSIFICATION=error "${fixture_make[@]}" repository-check
+expect_failure 'classification failed' env CLASSIFICATION=error "${fixture_make[@]}" release-impact
+expect_failure 'crate-impacting changes' env CLASSIFICATION=crate "${fixture_make[@]}" repository-check
+if [[ -e checks-ran ]]; then
+    echo 'error: repository checks ran after impact classification failed or rejected crate work' >&2
+    exit 1
+fi
+
+cat > crates/ic-timers/src/platform.rs <<'EOF'
+use ic_cdk_timers::TimerId;
+pub(crate) struct TimerHandle(TimerId);
+EOF
+printf '%s\n' 'mod platform;' > crates/ic-timers/src/lib.rs
+bash scripts/ci/check-provider-boundary.sh >/dev/null
+for export in \
+    'pub use platform::TimerHandle;' \
+    'pub use crate::platform::TimerHandle;' \
+    'pub use crate::platform::TimerHandle as PublicHandle;' \
+    'pub use crate::platform::*;' \
+    'pub use self::platform::{TimerHandle, set_timer};' \
+    'pub use crate::{snapshot::TimerEpoch, platform::{TimerHandle}};' \
+    'use crate::platform as p; pub use p::TimerHandle;' \
+    'use crate::platform as p; use p as q; pub use q::TimerHandle;' \
+    'use crate::platform::{TimerHandle as H}; pub use H;' \
+    'pub type PublicHandle = crate::platform::TimerHandle;' \
+    'use crate::platform as p; pub type PublicHandle = p::TimerHandle;' \
+    $'pub\nuse crate::{\n    platform::{TimerHandle},\n};' \
+    'pub mod platform;'; do
+    printf '%s\n' 'mod platform;' "${export}" > crates/ic-timers/src/lib.rs
+    expect_failure 'public export' bash scripts/ci/check-provider-boundary.sh
+done
+for export in 'pub use ic_cdk_timers::TimerId;' 'pub extern crate ic_cdk_timers;'; do
+    printf '%s\n' 'mod platform;' "${export}" > crates/ic-timers/src/lib.rs
+    expect_failure 'direct ic-cdk-timers use' bash scripts/ci/check-provider-boundary.sh
+done
+printf '%s\n' 'mod platform;' 'pub(crate) use crate::platform::TimerHandle;' > crates/ic-timers/src/lib.rs
+bash scripts/ci/check-provider-boundary.sh >/dev/null
+printf '%s\n' 'pub(super) use super::platform::TimerHandle;' > crates/ic-timers/src/runtime.rs
+bash scripts/ci/check-provider-boundary.sh >/dev/null
+printf '%s\n' 'use super::platform::TimerHandle;' > crates/ic-timers/src/runtime.rs
+bash scripts/ci/check-provider-boundary.sh >/dev/null
+printf '%s\n' 'use ic_cdk_timers::TimerId;' > crates/ic-timers/src/runtime.rs
+expect_failure 'direct ic-cdk-timers use' bash scripts/ci/check-provider-boundary.sh
+rm -- crates/ic-timers/src/runtime.rs
+printf '%s\n' 'pub mod platform;' > crates/ic-timers/src/lib.rs
+expect_failure 'private module' bash scripts/ci/check-provider-boundary.sh
+
+printf '%s\n' 'mod platform;' > crates/ic-timers/src/lib.rs
+printf '%s\n' 'pub fn leaked() {}' >> crates/ic-timers/src/platform.rs
+expect_failure 'restricted visibility' bash scripts/ci/check-provider-boundary.sh
+
+# Compile indirect leaks against a crate-visible handle. This independently
+# exercises Rust visibility and warning-denied type-alias validation.
+printf '%s\n' 'pub(crate) struct TimerHandle;' > crates/ic-timers/src/platform.rs
+printf '%s\n' 'mod platform;' 'use crate::platform as p; pub use p::TimerHandle;' \
+    > crates/ic-timers/src/lib.rs
+expect_failure 'cannot be re-exported' rustc --edition=2024 --crate-type=lib -D warnings \
+    crates/ic-timers/src/lib.rs -o visibility-fixture.rlib
+printf '%s\n' 'mod platform;' 'pub type PublicHandle = crate::platform::TimerHandle;' \
+    > crates/ic-timers/src/lib.rs
+expect_failure 'private_interfaces' rustc --edition=2024 --crate-type=lib -D warnings \
+    crates/ic-timers/src/lib.rs -o visibility-fixture.rlib
+
+echo 'Repository check regression tests passed'

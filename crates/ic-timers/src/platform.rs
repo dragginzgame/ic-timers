@@ -3,6 +3,11 @@
 //! Recurrence, identity, arbitration, inventory, and consumer work belong to
 //! the canonical runtime above this module.
 
+#![expect(
+    clippy::redundant_pub_crate,
+    reason = "Crate visibility forbids indirect public re-exports of platform authority."
+)]
+
 use std::{future::Future, time::Duration};
 
 #[cfg(not(test))]
@@ -14,11 +19,11 @@ use ic_cdk_timers::{
 #[cfg(not(test))]
 #[must_use = "bind or clear the platform timer handle"]
 #[derive(Debug, Eq, PartialEq)]
-pub struct TimerHandle(CdkTimerId);
+pub(crate) struct TimerHandle(CdkTimerId);
 
 /// Copy-only page extents returned by the private system-fact boundary.
 #[derive(Clone, Copy)]
-pub struct MemoryPages {
+pub(crate) struct MemoryPages {
     wasm: u64,
     stable: u64,
 }
@@ -35,7 +40,7 @@ impl MemoryPages {
 
 /// Arm one asynchronous one-shot callback.
 #[cfg(not(test))]
-pub fn set_timer(delay: Duration, task: impl Future<Output = ()> + 'static) -> TimerHandle {
+pub(crate) fn set_timer(delay: Duration, task: impl Future<Output = ()> + 'static) -> TimerHandle {
     TimerHandle(cdk_set_timer(delay, task))
 }
 
@@ -45,32 +50,32 @@ pub fn set_timer(delay: Duration, task: impl Future<Output = ()> + 'static) -> T
     clippy::needless_pass_by_value,
     reason = "Clearing consumes the linear handle."
 )]
-pub fn clear_timer(handle: TimerHandle) {
+pub(crate) fn clear_timer(handle: TimerHandle) {
     cdk_clear_timer(handle.0);
 }
 
 /// Return current IC message time in nanoseconds.
 #[cfg(not(test))]
-pub fn time_ns() -> u64 {
+pub(crate) fn time_ns() -> u64 {
     ic0::time()
 }
 
 /// Return the current canister version.
 #[cfg(not(test))]
-pub fn canister_version() -> u64 {
+pub(crate) fn canister_version() -> u64 {
     ic0::canister_version()
 }
 
 /// Return call-context instruction consumption on the IC.
 #[cfg(not(test))]
-pub fn instruction_counter() -> u64 {
+pub(crate) fn instruction_counter() -> u64 {
     ic0::performance_counter(1)
 }
 
 /// Return current Wasm and stable memory extents in 64 KiB pages without
 /// allocation.
 #[cfg(not(test))]
-pub fn memory_pages() -> MemoryPages {
+pub(crate) fn memory_pages() -> MemoryPages {
     #[cfg(target_arch = "wasm32")]
     let wasm = core::arch::wasm32::memory_size::<0>() as u64;
     #[cfg(not(target_arch = "wasm32"))]
@@ -84,12 +89,12 @@ pub fn memory_pages() -> MemoryPages {
 
 /// Abort the current message when an internal callback invariant is violated.
 #[cfg(not(test))]
-pub fn trap(message: &str) -> ! {
+pub(crate) fn trap(message: &str) -> ! {
     ic0::trap(message.as_bytes())
 }
 
 #[cfg(test)]
-pub use fake::{
+pub(crate) use fake::{
     TimerHandle, advance_instructions, canister_version, clear_timer, discard_next_due,
     grow_memory_pages, instruction_counter, memory_pages, reset, run_next_due, set_time, set_timer,
     time_ns, timer_count, trap,
@@ -114,7 +119,7 @@ mod fake {
 
     #[must_use = "bind or clear the platform timer handle"]
     #[derive(Debug, Eq, PartialEq)]
-    pub struct TimerHandle(u64);
+    pub(crate) struct TimerHandle(u64);
 
     thread_local! {
         static NOW_NS: Cell<u64> = const { Cell::new(0) };
@@ -128,7 +133,10 @@ mod fake {
         };
     }
 
-    pub fn set_timer(delay: Duration, task: impl Future<Output = ()> + 'static) -> TimerHandle {
+    pub(crate) fn set_timer(
+        delay: Duration,
+        task: impl Future<Output = ()> + 'static,
+    ) -> TimerHandle {
         advance_instructions(5);
         let delay_ns = u64::try_from(delay.as_nanos()).unwrap_or(u64::MAX);
         let deadline_ns = time_ns().saturating_add(delay_ns);
@@ -153,48 +161,48 @@ mod fake {
         clippy::needless_pass_by_value,
         reason = "Clearing consumes the linear handle."
     )]
-    pub fn clear_timer(handle: TimerHandle) {
+    pub(crate) fn clear_timer(handle: TimerHandle) {
         advance_instructions(2);
         TASKS.with(|tasks| {
             tasks.borrow_mut().remove(&handle.0);
         });
     }
 
-    pub fn time_ns() -> u64 {
+    pub(crate) fn time_ns() -> u64 {
         NOW_NS.with(Cell::get)
     }
 
-    pub fn canister_version() -> u64 {
+    pub(crate) fn canister_version() -> u64 {
         CANISTER_VERSION.with(Cell::get)
     }
 
-    pub fn instruction_counter() -> u64 {
+    pub(crate) fn instruction_counter() -> u64 {
         INSTRUCTIONS.with(Cell::get)
     }
 
-    pub fn memory_pages() -> MemoryPages {
+    pub(crate) fn memory_pages() -> MemoryPages {
         MemoryPages {
             wasm: WASM_MEMORY_PAGES.with(Cell::get),
             stable: STABLE_MEMORY_PAGES.with(Cell::get),
         }
     }
 
-    pub fn trap(message: &str) -> ! {
+    pub(crate) fn trap(message: &str) -> ! {
         panic!("{message}")
     }
 
-    pub fn advance_instructions(amount: u64) {
+    pub(crate) fn advance_instructions(amount: u64) {
         INSTRUCTIONS.with(|instructions| {
             instructions.set(instructions.get().saturating_add(amount));
         });
     }
 
-    pub fn grow_memory_pages(wasm: u64, stable: u64) {
+    pub(crate) fn grow_memory_pages(wasm: u64, stable: u64) {
         WASM_MEMORY_PAGES.with(|pages| pages.set(pages.get().saturating_add(wasm)));
         STABLE_MEMORY_PAGES.with(|pages| pages.set(pages.get().saturating_add(stable)));
     }
 
-    pub fn reset(now_ns: u64, canister_version: u64) {
+    pub(crate) fn reset(now_ns: u64, canister_version: u64) {
         NOW_NS.with(|now| now.set(now_ns));
         CANISTER_VERSION.with(|version| version.set(canister_version));
         NEXT_HANDLE.with(|next| next.set(0));
@@ -204,15 +212,15 @@ mod fake {
         TASKS.with(|tasks| tasks.borrow_mut().clear());
     }
 
-    pub fn set_time(now_ns: u64) {
+    pub(crate) fn set_time(now_ns: u64) {
         NOW_NS.with(|now| now.set(now_ns));
     }
 
-    pub fn timer_count() -> usize {
+    pub(crate) fn timer_count() -> usize {
         TASKS.with(|tasks| tasks.borrow().len())
     }
 
-    pub fn run_next_due() -> bool {
+    pub(crate) fn run_next_due() -> bool {
         let now_ns = time_ns();
         let next_handle = next_due_handle(now_ns);
         let Some(next_handle) = next_handle else {
@@ -232,7 +240,7 @@ mod fake {
         true
     }
 
-    pub fn discard_next_due() -> bool {
+    pub(crate) fn discard_next_due() -> bool {
         let Some(next_handle) = next_due_handle(time_ns()) else {
             return false;
         };
