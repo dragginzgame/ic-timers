@@ -4,6 +4,36 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.9.5]
+
+### Changed
+
+- Remove unused absolute deadlines from private provider effects. Policy control
+  state remains the deadline owner; effects retain resolved provider delays,
+  callback authority and arm kind.
+- Make ordinary cancellation return checked success or a typed error instead of
+  a generic scheduling action. The registry owns cleanup and pending commands;
+  remove the impossible arm-on-cancel and clear-on-schedule branches.
+
+### Development
+
+- Observe authoritative snapshot deadlines in the existing registry fixtures,
+  preserving provider-delay, generation and malformed-token coverage.
+- Update existing control fixtures to check cancellation state, repeat-cancel
+  generation stability and atomic failure on generation exhaustion. Existing
+  registry lifetime and runtime handle-cleanup fixtures remain the boundary checks.
+- Use one workspace-version projection in the release handoff. Remove the
+  redundant latest-release marker and its checks and fixtures.
+- Remove the historical README sentence prohibition from release validation.
+  Keep canonical API-line and dependency-pin checks, and verify that editorial
+  prose does not block structurally valid releases.
+
+### Documentation
+
+- Replace stale preparation instructions with scoped historical evidence and
+  current follow-up ownership. Record the completed 0.9.4 release and this
+  cleanup in the [0.9.5 release note](docs/changelog/0.9.5.md).
+
 ## [0.9.4] - 2026-10-03
 
 ### Changed

@@ -26,28 +26,27 @@ fn cadence(nanoseconds: u64) -> TimerCadence {
     TimerCadence::from_nanos(nanoseconds).expect("fixture cadence should be valid")
 }
 
-fn arm(transition: RegistryTransition) -> (CallbackToken, u64, WakeupArm) {
+fn arm(transition: RegistryTransition) -> (CallbackToken, WakeupArm) {
     match transition.into_effect() {
-        RegistryEffect::ArmWakeup {
-            token,
-            deadline_ns,
-            arm,
-            ..
-        } => (token, deadline_ns, arm),
+        RegistryEffect::ArmWakeup { token, arm, .. } => (token, arm),
         effect => panic!("expected arm effect, got {effect:?}"),
     }
 }
 
-fn dispatch(transition: RegistryTransition) -> (CallbackToken, u64, CallbackToken) {
+fn dispatch(transition: RegistryTransition) -> (CallbackToken, CallbackToken) {
     match transition.into_effect() {
         RegistryEffect::DispatchWatchdog {
-            successor,
-            successor_deadline_ns,
-            work,
-            ..
-        } => (successor, successor_deadline_ns, work),
+            successor, work, ..
+        } => (successor, work),
         effect => panic!("expected watchdog dispatch, got {effect:?}"),
     }
+}
+
+fn scheduled_deadline(registry: &TimerRegistry, token: &CallbackToken) -> u64 {
+    registry
+        .snapshot(token.identity())
+        .and_then(|snapshot| snapshot.next_deadline_ns())
+        .expect("scheduled generation should have an authoritative deadline")
 }
 
 fn confirm(registry: &mut TimerRegistry, transition: &RegistryTransition) {
@@ -210,7 +209,7 @@ fn explicit_unregistration_consumes_scheduled_and_running_claims() {
         .ensure_once(&scheduled, 0, TimerSchedule::At(10))
         .expect("ensure should succeed");
     confirm(&mut registry, &scheduled_transition);
-    let (queued, _, _) = arm(scheduled_transition);
+    let (queued, _) = arm(scheduled_transition);
     let transition = registry
         .unregister(&scheduled)
         .expect("scheduled unregistration should succeed");
@@ -232,7 +231,7 @@ fn explicit_unregistration_consumes_scheduled_and_running_claims() {
         .ensure_once(&running, 0, TimerSchedule::At(10))
         .expect("ensure should succeed");
     confirm(&mut registry, &running_transition);
-    let (active, _, _) = arm(running_transition);
+    let (active, _) = arm(running_transition);
     assert_eq!(
         registry.begin_ordinary(&active),
         CallbackAcceptance::Accepted
@@ -268,10 +267,10 @@ fn running_watchdog_unregistration_clears_its_committed_successor() {
         .ensure_recurring(&claim, 0)
         .expect("ensure should succeed");
     confirm(&mut registry, &initial);
-    let (scheduler, _, _) = arm(initial);
+    let (scheduler, _) = arm(initial);
     let dispatched = registry.begin_watchdog_scheduler(&scheduler, 10);
     confirm(&mut registry, &dispatched);
-    let (_successor, _, work) = dispatch(dispatched);
+    let (_successor, work) = dispatch(dispatched);
     assert_eq!(
         registry.begin_watchdog_work(&work),
         CallbackAcceptance::Accepted
@@ -312,18 +311,17 @@ fn watchdog_dispatch_confirmation_rejects_cross_claim_work() {
         .register_watchdog(second_id, cadence(5), DeclarationLifetime::Retained)
         .expect("second claim should succeed");
 
-    let (first_scheduler, _, _) = arm(registry
+    let (first_scheduler, _) = arm(registry
         .ensure_recurring(&first, 0)
         .expect("first ensure should succeed"));
-    let (second_scheduler, _, _) = arm(registry
+    let (second_scheduler, _) = arm(registry
         .ensure_recurring(&second, 0)
         .expect("second ensure should succeed"));
-    let (first_successor, first_deadline, first_work) =
+    let (first_successor, first_work) =
         dispatch(registry.begin_watchdog_scheduler(&first_scheduler, 5));
-    let (_, _, second_work) = dispatch(registry.begin_watchdog_scheduler(&second_scheduler, 5));
+    let (_, second_work) = dispatch(registry.begin_watchdog_scheduler(&second_scheduler, 5));
     let malformed_arm = RegistryEffect::ArmWakeup {
         token: second_work.clone(),
-        deadline_ns: first_deadline,
         delay_ns: 0,
         arm: WakeupArm::Initial,
     };
@@ -333,7 +331,6 @@ fn watchdog_dispatch_confirmation_rejects_cross_claim_work() {
     );
     let malformed_replacement = RegistryEffect::ArmWakeup {
         token: first_successor.clone(),
-        deadline_ns: first_deadline,
         delay_ns: 5,
         arm: WakeupArm::Replacement,
     };
@@ -343,7 +340,6 @@ fn watchdog_dispatch_confirmation_rejects_cross_claim_work() {
     );
     let malformed = RegistryEffect::DispatchWatchdog {
         successor: first_successor.clone(),
-        successor_deadline_ns: first_deadline,
         successor_delay_ns: 5,
         work: second_work,
     };
@@ -362,7 +358,6 @@ fn watchdog_dispatch_confirmation_rejects_cross_claim_work() {
 
     let valid = RegistryEffect::DispatchWatchdog {
         successor: first_successor.clone(),
-        successor_deadline_ns: first_deadline,
         successor_delay_ns: 5,
         work: first_work.clone(),
     };
@@ -374,7 +369,6 @@ fn watchdog_dispatch_confirmation_rejects_cross_claim_work() {
         .expect("duplicate confirmation should be inert");
     let wrong_attempt = RegistryEffect::DispatchWatchdog {
         successor: first_successor,
-        successor_deadline_ns: first_deadline,
         successor_delay_ns: 5,
         work: CallbackToken {
             callback_generation: first_work.callback_generation + 1,
@@ -417,7 +411,8 @@ fn once_coalesces_and_rotates_generations_while_nested_schedule_wins() {
             .wakeups_armed(),
         1
     );
-    let (first, deadline, arm_kind) = arm(first_transition);
+    let (first, arm_kind) = arm(first_transition);
+    let deadline = scheduled_deadline(&registry, &first);
     assert_eq!(deadline, 100);
     assert_eq!(arm_kind, WakeupArm::Initial);
     assert_eq!(first.callback_generation(), 1);
@@ -443,7 +438,8 @@ fn once_coalesces_and_rotates_generations_while_nested_schedule_wins() {
         )
         .expect("completion should succeed");
     confirm(&mut registry, &second_transition);
-    let (second, deadline, _) = arm(second_transition);
+    let (second, _) = arm(second_transition);
+    let deadline = scheduled_deadline(&registry, &second);
     assert_eq!(deadline, 80);
     assert_eq!(second.callback_generation(), 2);
     assert_eq!(registry.begin_ordinary(&first), CallbackAcceptance::Stale);
@@ -484,7 +480,7 @@ fn nested_cancel_and_ensure_use_latest_request_order() {
         .register_once(timer.clone(), DeclarationLifetime::Retained)
         .expect("claim should succeed");
 
-    let (first, _, _) = arm(registry
+    let (first, _) = arm(registry
         .ensure_once(&claim, 0, TimerSchedule::At(10))
         .expect("ensure should succeed"));
     assert_eq!(
@@ -519,7 +515,7 @@ fn nested_cancel_and_ensure_use_latest_request_order() {
     );
     assert_eq!(cancelled_snapshot.observability().counters().cancelled(), 1);
 
-    let (second, _, _) = arm(registry
+    let (second, _) = arm(registry
         .ensure_once(&claim, 20, TimerSchedule::At(40))
         .expect("retained declaration should re-enable"));
     assert_eq!(
@@ -532,13 +528,14 @@ fn nested_cancel_and_ensure_use_latest_request_order() {
     registry
         .ensure_once(&claim, 21, TimerSchedule::At(50))
         .expect("later nested ensure should succeed");
-    let (_, deadline, _) = arm(registry
+    let (scheduled_token, _) = arm(registry
         .complete_ordinary(
             &second,
             22,
             TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop),
         )
         .expect("later ensure should override cancellation"));
+    let deadline = scheduled_deadline(&registry, &scheduled_token);
     assert_eq!(deadline, 50);
     assert_eq!(
         registry
@@ -575,7 +572,7 @@ fn exact_ordinary_reconciliation_discards_invalid_callback_proposals() {
                     )
                     .unwrap()
             };
-            let (token, _, _) = arm(registry
+            let (token, _) = arm(registry
                 .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(1)))
                 .unwrap());
             assert_eq!(
@@ -593,7 +590,8 @@ fn exact_ordinary_reconciliation_discards_invalid_callback_proposals() {
                 )
                 .unwrap();
             assert_eq!(transition.failure(), None);
-            assert_eq!(arm(transition).1, u64::MAX);
+            let (token, _) = arm(transition);
+            assert_eq!(scheduled_deadline(&registry, &token), u64::MAX);
             let snapshot = registry.snapshot(&timer).unwrap();
             assert_eq!(
                 snapshot.latest_directive(),
@@ -614,7 +612,7 @@ fn relative_exact_reconciliation_preserves_request_observations_after_suspension
     let claim = registry
         .register_after_completion(timer.clone(), cadence(5), DeclarationLifetime::Retained)
         .unwrap();
-    let (token, _, _) = arm(registry
+    let (token, _) = arm(registry
         .reconcile_ordinary(&claim, 10, Some(TimerSchedule::At(10)))
         .unwrap());
     assert_eq!(
@@ -641,14 +639,11 @@ fn relative_exact_reconciliation_preserves_request_observations_after_suspension
     assert_eq!(transition.failure(), None);
     assert!(matches!(
         transition.effect(),
-        RegistryEffect::ArmWakeup {
-            deadline_ns: 13,
-            delay_ns: 0,
-            ..
-        }
+        RegistryEffect::ArmWakeup { delay_ns: 0, .. }
     ));
     confirm(&mut registry, &transition);
     let snapshot = registry.snapshot(&timer).unwrap();
+    assert_eq!(snapshot.next_deadline_ns(), Some(13));
     assert_eq!(
         snapshot.latest_directive(),
         Some(TimerDirectiveSnapshot::ScheduleAt { deadline_ns: 13 })
@@ -667,7 +662,7 @@ fn explicit_invariant_failure_still_overrides_exact_ordinary_reconciliation() {
         let mut registry = registry();
         let timer = identity("invariant-overrides-exact");
         let claim = registry.register_once(timer.clone(), lifetime).unwrap();
-        let (token, _, _) = arm(registry
+        let (token, _) = arm(registry
             .ensure_once(&claim, 0, TimerSchedule::At(1))
             .unwrap());
         assert_eq!(
@@ -710,14 +705,16 @@ fn ordinary_reconciliation_is_authoritative_and_registry_pending_is_ordered() {
         .register_after_completion(timer.clone(), cadence(5), DeclarationLifetime::Retained)
         .expect("claim should succeed");
 
-    let (replaced, deadline, arm_kind) = arm(registry
+    let (replaced, arm_kind) = arm(registry
         .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(100)))
         .expect("initial reconciliation should arm"));
+    let deadline = scheduled_deadline(&registry, &replaced);
     assert_eq!(deadline, 100);
     assert_eq!(arm_kind, WakeupArm::Initial);
-    let (current, deadline, arm_kind) = arm(registry
+    let (current, arm_kind) = arm(registry
         .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(200)))
         .expect("authoritative reconciliation may move later"));
+    let deadline = scheduled_deadline(&registry, &current);
     assert_eq!(deadline, 200);
     assert_eq!(arm_kind, WakeupArm::Replacement);
     assert_eq!(
@@ -735,13 +732,14 @@ fn ordinary_reconciliation_is_authoritative_and_registry_pending_is_ordered() {
     registry
         .reconcile_ordinary(&claim, 200, Some(TimerSchedule::At(300)))
         .expect("later authoritative request should supersede the ensure");
-    let (successor, deadline, _) = arm(registry
+    let (successor, _) = arm(registry
         .complete_ordinary(
             &current,
             201,
             TimerRunResult::new(TimerCompletion::success(1), TimerDirective::ScheduleAt(225)),
         )
         .expect("authoritative request should replace the callback directive"));
+    let deadline = scheduled_deadline(&registry, &successor);
     assert_eq!(deadline, 300);
     assert_eq!(
         registry.begin_ordinary(&successor),
@@ -754,13 +752,14 @@ fn ordinary_reconciliation_is_authoritative_and_registry_pending_is_ordered() {
     registry
         .ensure_recurring(&claim, 301)
         .expect("a later ensure should supersede reconciliation by request order");
-    let (_, deadline, _) = arm(registry
+    let (scheduled_token, _) = arm(registry
         .complete_ordinary(
             &successor,
             302,
             TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::ScheduleAt(375)),
         )
         .expect("completion should use the ordered pending request"));
+    let deadline = scheduled_deadline(&registry, &scheduled_token);
     assert_eq!(deadline, 306);
 
     registry
@@ -781,15 +780,16 @@ fn after_completion_owns_cadence_and_failure_state() {
     let claim = registry
         .register_after_completion(timer.clone(), cadence(5), DeclarationLifetime::Retained)
         .expect("claim should succeed");
-    let (first, deadline, _) = arm(registry
+    let (first, _) = arm(registry
         .ensure_recurring(&claim, 10)
         .expect("initial ensure should succeed"));
+    let deadline = scheduled_deadline(&registry, &first);
     assert_eq!(deadline, 15);
     assert_eq!(
         registry.begin_ordinary(&first),
         CallbackAcceptance::Accepted
     );
-    let (second, deadline, _) = arm(registry
+    let (second, _) = arm(registry
         .complete_ordinary(
             &first,
             20,
@@ -799,6 +799,7 @@ fn after_completion_owns_cadence_and_failure_state() {
             ),
         )
         .expect("recurrence should succeed"));
+    let deadline = scheduled_deadline(&registry, &second);
     assert_eq!(deadline, 25);
     assert_eq!(registry.consecutive_expected_failures(&timer), Some(1));
     assert_eq!(
@@ -826,7 +827,7 @@ fn ordinary_directive_matrix_preserves_mode_and_checked_deadline() {
         .ensure_once(&claim, 0, TimerSchedule::At(1))
         .expect("ensure should succeed");
     confirm(&mut registry, &initial);
-    let (first, _, _) = arm(initial);
+    let (first, _) = arm(initial);
     assert_eq!(
         registry.begin_ordinary(&first),
         CallbackAcceptance::Accepted
@@ -843,7 +844,8 @@ fn ordinary_directive_matrix_preserves_mode_and_checked_deadline() {
         )
         .expect("immediate continuation should succeed");
     confirm(&mut registry, &immediate);
-    let (second, deadline, _) = arm(immediate);
+    let (second, _) = arm(immediate);
+    let deadline = scheduled_deadline(&registry, &second);
     assert_eq!(deadline, 10);
     assert_eq!(
         registry
@@ -867,7 +869,8 @@ fn ordinary_directive_matrix_preserves_mode_and_checked_deadline() {
         )
         .expect("retry should succeed");
     confirm(&mut registry, &retry);
-    let (third, deadline, _) = arm(retry);
+    let (third, _) = arm(retry);
+    let deadline = scheduled_deadline(&registry, &third);
     assert_eq!(deadline, 25);
     assert_eq!(
         registry
@@ -888,7 +891,8 @@ fn ordinary_directive_matrix_preserves_mode_and_checked_deadline() {
         )
         .expect("absolute scheduling should succeed");
     confirm(&mut registry, &absolute);
-    let (fourth, deadline, _) = arm(absolute);
+    let (fourth, _) = arm(absolute);
+    let deadline = scheduled_deadline(&registry, &fourth);
     assert_eq!(deadline, 40);
     assert_eq!(
         registry
@@ -944,7 +948,7 @@ fn illegal_once_recurrence_and_invariant_result_stop_truthfully() {
     let illegal = registry
         .register_once(illegal_id.clone(), DeclarationLifetime::Retained)
         .expect("claim should succeed");
-    let (token, _, _) = arm(registry
+    let (token, _) = arm(registry
         .ensure_once(&illegal, 0, TimerSchedule::At(1))
         .expect("ensure should succeed"));
     assert_eq!(
@@ -978,7 +982,7 @@ fn illegal_once_recurrence_and_invariant_result_stop_truthfully() {
     let invariant = registry
         .register_once(invariant_id.clone(), DeclarationLifetime::Retained)
         .expect("claim should succeed");
-    let (token, _, _) = arm(registry
+    let (token, _) = arm(registry
         .ensure_once(&invariant, 0, TimerSchedule::At(1))
         .expect("ensure should succeed"));
     assert_eq!(
@@ -1037,13 +1041,15 @@ fn watchdog_dispatches_successor_first_and_retires_unacknowledged_attempt() {
         .ensure_recurring(&claim, 10)
         .expect("initial ensure should succeed");
     confirm(&mut registry, &initial_transition);
-    let (scheduler, deadline, _) = arm(initial_transition);
+    let (scheduler, _) = arm(initial_transition);
+    let deadline = scheduled_deadline(&registry, &scheduler);
     assert_eq!(deadline, 15);
 
     let first_dispatch = registry.begin_watchdog_scheduler(&scheduler, 20);
     confirm(&mut registry, &first_dispatch);
     confirm(&mut registry, &first_dispatch);
-    let (successor, deadline, work) = dispatch(first_dispatch);
+    let (successor, work) = dispatch(first_dispatch);
+    let deadline = scheduled_deadline(&registry, &successor);
     assert_eq!(deadline, 25);
     let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
     assert_eq!(
@@ -1083,11 +1089,13 @@ fn watchdog_dispatches_successor_first_and_retires_unacknowledged_attempt() {
     let second_dispatch = registry.begin_watchdog_scheduler(&successor, 30);
     confirm(&mut registry, &second_dispatch);
     confirm(&mut registry, &second_dispatch);
-    let (next_successor, deadline, delayed_work) = dispatch(second_dispatch);
+    let (next_successor, delayed_work) = dispatch(second_dispatch);
+    let deadline = scheduled_deadline(&registry, &next_successor);
     assert_eq!(deadline, 35);
     let third_dispatch = registry.begin_watchdog_scheduler(&next_successor, 40);
     confirm(&mut registry, &third_dispatch);
-    let (_third_successor, deadline, _third_work) = dispatch(third_dispatch);
+    let (third_successor, _third_work) = dispatch(third_dispatch);
+    let deadline = scheduled_deadline(&registry, &third_successor);
     assert_eq!(deadline, 45);
     assert_eq!(
         registry.begin_watchdog_work(&delayed_work),
@@ -1123,7 +1131,6 @@ fn watchdog_immediate_initial_and_replacement_requests_coalesce_without_duplicat
     assert!(matches!(
         initial.effect(),
         RegistryEffect::ArmWakeup {
-            deadline_ns: 10,
             delay_ns: 0,
             arm: WakeupArm::Initial,
             ..
@@ -1160,21 +1167,20 @@ fn watchdog_immediate_initial_and_replacement_requests_coalesce_without_duplicat
         .ensure_recurring(&replacement_claim, 10)
         .expect("cadence ensure should succeed");
     confirm(&mut registry, &cadence_arm);
-    let (stale_scheduler, _, _) = arm(cadence_arm);
+    let (stale_scheduler, _) = arm(cadence_arm);
     let replacement = registry
         .ensure_watchdog_immediately(&replacement_claim, 12)
         .expect("later cadence deadline should move to now");
     assert!(matches!(
         replacement.effect(),
         RegistryEffect::ArmWakeup {
-            deadline_ns: 12,
             delay_ns: 0,
             arm: WakeupArm::Replacement,
             ..
         }
     ));
     confirm(&mut registry, &replacement);
-    let (immediate_scheduler, _, _) = arm(replacement);
+    let (immediate_scheduler, _) = arm(replacement);
     assert_eq!(
         registry
             .begin_watchdog_scheduler(&stale_scheduler, 15)
@@ -1217,10 +1223,11 @@ fn watchdog_running_immediate_request_replaces_exact_successor_and_beats_cadence
         .ensure_recurring(&claim, 10)
         .expect("initial ensure should succeed");
     confirm(&mut registry, &initial);
-    let (scheduler, _, _) = arm(initial);
+    let (scheduler, _) = arm(initial);
     let dispatched = registry.begin_watchdog_scheduler(&scheduler, 20);
     confirm(&mut registry, &dispatched);
-    let (cadence_successor, cadence_deadline, work) = dispatch(dispatched);
+    let (cadence_successor, work) = dispatch(dispatched);
+    let cadence_deadline = scheduled_deadline(&registry, &cadence_successor);
     assert_eq!(cadence_deadline, 25);
 
     let dispatched_request = registry
@@ -1255,14 +1262,13 @@ fn watchdog_running_immediate_request_replaces_exact_successor_and_beats_cadence
     assert!(matches!(
         completed.effect(),
         RegistryEffect::ArmWakeup {
-            deadline_ns: 21,
             delay_ns: 0,
             arm: WakeupArm::Replacement,
             ..
         }
     ));
     confirm(&mut registry, &completed);
-    let (immediate_successor, _, _) = arm(completed);
+    let (immediate_successor, _) = arm(completed);
     assert_eq!(
         registry
             .begin_watchdog_scheduler(&cadence_successor, 25)
@@ -1301,10 +1307,10 @@ fn watchdog_completion_arbitrates_immediate_cancellation_and_unregistration() {
     let continue_claim = registry
         .register_watchdog(continue_timer, cadence(5), DeclarationLifetime::Retained)
         .expect("continue claim should succeed");
-    let (scheduler, _, _) = arm(registry
+    let (scheduler, _) = arm(registry
         .ensure_recurring(&continue_claim, 10)
         .expect("continue ensure should succeed"));
-    let (cadence_successor, _, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 20));
+    let (cadence_successor, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 20));
     assert_eq!(
         registry.begin_watchdog_work(&work),
         CallbackAcceptance::Accepted
@@ -1322,14 +1328,16 @@ fn watchdog_completion_arbitrates_immediate_cancellation_and_unregistration() {
     assert!(matches!(
         immediate.effect(),
         RegistryEffect::ArmWakeup {
-            deadline_ns: 21,
             delay_ns: 0,
             arm: WakeupArm::Replacement,
             ..
         }
     ));
+    let (immediate_successor, _) = arm(immediate);
+    let deadline = scheduled_deadline(&registry, &immediate_successor);
+    assert_eq!(deadline, 21);
     assert_ne!(
-        arm(immediate).0.callback_generation(),
+        immediate_successor.callback_generation(),
         cadence_successor.callback_generation()
     );
 
@@ -1341,10 +1349,10 @@ fn watchdog_completion_arbitrates_immediate_cancellation_and_unregistration() {
             DeclarationLifetime::Retained,
         )
         .expect("cancel claim should succeed");
-    let (scheduler, _, _) = arm(registry
+    let (scheduler, _) = arm(registry
         .ensure_recurring(&cancel_claim, 10)
         .expect("cancel ensure should succeed"));
-    let (_successor, _, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 20));
+    let (_successor, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 20));
     assert_eq!(
         registry.begin_watchdog_work(&work),
         CallbackAcceptance::Accepted
@@ -1389,10 +1397,10 @@ fn watchdog_completion_arbitrates_immediate_cancellation_and_unregistration() {
             DeclarationLifetime::Retained,
         )
         .expect("unregister claim should succeed");
-    let (scheduler, _, _) = arm(registry
+    let (scheduler, _) = arm(registry
         .ensure_recurring(&unregister_claim, 10)
         .expect("unregister ensure should succeed"));
-    let (_successor, _, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 20));
+    let (_successor, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 20));
     assert_eq!(
         registry.begin_watchdog_work(&work),
         CallbackAcceptance::Accepted
@@ -1437,10 +1445,10 @@ fn watchdog_terminal_cancellation_makes_queued_callbacks_stale() {
         registry.reconcile_ordinary(&claim, 0, None),
         Err(RegistryError::PolicyMismatch { actual: "watchdog" })
     );
-    let (scheduler, _, _) = arm(registry
+    let (scheduler, _) = arm(registry
         .ensure_recurring(&claim, 0)
         .expect("ensure should succeed"));
-    let (successor, _, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 10));
+    let (successor, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 10));
     let cancelled = registry.cancel(&claim).expect("cancel should succeed");
     assert_eq!(
         cancelled.effect(),
@@ -1486,10 +1494,10 @@ fn watchdog_result_matrix_tracks_retry_stop_and_invariant_failure() {
         .ensure_recurring(&claim, 0)
         .expect("ensure should succeed");
     confirm(&mut registry, &initial);
-    let (scheduler, _, _) = arm(initial);
+    let (scheduler, _) = arm(initial);
     let dispatched = registry.begin_watchdog_scheduler(&scheduler, 10);
     confirm(&mut registry, &dispatched);
-    let (successor, _, work) = dispatch(dispatched);
+    let (successor, work) = dispatch(dispatched);
     assert_eq!(
         registry.begin_watchdog_work(&work),
         CallbackAcceptance::Accepted
@@ -1515,7 +1523,7 @@ fn watchdog_result_matrix_tracks_retry_stop_and_invariant_failure() {
 
     let dispatched = registry.begin_watchdog_scheduler(&successor, 20);
     confirm(&mut registry, &dispatched);
-    let (_next, _, work) = dispatch(dispatched);
+    let (_next, work) = dispatch(dispatched);
     assert_eq!(
         registry.begin_watchdog_work(&work),
         CallbackAcceptance::Accepted
@@ -1540,10 +1548,10 @@ fn watchdog_result_matrix_tracks_retry_stop_and_invariant_failure() {
         .ensure_recurring(&claim, 30)
         .expect("retained watchdog should restart");
     confirm(&mut registry, &restarted);
-    let (scheduler, _, _) = arm(restarted);
+    let (scheduler, _) = arm(restarted);
     let dispatched = registry.begin_watchdog_scheduler(&scheduler, 40);
     confirm(&mut registry, &dispatched);
-    let (_successor, _, work) = dispatch(dispatched);
+    let (_successor, work) = dispatch(dispatched);
     assert_eq!(
         registry.begin_watchdog_work(&work),
         CallbackAcceptance::Accepted
@@ -1577,10 +1585,10 @@ fn watchdog_nested_cancel_then_ensure_retains_committed_successor() {
     let claim = registry
         .register_watchdog(timer.clone(), cadence(5), DeclarationLifetime::Retained)
         .expect("claim should succeed");
-    let (scheduler, _, _) = arm(registry
+    let (scheduler, _) = arm(registry
         .ensure_recurring(&claim, 0)
         .expect("ensure should succeed"));
-    let (_successor, _, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 10));
+    let (_successor, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 10));
     assert_eq!(
         registry.begin_watchdog_work(&work),
         CallbackAcceptance::Accepted
@@ -1649,7 +1657,7 @@ fn watchdog_checked_generation_exhaustion_is_terminal_and_atomic() {
     let initial = registry
         .ensure_recurring(&attempt_claim, 0)
         .expect("initial attempt-overflow ensure should succeed");
-    let (scheduler, _, _) = arm(initial);
+    let (scheduler, _) = arm(initial);
     {
         let entry = registry
             .entries
@@ -1702,7 +1710,7 @@ fn watchdog_checked_deadline_overflow_is_terminal() {
     let initial = registry
         .ensure_recurring(&deadline_claim, 0)
         .expect("initial deadline-overflow ensure should succeed");
-    let (scheduler, _, _) = arm(initial);
+    let (scheduler, _) = arm(initial);
     let transition = registry.begin_watchdog_scheduler(&scheduler, u64::MAX);
     assert_eq!(
         transition.failure(),
@@ -1751,7 +1759,7 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
                 let token = if subject == "initial" {
                     None
                 } else {
-                    let (token, _, _) = arm(registry
+                    let (token, _) = arm(registry
                         .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(10)))
                         .unwrap());
                     if subject == "completion" {
@@ -1958,8 +1966,8 @@ fn watchdog_exact_pending_order_preserves_terminal_and_immediate_precedence() {
         let claim = registry
             .register_watchdog(timer.clone(), cadence(5), DeclarationLifetime::Retained)
             .unwrap();
-        let (scheduler, _, _) = arm(registry.ensure_watchdog_immediately(&claim, 10).unwrap());
-        let (_, _, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 10));
+        let (scheduler, _) = arm(registry.ensure_watchdog_immediately(&claim, 10).unwrap());
+        let (_, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 10));
         assert_eq!(
             registry.begin_watchdog_work(&work),
             CallbackAcceptance::Accepted
@@ -2037,16 +2045,17 @@ fn watchdog_exact_replacement_rejects_stale_delivery_and_generation_exhaustion()
     let claim = registry
         .register_watchdog(timer.clone(), cadence(5), DeclarationLifetime::Retained)
         .unwrap();
-    let (old, _, _) = arm(registry.ensure_recurring(&claim, 10).unwrap());
-    let (new, deadline, kind) = arm(registry
+    let (old, _) = arm(registry.ensure_recurring(&claim, 10).unwrap());
+    let (new, kind) = arm(registry
         .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(100)))
         .unwrap());
+    let deadline = scheduled_deadline(&registry, &new);
     assert_eq!((deadline, kind), (100, WakeupArm::Replacement));
     assert_eq!(
         registry.begin_watchdog_scheduler(&old, 15).into_effect(),
         RegistryEffect::None
     );
-    let (_, _, work) = dispatch(registry.begin_watchdog_scheduler(&new, 100));
+    let (_, work) = dispatch(registry.begin_watchdog_scheduler(&new, 100));
     assert_eq!(
         registry.begin_watchdog_work(&work),
         CallbackAcceptance::Accepted

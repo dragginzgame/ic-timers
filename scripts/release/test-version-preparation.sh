@@ -66,7 +66,6 @@ cat > "${temporary_root}/docs/status/current.md" <<'EOF'
 # Current status
 
 - Workspace package version: `0.1.0`.
-- Latest release line: `0.1.0`.
 EOF
 printf '%s\n' '# 0.1.1' '' 'Status: prepared for 0.1.1; delivery is user-owned.' \
     > "${temporary_root}/docs/changelog/0.1.1.md"

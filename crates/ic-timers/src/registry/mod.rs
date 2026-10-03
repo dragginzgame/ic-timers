@@ -98,12 +98,12 @@ impl RegistrationClaim {
 }
 
 /// Provider-neutral effect emitted by one pure transition.
+/// Absolute deadlines remain in control state; arms carry resolved provider delays.
 #[derive(Debug, Eq, PartialEq)]
 pub enum RegistryEffect {
     None,
     ArmWakeup {
         token: CallbackToken,
-        deadline_ns: u64,
         delay_ns: u64,
         arm: WakeupArm,
     },
@@ -113,7 +113,6 @@ pub enum RegistryEffect {
     },
     DispatchWatchdog {
         successor: CallbackToken,
-        successor_deadline_ns: u64,
         successor_delay_ns: u64,
         work: CallbackToken,
     },
@@ -449,7 +448,6 @@ impl WatchdogControl {
         self.pending = None;
         RegistryTransition::normal(RegistryEffect::ArmWakeup {
             token: token_for(claim, generation, CallbackRole::WatchdogScheduler),
-            deadline_ns,
             delay_ns: deadline_ns.saturating_sub(now_ns),
             arm,
         })
@@ -1028,27 +1026,24 @@ impl TimerRegistry {
                     ..
                 } => {
                     let before = control.registration();
-                    let action = match control.cancel() {
-                        Ok(action) => action,
-                        Err(error) => {
-                            let transition = terminal_ordinary(entry, identity.clone(), error);
-                            return Ok(self.remove_transient_on_failure(&identity, transition));
-                        }
-                    };
+                    if let Err(error) = control.cancel() {
+                        let transition = terminal_ordinary(entry, identity.clone(), error);
+                        return Ok(self.remove_transient_on_failure(&identity, transition));
+                    }
                     let mut remove = false;
-                    let transition = match (before, action) {
-                        (TimerRegistration::Unregistered, TimerControlAction::None) => {
+                    let transition = match before {
+                        TimerRegistration::Unregistered => {
                             remove =
                                 matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
                             RegistryTransition::normal(RegistryEffect::None)
                         }
-                        (TimerRegistration::Running { .. }, TimerControlAction::None) => {
+                        TimerRegistration::Running { .. } => {
                             if !matches!(*pending, Some(OrdinaryPending::Unregister)) {
                                 *pending = Some(OrdinaryPending::Cancel);
                             }
                             RegistryTransition::normal(RegistryEffect::None)
                         }
-                        (_, TimerControlAction::Clear) => {
+                        TimerRegistration::Scheduled { .. } => {
                             *inactive_reason = InactiveReason::Cancelled;
                             entry.observability.counters_mut().record_cancellation();
                             remove =
@@ -1057,18 +1052,6 @@ impl TimerRegistry {
                                 identity.clone(),
                                 CallbacksToClear::Wakeup,
                             ))
-                        }
-                        (TimerRegistration::Scheduled { .. }, TimerControlAction::None)
-                        | (_, TimerControlAction::Arm { .. }) => {
-                            let clear_wakeup = control.terminate();
-                            *pending = None;
-                            *inactive_reason = InactiveReason::ControlFailure(
-                                TimerControlFailure::DirectiveNotAllowed,
-                            );
-                            RegistryTransition::terminal(
-                                clear_wakeup_if(identity.clone(), clear_wakeup),
-                                TimerControlFailure::DirectiveNotAllowed,
-                            )
                         }
                     };
                     (transition, remove)
@@ -1290,7 +1273,6 @@ impl TimerRegistry {
                                 generation,
                                 CallbackRole::OrdinaryWork,
                             ),
-                            deadline_ns,
                             delay_ns: deadline_ns.saturating_sub(now_ns),
                             arm: WakeupArm::Initial,
                         })
@@ -1413,7 +1395,6 @@ impl TimerRegistry {
                 successor_generation,
                 CallbackRole::WatchdogScheduler,
             ),
-            successor_deadline_ns,
             successor_delay_ns: cadence.as_nanos(),
             work: CallbackToken::new(
                 token.identity.clone(),
@@ -2079,7 +2060,6 @@ fn apply_ordinary_action(
                     generation,
                     CallbackRole::OrdinaryWork,
                 ),
-                deadline_ns,
                 delay_ns: deadline_ns.saturating_sub(now_ns),
                 arm: kind,
             })
@@ -2087,9 +2067,6 @@ fn apply_ordinary_action(
         TimerControlAction::None => {
             entry.observability.counters_mut().record_coalesced();
             RegistryTransition::normal(RegistryEffect::None)
-        }
-        TimerControlAction::Clear => {
-            terminal_ordinary(entry, identity, TimerControlError::StaleCompletion)
         }
     }
 }

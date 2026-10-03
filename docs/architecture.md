@@ -20,10 +20,11 @@ The module hierarchy keeps six responsibilities separate:
 3. `control` is the private ordinary generation/registration state machine. It
    owns checked callback generations, immediate schedule, reconciliation and
    cancellation transitions, and stale completion rejection. It owns no
-   pending command. Completion applies the registry-selected successor and
-   returns success or a typed error. The registry builds its provider effect
-   from the resulting registration and retains cancellation policy; control
-   does not echo that policy through a separate completion action.
+   pending command. Completion applies the registry-selected successor;
+   cancellation invalidates a scheduled generation while leaving running work
+   unchanged. Both return success or a typed error. The registry builds provider
+   effects and retains cancellation policy without a separate cancellation or
+   completion action. Only scheduling requests return an arm-or-no-op action.
 4. `registry` is the provider-call-free fixed-capacity canonical owner for
    structured identities, callback closures, claim generations,
    policy-specific state, the sole pending ordinary-command machine, nested
@@ -56,6 +57,10 @@ The module hierarchy keeps six responsibilities separate:
    callback acceptance, measurements, provider installation, and handle
    consumption, so identity reuse cannot transfer handle authority to a stale
    callback.
+
+Absolute deadlines remain authoritative in policy control state and its snapshot
+projection. Provider arm effects carry only the resolved delay, callback authority
+and arm kind; they do not store another deadline representation.
 
 The registry and runtime transition functions remain cohesive even where they
 are long: each audited function owns one atomic transition or one provider

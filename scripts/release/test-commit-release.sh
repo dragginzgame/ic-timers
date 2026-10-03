@@ -20,7 +20,7 @@ printf '%s\n' '[workspace.dependencies.fixture]' 'version = "0.2.0"' \
     '[workspace.package]' 'version = "0.1.0"' > Cargo.toml
 printf '%s\n' '# Changelog' '' '## [Unreleased]' '' '## [0.1.0] - 2026-10-03' '' '- Fixture release.' > CHANGELOG.md
 printf '%s\n' '# 0.1.0' '' 'Status: released 0.1.0.' > docs/changelog/0.1.0.md
-printf '%s\n' '- Workspace package version: `0.1.0`.' '- Latest release line: `0.1.0`.' > docs/status/current.md
+printf '%s\n' '- Workspace package version: `0.1.0`.' > docs/status/current.md
 printf '%s\n' '# Fixture' '| API line | `0.1` |' 'ic-timers = "=0.1.0"' > README.md
 git add .
 git commit -qm fixture

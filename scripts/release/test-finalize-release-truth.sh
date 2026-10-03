@@ -41,7 +41,6 @@ cat > "${temporary_root}/docs/status/current.md" <<'EOF'
 # Current status
 
 - Workspace package version: `0.3.3`.
-- Latest release line: `0.3.3`.
 EOF
 cat > "${temporary_root}/docs/changelog/0.3.4.md" <<'EOF'
 # 0.3.4
@@ -61,7 +60,7 @@ EOF
 cp "${temporary_root}/docs/status/current.md" "${temporary_root}/original-status.md"
 cp "${temporary_root}/docs/changelog/0.3.4.md" "${temporary_root}/original-note.md"
 for invalid in duplicate-status empty-status blank-second-status wrong-heading duplicate-heading \
-    duplicate-workspace conflicting-workspace wrong-workspace conflicting-latest wrong-latest finalized-note missing-note; do
+    missing-workspace duplicate-workspace conflicting-workspace wrong-workspace finalized-note missing-note; do
     cp "${temporary_root}/original-status.md" "${temporary_root}/docs/status/current.md"
     cp "${temporary_root}/original-note.md" "${temporary_root}/docs/changelog/0.3.4.md"
     case "${invalid}" in
@@ -70,11 +69,10 @@ for invalid in duplicate-status empty-status blank-second-status wrong-heading d
         blank-second-status) printf '%s\n' 'Status:' >> "${temporary_root}/docs/changelog/0.3.4.md" ;;
         wrong-heading) sed -i 's/^# 0.3.4$/# 0.3.5/' "${temporary_root}/docs/changelog/0.3.4.md" ;;
         duplicate-heading) printf '%s\n' '# 0.3.5' >> "${temporary_root}/docs/changelog/0.3.4.md" ;;
+        missing-workspace) sed -i '/Workspace package version/d' "${temporary_root}/docs/status/current.md" ;;
         duplicate-workspace) printf '%s\n' '- Workspace package version: `0.3.3`.' >> "${temporary_root}/docs/status/current.md" ;;
         conflicting-workspace) printf '%s\n' '- Workspace package version: `0.3.2`.' >> "${temporary_root}/docs/status/current.md" ;;
         wrong-workspace) sed -i 's/Workspace package version: `0.3.3`/Workspace package version: `0.3.2`/' "${temporary_root}/docs/status/current.md" ;;
-        conflicting-latest) printf '%s\n' '- Latest release line: `0.3.2`.' >> "${temporary_root}/docs/status/current.md" ;;
-        wrong-latest) sed -i 's/Latest release line: `0.3.3`/Latest release line: `0.3.2`/' "${temporary_root}/docs/status/current.md" ;;
         finalized-note) sed -i 's/^Status: .*/Status: released 0.3.4./' "${temporary_root}/docs/changelog/0.3.4.md" ;;
         missing-note) rm "${temporary_root}/docs/changelog/0.3.4.md" ;;
     esac
@@ -96,12 +94,12 @@ cp "${temporary_root}/original-note.md" "${temporary_root}/docs/changelog/0.3.4.
     bash "${repository_root}/scripts/release/finalize-changelog.sh" 0.3.4 2026-08-14
     sed -i 's/^version = "0.3.3"$/version = "0.3.4"/' Cargo.toml
     bash "${repository_root}/scripts/release/readme-version.sh" --update
+    # Editorial prose does not participate in structural release validation.
+    printf '%s\n' 'Version 0.3.4 is the current published release.' >> README.md
     bash "${repository_root}/scripts/release/check-release-truth.sh"
 )
 
 grep -Fqx -- '- Workspace package version: `0.3.4`.' \
-    "${temporary_root}/docs/status/current.md"
-grep -Fqx -- '- Latest release line: `0.3.4`.' \
     "${temporary_root}/docs/status/current.md"
 grep -Fqx -- 'Status: released 0.3.4.' \
     "${temporary_root}/docs/changelog/0.3.4.md"
@@ -120,15 +118,16 @@ cp "${temporary_root}/docs/status/current.md" "${temporary_root}/released-status
 cp "${temporary_root}/docs/changelog/0.3.4.md" "${temporary_root}/released-note.md"
 cp "${temporary_root}/CHANGELOG.md" "${temporary_root}/released-changelog.md"
 cp "${temporary_root}/README.md" "${temporary_root}/released-readme.md"
-for invalid in conflicting-workspace conflicting-latest wrong-latest duplicate-status blank-status duplicate-heading duplicate-release stale-pin stale-api duplicate-pin missing-api; do
+for invalid in missing-workspace duplicate-workspace conflicting-workspace wrong-workspace duplicate-status blank-status duplicate-heading duplicate-release stale-pin stale-api duplicate-pin missing-api; do
     cp "${temporary_root}/released-status.md" "${temporary_root}/docs/status/current.md"
     cp "${temporary_root}/released-note.md" "${temporary_root}/docs/changelog/0.3.4.md"
     cp "${temporary_root}/released-changelog.md" "${temporary_root}/CHANGELOG.md"
     cp "${temporary_root}/released-readme.md" "${temporary_root}/README.md"
     case "${invalid}" in
+        missing-workspace) sed -i '/Workspace package version/d' "${temporary_root}/docs/status/current.md" ;;
+        duplicate-workspace) printf '%s\n' '- Workspace package version: `0.3.4`.' >> "${temporary_root}/docs/status/current.md" ;;
         conflicting-workspace) printf '%s\n' '- Workspace package version: `0.3.3`.' >> "${temporary_root}/docs/status/current.md" ;;
-        conflicting-latest) printf '%s\n' '- Latest release line: `0.3.3`.' >> "${temporary_root}/docs/status/current.md" ;;
-        wrong-latest) sed -i 's/Latest release line: `0.3.4`/Latest release line: `0.3.3`/' "${temporary_root}/docs/status/current.md" ;;
+        wrong-workspace) sed -i 's/Workspace package version: `0.3.4`/Workspace package version: `0.3.3`/' "${temporary_root}/docs/status/current.md" ;;
         duplicate-status) printf '%s\n' 'Status: prepared.' >> "${temporary_root}/docs/changelog/0.3.4.md" ;;
         blank-status) printf '%s\n' 'Status:' >> "${temporary_root}/docs/changelog/0.3.4.md" ;;
         duplicate-heading) printf '%s\n' '# 0.3.5' >> "${temporary_root}/docs/changelog/0.3.4.md" ;;

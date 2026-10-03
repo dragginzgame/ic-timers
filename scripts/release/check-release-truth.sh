@@ -35,14 +35,8 @@ IC_TIMERS_RELEASE_VERSION="${version}" perl -0 -e '
     my @statuses = $note =~ /^(Status:.*)$/mg;
     die "error: $note_file needs exactly one released $version status\n"
         if @statuses != 1 || $statuses[0] ne "Status: released $version.";
-    for my $field ("Workspace package version", "Latest release line") {
-        my @markers = $status =~ /^(- \Q$field\E:.*)$/mg;
-        die "error: current status needs exactly one matching $field marker\n"
-            if @markers != 1 || $markers[0] ne "- $field: `$version`.";
-    }
+    my @markers = $status =~ /^(- Workspace package version:.*)$/mg;
+    die "error: current status needs exactly one matching workspace version marker\n"
+        if @markers != 1 || $markers[0] ne "- Workspace package version: `$version`.";
 ' CHANGELOG.md "${release_note}" docs/status/current.md
-if grep -Eq -- '^Version [0-9]+\.[0-9]+\.[0-9]+ is the current published release\.' README.md; then
-    echo "error: README.md duplicates mutable release-version truth" >&2
-    exit 1
-fi
 echo "Release truth checks passed for ${version}"

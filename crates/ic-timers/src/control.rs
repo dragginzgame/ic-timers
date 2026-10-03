@@ -25,7 +25,7 @@ pub enum TimerRegistration {
     },
 }
 
-/// Provider-neutral action consumed by the canonical registry.
+/// Scheduling action consumed by the canonical registry.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TimerControlAction {
     /// No platform change is required.
@@ -39,8 +39,6 @@ pub enum TimerControlAction {
         /// Whether the arm fills an empty slot or replaces its current handle.
         kind: WakeupArm,
     },
-    /// Clear the existing scheduled handle.
-    Clear,
 }
 
 /// Whether one arm fills an empty wake-up slot or replaces its current handle.
@@ -128,20 +126,15 @@ impl TimerControl {
 
     /// Cancel scheduled state immediately.
     ///
-    /// Running work returns no direct action so the canonical registry can
-    /// arbitrate its pending command without a second pending-state machine.
-    pub(crate) fn cancel(&mut self) -> Result<TimerControlAction, TimerControlError> {
-        match self.registration {
-            TimerRegistration::Scheduled { .. } => {
-                let generation = self.next_generation()?;
-                self.generation = generation;
-                self.registration = TimerRegistration::Unregistered;
-                Ok(TimerControlAction::Clear)
-            }
-            TimerRegistration::Unregistered | TimerRegistration::Running { .. } => {
-                Ok(TimerControlAction::None)
-            }
+    /// Running work is unchanged so the canonical registry can arbitrate its
+    /// pending command. Provider cleanup also remains the registry's decision.
+    pub(crate) fn cancel(&mut self) -> Result<(), TimerControlError> {
+        if matches!(self.registration, TimerRegistration::Scheduled { .. }) {
+            let generation = self.next_generation()?;
+            self.generation = generation;
+            self.registration = TimerRegistration::Unregistered;
         }
+        Ok(())
     }
 
     /// Reconcile this timer to one authoritative deadline.
@@ -297,7 +290,7 @@ mod tests {
         assert!(control.begin(generation));
         assert_eq!(control.reconcile(300), Ok(TimerControlAction::None));
         assert_eq!(control.schedule(90), Ok(TimerControlAction::None));
-        assert_eq!(control.cancel(), Ok(TimerControlAction::None));
+        assert_eq!(control.cancel(), Ok(()));
         assert_eq!(
             control.registration(),
             TimerRegistration::Running { generation }
@@ -336,8 +329,11 @@ mod tests {
     fn scheduled_cancel_invalidates_consumed_generation() {
         let mut control = TimerControl::default();
         let generation = arm(&mut control, 100);
-        assert_eq!(control.cancel(), Ok(TimerControlAction::Clear));
+        assert_eq!(control.cancel(), Ok(()));
         assert!(!control.begin(generation));
+        assert_eq!(control.generation(), 2);
+        assert_eq!(control.registration(), TimerRegistration::Unregistered);
+        assert_eq!(control.cancel(), Ok(()));
         assert_eq!(control.generation(), 2);
         assert_eq!(control.registration(), TimerRegistration::Unregistered);
     }
@@ -369,6 +365,10 @@ mod tests {
 
         assert_eq!(
             control.schedule(50),
+            Err(TimerControlError::GenerationExhausted)
+        );
+        assert_eq!(
+            control.cancel(),
             Err(TimerControlError::GenerationExhausted)
         );
         assert_eq!(

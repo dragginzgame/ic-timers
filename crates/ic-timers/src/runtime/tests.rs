@@ -1941,7 +1941,6 @@ fn watchdog_dispatch_rejects_cross_claim_tokens_before_provider_arms() {
             .expect("second scheduler should dispatch");
     let RegistryEffect::DispatchWatchdog {
         successor: first_successor,
-        successor_deadline_ns: first_deadline,
         successor_delay_ns: first_delay,
         ..
     } = first_dispatch.into_effect()
@@ -1956,7 +1955,6 @@ fn watchdog_dispatch_rejects_cross_claim_tokens_before_provider_arms() {
     };
     let malformed_arm = RegistryEffect::ArmWakeup {
         token: second_work.clone(),
-        deadline_ns: first_deadline,
         delay_ns: 0,
         arm: WakeupArm::Initial,
     };
@@ -1967,7 +1965,6 @@ fn watchdog_dispatch_rejects_cross_claim_tokens_before_provider_arms() {
     assert_eq!(timer_count(), 0, "validation must precede provider arms");
     let malformed_replacement = RegistryEffect::ArmWakeup {
         token: first_successor.clone(),
-        deadline_ns: first_deadline,
         delay_ns: first_delay,
         arm: WakeupArm::Replacement,
     };
@@ -1978,7 +1975,6 @@ fn watchdog_dispatch_rejects_cross_claim_tokens_before_provider_arms() {
     assert_eq!(timer_count(), 0, "validation must precede provider arms");
     let malformed = RegistryEffect::DispatchWatchdog {
         successor: first_successor,
-        successor_deadline_ns: first_deadline,
         successor_delay_ns: first_delay,
         work: second_work,
     };

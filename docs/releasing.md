@@ -102,8 +102,11 @@ The requested bump and changelog determine the target. The handoff does not
 need a second target-release marker, and release-note status prose does not
 need particular words such as `targeted` or `unreleased`. Preflight still
 requires a note headed with the requested version and one nonempty `Status:`
-line, rejects an already-finalized note, and checks the current workspace and
-latest-release markers. The bump writes the canonical released status itself.
+line, rejects an already-finalized note, and checks the handoff's single workspace
+version marker. The bump writes that projection and the canonical released status
+itself. Cargo owns the version; the handoff does not store a separate latest-release
+value. Keep preparation evidence explicitly historical and link delivery records
+instead of repeating mutable release instructions in prose.
 
 Before version mutation, the helper also scans
 the compact status for target-version wording likely to become stale, such as

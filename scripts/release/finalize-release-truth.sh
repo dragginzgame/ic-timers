@@ -39,18 +39,12 @@ perl -0 -e '
     my $status = do { local $/; open my $fh, "<", $status_file or die "$status_file: $!\n"; <$fh> };
     my $note = do { local $/; open my $fh, "<", $release_note or die "$release_note: $!\n"; <$fh> };
     my $workspace_marker = "- Workspace package version: `$previous`.";
-    my $latest_marker = "- Latest release line: `$previous`.";
 
     my @workspace_markers = $status =~ /^(- Workspace package version:.*)$/mg;
-    my @latest_markers = $status =~ /^(- Latest release line:.*)$/mg;
     die "error: current status workspace marker is missing or duplicated\n"
         if @workspace_markers != 1;
     die "error: current status workspace version does not match $previous\n"
         if $workspace_markers[0] ne $workspace_marker;
-    die "error: current status latest-release marker is missing or duplicated\n"
-        if @latest_markers != 1;
-    die "error: current status latest release does not match $previous\n"
-        if $latest_markers[0] ne $latest_marker;
 
     # The requested bump and changelog own target selection. Handoff prose
     # must not duplicate that authority or require particular English words.
@@ -77,7 +71,6 @@ perl -0pi -e '
     my $new = $ENV{IC_TIMERS_NEW_VERSION};
     if ($ARGV eq "docs/status/current.md") {
         s/^\Q- Workspace package version: `$previous`.\E$/- Workspace package version: `$new`./m;
-        s/^\Q- Latest release line: `$previous`.\E$/- Latest release line: `$new`./m;
     } elsif ($ARGV eq "docs/changelog/$new.md") {
         s/^Status:.*$/Status: released $new./m;
     }
