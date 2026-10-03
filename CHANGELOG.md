@@ -27,6 +27,8 @@ All notable changes to this project are recorded here.
   for an already tagged release. Combined release targets still always bump.
 - Replace unconditional native polling of suspended futures with real wake
   notifications so unrelated due timers can progress.
+- Document the suspension helper's intentionally non-`Send` future with a scoped
+  Clippy expectation, matching the single-threaded runtime executor.
 
 ### Evidence and documentation
 

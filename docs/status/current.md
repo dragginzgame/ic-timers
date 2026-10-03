@@ -62,6 +62,9 @@ the [safety boundary](../../SAFETY.md).
 - Native suspended futures use wake notifications and no longer block unrelated
   due timers. New fixtures cover suspension, outside control, context expiry and
   completion-time recurrence, plus exact-command precedence over invalid proposals.
+  The suspension helper now carries a scoped `future_not_send` expectation for
+  its intentional single-threaded `Rc` state, correcting the reported lint failure;
+  the maintainer's rerun remains pending.
 - Real-canister fixtures hold an ordinary callback across a self-call await while
   ingress and another Watchdog proceed. Provider-churn fixtures exercise distant
   replacement, bounded immediate work, cancellation and eventual deadline cleanup.
