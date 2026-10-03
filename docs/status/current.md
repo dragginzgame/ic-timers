@@ -14,8 +14,8 @@ Historical implementation and release detail belongs in `CHANGELOG.md`,
 
 ## Release state
 
-- Workspace package version: `0.8.3`.
-- Latest release line: `0.8.3`.
+- Workspace package version: `0.8.4`.
+- Latest release line: `0.8.4`.
 - The maintainer reports 0.8.3 live. Its completed local release commit is
   `a0a19c7`, with an annotated `v0.8.3` tag, dated changelog and matching root
   and testing lockfiles. Read-only inspection on 2026-10-03 corroborates registry
