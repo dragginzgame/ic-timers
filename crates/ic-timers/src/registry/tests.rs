@@ -164,6 +164,91 @@ fn fresh_remove_when_stopped_cancellation_releases_every_policy() {
 }
 
 #[test]
+fn provider_roles_reject_same_claim_mismatches_and_survive_detachment() {
+    let provider_count_before = crate::platform::timer_count();
+    let mut registry = registry();
+    let ordinary = registry
+        .register_once(identity("ordinary-role"), DeclarationLifetime::Retained)
+        .unwrap();
+    let watchdog = registry
+        .register_watchdog(
+            identity("watchdog-role"),
+            cadence(5),
+            DeclarationLifetime::Retained,
+        )
+        .unwrap();
+    let (ordinary_token, _) = arm(registry
+        .ensure_once(&ordinary, 0, TimerSchedule::At(10))
+        .unwrap());
+    let (scheduler, _) = arm(registry.ensure_recurring(&watchdog, 0).unwrap());
+    let (successor, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 5));
+    let tokens = [ordinary_token, successor, work];
+    for token in &tokens {
+        registry
+            .install_provider_handle(token, crate::platform::set_timer(Duration::ZERO, async {}))
+            .unwrap();
+    }
+
+    for token in &tokens {
+        let stale = CallbackToken {
+            callback_generation: token.callback_generation + 1,
+            ..token.clone()
+        };
+        registry.consume_provider_handle(&stale);
+        for role in [
+            CallbackRole::OrdinaryWork,
+            CallbackRole::WatchdogScheduler,
+            CallbackRole::WatchdogWork,
+        ] {
+            if role == token.role() {
+                continue;
+            }
+            let malformed = CallbackToken {
+                role,
+                ..token.clone()
+            };
+            let (error, rejected) = registry
+                .install_provider_handle(
+                    &malformed,
+                    crate::platform::set_timer(Duration::ZERO, async {}),
+                )
+                .unwrap_err();
+            assert_eq!(error, RegistryError::StaleCallback);
+            crate::platform::clear_timer(rejected);
+            registry.consume_provider_handle(&malformed);
+            assert_eq!(registry.has_armed_wakeup(&ordinary), Ok(true));
+            assert_eq!(registry.has_armed_wakeup(&watchdog), Ok(true));
+        }
+    }
+
+    for token in &tokens {
+        let detached = match token.role() {
+            CallbackRole::OrdinaryWork | CallbackRole::WatchdogScheduler => {
+                registry.take_wakeup_handle(token.identity())
+            }
+            CallbackRole::WatchdogWork => registry.take_work_handle(token.identity()),
+        }
+        .expect("malformed consumption must leave every owned handle intact");
+        let (detached_token, handle) = detached.into_parts();
+        assert_eq!(&detached_token, token);
+        registry
+            .install_provider_handle(&detached_token, handle)
+            .unwrap();
+    }
+    for claim in [&ordinary, &watchdog] {
+        let mut handles = registry.take_provider_handles_for_claim(claim).unwrap();
+        for handle in [handles.take_wakeup(), handles.take_work()]
+            .into_iter()
+            .flatten()
+        {
+            let (_, handle) = handle.into_parts();
+            crate::platform::clear_timer(handle);
+        }
+    }
+    assert_eq!(crate::platform::timer_count(), provider_count_before);
+}
+
+#[test]
 fn measurement_routing_rejects_a_policy_role_mismatch() {
     let mut registry = registry();
     let timer = identity("measurement-role");
@@ -1960,7 +2045,7 @@ fn registration_sequence_exhaustion_never_reuses_a_snapshot_identity() {
 
 #[test]
 fn watchdog_exact_pending_order_preserves_terminal_and_immediate_precedence() {
-    for scenario in 0..7 {
+    for scenario in 0..9 {
         let mut registry = registry();
         let timer = identity("deadline-arbitration");
         let claim = registry
@@ -1976,10 +2061,10 @@ fn watchdog_exact_pending_order_preserves_terminal_and_immediate_precedence() {
             .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(100)))
             .unwrap();
         match scenario {
-            0 => {
+            0 | 7 => {
                 registry.cancel(&claim).unwrap();
             }
-            1 => {
+            1 | 8 => {
                 registry.unregister(&claim).unwrap();
                 registry
                     .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(200)))
@@ -2004,7 +2089,7 @@ fn watchdog_exact_pending_order_preserves_terminal_and_immediate_precedence() {
             }
             _ => {}
         }
-        let completion = if scenario == 6 {
+        let completion = if scenario >= 6 {
             TimerCompletion::invariant_failure(0)
         } else {
             TimerCompletion::success(1)
@@ -2016,20 +2101,42 @@ fn watchdog_exact_pending_order_preserves_terminal_and_immediate_precedence() {
                 WatchdogRunResult::new(completion, WatchdogDecision::ScheduleAt(300)),
             )
             .unwrap();
-        if scenario == 1 {
+        if matches!(scenario, 1 | 8) {
             assert!(registry.snapshot(&timer).is_none());
         } else {
+            let snapshot = registry.snapshot(&timer).unwrap();
             let expected = match scenario {
-                0 | 6 => None,
+                0 | 6..=7 => None,
                 2 => Some(10),
                 3 => Some(100),
                 4 => Some(200),
                 _ => Some(15),
             };
+            assert_eq!(snapshot.next_deadline_ns(), expected, "scenario {scenario}");
+            let counters = snapshot.observability().counters();
+            assert_eq!(counters.work_completed(), 1);
+            assert_eq!(counters.cancelled(), u64::from(scenario == 0));
+            assert_eq!(counters.invariant_failure(), u64::from(scenario >= 6));
+            if matches!(scenario, 0 | 6..=7) {
+                let (reason, condition) = if scenario == 0 {
+                    (InactiveReason::Cancelled, TimerProcessCondition::Disabled)
+                } else {
+                    (
+                        InactiveReason::InvariantFailure,
+                        TimerProcessCondition::Failed,
+                    )
+                };
+                assert_eq!(
+                    snapshot.state(),
+                    TimerRuntimeStateSnapshot::Inactive { reason }
+                );
+                assert_eq!(snapshot.process_condition(), condition);
+            }
+        }
+        if matches!(scenario, 0 | 1 | 6..=8) {
             assert_eq!(
-                registry.snapshot(&timer).unwrap().next_deadline_ns(),
-                expected,
-                "scenario {scenario}"
+                transition.effect(),
+                &clear_callbacks(timer.clone(), CallbacksToClear::Wakeup)
             );
         }
         if scenario == 5 {

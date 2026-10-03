@@ -4,6 +4,32 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.0]
+
+### Fixed
+
+- Give Watchdog invariant failures precedence over pending cancellation when
+  reporting the inactive reason and cancellation count. Such failures report
+  `Failed`, matching ordinary completion, while retaining successor cleanup and
+  declaration-lifetime behavior. This observable semantic change uses a new minor
+  line.
+
+### Changed
+
+- Remove the private scheduling-action model that duplicates control generations
+  and deadlines. Scheduling returns only an optional initial/replacement arm kind;
+  the registry builds effects from authoritative control state.
+- Derive owned provider roles from entry policy and handle slot instead of storing
+  a second role. Preserve exact claim, generation and role validation and complete
+  tokens on detached handles.
+
+### Development
+
+- Update existing control and arbitration fixtures and add focused coverage for
+  malformed same-claim provider roles, cleanup and failure classification.
+- Record scope and pending maintainer validation in the
+  [0.10.0 release note](docs/changelog/0.10.0.md).
+
 ## [0.9.5] - 2026-10-03
 
 ### Changed

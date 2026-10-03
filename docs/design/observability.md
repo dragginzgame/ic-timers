@@ -137,6 +137,13 @@ performed against `ic-cdk-timers` and from callbacks that actually execute.
 | `coalesced` | Scheduling demand merged into existing scheduled or pending work rather than producing another logical run. |
 | `unacknowledged` | An older committed watchdog dispatch retired by its successor without a committed completion. |
 
+On the 0.10 line, explicit invariant failure takes precedence over pending
+cancellation for both ordinary and Watchdog stop classification. A retained
+declaration reports `InvariantFailure` and `Failed`; a losing cancellation does
+not increment `cancelled`. Sticky unregister and transient removal still apply.
+The new Watchdog combination requires maintainer execution of its native fixtures
+before it is treated as validated behavior.
+
 Every completed callback has exactly one classified completion outcome. Before
 counter saturation:
 

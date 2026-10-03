@@ -50,23 +50,22 @@ and the [safety boundary](../../SAFETY.md).
 
 ## Current follow-up
 
-The [timer-control and release-handoff note](../changelog/0.9.5.md) records the
-current private cleanup. Provider effects carry resolved delays without copying
-absolute deadlines from control state. Registry fixtures observe deadlines through
-snapshots; provider-delay and malformed-token checks remain. Public API and
-snapshot contracts are preserved.
+The maintainer reports 0.9.5 pushed. Local HEAD, the peeled 0.9.5 tag and origin/main
+agree at `8ac92764a327277bd27bdd028dd6c6d9909b78d6`. Its completed private cleanup
+is recorded in the [0.9.5 note](../changelog/0.9.5.md).
 
-Ordinary cancellation returns checked success or a typed error, leaving provider
-cleanup and pending commands with the registry. The scheduling action no longer
-permits a clear; impossible cancel/arm and schedule/clear branches are removed.
-Existing control fixtures observe state, repeated-cancel generation stability and
-atomic exhausted cancellation; registry lifetime and runtime cleanup coverage remain.
+The [0.10.0 note](../changelog/0.10.0.md) records the prepared follow-up. Watchdog
+invariant failure now wins inactive-reason classification over pending cancellation,
+reporting `Failed` without counting the losing cancel. This observable change uses
+the next minor line; successor cleanup and declaration lifetimes remain unchanged.
+The extended arbitration matrix and native runtime fixture await maintainer execution.
 
-Release finalization and validation use the single workspace-version projection.
-The duplicate latest-release field and its fixtures are removed. Structural
-README version checks remain; editorial release prose is outside the gate.
-Preparation evidence is historical rather than another current release selector.
-The changelog owns the prepared release target and its notes.
+Ordinary scheduling returns only an optional arm kind. The action model and
+generation/deadline copies are removed; effects read authoritative control state.
+Owned provider roles derive from immutable policy and slot, with explicit role,
+claim and generation validation. Detached handles retain complete tokens.
+Existing control fixtures are updated and a provider-role regression fixture
+covers same-claim mismatches and detach/restore. No compatibility path is retained.
 
 Ordinary/Watchdog command machines, effect confirmation and handle-restoration
 stages remain required by their distinct suspension and recovery contracts.
@@ -76,18 +75,19 @@ composed qualification.
 
 ## Evidence
 
-The inspected released baseline has matching local artifacts and successful hosted
-main checks/MSRV and tag-truth jobs. The delivery record names the exact subject.
-No new runtime, recovery or performance result is claimed for this cleanup.
-Changed Rust is formatted. Shell syntax, diff whitespace and the read-only
-release-truth and target-note structural preflight checks passed during preparation.
+The latest inspected hosted validation remains scoped to 0.9.4 as recorded in
+its delivery note; the maintainer's 0.9.5 push report and local references do not
+establish new hosted or PocketIC results. No new runtime, recovery or performance
+result is claimed for this cleanup. Changed Rust is formatted. Diff whitespace,
+current release-truth and target-note structural preflight checks passed during
+preparation.
 Tests, builds, lint gates and deployment validation remain user-owned.
 The native mock does not simulate IC rollback or provider heap allocation;
 maintained PocketIC subjects remain required for those claims.
 
 ## Next action
 
-Review the private cleanup and prepared changelog, then run the maintainer-owned
+Review the changes and prepared changelog, then run the maintainer-owned
 focused checks and deployment validation. The automated contributor leaves Cargo
 versions, both lockfiles and Git release state unchanged. Release commands always
 perform the requested bump; preparing notes does not advance the workspace version.

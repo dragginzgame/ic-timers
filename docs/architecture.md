@@ -24,7 +24,8 @@ The module hierarchy keeps six responsibilities separate:
    cancellation invalidates a scheduled generation while leaving running work
    unchanged. Both return success or a typed error. The registry builds provider
    effects and retains cancellation policy without a separate cancellation or
-   completion action. Only scheduling requests return an arm-or-no-op action.
+   completion action. Scheduling requests return only an optional initial or
+   replacement arm kind; generation and deadline remain in control state.
 4. `registry` is the provider-call-free fixed-capacity canonical owner for
    structured identities, callback closures, claim generations,
    policy-specific state, the sole pending ordinary-command machine, nested
@@ -34,6 +35,9 @@ The module hierarchy keeps six responsibilities separate:
    containing its control and correctly typed callback. An ordinary payload
    without cadence is Once; one with cadence is AfterCompletion. Public policy
    observations are derived from that payload rather than stored separately.
+   Owned provider roles follow entry policy and handle slot rather than a copied
+   field. Installation and consumption reject policy/role mismatches before using
+   a slot; detached handles retain complete tokens for restoration and cleanup.
 5. `platform` is the private direct boundary to `ic-cdk-timers` and required
    IC system facts. Its handle is linear and it owns no recurrence policy.
 6. `runtime` owns the one canister-local registry static, erases consumer

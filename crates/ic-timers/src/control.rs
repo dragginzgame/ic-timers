@@ -25,22 +25,6 @@ pub enum TimerRegistration {
     },
 }
 
-/// Scheduling action consumed by the canonical registry.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum TimerControlAction {
-    /// No platform change is required.
-    None,
-    /// Arm a new callback.
-    Arm {
-        /// Generation the callback must present when it begins.
-        generation: u64,
-        /// Absolute IC timestamp in nanoseconds.
-        deadline_ns: u64,
-        /// Whether the arm fills an empty slot or replaces its current handle.
-        kind: WakeupArm,
-    },
-}
-
 /// Whether one arm fills an empty wake-up slot or replaces its current handle.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum WakeupArm {
@@ -117,10 +101,12 @@ impl TimerControl {
     }
 
     /// Schedule a deadline, retaining an already scheduled earlier deadline.
+    /// Return the arm kind when scheduled state changes; the registry reads
+    /// the authoritative generation and deadline from that resulting state.
     pub(crate) fn schedule(
         &mut self,
         deadline_ns: u64,
-    ) -> Result<TimerControlAction, TimerControlError> {
+    ) -> Result<Option<WakeupArm>, TimerControlError> {
         self.request_deadline(deadline_ns, DeadlineSelection::Earliest)
     }
 
@@ -141,7 +127,7 @@ impl TimerControl {
     pub(crate) fn reconcile(
         &mut self,
         deadline_ns: u64,
-    ) -> Result<TimerControlAction, TimerControlError> {
+    ) -> Result<Option<WakeupArm>, TimerControlError> {
         self.request_deadline(deadline_ns, DeadlineSelection::Exact)
     }
 
@@ -149,7 +135,7 @@ impl TimerControl {
         &mut self,
         deadline_ns: u64,
         selection: DeadlineSelection,
-    ) -> Result<TimerControlAction, TimerControlError> {
+    ) -> Result<Option<WakeupArm>, TimerControlError> {
         let kind = match self.registration {
             TimerRegistration::Unregistered => WakeupArm::Initial,
             TimerRegistration::Scheduled {
@@ -157,7 +143,7 @@ impl TimerControl {
                 ..
             } if selection.replaces(current_deadline_ns, deadline_ns) => WakeupArm::Replacement,
             TimerRegistration::Scheduled { .. } | TimerRegistration::Running { .. } => {
-                return Ok(TimerControlAction::None);
+                return Ok(None);
             }
         };
 
@@ -167,11 +153,7 @@ impl TimerControl {
             generation,
             deadline_ns,
         };
-        Ok(TimerControlAction::Arm {
-            generation,
-            deadline_ns,
-            kind,
-        })
+        Ok(Some(kind))
     }
 
     /// Begin the scheduled generation, rejecting stale callbacks.
@@ -227,10 +209,8 @@ mod tests {
     use super::*;
 
     fn arm(control: &mut TimerControl, deadline_ns: u64) -> u64 {
-        let TimerControlAction::Arm { generation, .. } = control
-            .schedule(deadline_ns)
-            .expect("initial schedule should succeed")
-        else {
+        assert_eq!(control.schedule(deadline_ns), Ok(Some(WakeupArm::Initial)));
+        let TimerRegistration::Scheduled { generation, .. } = control.registration() else {
             panic!("initial schedule should arm");
         };
         generation
@@ -240,8 +220,8 @@ mod tests {
     fn duplicate_and_later_schedules_keep_one_earliest_handle() {
         let mut control = TimerControl::default();
         assert_eq!(arm(&mut control, 100), 1);
-        assert_eq!(control.schedule(100), Ok(TimerControlAction::None));
-        assert_eq!(control.schedule(200), Ok(TimerControlAction::None));
+        assert_eq!(control.schedule(100), Ok(None));
+        assert_eq!(control.schedule(200), Ok(None));
         assert_eq!(
             control.registration(),
             TimerRegistration::Scheduled {
@@ -255,13 +235,13 @@ mod tests {
     fn earlier_schedule_replaces_and_invalidates_old_generation() {
         let mut control = TimerControl::default();
         let old_generation = arm(&mut control, 100);
+        assert_eq!(control.schedule(50), Ok(Some(WakeupArm::Replacement)));
         assert_eq!(
-            control.schedule(50),
-            Ok(TimerControlAction::Arm {
+            control.registration(),
+            TimerRegistration::Scheduled {
                 generation: 2,
                 deadline_ns: 50,
-                kind: WakeupArm::Replacement,
-            })
+            }
         );
         assert!(!control.begin(old_generation));
         assert!(control.begin(2));
@@ -271,13 +251,13 @@ mod tests {
     fn authoritative_reconciliation_can_move_scheduled_deadline_later() {
         let mut control = TimerControl::default();
         let old_generation = arm(&mut control, 100);
+        assert_eq!(control.reconcile(200), Ok(Some(WakeupArm::Replacement)));
         assert_eq!(
-            control.reconcile(200),
-            Ok(TimerControlAction::Arm {
+            control.registration(),
+            TimerRegistration::Scheduled {
                 generation: 2,
                 deadline_ns: 200,
-                kind: WakeupArm::Replacement,
-            })
+            }
         );
         assert!(!control.begin(old_generation));
         assert!(control.begin(2));
@@ -288,8 +268,8 @@ mod tests {
         let mut control = TimerControl::default();
         let generation = arm(&mut control, 100);
         assert!(control.begin(generation));
-        assert_eq!(control.reconcile(300), Ok(TimerControlAction::None));
-        assert_eq!(control.schedule(90), Ok(TimerControlAction::None));
+        assert_eq!(control.reconcile(300), Ok(None));
+        assert_eq!(control.schedule(90), Ok(None));
         assert_eq!(control.cancel(), Ok(()));
         assert_eq!(
             control.registration(),

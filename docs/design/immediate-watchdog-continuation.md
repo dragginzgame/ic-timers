@@ -65,7 +65,9 @@ successor unchanged.
 
 The existing one-command Watchdog arbitration remains authoritative:
 
-1. An invariant-failure completion always stops.
+1. An invariant-failure completion always stops. On the 0.10 line it also wins
+   the inactive-reason classification over pending cancellation, so a retained
+   declaration reports `Failed` and does not count a losing cancellation.
 2. Unregistration is sticky and cannot be superseded by a later ensure.
 3. A later cancellation overrides either continuation request.
 4. As before, a later explicit ensure can re-enable a pending cancellation on

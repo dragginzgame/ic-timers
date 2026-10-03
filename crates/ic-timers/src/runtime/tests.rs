@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    InactiveReason, TimerLastOutcome, TimerPolicy, TimerRegistrationStatus,
+    InactiveReason, TimerLastOutcome, TimerPolicy, TimerProcessCondition, TimerRegistrationStatus,
     TimerRuntimeStateSnapshot, TimerSchedulingMode, WatchdogDecision, WatchdogRuntimeStateSnapshot,
     control::WakeupArm,
     platform::{
@@ -1307,6 +1307,66 @@ fn watchdog_cancellation_clears_successor_and_queued_work() {
         .expect("snapshot lookup should succeed")
         .expect("retained watchdog should remain declared");
     assert_eq!(snapshot.observability().counters().cancelled(), 1);
+}
+
+#[test]
+fn watchdog_invariant_failure_overrides_nested_cancellation_and_clears_handles() {
+    for lifetime in [
+        DeclarationLifetime::Retained,
+        DeclarationLifetime::RemoveWhenStopped,
+    ] {
+        setup();
+        let timer = identity("watchdog-cancel-invariant");
+        let registration = register_watchdog(
+            timer.clone(),
+            TimerCadence::from_nanos(5).unwrap(),
+            lifetime,
+            |context: WatchdogContext| {
+                context.cancel().unwrap();
+                WatchdogRunResult::new(
+                    TimerCompletion::invariant_failure(1),
+                    WatchdogDecision::ContinueImmediately,
+                )
+            },
+        )
+        .unwrap();
+        registration.ensure_scheduled().unwrap();
+        set_time(15);
+        assert!(run_next_due(), "scheduler should pre-arm its successor");
+        assert_eq!(timer_count(), 2);
+        assert!(
+            run_next_due(),
+            "work should complete with invariant failure"
+        );
+        assert_eq!(
+            timer_count(),
+            0,
+            "terminal failure must clear the successor"
+        );
+
+        let snapshot = timer_snapshot(&timer).unwrap();
+        if lifetime == DeclarationLifetime::Retained {
+            let snapshot = snapshot.unwrap();
+            assert_eq!(
+                snapshot.state(),
+                TimerRuntimeStateSnapshot::Inactive {
+                    reason: InactiveReason::InvariantFailure,
+                }
+            );
+            assert_eq!(snapshot.process_condition(), TimerProcessCondition::Failed);
+            let counters = snapshot.observability().counters();
+            assert_eq!(counters.work_completed(), 1);
+            assert_eq!(counters.invariant_failure(), 1);
+            assert_eq!(counters.cancelled(), 0);
+            assert!(counters.completion_partition_is_valid());
+        } else {
+            assert!(snapshot.is_none());
+            assert!(matches!(
+                registration.cancel(),
+                Err(TimerError::RegistrationExpired)
+            ));
+        }
+    }
 }
 
 #[test]
