@@ -10,7 +10,7 @@ and the [safety boundary](../../SAFETY.md).
 
 ## Release state
 
-- Workspace package version: `0.10.1`.
+- Workspace package version: `0.10.2`.
 - Cargo owns this version; the release helper updates the single projection above.
   Dated changelog sections and released note statuses record completed releases.
 - The last inspected delivery record includes the maintainer's live report and
