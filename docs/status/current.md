@@ -12,8 +12,8 @@ the [safety boundary](../../SAFETY.md).
 
 ## Release state
 
-- Workspace package version: `0.8.4`.
-- Latest release line: `0.8.4`.
+- Workspace package version: `0.9.0`.
+- Latest release line: `0.9.0`.
 - The maintainer reports 0.8.4 live. Its release commit is
   `058f968d012168bdae69d23f9ddb5cc46d9e34dd`, with annotated `v0.8.4`, dated
   changelog and matching root/testing lockfiles. The preceding feedback review
