@@ -2202,9 +2202,11 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
                 assert_eq!(counters.cancelled(), 0);
                 assert_eq!(
                     counters.work_completed(),
-                    u64::from(subject.starts_with("completion-"))
+                    u64::from(subject.starts_with("completion-")),
+                    "{subject}"
                 );
-                assert_eq!(counters.invariant_failure(), counters.work_completed());
+                assert_eq!(counters.succeeded(), counters.work_completed(), "{subject}");
+                assert_eq!(counters.invariant_failure(), 0, "{subject}");
                 assert_eq!(
                     snapshot.state(),
                     TimerRuntimeStateSnapshot::Inactive {

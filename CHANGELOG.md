@@ -23,6 +23,9 @@ All notable changes to this project are recorded here.
 - Replace the test-only completion-partition checker with direct outcome
   assertions. Cover mixed completion outcomes reaching saturation in the counter
   fixture; retain runtime failure, cleanup and lifecycle assertions.
+- Check successful callback completion separately from successor-generation
+  failure in the Watchdog lifetime fixture. A failed replacement does not
+  reclassify the callback's committed success as an invariant failure.
 - Record the cleanup and verification scope in the
   [0.10.15 release note](docs/changelog/0.10.15.md).
 
