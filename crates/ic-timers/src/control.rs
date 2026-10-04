@@ -1,9 +1,10 @@
 //! Pure callback-generation state for one ordinary timer.
 //!
 //! This module owns no task execution, platform timer handles, persistence, or
-//! time source. The canonical registry owns pending-command arbitration.
+//! time source. The canonical registry owns running-work authorization and
+//! pending-command arbitration.
 
-use thiserror::Error;
+use crate::snapshot::TimerControlFailure;
 
 /// Current registration state for one timer identity.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -36,17 +37,6 @@ impl WakeupArm {
     pub(crate) const fn replaces_existing(self) -> bool {
         matches!(self, Self::Replacement)
     }
-}
-
-/// Invalid or exhausted timer-control transition.
-#[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
-pub enum TimerControlError {
-    /// The callback generation cannot be incremented.
-    #[error("timer generation exhausted")]
-    GenerationExhausted,
-    /// Completion did not present the generation that owns execution.
-    #[error("timer completion does not own the running generation")]
-    StaleCompletion,
 }
 
 /// Pure state machine for one logical timer identity.
@@ -106,7 +96,7 @@ impl TimerControl {
     pub(crate) fn schedule(
         &mut self,
         deadline_ns: u64,
-    ) -> Result<Option<WakeupArm>, TimerControlError> {
+    ) -> Result<Option<WakeupArm>, TimerControlFailure> {
         self.request_deadline(deadline_ns, DeadlineSelection::Earliest)
     }
 
@@ -114,7 +104,7 @@ impl TimerControl {
     ///
     /// Running work is unchanged so the canonical registry can arbitrate its
     /// pending command. Provider cleanup also remains the registry's decision.
-    pub(crate) fn cancel(&mut self) -> Result<(), TimerControlError> {
+    pub(crate) fn cancel(&mut self) -> Result<(), TimerControlFailure> {
         if matches!(self.registration, TimerRegistration::Scheduled { .. }) {
             let generation = self.next_generation()?;
             self.generation = generation;
@@ -127,7 +117,7 @@ impl TimerControl {
     pub(crate) fn reconcile(
         &mut self,
         deadline_ns: u64,
-    ) -> Result<Option<WakeupArm>, TimerControlError> {
+    ) -> Result<Option<WakeupArm>, TimerControlFailure> {
         self.request_deadline(deadline_ns, DeadlineSelection::Exact)
     }
 
@@ -135,7 +125,7 @@ impl TimerControl {
         &mut self,
         deadline_ns: u64,
         selection: DeadlineSelection,
-    ) -> Result<Option<WakeupArm>, TimerControlError> {
+    ) -> Result<Option<WakeupArm>, TimerControlFailure> {
         let kind = match self.registration {
             TimerRegistration::Unregistered => WakeupArm::Initial,
             TimerRegistration::Scheduled {
@@ -172,18 +162,14 @@ impl TimerControl {
         }
     }
 
-    /// Complete the running generation with the registry's already-arbitrated
-    /// successor decision. The registry observes the resulting registration;
-    /// cancellation policy and provider effects remain its responsibility.
-    pub(crate) fn complete(
+    /// Apply completion after the registry has authorized the exact running
+    /// work token and selected its successor in the same atomic transition.
+    /// Generation allocation remains checked before state mutation; the
+    /// registry observes the resulting registration and owns provider effects.
+    pub(crate) fn complete_running(
         &mut self,
-        generation: u64,
         next_deadline_ns: Option<u64>,
-    ) -> Result<(), TimerControlError> {
-        if self.registration != (TimerRegistration::Running { generation }) {
-            return Err(TimerControlError::StaleCompletion);
-        }
-
+    ) -> Result<(), TimerControlFailure> {
         if let Some(deadline_ns) = next_deadline_ns {
             let next_generation = self.next_generation()?;
             self.generation = next_generation;
@@ -197,10 +183,10 @@ impl TimerControl {
         Ok(())
     }
 
-    fn next_generation(&self) -> Result<u64, TimerControlError> {
+    fn next_generation(&self) -> Result<u64, TimerControlFailure> {
         self.generation
             .checked_add(1)
-            .ok_or(TimerControlError::GenerationExhausted)
+            .ok_or(TimerControlFailure::GenerationExhausted)
     }
 }
 
@@ -284,7 +270,7 @@ mod tests {
             let mut control = TimerControl::default();
             let generation = arm(&mut control, 100);
             assert!(control.begin(generation));
-            assert_eq!(control.complete(generation, Some(deadline_ns)), Ok(()));
+            assert_eq!(control.complete_running(Some(deadline_ns)), Ok(()));
             assert_eq!(
                 control.registration(),
                 TimerRegistration::Scheduled {
@@ -301,7 +287,7 @@ mod tests {
         let mut control = TimerControl::default();
         let generation = arm(&mut control, 100);
         assert!(control.begin(generation));
-        assert_eq!(control.complete(generation, None), Ok(()));
+        assert_eq!(control.complete_running(None), Ok(()));
         assert_eq!(control.registration(), TimerRegistration::Unregistered);
     }
 
@@ -319,21 +305,6 @@ mod tests {
     }
 
     #[test]
-    fn stale_completion_cannot_change_current_registration() {
-        let mut control = TimerControl::default();
-        let generation = arm(&mut control, 100);
-        assert!(control.begin(generation));
-        assert_eq!(
-            control.complete(generation + 1, None),
-            Err(TimerControlError::StaleCompletion)
-        );
-        assert_eq!(
-            control.registration(),
-            TimerRegistration::Running { generation }
-        );
-    }
-
-    #[test]
     fn exhausted_generation_rejects_successors_without_preventing_stop() {
         let mut control = TimerControl {
             generation: u64::MAX,
@@ -345,11 +316,11 @@ mod tests {
 
         assert_eq!(
             control.schedule(50),
-            Err(TimerControlError::GenerationExhausted)
+            Err(TimerControlFailure::GenerationExhausted)
         );
         assert_eq!(
             control.cancel(),
-            Err(TimerControlError::GenerationExhausted)
+            Err(TimerControlFailure::GenerationExhausted)
         );
         assert_eq!(
             control.registration(),
@@ -361,8 +332,8 @@ mod tests {
 
         assert!(control.begin(u64::MAX));
         assert_eq!(
-            control.complete(u64::MAX, Some(200)),
-            Err(TimerControlError::GenerationExhausted)
+            control.complete_running(Some(200)),
+            Err(TimerControlFailure::GenerationExhausted)
         );
         assert_eq!(
             control.registration(),
@@ -371,7 +342,7 @@ mod tests {
             }
         );
         assert_eq!(
-            control.complete(u64::MAX, None),
+            control.complete_running(None),
             Ok(()),
             "stopping does not allocate a successor generation"
         );

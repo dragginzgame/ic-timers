@@ -37,3 +37,4 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.10.1 resolved schedule ownership](0.10.1.md)
 - [0.10.2 provider binding ownership](0.10.2.md)
 - [0.10.3 running-work ownership](0.10.3.md)
+- [0.10.4 ordinary completion and failure ownership](0.10.4.md)

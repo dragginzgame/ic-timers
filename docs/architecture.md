@@ -23,10 +23,14 @@ The module hierarchy keeps six responsibilities separate:
    control path.
 3. `control` is the private ordinary generation/registration state machine. It
    owns checked callback generations, immediate schedule, reconciliation and
-   cancellation transitions, and stale completion rejection. It owns no
-   pending command. Completion applies the registry-selected successor;
-   cancellation invalidates a scheduled generation while leaving running work
-   unchanged. Both return success or a typed error. The registry builds provider
+   cancellation transitions. The registry owns exact running-work authorization
+   and pending commands. Completion applies the registry-selected successor
+   after that authorization in the same atomic transition, without a second
+   generation argument or stale-result path. Checked transitions return the
+   canonical `TimerControlFailure` directly, without a private error conversion.
+   Cancellation invalidates a scheduled generation while leaving running work
+   unchanged. Completion and cancellation return success or a typed failure.
+   The registry builds provider
    effects and retains cancellation policy without a separate cancellation or
    completion action. Scheduling requests return only an optional initial or
    replacement arm kind; generation and deadline remain in control state.

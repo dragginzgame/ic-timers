@@ -5,7 +5,7 @@
 //! authority.
 
 use crate::{
-    control::{TimerControl, TimerControlError, TimerRegistration, WakeupArm},
+    control::{TimerControl, TimerRegistration, WakeupArm},
     platform::{MemoryPages, TimerHandle},
     schedule::{
         DirectiveError, ResolvedSchedule, ScheduleError, TimerCadence, TimerDirective,
@@ -962,7 +962,7 @@ impl TimerRegistry {
             let transition = terminal_ordinary(
                 entry,
                 claim.identity.clone(),
-                TimerControlError::StaleCompletion,
+                TimerControlFailure::DirectiveNotAllowed,
             );
             return Ok(self.remove_transient_on_failure(claim.identity(), transition));
         };
@@ -1263,30 +1263,19 @@ impl TimerRegistry {
                 let directive_snapshot = TimerDirectiveSnapshot::try_from(effective_directive)
                     .map_err(RegistryError::Schedule)?;
                 let selected_schedule = select_completion_schedule(pending_command, resolved);
-                match control.complete(
-                    token.callback_generation,
-                    selected_schedule.map(|value| value.deadline_ns),
-                ) {
-                    Ok(()) => {}
-                    Err(TimerControlError::StaleCompletion) => {
-                        return Err(RegistryError::StaleCallback);
-                    }
-                    Err(error) => {
-                        let transition = stop_ordinary_completion(
-                            entry,
-                            completion,
-                            now_ns,
-                            Some(map_control_failure(error)),
-                        );
-                        let remove = matches!(pending_command, Some(OrdinaryPending::Unregister))
-                            || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
-                        return Ok(remove_after(
-                            &mut self.entries,
-                            &identity,
-                            transition,
-                            remove,
-                        ));
-                    }
+                if let Err(failure) =
+                    control.complete_running(selected_schedule.map(|value| value.deadline_ns))
+                {
+                    let transition =
+                        stop_ordinary_completion(entry, completion, now_ns, Some(failure));
+                    let remove = matches!(pending_command, Some(OrdinaryPending::Unregister))
+                        || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
+                    return Ok(remove_after(
+                        &mut self.entries,
+                        &identity,
+                        transition,
+                        remove,
+                    ));
                 }
                 *pending = None;
                 entry.latest_directive = Some(directive_snapshot);
@@ -2066,9 +2055,8 @@ fn clear_wakeup_if(identity: TimerIdentity, clear_wakeup: bool) -> RegistryEffec
 fn terminal_ordinary(
     entry: &mut Entry,
     identity: TimerIdentity,
-    error: TimerControlError,
+    failure: TimerControlFailure,
 ) -> RegistryTransition {
-    let failure = map_control_failure(error);
     let EntryKind::Ordinary {
         control,
         pending,
@@ -2123,13 +2111,6 @@ fn stop_ordinary_completion(
     entry.latest_directive = Some(TimerDirectiveSnapshot::Stop);
     entry.observability.record_completion(completion, now_ns);
     transition
-}
-
-const fn map_control_failure(error: TimerControlError) -> TimerControlFailure {
-    match error {
-        TimerControlError::GenerationExhausted => TimerControlFailure::GenerationExhausted,
-        TimerControlError::StaleCompletion => TimerControlFailure::DirectiveNotAllowed,
-    }
 }
 
 const fn map_directive_failure(error: DirectiveError) -> TimerControlFailure {

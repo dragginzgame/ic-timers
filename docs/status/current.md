@@ -1,6 +1,6 @@
 # Current status
 
-Last updated: 2026-10-03
+Last updated: 2026-10-04
 
 ## Purpose
 
@@ -50,25 +50,26 @@ and the [safety boundary](../../SAFETY.md).
 
 ## Current follow-up
 
-The maintainer reports 0.10.2 pushed. Local HEAD, the peeled 0.10.2 tag and origin/main
-agree at `dca0a8f64d8769b91fbf55a075ffbeccb5abb5bd`. The completed provider-binding
-cleanup is recorded in the [0.10.2 note](../changelog/0.10.2.md).
+The maintainer reports 0.10.3 live. Local HEAD, the peeled 0.10.3 tag and origin/main
+agree at `ef359f75f6f5f63a4734a85ea3e3a62ebfbc637c`. The completed running-work
+ownership cleanup is recorded in the [0.10.3 note](../changelog/0.10.3.md).
 
-The [0.10.3 note](../changelog/0.10.3.md) records the prepared private cleanup.
-Each registry entry owns one predicate for exact running-work authority. Callback
-lookup, delegated control and ordinary/Watchdog completion share claim, work role,
-generation and running-state validation. Separate completion checks for the same
-invariant are deleted; completion still extracts its policy-specific control and
-Watchdog successor. Acceptance, armed-provider validation, checked control
-transitions and post-completion measurements keep their distinct responsibilities.
-Public API, typed errors, command ordering, counters, lifetimes and rollback rules
-remain unchanged.
+The [0.10.4 note](../changelog/0.10.4.md) records the prepared private cleanup.
+Ordinary completion authorizes the exact running token once at the registry
+boundary. Its only production call into control remains in that same atomic
+transition; private `complete_running` applies the selected successor without
+repeating generation validation. The private stale-completion path, control-error
+enum and failure conversion are deleted. Ordinary checked transitions return
+canonical `TimerControlFailure` values directly, and the inconsistent-schedule
+guard preserves its `DirectiveNotAllowed` classification. Checked generation
+allocation, terminal cleanup, public API, errors, observations and lifetimes are
+unchanged.
 
-A focused native matrix covers all policies and rejects unstarted, wrong-role,
-stale-claim, stale-generation, completed and removed work tokens at every running
-boundary. Inventory equality checks preserve observations on rejection. Existing
-completion, context-expiration, identity-reuse and Watchdog arbitration fixtures
-remain. Test execution stays maintainer-owned.
+Control completion and exhaustion fixtures are updated. The superseded control-local
+stale-generation fixture is deleted; the maintained registry matrix covers rejection
+at the live boundary without observation changes. Existing ordinary lifetime,
+context-expiration and identity-reuse fixtures remain. Test execution stays
+maintainer-owned.
 
 Ordinary/Watchdog command machines, effect confirmation and handle-restoration
 stages remain required by their distinct suspension and recovery contracts.
@@ -79,7 +80,7 @@ composed qualification.
 ## Evidence
 
 The latest inspected hosted validation remains scoped to 0.9.4 as recorded in
-its delivery note; the maintainer's 0.10.2 push report and local references do not
+its delivery note; the maintainer's 0.10.3 live report and local references do not
 establish new hosted or PocketIC results. No new runtime, recovery or performance
 result is claimed for this cleanup. Changed Rust is formatted. Diff whitespace,
 current release-truth and target-note structural preflight checks passed during

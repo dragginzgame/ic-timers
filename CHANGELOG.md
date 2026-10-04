@@ -4,6 +4,26 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.4]
+
+### Changed
+
+- Keep ordinary completion authorization at the registry's exact running-work
+  boundary. Remove the repeated generation argument and stale-completion check
+  from the private control transition, whose only production caller has already
+  validated that authority within the same atomic operation.
+- Return canonical `TimerControlFailure` values directly from checked ordinary
+  control. Delete the private error enum, conversion helper and unreachable
+  stale-completion result branch; preserve generation-exhaustion handling.
+
+### Development
+
+- Update control fixtures to the authorized-completion operation and remove its
+  superseded stale-generation fixture. The maintained registry matrix retains
+  stale-token rejection and unchanged-observation coverage at the live boundary.
+- Record the maintainer-reported live 0.10.3 baseline and this cleanup in the
+  [0.10.4 release note](docs/changelog/0.10.4.md).
+
 ## [0.10.3] - 2026-10-03
 
 ### Changed
