@@ -11,7 +11,7 @@ use crate::{
 
 /// A command arbitrated by the registry during ordinary work.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum OrdinaryPending {
+pub enum OrdinaryPending {
     Cancel,
     Reconcile(ResolvedSchedule),
     Unregister,
@@ -20,7 +20,7 @@ pub(crate) enum OrdinaryPending {
 
 /// Current registration state for one timer identity.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum TimerRegistration {
+pub enum TimerRegistration {
     /// No callback is scheduled or running.
     Inactive {
         /// Why the retained declaration has no scheduled or running work.
@@ -65,7 +65,7 @@ impl WakeupArm {
 
 /// Pure state machine for one logical timer identity.
 #[derive(Debug, Default)]
-pub(crate) struct TimerControl {
+pub struct TimerControl {
     generation: u64,
     pub(crate) registration: TimerRegistration,
 }

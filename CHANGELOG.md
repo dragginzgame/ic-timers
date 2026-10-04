@@ -17,6 +17,8 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Correct redundant type visibility qualifiers inside the private control module;
+  the crate facade and consumer visibility remain unchanged.
 - Update control fixtures for reason-bearing inactive state and verify that
   failed generation allocation preserves a running attempt's pending command.
 - Keep the compact handoff focused on current architecture and unresolved work;
