@@ -171,16 +171,13 @@ impl TimerControl {
     /// Install a selected deadline after request eligibility or exact running
     /// work authorization. Check allocation before replacing the current state.
     pub(crate) fn arm_deadline(&mut self, deadline_ns: u64) -> Result<(), TimerControlFailure> {
-        let generation = self.next_generation()?;
+        let generation = self
+            .generation
+            .checked_add(1)
+            .ok_or(TimerControlFailure::GenerationExhausted)?;
         self.generation = generation;
         self.registration = TimerRegistration::Scheduled { deadline_ns };
         Ok(())
-    }
-
-    fn next_generation(&self) -> Result<u64, TimerControlFailure> {
-        self.generation
-            .checked_add(1)
-            .ok_or(TimerControlFailure::GenerationExhausted)
     }
 }
 

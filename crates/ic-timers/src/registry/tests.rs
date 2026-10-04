@@ -61,14 +61,6 @@ fn assert_running_work_rejected(registry: &mut TimerRegistry, token: &CallbackTo
         registry.validate_running_context(token),
         Err(RegistryError::StaleCallback)
     );
-    assert!(matches!(
-        registry.ordinary_callback(token),
-        Err(RegistryError::StaleCallback)
-    ));
-    assert!(matches!(
-        registry.watchdog_callback(token),
-        Err(RegistryError::StaleCallback)
-    ));
     assert_eq!(
         registry.complete_ordinary(
             token,
@@ -124,11 +116,16 @@ fn running_work_boundaries_reject_unstarted_stale_and_completed_tokens() {
         };
         assert_running_work_rejected(&mut registry, &token);
         let accepted = if watchdog {
-            registry.begin_watchdog_work(&token)
+            registry.begin_watchdog_work(&token).is_some()
         } else {
-            registry.begin_ordinary(&token)
+            registry.begin_ordinary(&token).is_some()
         };
-        assert_eq!(accepted, CallbackAcceptance::Accepted);
+        assert!(accepted);
+        if watchdog {
+            assert!(registry.begin_watchdog_work(&token).is_none());
+        } else {
+            assert!(registry.begin_ordinary(&token).is_none());
+        }
         assert_eq!(registry.validate_running_context(&token), Ok(()));
 
         for role in [
@@ -164,7 +161,6 @@ fn running_work_boundaries_reject_unstarted_stale_and_completed_tokens() {
         }
 
         if watchdog {
-            assert!(registry.watchdog_callback(&token).is_ok());
             registry
                 .complete_watchdog_work(
                     &token,
@@ -173,7 +169,6 @@ fn running_work_boundaries_reject_unstarted_stale_and_completed_tokens() {
                 )
                 .unwrap();
         } else {
-            assert!(registry.ordinary_callback(&token).is_ok());
             registry
                 .complete_ordinary(
                     &token,
@@ -259,41 +254,52 @@ fn removal_invalidates_old_claim_before_identity_reuse() {
 }
 
 #[test]
-fn fresh_remove_when_stopped_cancellation_releases_every_policy() {
-    let mut registry = registry();
-
-    let once = registry
-        .register_once(
-            identity("fresh-transient-once"),
-            DeclarationLifetime::RemoveWhenStopped,
-        )
-        .expect("once claim should succeed");
-    registry.cancel(&once).expect("once cancel should succeed");
-    assert!(registry.is_empty());
-
-    let after = registry
-        .register_after_completion(
-            identity("fresh-transient-after"),
-            cadence(1),
-            DeclarationLifetime::RemoveWhenStopped,
-        )
-        .expect("after-completion claim should succeed");
-    registry
-        .cancel(&after)
-        .expect("after-completion cancel should succeed");
-    assert!(registry.is_empty());
-
-    let watchdog = registry
-        .register_watchdog(
-            identity("fresh-transient-watchdog"),
-            cadence(1),
-            DeclarationLifetime::RemoveWhenStopped,
-        )
-        .expect("watchdog claim should succeed");
-    registry
-        .cancel(&watchdog)
-        .expect("watchdog cancel should succeed");
-    assert!(registry.is_empty());
+fn fresh_cancellation_preserves_retained_declarations_and_releases_transients() {
+    for lifetime in [
+        DeclarationLifetime::Retained,
+        DeclarationLifetime::RemoveWhenStopped,
+    ] {
+        for policy in [
+            TimerPolicy::Once,
+            TimerPolicy::AfterCompletion {
+                cadence: cadence(1),
+            },
+            TimerPolicy::Watchdog {
+                cadence: cadence(1),
+            },
+        ] {
+            let mut registry = registry();
+            let timer = identity("fresh-cancellation");
+            let claim = match policy {
+                TimerPolicy::Once => registry.register_once(timer, lifetime),
+                TimerPolicy::AfterCompletion { cadence } => {
+                    registry.register_after_completion(timer, cadence, lifetime)
+                }
+                TimerPolicy::Watchdog { cadence } => {
+                    registry.register_watchdog(timer, cadence, lifetime)
+                }
+            }
+            .unwrap();
+            let before = registry.inventory();
+            let transition = registry.cancel(&claim).unwrap();
+            assert_eq!(transition.effect(), &RegistryEffect::None);
+            assert_eq!(transition.failure(), None);
+            if lifetime == DeclarationLifetime::Retained {
+                assert_eq!(registry.inventory(), before);
+                assert_eq!(
+                    registry.cancel(&claim).unwrap().effect(),
+                    &RegistryEffect::None
+                );
+                assert_eq!(registry.inventory(), before);
+            } else {
+                assert!(registry.is_empty());
+                assert_eq!(
+                    registry.cancel(&claim),
+                    Err(RegistryError::UnknownRegistration)
+                );
+            }
+        }
+    }
 }
 
 #[test]
@@ -493,7 +499,7 @@ fn explicit_unregistration_consumes_scheduled_and_running_claims() {
         }
     );
     assert!(registry.snapshot(&scheduled_id).is_none());
-    assert_eq!(registry.begin_ordinary(&queued), CallbackAcceptance::Stale);
+    assert!(registry.begin_ordinary(&queued).is_none());
 
     for once in [true, false] {
         for command in 0..3 {
@@ -513,10 +519,7 @@ fn explicit_unregistration_consumes_scheduled_and_running_claims() {
                 .unwrap();
             confirm(&mut registry, &running_transition);
             let (active, _) = arm(running_transition);
-            assert_eq!(
-                registry.begin_ordinary(&active),
-                CallbackAcceptance::Accepted
-            );
+            assert!(registry.begin_ordinary(&active).is_some());
             assert_eq!(
                 registry.unregister(&running).unwrap().effect(),
                 &RegistryEffect::None
@@ -547,7 +550,7 @@ fn explicit_unregistration_consumes_scheduled_and_running_claims() {
             assert_eq!(completed.failure(), None);
             assert_eq!(completed.effect(), &RegistryEffect::None);
             assert!(registry.snapshot(&running_id).is_none());
-            assert_eq!(registry.begin_ordinary(&active), CallbackAcceptance::Stale);
+            assert!(registry.begin_ordinary(&active).is_none());
         }
     }
 }
@@ -567,10 +570,7 @@ fn running_watchdog_unregistration_clears_its_committed_successor() {
     let dispatched = registry.begin_watchdog_scheduler(&scheduler, 10);
     confirm(&mut registry, &dispatched);
     let (_successor, work) = dispatch(dispatched);
-    assert_eq!(
-        registry.begin_watchdog_work(&work),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_watchdog_work(&work).is_some());
     assert_eq!(
         registry
             .unregister(&claim)
@@ -732,10 +732,7 @@ fn once_coalesces_and_rotates_generations_while_nested_schedule_wins() {
         .ensure_once(&claim, 10, TimerSchedule::At(200))
         .expect("duplicate ensure should succeed");
     assert_eq!(duplicate.effect(), &RegistryEffect::None);
-    assert_eq!(
-        registry.begin_ordinary(&first),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_ordinary(&first).is_some());
 
     let nested = registry
         .ensure_once(&claim, 20, TimerSchedule::At(80))
@@ -760,11 +757,8 @@ fn once_coalesces_and_rotates_generations_while_nested_schedule_wins() {
     assert_eq!(snapshot.scheduling_mode(), TimerSchedulingMode::Deadline);
     assert_eq!(snapshot.latest_requested_delay_ns(), None);
     assert_eq!(second.callback_generation(), 2);
-    assert_eq!(registry.begin_ordinary(&first), CallbackAcceptance::Stale);
-    assert_eq!(
-        registry.begin_ordinary(&second),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_ordinary(&first).is_none());
+    assert!(registry.begin_ordinary(&second).is_some());
     registry
         .complete_ordinary(
             &second,
@@ -802,10 +796,7 @@ fn nested_cancel_and_ensure_use_latest_request_order() {
     let (first, _) = arm(registry
         .ensure_once(&claim, 0, TimerSchedule::At(10))
         .expect("ensure should succeed"));
-    assert_eq!(
-        registry.begin_ordinary(&first),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_ordinary(&first).is_some());
     registry
         .ensure_once(&claim, 10, TimerSchedule::At(30))
         .expect("nested ensure should succeed");
@@ -837,10 +828,7 @@ fn nested_cancel_and_ensure_use_latest_request_order() {
     let (second, _) = arm(registry
         .ensure_once(&claim, 20, TimerSchedule::At(40))
         .expect("retained declaration should re-enable"));
-    assert_eq!(
-        registry.begin_ordinary(&second),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_ordinary(&second).is_some());
     registry
         .cancel(&claim)
         .expect("nested cancel should succeed");
@@ -894,10 +882,7 @@ fn exact_ordinary_reconciliation_discards_invalid_callback_proposals() {
             let (token, _) = arm(registry
                 .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(1)))
                 .unwrap());
-            assert_eq!(
-                registry.begin_ordinary(&token),
-                CallbackAcceptance::Accepted
-            );
+            assert!(registry.begin_ordinary(&token).is_some());
             registry
                 .reconcile_ordinary(&claim, u64::MAX - 5, Some(TimerSchedule::At(u64::MAX)))
                 .unwrap();
@@ -935,10 +920,7 @@ fn relative_exact_reconciliation_preserves_request_observations_after_suspension
         let (token, _) = arm(registry
             .reconcile_ordinary(&claim, 10, Some(TimerSchedule::At(10)))
             .unwrap());
-        assert_eq!(
-            registry.begin_ordinary(&token),
-            CallbackAcceptance::Accepted
-        );
+        assert!(registry.begin_ordinary(&token).is_some());
         registry
             .reconcile_ordinary(
                 &claim,
@@ -989,10 +971,7 @@ fn explicit_invariant_failure_still_overrides_exact_ordinary_reconciliation() {
         let (token, _) = arm(registry
             .ensure_once(&claim, 0, TimerSchedule::At(1))
             .unwrap());
-        assert_eq!(
-            registry.begin_ordinary(&token),
-            CallbackAcceptance::Accepted
-        );
+        assert!(registry.begin_ordinary(&token).is_some());
         registry
             .reconcile_ordinary(&claim, 1, Some(TimerSchedule::At(50)))
             .unwrap();
@@ -1041,14 +1020,8 @@ fn ordinary_reconciliation_is_authoritative_and_registry_pending_is_ordered() {
     let deadline = scheduled_deadline(&registry, &current);
     assert_eq!(deadline, 200);
     assert_eq!(arm_kind, WakeupArm::Replacement);
-    assert_eq!(
-        registry.begin_ordinary(&replaced),
-        CallbackAcceptance::Stale
-    );
-    assert_eq!(
-        registry.begin_ordinary(&current),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_ordinary(&replaced).is_none());
+    assert!(registry.begin_ordinary(&current).is_some());
 
     registry
         .ensure_recurring(&claim, 200)
@@ -1065,10 +1038,7 @@ fn ordinary_reconciliation_is_authoritative_and_registry_pending_is_ordered() {
         .expect("authoritative request should replace the callback directive"));
     let deadline = scheduled_deadline(&registry, &successor);
     assert_eq!(deadline, 300);
-    assert_eq!(
-        registry.begin_ordinary(&successor),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_ordinary(&successor).is_some());
 
     registry
         .reconcile_ordinary(&claim, 300, Some(TimerSchedule::At(400)))
@@ -1109,10 +1079,7 @@ fn after_completion_owns_cadence_and_failure_state() {
         .expect("initial ensure should succeed"));
     let deadline = scheduled_deadline(&registry, &first);
     assert_eq!(deadline, 15);
-    assert_eq!(
-        registry.begin_ordinary(&first),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_ordinary(&first).is_some());
     let (second, _) = arm(registry
         .complete_ordinary(
             &first,
@@ -1126,10 +1093,7 @@ fn after_completion_owns_cadence_and_failure_state() {
     let deadline = scheduled_deadline(&registry, &second);
     assert_eq!(deadline, 25);
     assert_eq!(registry.consecutive_expected_failures(&timer), Some(1));
-    assert_eq!(
-        registry.begin_ordinary(&second),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_ordinary(&second).is_some());
     registry
         .complete_ordinary(
             &second,
@@ -1152,10 +1116,7 @@ fn ordinary_directive_matrix_preserves_mode_and_checked_deadline() {
         .expect("ensure should succeed");
     confirm(&mut registry, &initial);
     let (first, _) = arm(initial);
-    assert_eq!(
-        registry.begin_ordinary(&first),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_ordinary(&first).is_some());
 
     let immediate = registry
         .complete_ordinary(
@@ -1177,10 +1138,7 @@ fn ordinary_directive_matrix_preserves_mode_and_checked_deadline() {
             .map(|value| value.scheduling_mode()),
         Some(TimerSchedulingMode::Continuation)
     );
-    assert_eq!(
-        registry.begin_ordinary(&second),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_ordinary(&second).is_some());
 
     let retry = registry
         .complete_ordinary(
@@ -1202,10 +1160,7 @@ fn ordinary_directive_matrix_preserves_mode_and_checked_deadline() {
             .map(|value| value.process_condition()),
         Some(TimerProcessCondition::Retrying)
     );
-    assert_eq!(
-        registry.begin_ordinary(&third),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_ordinary(&third).is_some());
 
     let absolute = registry
         .complete_ordinary(
@@ -1224,10 +1179,7 @@ fn ordinary_directive_matrix_preserves_mode_and_checked_deadline() {
             .map(|value| value.scheduling_mode()),
         Some(TimerSchedulingMode::Deadline)
     );
-    assert_eq!(
-        registry.begin_ordinary(&fourth),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_ordinary(&fourth).is_some());
     registry
         .complete_ordinary(
             &fourth,
@@ -1287,10 +1239,7 @@ fn recurring_duplicate_ensure_is_idempotent_without_deadline_recalculation() {
         assert_eq!(snapshot.observability().counters().coalesced(), 1);
         let (token, _) = arm(initial);
         assert_eq!(token.callback_generation(), u64::MAX);
-        assert_eq!(
-            registry.begin_ordinary(&token),
-            CallbackAcceptance::Accepted
-        );
+        assert!(registry.begin_ordinary(&token).is_some());
     }
 }
 
@@ -1304,10 +1253,7 @@ fn illegal_once_recurrence_and_invariant_result_stop_truthfully() {
     let (token, _) = arm(registry
         .ensure_once(&illegal, 0, TimerSchedule::At(1))
         .expect("ensure should succeed"));
-    assert_eq!(
-        registry.begin_ordinary(&token),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_ordinary(&token).is_some());
     let transition = registry
         .complete_ordinary(
             &token,
@@ -1338,10 +1284,7 @@ fn illegal_once_recurrence_and_invariant_result_stop_truthfully() {
     let (token, _) = arm(registry
         .ensure_once(&invariant, 0, TimerSchedule::At(1))
         .expect("ensure should succeed"));
-    assert_eq!(
-        registry.begin_ordinary(&token),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_ordinary(&token).is_some());
     let transition = registry
         .complete_ordinary(
             &token,
@@ -1417,10 +1360,7 @@ fn watchdog_dispatches_successor_first_and_retires_unacknowledged_attempt() {
         snapshot.registration_status(),
         TimerRegistrationStatus::Scheduled
     );
-    assert_eq!(
-        registry.begin_watchdog_work(&work),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_watchdog_work(&work).is_some());
     assert_eq!(
         registry
             .snapshot(&timer)
@@ -1455,10 +1395,7 @@ fn watchdog_dispatches_successor_first_and_retires_unacknowledged_attempt() {
     let (third_successor, _third_work) = dispatch(third_dispatch);
     let deadline = scheduled_deadline(&registry, &third_successor);
     assert_eq!(deadline, 45);
-    assert_eq!(
-        registry.begin_watchdog_work(&delayed_work),
-        CallbackAcceptance::Stale
-    );
+    assert!(registry.begin_watchdog_work(&delayed_work).is_none());
 
     let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
     let counters = snapshot.observability().counters();
@@ -1492,10 +1429,7 @@ fn watchdog_requests_preserve_dispatch_authority_until_completion_replaces_the_p
             scheduler.callback_generation() + 1
         );
         if running {
-            assert_eq!(
-                registry.begin_watchdog_work(&work),
-                CallbackAcceptance::Accepted
-            );
+            assert!(registry.begin_watchdog_work(&work).is_some());
         }
         let before = registry.snapshot(&timer).unwrap().state();
         assert_eq!(
@@ -1517,10 +1451,7 @@ fn watchdog_requests_preserve_dispatch_authority_until_completion_replaces_the_p
             &RegistryEffect::None
         );
         assert_eq!(registry.snapshot(&timer).unwrap().state(), before);
-        assert_eq!(
-            registry.begin_watchdog_work(&successor),
-            CallbackAcceptance::Stale
-        );
+        assert!(registry.begin_watchdog_work(&successor).is_none());
         assert_eq!(
             registry.begin_watchdog_scheduler(&work, 15).effect(),
             &RegistryEffect::None
@@ -1528,10 +1459,7 @@ fn watchdog_requests_preserve_dispatch_authority_until_completion_replaces_the_p
         if running {
             assert_eq!(registry.validate_running_context(&work), Ok(()));
         } else {
-            assert_eq!(
-                registry.begin_watchdog_work(&work),
-                CallbackAcceptance::Accepted
-            );
+            assert!(registry.begin_watchdog_work(&work).is_some());
         }
         let (replacement, kind) = arm(registry
             .complete_watchdog_work(
@@ -1550,10 +1478,7 @@ fn watchdog_requests_preserve_dispatch_authority_until_completion_replaces_the_p
             registry.validate_running_context(&work),
             Err(RegistryError::StaleCallback)
         );
-        assert_eq!(
-            registry.begin_watchdog_work(&work),
-            CallbackAcceptance::Stale
-        );
+        assert!(registry.begin_watchdog_work(&work).is_none());
         assert_eq!(
             registry.begin_watchdog_scheduler(&successor, 30).effect(),
             &RegistryEffect::None
@@ -1681,10 +1606,7 @@ fn watchdog_running_immediate_request_replaces_exact_successor_and_beats_cadence
         .ensure_watchdog_immediately(&claim, 20)
         .expect("dispatched work should satisfy immediate demand");
     assert_eq!(dispatched_request.effect(), &RegistryEffect::None);
-    assert_eq!(
-        registry.begin_watchdog_work(&work),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_watchdog_work(&work).is_some());
     assert_eq!(
         registry
             .ensure_watchdog_immediately(&claim, 21)
@@ -1758,10 +1680,7 @@ fn watchdog_completion_arbitrates_immediate_cancellation_and_unregistration() {
         .ensure_recurring(&continue_claim, 10)
         .expect("continue ensure should succeed"));
     let (cadence_successor, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 20));
-    assert_eq!(
-        registry.begin_watchdog_work(&work),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_watchdog_work(&work).is_some());
     let immediate = registry
         .complete_watchdog_work(
             &work,
@@ -1800,10 +1719,7 @@ fn watchdog_completion_arbitrates_immediate_cancellation_and_unregistration() {
         .ensure_recurring(&cancel_claim, 10)
         .expect("cancel ensure should succeed"));
     let (_successor, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 20));
-    assert_eq!(
-        registry.begin_watchdog_work(&work),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_watchdog_work(&work).is_some());
     registry
         .ensure_watchdog_immediately(&cancel_claim, 21)
         .expect("immediate request should pend");
@@ -1848,10 +1764,7 @@ fn watchdog_completion_arbitrates_immediate_cancellation_and_unregistration() {
         .ensure_recurring(&unregister_claim, 10)
         .expect("unregister ensure should succeed"));
     let (_successor, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 20));
-    assert_eq!(
-        registry.begin_watchdog_work(&work),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_watchdog_work(&work).is_some());
     registry
         .ensure_watchdog_immediately(&unregister_claim, 21)
         .expect("immediate request should pend");
@@ -1912,10 +1825,7 @@ fn watchdog_terminal_cancellation_makes_queued_callbacks_stale() {
             handles: CallbacksToClear::WakeupAndWork,
         }
     );
-    assert_eq!(
-        registry.begin_watchdog_work(&work),
-        CallbackAcceptance::Stale
-    );
+    assert!(registry.begin_watchdog_work(&work).is_none());
     assert_eq!(
         registry.begin_watchdog_scheduler(&successor, 20).effect(),
         &RegistryEffect::None
@@ -1952,14 +1862,8 @@ fn watchdog_terminal_cancellation_makes_queued_callbacks_stale() {
         next_successor.callback_generation()
     );
     assert!(next_work.callback_generation() > work.callback_generation());
-    assert_eq!(
-        registry.begin_watchdog_work(&work),
-        CallbackAcceptance::Stale
-    );
-    assert_eq!(
-        registry.begin_watchdog_work(&next_work),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_watchdog_work(&work).is_none());
+    assert!(registry.begin_watchdog_work(&next_work).is_some());
 }
 
 #[test]
@@ -1977,10 +1881,7 @@ fn watchdog_result_matrix_tracks_retry_stop_and_invariant_failure() {
     let dispatched = registry.begin_watchdog_scheduler(&scheduler, 10);
     confirm(&mut registry, &dispatched);
     let (successor, work) = dispatch(dispatched);
-    assert_eq!(
-        registry.begin_watchdog_work(&work),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_watchdog_work(&work).is_some());
     registry
         .complete_watchdog_work(
             &work,
@@ -2003,10 +1904,7 @@ fn watchdog_result_matrix_tracks_retry_stop_and_invariant_failure() {
     let dispatched = registry.begin_watchdog_scheduler(&successor, 20);
     confirm(&mut registry, &dispatched);
     let (_next, work) = dispatch(dispatched);
-    assert_eq!(
-        registry.begin_watchdog_work(&work),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_watchdog_work(&work).is_some());
     let stopped = registry
         .complete_watchdog_work(
             &work,
@@ -2031,10 +1929,7 @@ fn watchdog_result_matrix_tracks_retry_stop_and_invariant_failure() {
     let dispatched = registry.begin_watchdog_scheduler(&scheduler, 40);
     confirm(&mut registry, &dispatched);
     let (_successor, work) = dispatch(dispatched);
-    assert_eq!(
-        registry.begin_watchdog_work(&work),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_watchdog_work(&work).is_some());
     registry
         .complete_watchdog_work(
             &work,
@@ -2068,10 +1963,7 @@ fn watchdog_nested_cancel_then_ensure_retains_committed_successor() {
         .ensure_recurring(&claim, 0)
         .expect("ensure should succeed"));
     let (_successor, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 10));
-    assert_eq!(
-        registry.begin_watchdog_work(&work),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_watchdog_work(&work).is_some());
     registry
         .cancel(&claim)
         .expect("nested cancel should succeed");
@@ -2251,7 +2143,7 @@ fn ordinary_cancellation_at_maximum_generation_preserves_lifetime_and_rejects_de
                     handles: CallbacksToClear::Wakeup,
                 }
             );
-            assert_eq!(registry.begin_ordinary(&token), CallbackAcceptance::Stale);
+            assert!(registry.begin_ordinary(&token).is_none());
             if lifetime == DeclarationLifetime::Retained {
                 let EntryKind::Ordinary { control, .. } =
                     &registry.entries.get(&timer).unwrap().kind
@@ -2336,10 +2228,7 @@ fn watchdog_cancellation_at_maximum_generation_clears_the_selected_callbacks() {
                 &RegistryEffect::None
             );
             if let Some(work) = work {
-                assert_eq!(
-                    registry.begin_watchdog_work(&work),
-                    CallbackAcceptance::Stale
-                );
+                assert!(registry.begin_watchdog_work(&work).is_none());
             }
             if lifetime == DeclarationLifetime::Retained {
                 let EntryKind::Watchdog { control, .. } =
@@ -2416,10 +2305,7 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
                         .unwrap());
                     assert_eq!(token.callback_generation(), u64::MAX);
                     if subject == "completion" {
-                        assert_eq!(
-                            registry.begin_ordinary(&token),
-                            CallbackAcceptance::Accepted
-                        );
+                        assert!(registry.begin_ordinary(&token).is_some());
                     }
                     Some(token)
                 };
@@ -2525,10 +2411,7 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
                 let (successor, work) =
                     dispatch(registry.begin_watchdog_scheduler(scheduler.as_ref().unwrap(), 1));
                 assert_eq!(successor.callback_generation(), u64::MAX);
-                assert_eq!(
-                    registry.begin_watchdog_work(&work),
-                    CallbackAcceptance::Accepted
-                );
+                assert!(registry.begin_watchdog_work(&work).is_some());
                 Some(work)
             } else {
                 None
@@ -2644,10 +2527,7 @@ fn transient_watchdog_completion_keeps_retained_or_replaced_successors() {
         }
         let (scheduler, _) = arm(registry.ensure_recurring(&claim, 0).unwrap());
         let (successor, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 1));
-        assert_eq!(
-            registry.begin_watchdog_work(&work),
-            CallbackAcceptance::Accepted
-        );
+        assert!(registry.begin_watchdog_work(&work).is_some());
 
         let transition = registry
             .complete_watchdog_work(
@@ -2756,10 +2636,7 @@ fn watchdog_exact_pending_order_preserves_terminal_and_immediate_precedence() {
             .unwrap();
         let (scheduler, _) = arm(registry.ensure_watchdog_immediately(&claim, 10).unwrap());
         let (_, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 10));
-        assert_eq!(
-            registry.begin_watchdog_work(&work),
-            CallbackAcceptance::Accepted
-        );
+        assert!(registry.begin_watchdog_work(&work).is_some());
         registry
             .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(100)))
             .unwrap();
@@ -2871,10 +2748,7 @@ fn watchdog_exact_replacement_rejects_stale_delivery_and_generation_exhaustion()
     );
     let (successor, work) = dispatch(registry.begin_watchdog_scheduler(&new, 100));
     assert_eq!(successor.callback_generation(), u64::MAX);
-    assert_eq!(
-        registry.begin_watchdog_work(&work),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_watchdog_work(&work).is_some());
     let transition = registry
         .complete_watchdog_work(
             &work,

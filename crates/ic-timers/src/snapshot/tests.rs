@@ -1,7 +1,7 @@
 use super::*;
 use crate::{
     ScheduleError, TimerCadence, TimerDirective, TimerRunResult, TimerSchedule,
-    registry::{CallbackAcceptance, RegistryEffect, TimerRegistry},
+    registry::{RegistryEffect, TimerRegistry},
 };
 use std::time::Duration;
 
@@ -217,10 +217,7 @@ fn canonical_registry_snapshot_projects_canic_surface_without_parallel_metrics()
         RegistryEffect::ArmWakeup { token, .. } => token,
         effect => panic!("expected arm effect, got {effect:?}"),
     };
-    assert_eq!(
-        registry.begin_ordinary(&token),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_ordinary(&token).is_some());
     let completion_transition = registry
         .complete_ordinary(
             &token,
@@ -290,10 +287,7 @@ fn canic_projection_combines_completion_and_stale_classes_without_fabrication() 
         RegistryEffect::ArmWakeup { token, .. } => token,
         effect => panic!("expected arm effect, got {effect:?}"),
     };
-    assert_eq!(
-        registry.begin_ordinary(&first),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_ordinary(&first).is_some());
     let second_transition = registry
         .complete_ordinary(
             &first,
@@ -311,10 +305,7 @@ fn canic_projection_combines_completion_and_stale_classes_without_fabrication() 
         RegistryEffect::ArmWakeup { token, .. } => token,
         effect => panic!("expected arm effect, got {effect:?}"),
     };
-    assert_eq!(
-        registry.begin_ordinary(&second),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_ordinary(&second).is_some());
     registry
         .complete_ordinary(
             &second,
@@ -322,7 +313,7 @@ fn canic_projection_combines_completion_and_stale_classes_without_fabrication() 
             TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop),
         )
         .expect("terminal completion should succeed");
-    assert_eq!(registry.begin_ordinary(&first), CallbackAcceptance::Stale);
+    assert!(registry.begin_ordinary(&first).is_none());
 
     let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
     let projection = project_to_canic(&snapshot);
@@ -352,10 +343,7 @@ fn retryable_terminal_completion_projects_failed_canic_condition() {
         RegistryEffect::ArmWakeup { token, .. } => token,
         effect => panic!("expected arm effect, got {effect:?}"),
     };
-    assert_eq!(
-        registry.begin_ordinary(&token),
-        CallbackAcceptance::Accepted
-    );
+    assert!(registry.begin_ordinary(&token).is_some());
     registry
         .complete_ordinary(
             &token,

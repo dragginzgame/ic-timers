@@ -103,8 +103,9 @@ The module hierarchy keeps six responsibilities separate:
    [generation ownership note](changelog/0.11.0.md).
    Ordinary completion computes its removal-on-stop decision once from pending
    unregister and declaration lifetime; every terminal exit uses it. A successful
-   arm retains its declaration. Ordinary cancellation derives immediate removal
-   from execution state and lifetime; running work retains pending authority.
+   arm retains its declaration. Cancellation derives immediate removal once
+   from final inactive state and lifetime for both ordinary and Watchdog
+   declarations; running work retains pending authority.
    Watchdog completion decides removal once after selecting its final state:
    inactive declarations follow their lifetime and pending unregister command,
    while retained or replaced successors keep their declaration.
@@ -157,14 +158,17 @@ The module hierarchy keeps six responsibilities separate:
    callback acceptance, measurements, provider installation, and handle
    consumption, so identity reuse cannot transfer handle authority to a stale
    callback.
-   Private callback lookup selects identity and exact claim without a separate
-   expected-role argument. Installation and effect confirmation each retain
-   their own required role, generation and state checks.
-   Callback lookup, delegated control and both work-completion paths share one
-   entry-local running-work predicate for the exact claim, work role, generation
-   and running state. Completion checks it before any mutation. Callback acceptance
-   transitions into that state; provider binding and completed measurements retain
-   their distinct validation boundaries.
+   Work acceptance checks the exact claim, policy, work role, generation and
+   eligible state, then transitions to running state and returns that entry's
+   correctly typed callback. Dispatch releases the registry borrow before
+   invoking consumer work; there is no separate callback lookup or second borrow.
+   Duplicate or stale acceptance returns no callback and keeps its existing stale
+   accounting. Installation and effect confirmation retain their own required
+   role, generation and state checks.
+   Delegated control and both work-completion paths share one entry-local
+   running-work predicate for the exact claim, work role, generation and running
+   state. Completion checks it before any mutation; provider binding and completed
+   measurements retain their distinct validation boundaries.
 
 Absolute deadlines remain authoritative in policy control state and its snapshot
 projection. Provider arm effects carry only the resolved delay, callback authority

@@ -3,9 +3,9 @@
 use crate::{
     platform::{self, TimerHandle},
     registry::{
-        CallbackAcceptance, CallbackRole, CallbackToken, OrdinaryCallback, ProviderHandle,
-        ProviderHandles, RegisterError, RegistrationClaim, RegistryEffect, RegistryError,
-        RegistryTransition, TimerRegistry, WatchdogCallback,
+        CallbackRole, CallbackToken, OrdinaryCallback, ProviderHandle, ProviderHandles,
+        RegisterError, RegistrationClaim, RegistryEffect, RegistryError, RegistryTransition,
+        TimerRegistry, WatchdogCallback,
     },
     schedule::{ScheduleError, TimerCadence, TimerDirective, TimerSchedule},
     snapshot::{
@@ -1074,21 +1074,15 @@ async fn dispatch_wakeup(token: CallbackToken) {
 )]
 async fn dispatch_ordinary(token: CallbackToken) {
     let measurement = CallbackMeasurementStart::capture();
-    let accepted = with_registry_mut(|registry| {
+    let callback = with_registry_mut(|registry| {
         registry.consume_provider_handle(&token);
         Ok(registry.begin_ordinary(&token))
     });
-    match accepted {
-        Ok(CallbackAcceptance::Accepted) => {}
-        Ok(CallbackAcceptance::Stale) => return,
+    let callback = match callback {
+        Ok(Some(callback)) => callback,
+        Ok(None) => return,
         Err(error) => trap_callback_failure("ordinary callback acceptance", &error),
-    }
-
-    // Acceptance and lookup are synchronous; the accepted ordinary claim cannot
-    // change policy or leave running state between these operations.
-    let callback =
-        with_registry(|registry| registry.ordinary_callback(&token).map_err(TimerError::from))
-            .unwrap_or_else(|error| trap_callback_failure("ordinary callback lookup", &error));
+    };
     let future = {
         let Ok(mut callback) = callback.try_borrow_mut() else {
             finish_ordinary_callback(
@@ -1143,22 +1137,15 @@ fn dispatch_watchdog_scheduler(token: &CallbackToken) {
 
 fn dispatch_watchdog_work(token: &CallbackToken) {
     let measurement = CallbackMeasurementStart::capture();
-    let accepted = with_registry_mut(|registry| {
+    let callback = with_registry_mut(|registry| {
         registry.consume_provider_handle(token);
         Ok(registry.begin_watchdog_work(token))
     });
-    match accepted {
-        Ok(CallbackAcceptance::Accepted) => {}
-        Ok(CallbackAcceptance::Stale) => return,
+    let callback = match callback {
+        Ok(Some(callback)) => callback,
+        Ok(None) => return,
         Err(error) => trap_callback_failure("watchdog work acceptance", &error),
-    }
-
-    let callback =
-        match with_registry(|registry| registry.watchdog_callback(token).map_err(TimerError::from))
-        {
-            Ok(callback) => callback,
-            Err(error) => trap_callback_failure("watchdog callback lookup", &error),
-        };
+    };
     let result = {
         let Ok(mut callback) = callback.try_borrow_mut() else {
             trap_callback_failure(

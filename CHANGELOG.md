@@ -8,6 +8,32 @@ All notable changes to this project are recorded here.
 
 - Add the shared helper navigation menu linking the eight maintained helper
   repositories through centrally hosted icons.
+- Remove stale merge-conflict text from the README and align its technical
+  overview with the `0.11` API line.
+
+## [0.11.2] - 2026-10-04
+
+### Changed
+
+- Return ordinary and Watchdog work callbacks directly from the registry's
+  acceptance transition. Remove the separate callback lookups, acceptance-status
+  enum and second dispatch borrow while retaining exact claim, role, generation
+  and state authorization.
+- Fold the remaining context-only read lookup into context validation, retaining
+  the shared running-work predicate and independent completion authorization.
+- Decide cancellation lifetime removal once from the final state for both
+  ordinary and Watchdog declarations. Remove the ordinary pre-state copy and
+  fold its remaining generation-allocation helper into checked arming.
+
+### Development
+
+- Update acceptance fixtures to assert callback availability and reject duplicate
+  acceptance across all three policies. Retain delegated-context and completion
+  rejection coverage; remove assertions for the deleted lookup paths.
+- Extend fresh cancellation coverage across both lifetimes, checking unchanged
+  retained inventories and expiration of transient claims for every policy.
+- Record scope and pending verification in the
+  [0.11.2 release note](docs/changelog/0.11.2.md).
 
 ## [0.11.1] - 2026-10-04
 
