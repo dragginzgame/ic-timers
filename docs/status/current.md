@@ -57,6 +57,13 @@ references and validation belong in [release notes](../changelog/README.md),
   Provider installation and effect confirmation use the canonical mutable claim
   lookup with callback-specific stale-error translation; see the
   [claim lookup note](../changelog/0.10.21.md).
+  Late measurements and provider-handle consumption share that lookup while
+  retaining no-op behavior for missing or superseded claims; see the
+  [lookup and detachment note](../changelog/0.10.22.md). Watchdog failure cleanup
+  obtains paired handles through the entry's existing detachment owner, with
+  provider clearing after the registry borrow is released. Ordinary terminal
+  request failures pass validated control directly to stop finalization rather
+  than repeating policy selection.
   The shared claim-transition operation validates context authority before
   detachment; lifecycle reconciliation directly verifies retained declarations.
   See the [runtime validation ownership note](../changelog/0.10.20.md).

@@ -4,6 +4,27 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.22]
+
+### Changed
+
+- Use the canonical claim lookup for late measurement accounting and provider
+  handle consumption, preserving no-op behavior for missing or superseded claims
+  and the independent policy, role and handle-generation checks.
+- Detach provider-handle pairs through their registry entry during Watchdog
+  failure cleanup. Remove runtime pair assembly and the separate pair constructor,
+  preserving cleanup order and harmless cleanup of empty or missing entries.
+- Pass validated ordinary control directly to terminal-failure finalization,
+  removing its repeated policy check and unreachable fallback. Preserve terminal
+  reasons, wakeup cleanup and declaration-lifetime decisions.
+
+### Development
+
+- Extend the provider-cleanup fixture for empty and missing entries, and update
+  restoration cleanup to use registry-owned pair detachment.
+- Record the lookup cleanup and focused verification subjects in the
+  [0.10.22 release note](docs/changelog/0.10.22.md).
+
 ## [0.10.21] - 2026-10-04
 
 ### Changed
