@@ -29,6 +29,13 @@ All notable changes to this project are recorded here.
 - Record scope and pending verification in the
   [0.11.3 release note](docs/changelog/0.11.3.md).
 
+### Documentation
+
+- Add the shared helper navigation menu linking the eight maintained helper
+  repositories through centrally hosted icons.
+- Remove stale merge-conflict text from the README and align its technical
+  overview with the `0.11` API line.
+
 ## [0.11.2] - 2026-10-04
 
 ### Changed

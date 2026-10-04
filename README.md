@@ -1,5 +1,25 @@
 ![IC Timers — Internet Computer helper library](docs/assets/ic-timers-readme-header.svg)
 
+<!-- helper-navigation:start -->
+<p align="center">
+  <a href="https://github.com/dragginzgame/canic"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/helper-icons/canic.svg" width="18" height="18" alt=""> <strong>canic</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://github.com/dragginzgame/icydb"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/helper-icons/icydb.svg" width="18" height="18" alt=""> <strong>icydb</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://github.com/dragginzgame/ic-timers"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/helper-icons/ic-timers.svg" width="18" height="18" alt=""> <strong>ic-timers</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://github.com/dragginzgame/ic-memory"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/helper-icons/ic-memory.svg" width="18" height="18" alt=""> <strong>ic-memory</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://github.com/dragginzgame/ic-query"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/helper-icons/ic-query.svg" width="18" height="18" alt=""> <strong>ic-query</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://github.com/dragginzgame/ic-backup"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/helper-icons/ic-backup.svg" width="18" height="18" alt=""> <strong>ic-backup</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://github.com/dragginzgame/ic-blob-storage"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/helper-icons/ic-blob-storage.svg" width="18" height="18" alt=""> <strong>ic-blob-storage</strong></a>
+  &nbsp;&middot;&nbsp;
+  <a href="https://github.com/dragginzgame/ic-testkit"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/helper-icons/ic-testkit.svg" width="18" height="18" alt=""> <strong>ic-testkit</strong></a>
+</p>
+<!-- helper-navigation:end -->
+
 > A shared scheduler for background tasks in applications running on the
 > Internet Computer.
 
@@ -16,23 +36,11 @@ timers in one place, and report what happened when they ran.
 
 For example, an application might use IC Timers to:
 
-<<<<<<< HEAD
-| | Current contract |
-| --- | --- |
-| 🧩 API line | `0.11` |
-| 🦀 Rust | Edition 2024; MSRV 1.88.0 |
-| ⚙️ Provider | Exact `ic-cdk-timers` 1.0.0, private and wrapped |
-| 🗂️ Capacity | 64 logical timers; at most 128 owned provider handles |
-| 🔄 Policies | `Once`, `AfterCompletion`, and pre-armed `Watchdog` |
-| 💾 Persistence | None; consumers retain durable application authority |
-| 🔎 Observation | Bounded snapshots, counters, instructions, and memory-page extents |
-=======
 - remove expired records;
 - process a queue a few items at a time;
 - run regular database maintenance;
 - try important work again after an interrupted attempt; or
 - show operators which background tasks are waiting, running, or stopped.
->>>>>>> a60341aa568c2e2d28401b428f3f3579cb312faf
 
 People using the application do not interact with IC Timers directly. They
 benefit from background work that is easier for the application's developers
@@ -47,7 +55,7 @@ but it does not promise that a task will happen exactly once.
 
 ## Technical overview
 
-The current API line is `0.10`. It is written in Rust 2024 and supports Rust
+The current API line is `0.11`. It is written in Rust 2024 and supports Rust
 1.88.0 and newer. It uses `ic-cdk-timers` 1.0.0 as its private, underlying
 timer service.
 
