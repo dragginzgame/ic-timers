@@ -1188,10 +1188,6 @@ impl TimerRegistry {
         }
     }
 
-    #[expect(
-        clippy::too_many_lines,
-        reason = "One atomic policy transition; splitting obscures rollback state."
-    )]
     pub(crate) fn complete_ordinary(
         &mut self,
         token: &CallbackToken,

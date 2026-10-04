@@ -16,6 +16,8 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Remove ordinary completion's obsolete `too_many_lines` lint expectation after
+  the simplification brings it below Clippy's limit.
 - Extend the existing transition-error fixture to check failed restoration,
   provider-handle cleanup, claim retirement and restoration-error precedence.
 - Record the pushed 0.10.6 baseline and private cleanup in the
