@@ -4,6 +4,29 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.21]
+
+### Changed
+
+- Use the canonical claim lookup for provider installation and effect
+  confirmation, removing their duplicate identity and claim-generation lookup.
+  Preserve stale-callback errors and independent role, state and generation checks.
+
+### Development
+
+- Cover lifecycle reconciliation rejection through the public APIs: mismatched
+  identity for Once, transient lifetime and mismatched cadence for AfterCompletion,
+  and an expired Watchdog claim after identity reuse. Assert typed errors and
+  preservation of inventory, armed handles and the live callback. Verify the
+  retained AfterCompletion callback still runs at its original deadline.
+- Extend the duplicate-registration fixture to cover reconstruction from an
+  empty consumer slot when the identity is already occupied. Preserve the empty
+  slot, live declaration, armed wakeup and original callback on rejection.
+- Cover provider installation and effect confirmation after claim removal and
+  identity reuse, preserving rejected-handle ownership and unchanged inventory.
+- Record the cleanup scope and pending verification in the
+  [0.10.21 release note](docs/changelog/0.10.21.md).
+
 ## [0.10.20] - 2026-10-04
 
 ### Changed

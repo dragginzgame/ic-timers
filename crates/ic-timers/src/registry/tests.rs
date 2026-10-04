@@ -382,6 +382,47 @@ fn provider_roles_reject_same_claim_mismatches_and_survive_detachment() {
 }
 
 #[test]
+fn provider_installation_and_confirmation_reject_removed_or_reused_claims() {
+    for reuse_identity in [false, true] {
+        let provider_count_before = crate::platform::timer_count();
+        let mut registry = registry();
+        let timer = identity("provider-expired-claim");
+        let original = registry
+            .register_once(timer.clone(), DeclarationLifetime::Retained)
+            .unwrap();
+        let transition = registry
+            .ensure_once(&original, 0, TimerSchedule::At(10))
+            .unwrap();
+        let RegistryEffect::ArmWakeup { token, .. } = transition.effect() else {
+            panic!("fixture must produce an arm effect");
+        };
+        registry.unregister(&original).unwrap();
+        if reuse_identity {
+            let replacement = registry
+                .register_once(timer, DeclarationLifetime::Retained)
+                .unwrap();
+            registry
+                .ensure_once(&replacement, 0, TimerSchedule::At(20))
+                .unwrap();
+        }
+        let before = registry.inventory();
+
+        let handle = crate::platform::set_timer(Duration::ZERO, async {});
+        let (error, rejected) = registry.install_provider_handle(token, handle).unwrap_err();
+        assert_eq!(error, RegistryError::StaleCallback);
+        assert_eq!(crate::platform::timer_count(), provider_count_before + 1);
+        crate::platform::clear_timer(rejected);
+        assert_eq!(crate::platform::timer_count(), provider_count_before);
+        assert_eq!(registry.inventory(), before);
+        assert_eq!(
+            registry.confirm_effect_applied(transition.effect()),
+            Err(RegistryError::StaleCallback)
+        );
+        assert_eq!(registry.inventory(), before);
+    }
+}
+
+#[test]
 fn measurement_routing_rejects_a_policy_role_mismatch() {
     let mut registry = registry();
     let timer = identity("measurement-role");

@@ -1854,14 +1854,9 @@ impl TimerRegistry {
     // Select identity and exact claim; callers validate the role and generation
     // against their operation's policy state.
     fn entry_by_token_mut(&mut self, token: &CallbackToken) -> Result<&mut Entry, RegistryError> {
-        let entry = self
-            .entries
-            .get_mut(token.identity())
-            .ok_or(RegistryError::StaleCallback)?;
-        if !entry.owns_token_claim(token) {
-            return Err(RegistryError::StaleCallback);
-        }
-        Ok(entry)
+        // Missing and superseded claims are both stale callback delivery.
+        self.entry_mut(token.claim())
+            .map_err(|_| RegistryError::StaleCallback)
     }
 
     fn running_work_entry(&self, token: &CallbackToken) -> Result<&Entry, RegistryError> {
