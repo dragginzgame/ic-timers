@@ -4,6 +4,38 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.5]
+
+### Changed
+
+- Store the Watchdog inactive reason inside its private inactive state. Remove
+  the independent reason field and paired assignments; active states no longer
+  carry irrelevant inactive metadata. Public snapshots and terminal behavior
+  retain their existing contracts.
+- Finalize cancellation removal once from its policy decision. Remove the
+  redundant follow-up failure cleanup; preserve terminal errors, declaration
+  lifetimes and provider cleanup effects.
+- Route recurring ordinary coalescing through the shared scheduling-request
+  handler. Remove the separate counter/metadata update path while retaining
+  the existing deadline without allocating a generation or recalculating an
+  unused cadence deadline.
+- Remove the redundant expected-role argument from private callback-claim lookup.
+  Provider installation and effect confirmation retain their operation-specific
+  role, generation and state validation.
+
+### Development
+
+- Check the public inactive reason in the existing Watchdog generation-exhaustion
+  and deadline-overflow fixtures while retaining atomicity and cleanup assertions.
+- Extend the Watchdog failure/lifetime matrix to cover exhausted cancellation
+  before and after work dispatch, including selected callback cleanup and the
+  absence of successful cancellation counts.
+- Extend recurring coalescing coverage to cadence and exact schedules with
+  exhausted generations and overflowing hypothetical successors; preserve mode,
+  request observations, counters and callback authority.
+- Record the maintainer-reported pushed 0.10.4 baseline and this cleanup in the
+  [0.10.5 release note](docs/changelog/0.10.5.md).
+
 ## [0.10.4] - 2026-10-04
 
 ### Changed

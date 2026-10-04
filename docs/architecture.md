@@ -30,10 +30,10 @@ The module hierarchy keeps six responsibilities separate:
    canonical `TimerControlFailure` directly, without a private error conversion.
    Cancellation invalidates a scheduled generation while leaving running work
    unchanged. Completion and cancellation return success or a typed failure.
-   The registry builds provider
-   effects and retains cancellation policy without a separate cancellation or
-   completion action. Scheduling requests return only an optional initial or
-   replacement arm kind; generation and deadline remain in control state.
+   The registry builds provider effects and retains cancellation policy without a
+   separate cancellation or completion action. Scheduling requests return only
+   an optional initial or replacement arm kind; generation and deadline remain
+   in control state.
 4. `registry` is the provider-call-free fixed-capacity canonical owner for
    structured identities, callback closures, claim generations,
    policy-specific state, the sole pending ordinary-command machine, nested
@@ -43,6 +43,11 @@ The module hierarchy keeps six responsibilities separate:
    containing its control and correctly typed callback. An ordinary payload
    without cadence is Once; one with cadence is AfterCompletion. Public policy
    observations are derived from that payload rather than stored separately.
+   The private Watchdog inactive state owns its reason; active states carry no
+   inactive reason, and snapshots project the reason from the state itself.
+   Ordinary schedule requests share counter, request-metadata and coalescing
+   updates. Recurring ensure submits an existing scheduled deadline unchanged;
+   it calculates a cadence deadline only for inactive or running declarations.
    Owned provider roles follow entry policy and handle slot rather than a copied
    field. Installation and consumption reject policy/role mismatches before using
    a slot; detached handles retain complete tokens for restoration and cleanup.
@@ -74,6 +79,9 @@ The module hierarchy keeps six responsibilities separate:
    callback acceptance, measurements, provider installation, and handle
    consumption, so identity reuse cannot transfer handle authority to a stale
    callback.
+   Private callback lookup selects identity and exact claim without a separate
+   expected-role argument. Installation and effect confirmation each retain
+   their own required role, generation and state checks.
    Callback lookup, delegated control and both work-completion paths share one
    entry-local running-work predicate for the exact claim, work role, generation
    and running state. Completion checks it before any mutation. Callback acceptance

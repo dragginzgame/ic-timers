@@ -1137,24 +1137,53 @@ fn ordinary_directive_matrix_preserves_mode_and_checked_deadline() {
 
 #[test]
 fn recurring_duplicate_ensure_is_idempotent_without_deadline_recalculation() {
-    let mut registry = registry();
-    let timer = identity("recurring-idempotent");
-    let claim = registry
-        .register_after_completion(timer.clone(), cadence(5), DeclarationLifetime::Retained)
-        .expect("claim should succeed");
-    let initial = registry
-        .ensure_recurring(&claim, 0)
-        .expect("initial ensure should succeed");
-    confirm(&mut registry, &initial);
-    let duplicate = registry
-        .ensure_recurring(&claim, u64::MAX)
-        .expect("existing schedule should satisfy duplicate demand");
-    assert_eq!(duplicate.effect(), &RegistryEffect::None);
-    let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
-    assert_eq!(snapshot.next_deadline_ns(), Some(5));
-    assert_eq!(snapshot.observability().counters().schedule_requests(), 2);
-    assert_eq!(snapshot.observability().counters().wakeups_armed(), 1);
-    assert_eq!(snapshot.observability().counters().coalesced(), 1);
+    for exact_deadline in [false, true] {
+        let mut registry = registry();
+        let timer = identity("recurring-idempotent");
+        let claim = registry
+            .register_after_completion(timer.clone(), cadence(5), DeclarationLifetime::Retained)
+            .expect("claim should succeed");
+        let initial = if exact_deadline {
+            registry.reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(40)))
+        } else {
+            registry.ensure_recurring(&claim, 0)
+        }
+        .expect("initial schedule should succeed");
+        confirm(&mut registry, &initial);
+        let before = registry.snapshot(&timer).unwrap();
+        let EntryKind::Ordinary { control, .. } =
+            &mut registry.entries.get_mut(&timer).unwrap().kind
+        else {
+            panic!("fixture must be ordinary control");
+        };
+        control.exhaust_generation_for_test();
+
+        let duplicate = registry
+            .ensure_recurring(&claim, u64::MAX)
+            .expect("existing schedule should satisfy duplicate demand without allocation");
+        assert_eq!(duplicate.effect(), &RegistryEffect::None);
+        assert_eq!(duplicate.failure(), None);
+        let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
+        assert_eq!(snapshot.state(), before.state());
+        assert_eq!(
+            snapshot.next_deadline_ns(),
+            Some(if exact_deadline { 40 } else { 5 })
+        );
+        assert_eq!(snapshot.scheduling_mode(), before.scheduling_mode());
+        assert_eq!(snapshot.latest_requested_delay_ns(), Some(5));
+        assert_eq!(
+            snapshot.latest_armed_delay_ns(),
+            before.latest_armed_delay_ns()
+        );
+        assert_eq!(snapshot.observability().counters().schedule_requests(), 2);
+        assert_eq!(snapshot.observability().counters().wakeups_armed(), 1);
+        assert_eq!(snapshot.observability().counters().coalesced(), 1);
+        let (token, _) = arm(initial);
+        assert_eq!(
+            registry.begin_ordinary(&token),
+            CallbackAcceptance::Accepted
+        );
+    }
 }
 
 #[test]
@@ -1908,7 +1937,12 @@ fn watchdog_checked_generation_exhaustion_is_terminal_and_atomic() {
         control.scheduler_generation, 1,
         "paired generation allocation must be atomic"
     );
-    assert_eq!(control.state, WatchdogState::Inactive);
+    assert_eq!(
+        registry.snapshot(&attempt_timer).unwrap().state(),
+        TimerRuntimeStateSnapshot::Inactive {
+            reason: InactiveReason::ControlFailure(TimerControlFailure::GenerationExhausted),
+        }
+    );
     assert_eq!(control.pending, None);
 }
 
@@ -1946,7 +1980,12 @@ fn watchdog_checked_deadline_overflow_is_terminal() {
     let EntryKind::Watchdog { control, .. } = &entry.kind else {
         panic!("fixture should remain watchdog control");
     };
-    assert_eq!(control.state, WatchdogState::Inactive);
+    assert_eq!(
+        registry.snapshot(&deadline_timer).unwrap().state(),
+        TimerRuntimeStateSnapshot::Inactive {
+            reason: InactiveReason::ControlFailure(TimerControlFailure::DeadlineOverflow),
+        }
+    );
     assert_eq!(control.pending, None);
 }
 
@@ -2054,6 +2093,8 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
             "dispatch-generation",
             "dispatch-attempt",
             "dispatch-deadline",
+            "cancel-scheduled",
+            "cancel-dispatched",
         ] {
             let mut registry = registry();
             let timer = identity(subject);
@@ -2065,21 +2106,26 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
             } else {
                 Some(arm(registry.ensure_recurring(&claim, 0).unwrap()).0)
             };
+            if subject == "cancel-dispatched" {
+                let (_successor, _work) =
+                    dispatch(registry.begin_watchdog_scheduler(scheduler.as_ref().unwrap(), 1));
+            }
             let entry = registry.entries.get_mut(&timer).unwrap();
             let EntryKind::Watchdog { control, .. } = &mut entry.kind else {
                 panic!("fixture must be a watchdog");
             };
             match subject {
-                "initial" | "replacement" | "dispatch-generation" => {
+                "initial" | "replacement" | "dispatch-generation" | "cancel-scheduled" => {
                     control.scheduler_generation = u64::MAX;
                 }
-                "dispatch-attempt" => control.attempt_generation = u64::MAX,
+                "dispatch-attempt" | "cancel-dispatched" => control.attempt_generation = u64::MAX,
                 "dispatch-deadline" => {}
                 _ => unreachable!("closed fixture subjects"),
             }
             let transition = match subject {
                 "initial" => registry.ensure_recurring(&claim, 0).unwrap(),
                 "replacement" => registry.ensure_watchdog_immediately(&claim, 0).unwrap(),
+                "cancel-scheduled" | "cancel-dispatched" => registry.cancel(&claim).unwrap(),
                 _ => registry.begin_watchdog_scheduler(
                     scheduler.as_ref().unwrap(),
                     if subject == "dispatch-deadline" {
@@ -2095,9 +2141,23 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
                 TimerControlFailure::GenerationExhausted
             };
             assert_eq!(transition.failure(), Some(failure));
+            if subject.starts_with("cancel-") {
+                let handles = if subject == "cancel-dispatched" {
+                    CallbacksToClear::WakeupAndWork
+                } else {
+                    CallbacksToClear::Wakeup
+                };
+                assert!(matches!(
+                    transition.effect(),
+                    RegistryEffect::ClearCallbacks { handles: selected, .. }
+                        if *selected == handles
+                ));
+            }
             if lifetime == DeclarationLifetime::Retained {
+                let snapshot = registry.snapshot(&timer).unwrap();
+                assert_eq!(snapshot.observability().counters().cancelled(), 0);
                 assert_eq!(
-                    registry.snapshot(&timer).unwrap().state(),
+                    snapshot.state(),
                     TimerRuntimeStateSnapshot::Inactive {
                         reason: InactiveReason::ControlFailure(failure),
                     }

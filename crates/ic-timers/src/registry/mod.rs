@@ -378,7 +378,9 @@ impl EntryKind {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum WatchdogState {
-    Inactive,
+    Inactive {
+        reason: InactiveReason,
+    },
     Scheduled {
         scheduler_generation: u64,
         deadline_ns: u64,
@@ -397,7 +399,6 @@ struct WatchdogControl {
     attempt_generation: u64,
     state: WatchdogState,
     pending: Option<WatchdogPending>,
-    inactive_reason: InactiveReason,
 }
 
 impl Default for WatchdogControl {
@@ -405,9 +406,10 @@ impl Default for WatchdogControl {
         Self {
             scheduler_generation: 0,
             attempt_generation: 0,
-            state: WatchdogState::Inactive,
+            state: WatchdogState::Inactive {
+                reason: InactiveReason::NeverScheduled,
+            },
             pending: None,
-            inactive_reason: InactiveReason::NeverScheduled,
         }
     }
 }
@@ -456,9 +458,10 @@ impl WatchdogControl {
         effect: RegistryEffect,
         failure: TimerControlFailure,
     ) -> RegistryTransition {
-        self.state = WatchdogState::Inactive;
+        self.state = WatchdogState::Inactive {
+            reason: InactiveReason::ControlFailure(failure),
+        };
         self.pending = None;
-        self.inactive_reason = InactiveReason::ControlFailure(failure);
         RegistryTransition::terminal(effect, failure)
     }
 }
@@ -529,9 +532,9 @@ impl Entry {
                 }
             },
             EntryKind::Watchdog { control, .. } => match control.state {
-                WatchdogState::Inactive => TimerRuntimeStateSnapshot::Inactive {
-                    reason: control.inactive_reason,
-                },
+                WatchdogState::Inactive { reason } => {
+                    TimerRuntimeStateSnapshot::Inactive { reason }
+                }
                 WatchdogState::Scheduled {
                     scheduler_generation,
                     deadline_ns,
@@ -844,16 +847,14 @@ impl TimerRegistry {
                 ..
             } => {
                 let cadence = *cadence;
-                let already_scheduled =
-                    matches!(control.registration(), TimerRegistration::Scheduled { .. });
-                if already_scheduled {
-                    let entry = self.entry_mut(claim)?;
-                    entry.observability.counters_mut().record_schedule_request();
-                    entry.observability.counters_mut().record_coalesced();
-                    entry.latest_requested_delay_ns = Some(cadence.as_nanos());
-                    return Ok(RegistryTransition::normal(RegistryEffect::None));
-                }
-                let deadline_ns = cadence.deadline_after(now_ns)?;
+                // Existing authority satisfies recurrence without calculating
+                // an unused successor, even when now + cadence would overflow.
+                let deadline_ns = match control.registration() {
+                    TimerRegistration::Scheduled { deadline_ns, .. } => deadline_ns,
+                    TimerRegistration::Unregistered | TimerRegistration::Running { .. } => {
+                        cadence.deadline_after(now_ns)?
+                    }
+                };
                 self.request_ordinary(
                     claim,
                     now_ns,
@@ -995,7 +996,7 @@ impl TimerRegistry {
             WatchdogScheduleRequest::Reconcile(requested) => requested.requested_delay_ns,
         };
         let transition = match control.state {
-            WatchdogState::Inactive => {
+            WatchdogState::Inactive { .. } => {
                 let deadline_ns = match request {
                     WatchdogScheduleRequest::Cadence => cadence.deadline_after(now_ns)?,
                     WatchdogScheduleRequest::Immediate => now_ns,
@@ -1122,7 +1123,7 @@ impl TimerRegistry {
                     if cancels_immediately && transition.failure().is_none() {
                         entry.observability.counters_mut().record_cancellation();
                     }
-                    let stopped = matches!(control.state, WatchdogState::Inactive);
+                    let stopped = matches!(control.state, WatchdogState::Inactive { .. });
                     (
                         transition,
                         stopped && matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped),
@@ -1131,10 +1132,12 @@ impl TimerRegistry {
             }
         };
 
-        if remove {
-            self.entries.remove(&identity);
-        }
-        Ok(self.remove_transient_on_failure(&identity, transition))
+        Ok(remove_after(
+            &mut self.entries,
+            &identity,
+            transition,
+            remove,
+        ))
     }
 
     /// Remove the declaration owned by one exact logical claim.
@@ -1370,7 +1373,7 @@ impl TimerRegistry {
                 attempt_status: WatchdogAttemptStatus::Dispatched,
                 ..
             } => successor_generation == token.callback_generation,
-            WatchdogState::Inactive
+            WatchdogState::Inactive { .. }
             | WatchdogState::AwaitingWork {
                 attempt_status: WatchdogAttemptStatus::Running,
                 ..
@@ -1455,7 +1458,7 @@ impl TimerRegistry {
                 entry.observability.counters_mut().record_work_started();
                 CallbackAcceptance::Accepted
             }
-            WatchdogState::Inactive
+            WatchdogState::Inactive { .. }
             | WatchdogState::Scheduled { .. }
             | WatchdogState::AwaitingWork { .. } => {
                 entry.observability.counters_mut().record_stale_work();
@@ -1563,16 +1566,16 @@ impl TimerRegistry {
                     }
                 }
                 WatchdogDecision::Stop => {
-                    control.state = WatchdogState::Inactive;
-                    control.inactive_reason =
-                        if completion.outcome() == TimerCompletionOutcome::InvariantFailure {
-                            InactiveReason::InvariantFailure
-                        } else if cancelled {
-                            entry.observability.counters_mut().record_cancellation();
-                            InactiveReason::Cancelled
-                        } else {
-                            InactiveReason::Stopped
-                        };
+                    let reason = if completion.outcome() == TimerCompletionOutcome::InvariantFailure
+                    {
+                        InactiveReason::InvariantFailure
+                    } else if cancelled {
+                        entry.observability.counters_mut().record_cancellation();
+                        InactiveReason::Cancelled
+                    } else {
+                        InactiveReason::Stopped
+                    };
+                    control.state = WatchdogState::Inactive { reason };
                     (
                         RegistryTransition::normal(clear_callbacks(
                             identity.clone(),
@@ -1705,9 +1708,10 @@ impl TimerRegistry {
                     *inactive_reason = InactiveReason::ControlFailure(failure);
                 }
                 EntryKind::Watchdog { control, .. } => {
-                    control.state = WatchdogState::Inactive;
+                    control.state = WatchdogState::Inactive {
+                        reason: InactiveReason::ControlFailure(failure),
+                    };
                     control.pending = None;
-                    control.inactive_reason = InactiveReason::ControlFailure(failure);
                 }
             }
             let handles = entry.take_provider_handles(&identity);
@@ -1760,7 +1764,7 @@ impl TimerRegistry {
         token: &CallbackToken,
         handle: TimerHandle,
     ) -> Result<(), (RegistryError, TimerHandle)> {
-        let entry = match self.entry_by_token_mut(token, token.role) {
+        let entry = match self.entry_by_token_mut(token) {
             Ok(entry) => entry,
             Err(error) => return Err((error, handle)),
         };
@@ -1872,7 +1876,7 @@ impl TimerRegistry {
             RegistryEffect::ArmWakeup {
                 token, delay_ns, ..
             } => {
-                let entry = self.entry_by_token_mut(token, token.role)?;
+                let entry = self.entry_by_token_mut(token)?;
                 let valid_generation = match (&entry.kind, token.role) {
                     (EntryKind::Ordinary { control, .. }, CallbackRole::OrdinaryWork) => {
                         matches!(
@@ -1904,7 +1908,7 @@ impl TimerRegistry {
                 ..
             } => {
                 let successor_callback_generation = successor.callback_generation;
-                let entry = self.entry_by_token_mut(successor, CallbackRole::WatchdogScheduler)?;
+                let entry = self.entry_by_token_mut(successor)?;
                 let EntryKind::Watchdog { control, .. } = &entry.kind else {
                     return Err(RegistryError::StaleCallback);
                 };
@@ -1960,16 +1964,14 @@ impl TimerRegistry {
         Ok(entry)
     }
 
-    fn entry_by_token_mut(
-        &mut self,
-        token: &CallbackToken,
-        role: CallbackRole,
-    ) -> Result<&mut Entry, RegistryError> {
+    // Select identity and exact claim; callers validate the role and generation
+    // against their operation's policy state.
+    fn entry_by_token_mut(&mut self, token: &CallbackToken) -> Result<&mut Entry, RegistryError> {
         let entry = self
             .entries
             .get_mut(token.identity())
             .ok_or(RegistryError::StaleCallback)?;
-        if !entry.owns_token_claim(token) || token.role != role {
+        if !entry.owns_token_claim(token) {
             return Err(RegistryError::StaleCallback);
         }
         Ok(entry)
@@ -2197,7 +2199,7 @@ const fn select_pending_watchdog(
 
 fn cancel_watchdog(control: &mut WatchdogControl, identity: &TimerIdentity) -> RegistryTransition {
     match control.state {
-        WatchdogState::Inactive => RegistryTransition::normal(RegistryEffect::None),
+        WatchdogState::Inactive { .. } => RegistryTransition::normal(RegistryEffect::None),
         WatchdogState::AwaitingWork {
             attempt_status: WatchdogAttemptStatus::Running,
             ..
@@ -2226,9 +2228,10 @@ fn cancel_watchdog(control: &mut WatchdogControl, identity: &TimerIdentity) -> R
             };
             control.scheduler_generation = scheduler_generation;
             control.attempt_generation = attempt_generation;
-            control.state = WatchdogState::Inactive;
+            control.state = WatchdogState::Inactive {
+                reason: InactiveReason::Cancelled,
+            };
             control.pending = None;
-            control.inactive_reason = InactiveReason::Cancelled;
             RegistryTransition::normal(clear_callbacks(
                 identity.clone(),
                 CallbacksToClear::wakeup_and_maybe_work(clear_work),

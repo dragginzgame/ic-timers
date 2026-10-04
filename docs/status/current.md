@@ -50,26 +50,37 @@ and the [safety boundary](../../SAFETY.md).
 
 ## Current follow-up
 
-The maintainer reports 0.10.3 live. Local HEAD, the peeled 0.10.3 tag and origin/main
-agree at `ef359f75f6f5f63a4734a85ea3e3a62ebfbc637c`. The completed running-work
-ownership cleanup is recorded in the [0.10.3 note](../changelog/0.10.3.md).
+The maintainer reports 0.10.4 pushed. Local HEAD, the peeled 0.10.4 tag and origin/main
+agree at `d008c5f3c2fcfef6c69f2df865effeeecc410706`. The completed ordinary
+completion and failure cleanup is recorded in the [0.10.4 note](../changelog/0.10.4.md).
 
-The [0.10.4 note](../changelog/0.10.4.md) records the prepared private cleanup.
-Ordinary completion authorizes the exact running token once at the registry
-boundary. Its only production call into control remains in that same atomic
-transition; private `complete_running` applies the selected successor without
-repeating generation validation. The private stale-completion path, control-error
-enum and failure conversion are deleted. Ordinary checked transitions return
-canonical `TimerControlFailure` values directly, and the inconsistent-schedule
-guard preserves its `DirectiveNotAllowed` classification. Checked generation
-allocation, terminal cleanup, public API, errors, observations and lifetimes are
-unchanged.
+The [0.10.5 note](../changelog/0.10.5.md) records the prepared private cleanup.
+Watchdog inactive state owns its reason directly. The independent reason field
+and paired assignments are deleted; active states carry no inactive metadata.
+Fresh declarations, cancellation, normal stopping, invariant failure and control
+failure retain their existing reasons. Snapshot shape, paired generation
+allocation, cancellation counts, pending cleanup, declaration lifetimes and
+provider ordering are unchanged.
 
-Control completion and exhaustion fixtures are updated. The superseded control-local
-stale-generation fixture is deleted; the maintained registry matrix covers rejection
-at the live boundary without observation changes. Existing ordinary lifetime,
-context-expiration and identity-reuse fixtures remain. Test execution stays
-maintainer-owned.
+Cancellation's shared exit now applies its complete removal decision once instead
+of following it with redundant failure cleanup. Ordinary early failure cleanup
+and running-work pending commands retain their existing behavior.
+
+Recurring ordinary ensure now shares the scheduling-request observation and
+coalescing path. It retains existing scheduled deadlines without recalculating
+an unused cadence successor or allocating a new generation. Callback-claim
+lookup drops its redundant expected-role argument; operation-specific provider
+and confirmation role/state/generation checks remain.
+
+Existing Watchdog exhaustion and deadline-overflow fixtures now assert public
+inactive state and reason while retaining atomicity and pending cleanup checks.
+The Watchdog failure/lifetime matrix also covers exhausted cancellation before
+and after dispatch, callback cleanup selection and unchanged cancellation counts.
+The recurring duplicate-ensure fixture covers cadence and exact schedules at
+generation and timestamp limits, preserving state, mode, observations and callback
+authority. Provider-role and malformed-effect fixtures remain.
+Fresh-declaration, result-matrix, cancellation, terminal-lifetime and provider-failure
+fixtures remain. Test execution stays maintainer-owned.
 
 Ordinary/Watchdog command machines, effect confirmation and handle-restoration
 stages remain required by their distinct suspension and recovery contracts.
@@ -80,7 +91,7 @@ composed qualification.
 ## Evidence
 
 The latest inspected hosted validation remains scoped to 0.9.4 as recorded in
-its delivery note; the maintainer's 0.10.3 live report and local references do not
+its delivery note; the maintainer's 0.10.4 pushed report and local references do not
 establish new hosted or PocketIC results. No new runtime, recovery or performance
 result is claimed for this cleanup. Changed Rust is formatted. Diff whitespace,
 current release-truth and target-note structural preflight checks passed during
