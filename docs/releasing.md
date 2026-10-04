@@ -203,8 +203,8 @@ stale path-package versions without building either workspace or repeating
 the evidence suite. `--no-deps` is not sufficient because it skips lockfile
 validation. `release-stage` stages both lockfiles automatically.
 
-Before mutation, the helper backs up only its six output files: the workspace
-manifest, both lockfiles, changelog, status and target release note. Failed
+Before mutation, the helper backs up only its seven output files: the workspace
+manifest, both lockfiles, changelog, README, status and target release note. Failed
 commands and handled `INT`/`TERM` interruptions restore their pre-bump contents
 and modes, including existing user edits. If restoration fails, the backup is
 retained and its path is reported. These shell traps do not cover a forced kill

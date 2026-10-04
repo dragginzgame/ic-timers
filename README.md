@@ -171,7 +171,7 @@ Callbacks run without a registry borrow. Nested ensure, reconcile, cancel,
 and unregister requests are arbitrated by one canonical pending command and
 the exact callback generation.
 
-In the 0.8 API, a sleeping Watchdog can reconcile its own exact
+Since the 0.8 API, a sleeping Watchdog can reconcile its own exact
 wake-up with `reconcile_schedule(Some(TimerSchedule::At(deadline_ns)))` and
 return `WatchdogDecision::ScheduleAt(next_deadline_ns)` after successful work.
 The scheduler still commits the cadence recovery successor before work runs.
