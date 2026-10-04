@@ -22,6 +22,9 @@ The module hierarchy keeps six responsibilities separate:
    observation aggregates. Platform reads construct inert `MemoryPageExtent`
    values directly. Those aggregates and extents expose no public construction
    or control path.
+   Outcome observations project their latest classification and work count from
+   one stored terminal event. Success, failure and unacknowledged timestamps and
+   the expected-failure streak remain independent history.
 3. `control` is the private ordinary generation/registration state machine. It
    owns checked callback generations, immediate schedule, reconciliation and
    cancellation transitions. One counter owns ordinary allocation history and

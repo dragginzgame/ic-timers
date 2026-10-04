@@ -538,11 +538,17 @@ impl WatchdogRunResult {
     }
 }
 
+// One event owns both its completion classification and reported work count.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum RecordedOutcome {
+    Completed(TimerCompletion),
+    Unacknowledged,
+}
+
 /// Latest outcome and functional failure state for one timer.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TimerOutcomeSnapshot {
-    last_outcome: Option<TimerLastOutcome>,
-    last_work_count: Option<u64>,
+    last_event: Option<RecordedOutcome>,
     last_success_at_ns: Option<u64>,
     last_failure_at_ns: Option<u64>,
     last_unacknowledged_at_ns: Option<u64>,
@@ -551,8 +557,7 @@ pub struct TimerOutcomeSnapshot {
 
 impl TimerOutcomeSnapshot {
     pub(crate) const EMPTY: Self = Self {
-        last_outcome: None,
-        last_work_count: None,
+        last_event: None,
         last_success_at_ns: None,
         last_failure_at_ns: None,
         last_unacknowledged_at_ns: None,
@@ -564,8 +569,7 @@ impl TimerOutcomeSnapshot {
         completion: TimerCompletion,
         completed_at_ns: u64,
     ) {
-        self.last_outcome = Some(TimerLastOutcome::Completed(completion.outcome));
-        self.last_work_count = Some(completion.work_count);
+        self.last_event = Some(RecordedOutcome::Completed(completion));
         match completion.outcome {
             TimerCompletionOutcome::Success | TimerCompletionOutcome::NoWork => {
                 self.last_success_at_ns = Some(completed_at_ns);
@@ -584,21 +588,29 @@ impl TimerOutcomeSnapshot {
     }
 
     pub(crate) const fn record_unacknowledged(&mut self, observed_at_ns: u64) {
-        self.last_outcome = Some(TimerLastOutcome::Unacknowledged);
-        self.last_work_count = None;
+        self.last_event = Some(RecordedOutcome::Unacknowledged);
         self.last_unacknowledged_at_ns = Some(observed_at_ns);
     }
 
     /// Return the latest terminal event.
     #[must_use]
     pub const fn last_outcome(self) -> Option<TimerLastOutcome> {
-        self.last_outcome
+        match self.last_event {
+            Some(RecordedOutcome::Completed(completion)) => {
+                Some(TimerLastOutcome::Completed(completion.outcome()))
+            }
+            Some(RecordedOutcome::Unacknowledged) => Some(TimerLastOutcome::Unacknowledged),
+            None => None,
+        }
     }
 
     /// Return work reported by the latest completion.
     #[must_use]
     pub const fn last_work_count(self) -> Option<u64> {
-        self.last_work_count
+        match self.last_event {
+            Some(RecordedOutcome::Completed(completion)) => Some(completion.work_count()),
+            Some(RecordedOutcome::Unacknowledged) | None => None,
+        }
     }
 
     /// Return the latest successful or valid no-work completion time.
@@ -657,6 +669,59 @@ impl TimerEpoch {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn latest_outcome_keeps_work_count_and_independent_history_coherent() {
+        let mut outcomes = TimerOutcomeSnapshot::EMPTY;
+        assert_eq!(outcomes.last_outcome(), None);
+        assert_eq!(outcomes.last_work_count(), None);
+
+        for (completion, completed_at_ns) in [
+            (TimerCompletion::success(0), 10),
+            (TimerCompletion::no_work(), 11),
+            (TimerCompletion::retryable_failure(7), 12),
+        ] {
+            outcomes.record_completion(completion, completed_at_ns);
+            assert_eq!(
+                outcomes.last_outcome(),
+                Some(TimerLastOutcome::Completed(completion.outcome()))
+            );
+            assert_eq!(outcomes.last_work_count(), Some(completion.work_count()));
+        }
+        outcomes.record_unacknowledged(20);
+        assert_eq!(
+            outcomes.last_outcome(),
+            Some(TimerLastOutcome::Unacknowledged)
+        );
+        assert_eq!(outcomes.last_work_count(), None);
+        assert_eq!(outcomes.last_success_at_ns(), Some(11));
+        assert_eq!(outcomes.last_failure_at_ns(), Some(12));
+        assert_eq!(outcomes.last_unacknowledged_at_ns(), Some(20));
+        assert_eq!(outcomes.consecutive_expected_failures(), 1);
+
+        outcomes.record_completion(TimerCompletion::invariant_failure(2), 30);
+        assert_eq!(
+            outcomes.last_outcome(),
+            Some(TimerLastOutcome::Completed(
+                TimerCompletionOutcome::InvariantFailure
+            ))
+        );
+        assert_eq!(outcomes.last_work_count(), Some(2));
+        assert_eq!(outcomes.last_success_at_ns(), Some(11));
+        assert_eq!(outcomes.last_failure_at_ns(), Some(30));
+        assert_eq!(outcomes.last_unacknowledged_at_ns(), Some(20));
+        assert_eq!(outcomes.consecutive_expected_failures(), 0);
+
+        outcomes.record_completion(TimerCompletion::success(4), 40);
+        assert_eq!(
+            outcomes.last_outcome(),
+            Some(TimerLastOutcome::Completed(TimerCompletionOutcome::Success))
+        );
+        assert_eq!(outcomes.last_work_count(), Some(4));
+        assert_eq!(outcomes.last_success_at_ns(), Some(40));
+        assert_eq!(outcomes.last_failure_at_ns(), Some(30));
+        assert_eq!(outcomes.last_unacknowledged_at_ns(), Some(20));
+    }
 
     #[test]
     fn expected_failure_streak_saturates() {

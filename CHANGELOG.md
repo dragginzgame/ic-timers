@@ -4,6 +4,25 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.20]
+
+### Changed
+
+- Move lifecycle declaration checks into the shared reconciliation operation and
+  callback-context checks into the shared claim-transition operation. Remove two
+  single-caller validation helpers while preserving rejection before timer
+  mutation or provider-handle detachment.
+- Store the latest outcome and reported work count as one private terminal event.
+  Derive their public observations together while retaining independent success,
+  failure and unacknowledged timestamps and failure-streak accounting.
+
+### Development
+
+- Add a focused outcome-history fixture covering empty and zero-work observations,
+  interrupted attempts, subsequent completions and preservation of prior timestamps.
+- Record the validation and outcome ownership changes and focused verification in
+  the [0.10.20 release note](docs/changelog/0.10.20.md).
+
 ## [0.10.19] - 2026-10-04
 
 ### Changed

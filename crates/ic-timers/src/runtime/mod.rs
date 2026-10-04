@@ -706,15 +706,7 @@ where
     let registration = registration
         .as_ref()
         .ok_or(TimerError::ReconciliationConflict)?;
-    verify_declaration(registration.registration_claim(), identity, policy)?;
-    Ok(registration)
-}
-
-fn verify_declaration(
-    claim: &RegistrationClaim,
-    identity: &TimerIdentity,
-    policy: TimerPolicy,
-) -> Result<(), TimerError> {
+    let claim = registration.registration_claim();
     if claim.identity() != identity {
         return Err(TimerError::ReconciliationConflict);
     }
@@ -724,7 +716,8 @@ fn verify_declaration(
             .map_err(TimerError::from)?
             .then_some(())
             .ok_or(TimerError::ReconciliationConflict)
-    })
+    })?;
+    Ok(registration)
 }
 
 /// Return one coherent inert snapshot by identity.
@@ -768,7 +761,11 @@ fn apply_claim_transition(
     operation: impl FnOnce(&mut TimerRegistry) -> Result<RegistryTransition, RegistryError>,
 ) -> Result<(), TimerError> {
     let (handles, transition) = with_registry_mut(|registry| {
-        validate_context(registry, context)?;
+        if let Some(token) = context {
+            registry
+                .validate_running_context(token)
+                .map_err(TimerError::from)?;
+        }
         // A terminal transition may remove a transient declaration. Detach its
         // capabilities first so every owned provider timer is restored or cleared.
         let handles = registry
@@ -833,17 +830,6 @@ fn cancel_claim(
     context: Option<&CallbackToken>,
 ) -> Result<(), TimerError> {
     apply_claim_transition(claim, context, |registry| registry.cancel(claim))
-}
-
-fn validate_context(
-    registry: &TimerRegistry,
-    context: Option<&CallbackToken>,
-) -> Result<(), TimerError> {
-    context.map_or(Ok(()), |token| {
-        registry
-            .validate_running_context(token)
-            .map_err(TimerError::from)
-    })
 }
 
 fn unregister_claim(claim: &RegistrationClaim) -> Result<(), TimerError> {
