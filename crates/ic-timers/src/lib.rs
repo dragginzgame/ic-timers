@@ -42,6 +42,6 @@ pub use snapshot::{
     TimerInventorySnapshot, TimerLastOutcome, TimerObservabilitySnapshot, TimerOutcomeSnapshot,
     TimerPerformance, TimerPolicy, TimerProcessCondition, TimerRegistrationId,
     TimerRegistrationStatus, TimerRunResult, TimerRuntimeStateSnapshot, TimerSchedulingMode,
-    TimerSnapshot, WatchdogAttemptSnapshot, WatchdogAttemptStatus, WatchdogDecision,
-    WatchdogRunResult, WatchdogRuntimeStateSnapshot,
+    TimerSnapshot, WatchdogAttemptStatus, WatchdogDecision, WatchdogRunResult,
+    WatchdogRuntimeStateSnapshot,
 };

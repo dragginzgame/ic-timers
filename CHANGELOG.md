@@ -4,6 +4,41 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.11.0]
+
+### Changed
+
+- Make cancellation stop existing work without allocating callback generations.
+  Remove ordinary and Watchdog cancellation exhaustion paths; preserve pending
+  commands for running work, actual handle cleanup and non-wrapping allocation
+  when scheduling new callbacks.
+- Treat cancellation at exhausted generations as `Cancelled` rather than a
+  generation control failure. Subsequent generation values no longer include
+  cancellation increments. This is a pre-1.0 semantic hard cut.
+  Reconciliation to `None` and non-running unregistration share this behavior.
+- Replace separate Watchdog scheduler and work-attempt allocation counters with
+  one generation shared by each dispatched pair. Preserve role-scoped authority,
+  separate handles and checked generation/deadline validation. Work and successor
+  now share the observed dispatch generation rather than independent clocks.
+
+### Removed
+
+- Remove `WatchdogAttemptSnapshot` and the `AwaitingWork.attempt` wrapper. The
+  awaiting-work snapshot now exposes `attempt_status` directly and represents
+  its shared generation once through `successor_generation`.
+
+### Development
+
+- Update cancellation and exhaustion fixtures for state-based invalidation,
+  cancellation at maximum generation and stale delivery after rearming.
+- Cover shared-generation role boundaries and pending requests that preserve the
+  dispatched/running pair until completion. Remove the independent attempt-counter
+  exhaustion cases and retain allocation, deadline, cleanup and recovery fixtures.
+- Add a runtime fixture rejecting mixed-generation dispatch pairs before provider
+  arms, preserving inventory and testing both mismatched-pair orientations.
+- Record the contract and pending verification in the
+  [0.11.0 release note](docs/changelog/0.11.0.md).
+
 ## [0.10.23] - 2026-10-04
 
 ### Changed

@@ -166,6 +166,7 @@ impl OnceContext {
     }
 
     /// Request cancellation while this exact work attempt is active.
+    /// Cancellation allocates no callback generation.
     ///
     /// Cancellation does not interrupt the current invocation; normal
     /// completion applies it before any callback successor is retained.
@@ -218,6 +219,7 @@ impl AfterCompletionContext {
     }
 
     /// Request cancellation while this exact work attempt is active.
+    /// Cancellation allocates no callback generation.
     ///
     /// Cancellation does not interrupt the current invocation; normal
     /// completion applies it before any callback successor is retained. A
@@ -278,6 +280,7 @@ impl WatchdogContext {
     }
 
     /// Request cancellation while this exact work attempt is active.
+    /// Cancellation allocates no callback generation.
     ///
     /// Cancellation does not interrupt the current invocation; normal
     /// completion clears the already-armed successor when cancellation wins.
@@ -329,6 +332,7 @@ impl OnceRegistration {
     }
 
     /// Cancel the armed callback or the running work's successor.
+    /// Cancellation allocates no callback generation, even at the counter limit.
     ///
     /// Consumer work already running is not interrupted.
     /// A retained declaration keeps callback authority. A remove-on-stop
@@ -453,6 +457,7 @@ impl WatchdogRegistration {
     }
 
     /// Cancel the scheduler and any work callback that has not started.
+    /// Cancellation allocates no callback generation, even at the counter limits.
     ///
     /// Consumer work already running is not interrupted; normal completion
     /// clears its pre-armed successor.
@@ -505,6 +510,7 @@ impl AfterCompletionRegistration {
     }
 
     /// Cancel the armed callback or the running work's successor.
+    /// Cancellation allocates no callback generation, even at the counter limit.
     ///
     /// Consumer work already running is not interrupted.
     /// A retained declaration keeps callback authority. A remove-on-stop

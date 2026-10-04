@@ -13,8 +13,8 @@ use crate::{
         OrdinaryRuntimeStateSnapshot, TimerCompletion, TimerCompletionOutcome, TimerControlFailure,
         TimerDirectiveSnapshot, TimerEpoch, TimerIdentity, TimerInventorySnapshot,
         TimerObservabilitySnapshot, TimerPolicy, TimerRegistrationId, TimerRunResult,
-        TimerRuntimeStateSnapshot, TimerSchedulingMode, TimerSnapshot, WatchdogAttemptSnapshot,
-        WatchdogAttemptStatus, WatchdogDecision, WatchdogRunResult, WatchdogRuntimeStateSnapshot,
+        TimerRuntimeStateSnapshot, TimerSchedulingMode, TimerSnapshot, WatchdogAttemptStatus,
+        WatchdogDecision, WatchdogRunResult, WatchdogRuntimeStateSnapshot,
     },
 };
 use std::{cell::RefCell, collections::BTreeMap, future::Future, pin::Pin, rc::Rc};
@@ -169,6 +169,7 @@ impl RegistryEffect {
                 successor.role == CallbackRole::WatchdogScheduler
                     && work.role == CallbackRole::WatchdogWork
                     && successor.belongs_to_same_claim(work)
+                    && successor.callback_generation == work.callback_generation
             }
         }
     }
@@ -382,18 +383,17 @@ enum WatchdogState {
 
 #[derive(Debug)]
 struct WatchdogControl {
-    // Active state uses these generations. Keep both allocation histories while
-    // inactive; scheduler replacement advances independently of work attempts.
-    scheduler_generation: u64,
-    attempt_generation: u64,
+    // One allocation history survives inactive state. A dispatch stamps its
+    // successor and work with one generation, distinguished by callback role.
+    // Requests while awaiting work cannot replace that successor until completion.
+    generation: u64,
     state: WatchdogState,
 }
 
 impl Default for WatchdogControl {
     fn default() -> Self {
         Self {
-            scheduler_generation: 0,
-            attempt_generation: 0,
+            generation: 0,
             state: WatchdogState::Inactive {
                 reason: InactiveReason::NeverScheduled,
             },
@@ -409,27 +409,17 @@ impl WatchdogControl {
         deadline_ns: u64,
         arm: WakeupArm,
     ) -> RegistryTransition {
-        let Some(generation) = self.scheduler_generation.checked_add(1) else {
+        let Some(generation) = self.generation.checked_add(1) else {
             let cleanup = clear_wakeup_if(claim.identity(), arm.replaces_existing());
             return self.terminate(cleanup, TimerControlFailure::GenerationExhausted);
         };
-        self.scheduler_generation = generation;
+        self.generation = generation;
         self.state = WatchdogState::Scheduled { deadline_ns };
         RegistryTransition::normal(RegistryEffect::ArmWakeup {
             token: token_for(claim, generation, CallbackRole::WatchdogScheduler),
             delay_ns: deadline_ns.saturating_sub(now_ns),
             arm,
         })
-    }
-
-    const fn next_dispatch_generations(&self) -> Option<(u64, u64)> {
-        let Some(scheduler_generation) = self.scheduler_generation.checked_add(1) else {
-            return None;
-        };
-        let Some(attempt_generation) = self.attempt_generation.checked_add(1) else {
-            return None;
-        };
-        Some((scheduler_generation, attempt_generation))
     }
 
     const fn terminate(
@@ -510,7 +500,7 @@ impl Entry {
                 }
                 WatchdogState::Scheduled { deadline_ns } => {
                     TimerRuntimeStateSnapshot::Watchdog(WatchdogRuntimeStateSnapshot::Scheduled {
-                        scheduler_generation: control.scheduler_generation,
+                        scheduler_generation: control.generation,
                         deadline_ns,
                     })
                 }
@@ -520,12 +510,9 @@ impl Entry {
                     ..
                 } => TimerRuntimeStateSnapshot::Watchdog(
                     WatchdogRuntimeStateSnapshot::AwaitingWork {
-                        successor_generation: control.scheduler_generation,
+                        successor_generation: control.generation,
                         successor_deadline_ns,
-                        attempt: WatchdogAttemptSnapshot::new(
-                            control.attempt_generation,
-                            attempt_status,
-                        ),
+                        attempt_status,
                     },
                 ),
             },
@@ -607,7 +594,7 @@ impl Entry {
                 WatchdogState::AwaitingWork {
                     attempt_status: WatchdogAttemptStatus::Running,
                     ..
-                } if control.attempt_generation == token.callback_generation
+                } if control.generation == token.callback_generation
             ),
             (
                 EntryKind::Ordinary { .. },
@@ -899,7 +886,11 @@ impl TimerRegistry {
         let arm = match arm {
             Ok(arm) => arm,
             Err(error) => {
-                let transition = terminal_ordinary(control, claim.identity(), error);
+                let clear_wakeup = control.terminate(InactiveReason::ControlFailure(error));
+                let transition = RegistryTransition::terminal(
+                    clear_wakeup_if(claim.identity(), clear_wakeup),
+                    error,
+                );
                 return Ok(self.remove_transient_on_failure(claim.identity(), transition));
             }
         };
@@ -1025,10 +1016,6 @@ impl TimerRegistry {
             match &mut entry.kind {
                 EntryKind::Ordinary { control, .. } => {
                     let before = control.registration;
-                    if let Err(error) = control.cancel() {
-                        let transition = terminal_ordinary(control, identity, error);
-                        return Ok(self.remove_transient_on_failure(identity, transition));
-                    }
                     let remove = !matches!(before, TimerRegistration::Running { .. })
                         && matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
                     let transition = if let TimerRegistration::Running { pending } =
@@ -1041,6 +1028,7 @@ impl TimerRegistry {
                     } else {
                         let clear_wakeup = matches!(before, TimerRegistration::Scheduled { .. });
                         if clear_wakeup {
+                            control.terminate(InactiveReason::Cancelled);
                             entry.observability.counters_mut().record_cancellation();
                         }
                         RegistryTransition::normal(clear_wakeup_if(identity, clear_wakeup))
@@ -1057,7 +1045,7 @@ impl TimerRegistry {
                             }
                     );
                     let transition = cancel_watchdog(control, identity);
-                    if cancels_immediately && transition.failure().is_none() {
+                    if cancels_immediately {
                         entry.observability.counters_mut().record_cancellation();
                     }
                     let stopped = matches!(control.state, WatchdogState::Inactive { .. });
@@ -1274,7 +1262,7 @@ impl TimerRegistry {
             | WatchdogState::AwaitingWork {
                 attempt_status: WatchdogAttemptStatus::Dispatched,
                 ..
-            } => control.scheduler_generation == token.callback_generation,
+            } => control.generation == token.callback_generation,
             WatchdogState::Inactive { .. }
             | WatchdogState::AwaitingWork {
                 attempt_status: WatchdogAttemptStatus::Running,
@@ -1294,16 +1282,16 @@ impl TimerRegistry {
             entry.observability.record_unacknowledged(now_ns);
         }
         let next_dispatch = control
-            .next_dispatch_generations()
+            .generation
+            .checked_add(1)
             .ok_or(TimerControlFailure::GenerationExhausted)
-            .and_then(|(successor_generation, attempt_generation)| {
+            .and_then(|generation| {
                 cadence
                     .deadline_after(now_ns)
-                    .map(|deadline_ns| (successor_generation, attempt_generation, deadline_ns))
+                    .map(|deadline_ns| (generation, deadline_ns))
                     .map_err(|_| TimerControlFailure::DeadlineOverflow)
             });
-        let (successor_generation, attempt_generation, successor_deadline_ns) = match next_dispatch
-        {
+        let (generation, successor_deadline_ns) = match next_dispatch {
             Ok(next) => next,
             Err(failure) => {
                 let transition = control.terminate(
@@ -1317,8 +1305,7 @@ impl TimerRegistry {
             }
         };
 
-        control.scheduler_generation = successor_generation;
-        control.attempt_generation = attempt_generation;
+        control.generation = generation;
         control.state = WatchdogState::AwaitingWork {
             successor_deadline_ns,
             attempt_status: WatchdogAttemptStatus::Dispatched,
@@ -1326,17 +1313,9 @@ impl TimerRegistry {
         };
         entry.scheduling_mode = TimerSchedulingMode::Watchdog;
         RegistryTransition::normal(RegistryEffect::DispatchWatchdog {
-            successor: token_for(
-                token.claim(),
-                successor_generation,
-                CallbackRole::WatchdogScheduler,
-            ),
+            successor: token_for(token.claim(), generation, CallbackRole::WatchdogScheduler),
             successor_delay_ns: cadence.as_nanos(),
-            work: token_for(
-                token.claim(),
-                attempt_generation,
-                CallbackRole::WatchdogWork,
-            ),
+            work: token_for(token.claim(), generation, CallbackRole::WatchdogWork),
         })
     }
 
@@ -1354,7 +1333,7 @@ impl TimerRegistry {
         };
         match &mut control.state {
             WatchdogState::AwaitingWork { attempt_status, .. }
-                if control.attempt_generation == token.callback_generation
+                if control.generation == token.callback_generation
                     && *attempt_status == WatchdogAttemptStatus::Dispatched =>
             {
                 *attempt_status = WatchdogAttemptStatus::Running;
@@ -1666,7 +1645,7 @@ impl TimerRegistry {
                 if matches!(
                     control.state,
                     WatchdogState::Scheduled { .. } | WatchdogState::AwaitingWork { .. }
-                        if control.scheduler_generation == token.callback_generation
+                        if control.generation == token.callback_generation
                 ) =>
             {
                 &mut entry.wakeup
@@ -1677,7 +1656,7 @@ impl TimerRegistry {
                     WatchdogState::AwaitingWork {
                         attempt_status: WatchdogAttemptStatus::Dispatched,
                         ..
-                    } if control.attempt_generation == token.callback_generation
+                    } if control.generation == token.callback_generation
                 ) =>
             {
                 &mut entry.work
@@ -1769,7 +1748,7 @@ impl TimerRegistry {
                         matches!(
                             control.state,
                             WatchdogState::Scheduled { .. }
-                                if control.scheduler_generation == token.callback_generation
+                                if control.generation == token.callback_generation
                         )
                     }
                     (EntryKind::Ordinary { .. } | EntryKind::Watchdog { .. }, _) => false,
@@ -1782,7 +1761,6 @@ impl TimerRegistry {
             RegistryEffect::DispatchWatchdog {
                 successor,
                 successor_delay_ns,
-                work,
                 ..
             } => {
                 let successor_callback_generation = successor.callback_generation;
@@ -1793,8 +1771,7 @@ impl TimerRegistry {
                 if !matches!(
                     control.state,
                     WatchdogState::AwaitingWork { .. }
-                        if control.scheduler_generation == successor_callback_generation
-                            && control.attempt_generation == work.callback_generation
+                        if control.generation == successor_callback_generation
                 ) {
                     return Err(RegistryError::StaleCallback);
                 }
@@ -1916,15 +1893,6 @@ fn clear_wakeup_if(identity: &TimerIdentity, clear_wakeup: bool) -> RegistryEffe
     }
 }
 
-fn terminal_ordinary(
-    control: &mut TimerControl,
-    identity: &TimerIdentity,
-    failure: TimerControlFailure,
-) -> RegistryTransition {
-    let clear_wakeup = control.terminate(InactiveReason::ControlFailure(failure));
-    RegistryTransition::terminal(clear_wakeup_if(identity, clear_wakeup), failure)
-}
-
 // Callers have validated the exact running generation. Checked completion
 // failures leave that state unchanged before this shared stop finalization.
 fn stop_ordinary_completion(
@@ -2042,13 +2010,6 @@ fn cancel_watchdog(control: &mut WatchdogControl, identity: &TimerIdentity) -> R
                     WatchdogState::AwaitingWork { .. }
                 )),
             };
-            let Some((scheduler_generation, attempt_generation)) =
-                control.next_dispatch_generations()
-            else {
-                return control.terminate(cleanup, TimerControlFailure::GenerationExhausted);
-            };
-            control.scheduler_generation = scheduler_generation;
-            control.attempt_generation = attempt_generation;
             control.state = WatchdogState::Inactive {
                 reason: InactiveReason::Cancelled,
             };

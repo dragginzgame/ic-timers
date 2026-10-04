@@ -1164,6 +1164,11 @@ fn replacement_and_cancellation_clear_actual_owned_handles() {
             .and_then(|snapshot| snapshot.next_deadline_ns()),
         Some(50)
     );
+    let cancelled_generation = timer_snapshot(&timer)
+        .unwrap()
+        .unwrap()
+        .generation()
+        .unwrap();
 
     registration.cancel().expect("cancel should clear handle");
     assert_eq!(timer_count(), 0);
@@ -1177,6 +1182,19 @@ fn replacement_and_cancellation_clear_actual_owned_handles() {
         .expect("snapshot lookup should succeed")
         .expect("retained snapshot should exist");
     assert_eq!(snapshot.observability().counters().cancelled(), 1);
+
+    registration
+        .ensure_scheduled(TimerSchedule::At(150))
+        .unwrap();
+    assert_eq!(
+        timer_snapshot(&timer).unwrap().unwrap().generation(),
+        Some(cancelled_generation + 1)
+    );
+    assert_eq!(timer_count(), 1);
+    set_time(150);
+    assert!(run_next_due());
+    assert_eq!(calls.get(), 1);
+    assert_eq!(timer_count(), 0);
 }
 
 #[test]
@@ -1432,6 +1450,11 @@ fn watchdog_cancellation_clears_successor_and_queued_work() {
     set_time(15);
     assert!(run_next_due());
     assert_eq!(timer_count(), 2);
+    let cancelled_generation = timer_snapshot(&timer)
+        .unwrap()
+        .unwrap()
+        .generation()
+        .unwrap();
 
     registration
         .cancel()
@@ -1443,6 +1466,20 @@ fn watchdog_cancellation_clears_successor_and_queued_work() {
         .expect("snapshot lookup should succeed")
         .expect("retained watchdog should remain declared");
     assert_eq!(snapshot.observability().counters().cancelled(), 1);
+
+    registration.ensure_scheduled().unwrap();
+    assert_eq!(
+        timer_snapshot(&timer).unwrap().unwrap().generation(),
+        Some(cancelled_generation + 1)
+    );
+    assert_eq!(timer_count(), 1);
+    set_time(20);
+    assert!(run_next_due());
+    assert!(run_next_due());
+    assert_eq!(calls.get(), 1);
+    assert_eq!(timer_count(), 1);
+    registration.cancel().unwrap();
+    assert_eq!(timer_count(), 0);
 }
 
 #[test]
@@ -2315,6 +2352,79 @@ fn watchdog_dispatch_rejects_cross_claim_tokens_before_provider_arms() {
         Err(TimerError::OwnershipInvariant)
     ));
     assert_eq!(timer_count(), 0, "validation must precede provider arms");
+}
+
+#[test]
+fn watchdog_dispatch_rejects_mixed_generations_before_provider_arms() {
+    setup();
+    let registration = register_watchdog(
+        identity("mixed-dispatch-generations"),
+        TimerCadence::from_nanos(5).unwrap(),
+        DeclarationLifetime::Retained,
+        |_context| panic!("malformed effects must not execute consumer work"),
+    )
+    .unwrap();
+    registration.ensure_scheduled().unwrap();
+    let handle = with_registry_mut(|registry| {
+        registry
+            .take_wakeup_handle(registration.identity())
+            .ok_or(TimerError::OwnershipInvariant)
+    })
+    .unwrap();
+    let (scheduler, handle) = handle.into_parts();
+    platform::clear_timer(handle);
+    let dispatch =
+        with_registry_mut(|registry| Ok(registry.begin_watchdog_scheduler(&scheduler, 15)))
+            .unwrap();
+    let RegistryEffect::DispatchWatchdog {
+        successor: old_successor,
+        work: old_work,
+        ..
+    } = dispatch.into_effect()
+    else {
+        panic!("fixture must emit a dispatch");
+    };
+    let recovery =
+        with_registry_mut(|registry| Ok(registry.begin_watchdog_scheduler(&old_successor, 20)))
+            .unwrap();
+    let RegistryEffect::DispatchWatchdog {
+        successor,
+        successor_delay_ns,
+        work,
+    } = recovery.into_effect()
+    else {
+        panic!("fixture must emit a recovery dispatch");
+    };
+    assert_eq!(
+        old_successor.callback_generation(),
+        old_work.callback_generation()
+    );
+    assert_eq!(successor.callback_generation(), work.callback_generation());
+    assert_ne!(
+        old_successor.callback_generation(),
+        successor.callback_generation()
+    );
+    assert_eq!(timer_count(), 0);
+    let before = timer_inventory().unwrap();
+    for malformed in [
+        RegistryEffect::DispatchWatchdog {
+            successor,
+            successor_delay_ns,
+            work: old_work,
+        },
+        RegistryEffect::DispatchWatchdog {
+            successor: old_successor,
+            successor_delay_ns,
+            work,
+        },
+    ] {
+        assert!(matches!(
+            apply_effect(&malformed, ProviderHandles::default()),
+            Err(TimerError::OwnershipInvariant)
+        ));
+        assert_eq!(timer_count(), 0, "validation must precede provider arms");
+        assert_eq!(timer_inventory().unwrap(), before);
+    }
 }
 
 #[test]

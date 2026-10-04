@@ -49,8 +49,7 @@ pub use model::{
     TimerCompletionOutcome, TimerControlFailure, TimerDirectiveSnapshot, TimerEpoch,
     TimerLastOutcome, TimerOutcomeSnapshot, TimerPolicy, TimerProcessCondition,
     TimerRegistrationStatus, TimerRunResult, TimerRuntimeStateSnapshot, TimerSchedulingMode,
-    WatchdogAttemptSnapshot, WatchdogAttemptStatus, WatchdogDecision, WatchdogRunResult,
-    WatchdogRuntimeStateSnapshot,
+    WatchdogAttemptStatus, WatchdogDecision, WatchdogRunResult, WatchdogRuntimeStateSnapshot,
 };
 
 /// Atomic provider-neutral snapshot of one complete canister-local inventory.
@@ -261,7 +260,8 @@ impl TimerSnapshot {
     /// Return the latest authoritative callback generation.
     ///
     /// Scheduling changes this value. Use [`Self::registration_id`] to check
-    /// counter continuity across observations.
+    /// counter continuity across observations. A Watchdog's outstanding work
+    /// and successor share this dispatch generation; it is not a work count.
     #[must_use]
     pub const fn generation(&self) -> Option<u64> {
         match self.state {

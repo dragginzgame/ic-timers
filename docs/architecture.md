@@ -27,22 +27,22 @@ The module hierarchy keeps six responsibilities separate:
    the expected-failure streak remain independent history.
 3. `control` is the private ordinary generation/registration state machine. It
    owns checked callback generations, immediate schedule, reconciliation and
-   cancellation transitions. One counter owns ordinary allocation history and
+   stopping transitions. One counter owns ordinary allocation history and
    the active callback generation; state variants do not store another copy.
    Its inactive state owns its reason, its running
    state owns its pending command, and scheduled state carries neither. The
    registry owns exact running-work authorization and command arbitration.
    Completion arms its selected successor through the shared checked arming
    operation or stops with its selected reason, in the same atomic transition.
-   Checked arming and cancellation return canonical `TimerControlFailure`
+   Checked arming returns canonical `TimerControlFailure`
    values directly, without a private error conversion.
    Ordinary directive resolution also returns `TimerControlFailure` directly;
    explicit scheduling requests retain `ScheduleError` at their input boundary.
    The schedule owner classifies invalid successor proposals, while the registry
    owns terminal state and completion accounting.
-   Cancellation invalidates a scheduled generation while leaving running work
-   unchanged. Stopping with a reason allocates no generation and discards the
-   running command through state replacement.
+   Cancellation in the registry stops scheduled state without allocating a
+   generation and queues a command for running work. Stopping with a reason
+   discards the running command through state replacement.
    The registry builds provider effects and retains cancellation policy without a
    separate cancellation or completion action. Scheduling requests return only
    an optional initial or replacement arm kind; generation and deadline remain
@@ -64,12 +64,19 @@ The module hierarchy keeps six responsibilities separate:
    Watchdog awaiting-work state owns its pending command through both dispatch
    and execution. Work acceptance preserves it; leaving that state discards it,
    including when the scheduler retires an unacknowledged attempt.
-   Watchdog control retains separate scheduler and work-attempt counters because
-   successor replacement advances only the scheduler. Scheduled and awaiting-work
-   states store no copies of those counters. Callback authorization checks the
-   appropriate counter together with state, claim and role; public snapshots
-   project the active generations from the counters. Callback tokens and owned
-   handles keep their independent delivery stamps for stale-callback rejection.
+   Watchdog control retains one generation counter. Each dispatch gives its
+   successor and work the same fresh generation, distinguished by role. Scheduling
+   requests while work is dispatched or running cannot replace that pair: exact
+   scheduling waits for normal completion, and ensures coalesce or become pending
+   commands. Completion either retains the successor, replaces it after expiring
+   the work attempt, or stops. A later recovery scheduler also expires the old
+   attempt before advancing the generation. No state repeats allocation history.
+   Authorization checks generation together with state, claim and role; awaiting
+   snapshots expose that generation once and project `attempt_status` directly,
+   without a separate attempt wrapper. Tokens and owned handles keep their
+   independent delivery stamps for stale-callback rejection and separate slots.
+   This 0.11.0 observation change and its pending qualification are recorded in the
+   [generation ownership note](changelog/0.11.0.md).
    Ordinary completion computes its removal-on-stop decision once from pending
    unregister and declaration lifetime; every terminal exit uses it. A successful
    arm retains its declaration. Ordinary cancellation derives immediate removal
