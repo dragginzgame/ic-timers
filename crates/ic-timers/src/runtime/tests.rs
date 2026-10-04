@@ -762,6 +762,72 @@ fn once_owns_one_provider_handle_and_executes_without_registry_borrow() {
 }
 
 #[test]
+fn ordinary_callback_borrow_failure_stops_without_invoking_or_measuring_work() {
+    for lifetime in [
+        DeclarationLifetime::Retained,
+        DeclarationLifetime::RemoveWhenStopped,
+    ] {
+        setup();
+        let timer = identity("ordinary-borrow-failure");
+        let calls = Rc::new(Cell::new(0));
+        let callback_calls = Rc::clone(&calls);
+        let callback = erase_ordinary_callback(
+            move |_context| {
+                callback_calls.set(callback_calls.get() + 1);
+                async { TimerRunResult::new(TimerCompletion::success(1), TimerDirective::Stop) }
+            },
+            OnceContext::new,
+        );
+        let claim = with_registry_mut(|registry| {
+            registry
+                .register_once_with_callback(timer.clone(), lifetime, Rc::clone(&callback))
+                .map_err(TimerError::from)
+        })
+        .unwrap();
+        let registration = OnceRegistration { claim };
+        registration
+            .ensure_scheduled(TimerSchedule::At(15))
+            .unwrap();
+        assert_eq!(timer_count(), 1);
+
+        // Keep the callback unavailable while dispatch accepts and completes work.
+        let _borrow = callback.borrow_mut();
+        set_time(15);
+        assert!(run_next_due());
+        assert_eq!(calls.get(), 0);
+        assert_eq!(timer_count(), 0);
+        assert!(!run_next_due());
+
+        let snapshot = timer_snapshot(&timer).unwrap();
+        if lifetime == DeclarationLifetime::Retained {
+            let snapshot = snapshot.unwrap();
+            assert_eq!(
+                snapshot.state(),
+                TimerRuntimeStateSnapshot::Inactive {
+                    reason: InactiveReason::InvariantFailure,
+                }
+            );
+            assert_eq!(snapshot.process_condition(), TimerProcessCondition::Failed);
+            let counters = snapshot.observability().counters();
+            assert_eq!(counters.work_started(), 1);
+            assert_eq!(counters.work_completed(), 1);
+            assert_eq!(counters.invariant_failure(), 1);
+            assert!(counters.completion_partition_is_valid());
+            let performance = snapshot.observability().performance();
+            assert_eq!(performance.work_instructions().samples(), 0);
+            assert_eq!(performance.work_memory_pages().samples(), 0);
+            assert!(!registration.has_armed_wakeup().unwrap());
+        } else {
+            assert!(snapshot.is_none());
+            assert!(matches!(
+                registration.has_armed_wakeup(),
+                Err(TimerError::RegistrationExpired)
+            ));
+        }
+    }
+}
+
+#[test]
 fn after_completion_rearms_from_actual_completion_time() {
     setup();
     let timer = identity("after-completion");

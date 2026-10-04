@@ -4,6 +4,22 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.9]
+
+### Changed
+
+- Finalize ordinary callback results and callback-borrow failures through one
+  completion helper. Remove the separate invariant-stop completion path and the
+  unreachable ownership-mismatch recovery branch after successful acceptance.
+  Preserve terminal cleanup, declaration lifetimes and measurement behavior.
+
+### Development
+
+- Add a focused native callback-borrow failure fixture covering terminal reasons,
+  both declaration lifetimes, provider cleanup and absent work measurements.
+- Record the cleanup and verification scope in the
+  [0.10.9 release note](docs/changelog/0.10.9.md).
+
 ## [0.10.8] - 2026-10-04
 
 ### Changed

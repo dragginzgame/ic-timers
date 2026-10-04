@@ -1114,48 +1114,34 @@ async fn dispatch_ordinary(token: CallbackToken) {
         Err(error) => trap_callback_failure("ordinary callback acceptance", &error),
     }
 
-    let callback = match with_registry(|registry| {
-        registry.ordinary_callback(&token).map_err(TimerError::from)
-    }) {
-        Ok(callback) => callback,
-        Err(TimerError::OwnershipInvariant) => {
-            fail_ordinary_dispatch(&token);
-            return;
-        }
-        Err(error) => trap_callback_failure("ordinary callback lookup", &error),
-    };
+    // Acceptance and lookup are synchronous; the accepted ordinary claim cannot
+    // change policy or leave running state between these operations.
+    let callback =
+        with_registry(|registry| registry.ordinary_callback(&token).map_err(TimerError::from))
+            .unwrap_or_else(|error| trap_callback_failure("ordinary callback lookup", &error));
     let future = {
         let Ok(mut callback) = callback.try_borrow_mut() else {
-            fail_ordinary_dispatch(&token);
+            finish_ordinary_callback(
+                &token,
+                TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop),
+            );
             return;
         };
         callback(token.clone())
     };
     let result = future.await;
+    finish_ordinary_callback(&token, result);
+    record_callback_measurements(&token, measurement.finish());
+}
+
+fn finish_ordinary_callback(token: &CallbackToken, result: TimerRunResult) {
     let transition = with_registry_mut(|registry| {
         registry
-            .complete_ordinary(&token, platform::time_ns(), result)
+            .complete_ordinary(token, platform::time_ns(), result)
             .map_err(TimerError::from)
     });
     let transition = transition
         .unwrap_or_else(|error| trap_callback_failure("ordinary callback completion", &error));
-    finish_callback_transition(&token, transition, ProviderHandles::default());
-    record_callback_measurements(&token, measurement.finish());
-}
-
-fn fail_ordinary_dispatch(token: &CallbackToken) {
-    let transition = with_registry_mut(|registry| {
-        registry
-            .complete_ordinary(
-                token,
-                platform::time_ns(),
-                TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop),
-            )
-            .map_err(TimerError::from)
-    });
-    let transition = transition.unwrap_or_else(|error| {
-        trap_callback_failure("ordinary invariant-failure completion", &error)
-    });
     finish_callback_transition(token, transition, ProviderHandles::default());
 }
 

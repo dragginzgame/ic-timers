@@ -50,6 +50,9 @@ references and validation belong in [release notes](../changelog/README.md),
 - Ordinary requests and authorized completion successors share checked arming;
   stopping selects its reason and allocates no generation. Lifetime removal is
   decided once per transition. See the [ordinary state ownership note](../changelog/0.10.8.md).
+- Ordinary dispatch shares completion finalization for callback results and
+  callback-borrow failures. Work measurements are recorded only after executed
+  work; see the [ordinary callback finalization note](../changelog/0.10.9.md).
 - Registry and owned-handle bounds do not bound the provider heap. Cancelled future
   deadline records remain queued. Page extents do not establish allocator bounds.
 - Public control failures retire false scheduled state. One detached-claim finalizer
