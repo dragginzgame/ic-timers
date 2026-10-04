@@ -2048,25 +2048,28 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
                         .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(1)))
                         .unwrap()
                 };
-                assert_eq!(
-                    transition.failure(),
-                    Some(TimerControlFailure::GenerationExhausted)
-                );
+                let failure = TimerControlFailure::GenerationExhausted;
+                assert_eq!(transition.failure(), Some(failure));
                 if lifetime == DeclarationLifetime::Retained {
                     let snapshot = registry.snapshot(&timer).unwrap();
                     assert_eq!(
                         snapshot.state(),
                         TimerRuntimeStateSnapshot::Inactive {
-                            reason: InactiveReason::ControlFailure(
-                                TimerControlFailure::GenerationExhausted,
-                            ),
+                            reason: InactiveReason::ControlFailure(failure),
                         }
                     );
                     if subject == "completion" {
-                        assert_eq!(snapshot.observability().counters().work_completed(), 1);
+                        let counters = snapshot.observability().counters();
+                        assert_eq!(counters.work_completed(), 1);
+                        assert_eq!(counters.succeeded(), 0);
+                        assert_eq!(counters.invariant_failure(), 1);
+                        let outcomes = snapshot.observability().outcomes();
+                        assert_eq!(outcomes.last_work_count(), Some(3));
                         assert_eq!(
-                            snapshot.observability().outcomes().last_work_count(),
-                            Some(3)
+                            outcomes.last_outcome(),
+                            Some(TimerLastOutcome::Completed(
+                                TimerCompletionOutcome::InvariantFailure
+                            ))
                         );
                     }
                 } else {
@@ -2207,6 +2210,16 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
                 );
                 assert_eq!(counters.succeeded(), counters.work_completed(), "{subject}");
                 assert_eq!(counters.invariant_failure(), 0, "{subject}");
+                if subject.starts_with("completion-") {
+                    let outcomes = snapshot.observability().outcomes();
+                    assert_eq!(
+                        outcomes.last_outcome(),
+                        Some(TimerLastOutcome::Completed(TimerCompletionOutcome::Success))
+                    );
+                    assert_eq!(outcomes.last_work_count(), Some(1));
+                    assert_eq!(outcomes.last_success_at_ns(), Some(1));
+                    assert_eq!(outcomes.last_failure_at_ns(), None);
+                }
                 assert_eq!(
                     snapshot.state(),
                     TimerRuntimeStateSnapshot::Inactive {

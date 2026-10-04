@@ -48,3 +48,4 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.10.13 directive failure ownership](0.10.13.md)
 - [0.10.14 callback claim ownership](0.10.14.md)
 - [0.10.15 accounting and effect simplification](0.10.15.md)
+- [0.10.16 measurement ownership and failure accounting](0.10.16.md)

@@ -1,7 +1,8 @@
 use super::*;
 use crate::{
-    InactiveReason, TimerLastOutcome, TimerPolicy, TimerProcessCondition, TimerRegistrationStatus,
-    TimerRuntimeStateSnapshot, TimerSchedulingMode, WatchdogDecision, WatchdogRuntimeStateSnapshot,
+    InactiveReason, MemoryPageSample, TimerLastOutcome, TimerPolicy, TimerProcessCondition,
+    TimerRegistrationStatus, TimerRuntimeStateSnapshot, TimerSchedulingMode, WatchdogDecision,
+    WatchdogRuntimeStateSnapshot,
     control::WakeupArm,
     platform::{
         advance_instructions, discard_next_due, grow_memory_pages, run_next_due, set_time,
@@ -1034,7 +1035,7 @@ fn retained_once_context_expires_after_its_work_attempt() {
 }
 
 #[test]
-fn stale_reused_identity_callback_cannot_consume_the_new_claims_handle() {
+fn stale_reused_identity_callback_cannot_change_handles_or_measurements() {
     setup();
     let timer_identity = identity("stale-consume-reuse");
     let old = register_once(
@@ -1056,10 +1057,22 @@ fn stale_reused_identity_callback_cannot_consume_the_new_claims_handle() {
     old.cancel()
         .expect("old transient registration should be removed");
 
+    let stale_measurement = CallbackMeasurement {
+        instructions: 1_000,
+        memory_start: MemoryPageExtent::new(1, 0),
+        memory_end: MemoryPageExtent::new(11, 20),
+    };
+    record_callback_measurements(&old_token, stale_measurement);
+    assert!(timer_snapshot(old_token.identity()).unwrap().is_none());
+
     let replacement = register_once(
         timer_identity,
         DeclarationLifetime::Retained,
-        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+        |_context| async {
+            advance_instructions(7);
+            grow_memory_pages(2, 3);
+            TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop)
+        },
     )
     .expect("replacement registration should succeed");
     replacement
@@ -1067,17 +1080,50 @@ fn stale_reused_identity_callback_cannot_consume_the_new_claims_handle() {
         .expect("replacement wake-up should arm");
     assert_eq!(timer_count(), 1);
 
+    let before = timer_snapshot(replacement.identity()).unwrap().unwrap();
+    let before_performance = before.observability().performance();
     with_registry_mut(|registry| {
         registry.consume_provider_handle(&old_token);
         Ok(())
     })
     .expect("stale callback consumption should be harmless");
+    // Exercise the accounting boundary directly; stale dispatch would return
+    // before taking a measurement and cannot reach this ownership check.
+    record_callback_measurements(&old_token, stale_measurement);
+    let after = timer_snapshot(replacement.identity()).unwrap().unwrap();
+    assert_eq!(after.observability().performance(), before_performance);
     assert!(
         replacement
             .has_armed_wakeup()
             .expect("replacement claim should retain its handle")
     );
     assert_eq!(timer_count(), 1);
+
+    set_time(25);
+    assert!(run_next_due());
+    let completed = timer_snapshot(replacement.identity()).unwrap().unwrap();
+    let performance = completed.observability().performance();
+    assert_eq!(performance.work_instructions().samples(), 1);
+    assert_eq!(performance.work_instructions().total(), 7);
+    assert_eq!(performance.work_memory_pages().samples(), 1);
+    assert_eq!(
+        performance.work_memory_pages().latest(),
+        Some(MemoryPageSample::new(
+            MemoryPageExtent::new(1, 0),
+            MemoryPageExtent::new(3, 3),
+        ))
+    );
+    assert_eq!(
+        performance.scheduler_instructions(),
+        before_performance.scheduler_instructions()
+    );
+    assert_eq!(
+        performance.scheduler_memory_pages(),
+        before_performance.scheduler_memory_pages()
+    );
+    record_callback_measurements(&old_token, stale_measurement);
+    let after_stale = timer_snapshot(replacement.identity()).unwrap().unwrap();
+    assert_eq!(after_stale.observability().performance(), performance);
 
     replacement
         .cancel()

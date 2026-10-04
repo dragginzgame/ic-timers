@@ -105,6 +105,8 @@ belongs in its release note rather than a repeated handoff claim.
 The native mock does not simulate IC rollback or provider heap allocation;
 maintained PocketIC subjects remain required for those claims. Tests, builds,
 lint gates and deployment validation remain user-owned.
+Measurement ownership across identity reuse and policy-specific completion
+failure assertions are scoped in the [0.10.16 note](../changelog/0.10.16.md).
 
 ## Next action
 

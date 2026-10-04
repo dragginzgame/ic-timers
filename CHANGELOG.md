@@ -4,6 +4,18 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.16]
+
+### Development
+
+- Extend the identity-reuse fixture to check that stale measurements cannot
+  update a replacement registration, while its own callback still records
+  instruction and memory observations.
+- Strengthen existing ordinary and Watchdog failure-accounting assertions to
+  distinguish completion outcomes from terminal control failures.
+- Record the test-only scope and pending verification in the
+  [0.10.16 release note](docs/changelog/0.10.16.md).
+
 ## [0.10.15] - 2026-10-04
 
 ### Changed
