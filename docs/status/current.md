@@ -10,7 +10,7 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Release state
 
-- Workspace package version: `0.10.17`.
+- Workspace package version: `0.10.18`.
 - Cargo owns this version; the release helper updates the single projection above.
   Dated changelog sections and release-note statuses own release state. Read those
   sources to distinguish preparation from a completed release; do not duplicate
