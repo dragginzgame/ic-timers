@@ -7,10 +7,7 @@
 use crate::{
     control::{OrdinaryPending, TimerControl, TimerRegistration, WakeupArm},
     platform::{MemoryPages, TimerHandle},
-    schedule::{
-        DirectiveError, ResolvedSchedule, ScheduleError, TimerCadence, TimerDirective,
-        TimerSchedule,
-    },
+    schedule::{ResolvedSchedule, ScheduleError, TimerCadence, TimerDirective, TimerSchedule},
     snapshot::{
         DeclarationLifetime, InactiveReason, MemoryPageExtent, MemoryPageSample,
         OrdinaryRuntimeStateSnapshot, TimerCompletion, TimerCompletionOutcome, TimerControlFailure,
@@ -1196,13 +1193,9 @@ impl TimerRegistry {
             } else {
                 let resolved = match effective_directive.resolve(now_ns, cadence) {
                     Ok(value) => value,
-                    Err(error) => {
-                        let transition = stop_ordinary_completion(
-                            entry,
-                            completion,
-                            now_ns,
-                            Some(map_directive_failure(error)),
-                        );
+                    Err(failure) => {
+                        let transition =
+                            stop_ordinary_completion(entry, completion, now_ns, Some(failure));
                         return Ok(remove_after(
                             &mut self.entries,
                             &identity,
@@ -1977,20 +1970,6 @@ fn stop_ordinary_completion(
     entry.latest_directive = Some(TimerDirectiveSnapshot::Stop);
     entry.observability.record_completion(completion, now_ns);
     transition
-}
-
-const fn map_directive_failure(error: DirectiveError) -> TimerControlFailure {
-    match error {
-        DirectiveError::Schedule(ScheduleError::DeadlineOverflow) => {
-            TimerControlFailure::DeadlineOverflow
-        }
-        DirectiveError::Schedule(ScheduleError::DelayOutOfRange) => {
-            TimerControlFailure::DelayOutOfRange
-        }
-        DirectiveError::Schedule(ScheduleError::ZeroCadence) | DirectiveError::MissingCadence => {
-            TimerControlFailure::DirectiveNotAllowed
-        }
-    }
 }
 
 const fn select_completion_schedule(

@@ -54,6 +54,10 @@ references and validation belong in [release notes](../changelog/README.md),
 - Ordinary requests and authorized completion successors share checked arming;
   stopping selects its reason and allocates no generation. Lifetime removal is
   decided once per transition. See the [ordinary state ownership note](../changelog/0.10.8.md).
+- Ordinary directive resolution returns canonical control failures directly.
+  Explicit scheduling requests retain schedule errors at their input boundary;
+  the registry owns terminal state and completion accounting. See the
+  [directive failure ownership note](../changelog/0.10.13.md).
 - Ordinary dispatch shares completion finalization for callback results and
   callback-borrow failures. Work measurements are recorded only after executed
   work; see the [ordinary callback finalization note](../changelog/0.10.9.md).

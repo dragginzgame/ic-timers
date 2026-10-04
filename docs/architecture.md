@@ -32,6 +32,10 @@ The module hierarchy keeps six responsibilities separate:
    operation or stops with its selected reason, in the same atomic transition.
    Checked arming and cancellation return canonical `TimerControlFailure`
    values directly, without a private error conversion.
+   Ordinary directive resolution also returns `TimerControlFailure` directly;
+   explicit scheduling requests retain `ScheduleError` at their input boundary.
+   The schedule owner classifies invalid successor proposals, while the registry
+   owns terminal state and completion accounting.
    Cancellation invalidates a scheduled generation while leaving running work
    unchanged. Stopping with a reason allocates no generation and discards the
    running command through state replacement.

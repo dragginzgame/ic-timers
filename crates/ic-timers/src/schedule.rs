@@ -1,6 +1,6 @@
 //! Checked cadence and scheduling decisions.
 
-use crate::snapshot::TimerSchedulingMode;
+use crate::snapshot::{TimerControlFailure, TimerSchedulingMode};
 use std::time::Duration;
 use thiserror::Error;
 
@@ -86,7 +86,7 @@ impl TimerDirective {
         self,
         now_ns: u64,
         cadence: Option<TimerCadence>,
-    ) -> Result<Option<ResolvedSchedule>, DirectiveError> {
+    ) -> Result<Option<ResolvedSchedule>, TimerControlFailure> {
         match self {
             Self::Stop => Ok(None),
             Self::ContinueImmediately => Ok(Some(ResolvedSchedule {
@@ -95,9 +95,10 @@ impl TimerDirective {
                 mode: TimerSchedulingMode::Continuation,
             })),
             Self::RetryAfter(delay) => {
-                let delay_ns = duration_ns(delay)?;
+                let delay_ns = duration_ns(delay).map_err(ScheduleError::control_failure)?;
                 Ok(Some(ResolvedSchedule {
-                    deadline_ns: checked_deadline_after(now_ns, delay_ns)?,
+                    deadline_ns: checked_deadline_after(now_ns, delay_ns)
+                        .map_err(ScheduleError::control_failure)?,
                     requested_delay_ns: Some(delay_ns),
                     mode: TimerSchedulingMode::Retry,
                 }))
@@ -108,9 +109,11 @@ impl TimerDirective {
                 mode: TimerSchedulingMode::Deadline,
             })),
             Self::RecurAfterCompletion => {
-                let cadence = cadence.ok_or(DirectiveError::MissingCadence)?;
+                let cadence = cadence.ok_or(TimerControlFailure::DirectiveNotAllowed)?;
                 Ok(Some(ResolvedSchedule {
-                    deadline_ns: cadence.deadline_after(now_ns)?,
+                    deadline_ns: cadence
+                        .deadline_after(now_ns)
+                        .map_err(ScheduleError::control_failure)?,
                     requested_delay_ns: Some(cadence.as_nanos()),
                     mode: TimerSchedulingMode::AfterCompletion,
                 }))
@@ -134,15 +137,15 @@ pub enum ScheduleError {
     DeadlineOverflow,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum DirectiveError {
-    Schedule(ScheduleError),
-    MissingCadence,
-}
-
-impl From<ScheduleError> for DirectiveError {
-    fn from(error: ScheduleError) -> Self {
-        Self::Schedule(error)
+impl ScheduleError {
+    // Invalid callback successors are terminal control failures; explicit
+    // scheduling requests keep returning ScheduleError at their input boundary.
+    const fn control_failure(self) -> TimerControlFailure {
+        match self {
+            Self::ZeroCadence => TimerControlFailure::DirectiveNotAllowed,
+            Self::DelayOutOfRange => TimerControlFailure::DelayOutOfRange,
+            Self::DeadlineOverflow => TimerControlFailure::DeadlineOverflow,
+        }
     }
 }
 
@@ -244,11 +247,19 @@ mod tests {
         );
         assert_eq!(
             TimerDirective::RecurAfterCompletion.resolve(10, None),
-            Err(DirectiveError::MissingCadence)
+            Err(TimerControlFailure::DirectiveNotAllowed)
         );
         assert_eq!(
             TimerDirective::RetryAfter(Duration::from_nanos(1)).resolve(u64::MAX, None),
-            Err(DirectiveError::Schedule(ScheduleError::DeadlineOverflow))
+            Err(TimerControlFailure::DeadlineOverflow)
+        );
+        assert_eq!(
+            TimerDirective::RetryAfter(Duration::MAX).resolve(0, None),
+            Err(TimerControlFailure::DelayOutOfRange)
+        );
+        assert_eq!(
+            TimerDirective::RecurAfterCompletion.resolve(u64::MAX, Some(cadence)),
+            Err(TimerControlFailure::DeadlineOverflow)
         );
     }
 }

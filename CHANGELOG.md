@@ -4,6 +4,22 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.13]
+
+### Changed
+
+- Return canonical control failures directly from ordinary directive resolution.
+  Remove the private directive-error wrapper and registry translation while
+  preserving typed failures, command precedence and completion cleanup.
+
+### Development
+
+- Extend the existing schedule fixture to check oversized retry delays and
+  overflowing recurrence deadlines at the directive boundary. Test execution
+  remains maintainer-owned.
+- Record the cleanup and verification scope in the
+  [0.10.13 release note](docs/changelog/0.10.13.md).
+
 ## [0.10.12] - 2026-10-04
 
 ### Changed
