@@ -1,7 +1,5 @@
 ![IC Timers — Internet Computer helper library](docs/assets/ic-timers-readme-header.svg)
 
-# ic-timers
-
 > A shared scheduler for background tasks in applications running on the
 > Internet Computer.
 
@@ -172,13 +170,7 @@ registration functions.
 
 ## Runtime ownership
 
-| Layer | Owns |
-| --- | --- |
-| Consumer | Durable demand, application outcomes, and lifecycle composition |
-| Registration capability | Claim-scoped control for one logical declaration |
-| `ic-timers` runtime | Callback execution, provider effects, and lifecycle reconciliation |
-| Canonical registry | Identities, generations, policy state, arbitration, callbacks, counters, and handles |
-| Private `platform` module | The only direct `ic-cdk-timers` and IC system-fact calls |
+![Ownership and control flow from durable application state through the IC Timers runtime to its private platform boundary](docs/assets/ic-timers-runtime-ownership.svg)
 
 The registry is volatile. It stores no stable timer policy, provider handle,
 generation, snapshot, epoch, or application recovery authority. After an
@@ -198,6 +190,8 @@ when durable demand supplies a deadline. See the
 [0.8 contract](docs/design/0.8-registration-continuity-and-deadlines.md).
 
 ## Truthful observability
+
+![Timer state, outcomes, instruction use, memory growth, and registration identity flowing into one read-only operational snapshot](docs/assets/ic-timers-observability.svg)
 
 `timer_snapshot` and `timer_inventory` return inert values; snapshots never
 become mutation authority. The inventory carries the runtime epoch even when
