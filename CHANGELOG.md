@@ -4,6 +4,15 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+### Documentation
+
+- Distinguish historical Toko Miner composition receipts from the evidence
+  required for each new combined dependency graph.
+- Mark the immediate-Watchdog report as historical 0.7.0 pre-release evidence
+  and update the documentation index to describe the record's current scope.
+- Correct the release helper's documented backup set to include all seven
+  mutated metadata files, including the README.
+
 ## [0.10.20] - 2026-10-04
 
 ### Changed

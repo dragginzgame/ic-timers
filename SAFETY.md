@@ -170,10 +170,11 @@ the idempotent ensure operation whenever their authority requires a wake-up.
 - The recorded IcyDB and Canic adoption subjects independently supply exact-0.5.0
   shared-registry evidence, recorded separately from this library's
   owner-local proof. Canic's schema-3 adapter exports timer, instruction, and
-  memory observations without a parallel runtime. Combined composition still
-  requires one final Wasm proving one registry, both owners in one inventory,
-  synchronous lifecycle reconstruction, IcyDB Watchdog recovery, and
-  continued Canic timer progress.
+  memory observations without a parallel runtime. The historical Toko Miner
+  receipt supplies scoped combined-composition evidence for one exact 0.8.0
+  dependency graph. Every new dependency combination still requires one final
+  Wasm proving one registry, both owners in one inventory, synchronous lifecycle
+  reconstruction, IcyDB Watchdog recovery, and continued Canic timer progress.
 
 The frozen [0.3 Patch 1 contract](docs/design/0.3-patch-1-contract.md) defines
 the protocol and the
@@ -181,7 +182,10 @@ the protocol and the
 promotion case to direct evidence. The
 [IcyDB adoption record](docs/adoption/icydb.md) and
 [Canic adapter contract](docs/adoption/canic.md) identify which additional
-claims come from maintained downstream evidence.
+claims come from maintained downstream evidence. The
+[Toko Miner record](docs/adoption/toko-miner.md) preserves the scoped combined
+receipts and the later dependency-graph blocker without qualifying newer
+combinations.
 
 ## Failure and measurement semantics
 

@@ -1,6 +1,6 @@
 # Immediate Watchdog continuation evidence
 
-Date: 2026-08-28. Status: current unreleased HEAD.
+Date: 2026-08-28. Status: historical pre-release evidence for 0.7.0.
 
 ## Subject
 
@@ -77,7 +77,7 @@ profile. Final Wasm uses Binaryen 108 `wasm-opt -Oz --enable-bulk-memory
 | After-completion | 321,450 | 261,914 | 105,210 |
 | Watchdog | 322,759 | 262,791 | 105,538 |
 
-In this controlled current-HEAD build, Watchdog exceeds after-completion by
+In this controlled recorded build, Watchdog exceeds after-completion by
 1,309 compiler bytes (0.407%), 877 final raw bytes (0.335%), and 328 gzip bytes
 (0.312%). The final raw size is authoritative; gzip is secondary. This is a
 cross-policy linked-code delta, not a downstream IcyDB Wasm measurement.
