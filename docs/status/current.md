@@ -30,6 +30,9 @@ references and validation belong in [release notes](../changelog/README.md),
   declaration claims, callback generations, policy states, pending commands,
   callbacks, observations and provider handles. Entries own matching control,
   callback and cadence in one typed payload; policy is derived.
+- Runtime initialization creates that registry and samples its epoch only when
+  the slot is empty. Repeated initialization returns the existing epoch; borrow
+  conflicts remain typed errors. See the [initialization note](../changelog/0.10.17.md).
 - Once and AfterCompletion accept async work. Watchdog accepts one synchronous
   bounded unit after its scheduler commits a cadence successor.
 - Only private `platform` calls the provider and IC system facts. Rust visibility

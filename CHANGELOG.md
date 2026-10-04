@@ -4,6 +4,21 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.17]
+
+### Changed
+
+- Initialize the canonical registry lazily in its existing runtime slot. Read
+  canister version and time only when creating the first epoch; repeated
+  initialization returns the original epoch without reconstructing a discarded one.
+
+### Development
+
+- Extend the initialization fixture to check typed borrow-conflict rejection
+  and preservation of the original inventory epoch.
+- Record the cleanup and pending verification in the
+  [0.10.17 release note](docs/changelog/0.10.17.md).
+
 ## [0.10.16] - 2026-10-04
 
 ### Development

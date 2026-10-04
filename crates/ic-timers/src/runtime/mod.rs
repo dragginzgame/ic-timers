@@ -70,16 +70,17 @@ impl From<RegistryError> for TimerError {
 /// Repeated calls are idempotent and return the original epoch. This function
 /// exports no lifecycle hook; the canister's existing lifecycle owner calls it.
 pub fn initialize_runtime() -> Result<TimerEpoch, TimerError> {
-    let epoch = TimerEpoch::new(platform::canister_version(), platform::time_ns());
     RUNTIME.with(|runtime| {
         let mut runtime = runtime
             .try_borrow_mut()
             .map_err(|_| TimerError::RuntimeBusy)?;
-        if let Some(registry) = runtime.as_ref() {
-            return Ok(registry.epoch());
-        }
-        *runtime = Some(TimerRegistry::new(epoch));
-        Ok(epoch)
+        let registry = runtime.get_or_insert_with(|| {
+            TimerRegistry::new(TimerEpoch::new(
+                platform::canister_version(),
+                platform::time_ns(),
+            ))
+        });
+        Ok(registry.epoch())
     })
 }
 

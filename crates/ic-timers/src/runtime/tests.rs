@@ -289,6 +289,11 @@ fn initialization_is_required_and_idempotent() {
     assert_eq!(first, second);
     assert_eq!(first.canister_version(), 7);
     assert_eq!(first.started_at_ns(), 10);
+    let busy = RUNTIME.with(|runtime| {
+        let _borrow = runtime.borrow();
+        initialize_runtime()
+    });
+    assert!(matches!(busy, Err(TimerError::RuntimeBusy)));
     let inventory = timer_inventory().expect("initialized inventory should be available");
     assert_eq!(inventory.epoch(), first);
     assert!(inventory.is_empty());
