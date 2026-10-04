@@ -282,13 +282,6 @@ pub struct ProviderHandles {
 }
 
 impl ProviderHandles {
-    pub(crate) const fn from_parts(
-        wakeup: Option<ProviderHandle>,
-        work: Option<ProviderHandle>,
-    ) -> Self {
-        Self { wakeup, work }
-    }
-
     pub(crate) const fn take_wakeup(&mut self) -> Option<ProviderHandle> {
         self.wakeup.take()
     }
@@ -915,7 +908,7 @@ impl TimerRegistry {
         let arm = match arm {
             Ok(arm) => arm,
             Err(error) => {
-                let transition = terminal_ordinary(entry, claim.identity(), error);
+                let transition = terminal_ordinary(control, claim.identity(), error);
                 return Ok(self.remove_transient_on_failure(claim.identity(), transition));
             }
         };
@@ -1042,7 +1035,7 @@ impl TimerRegistry {
                 EntryKind::Ordinary { control, .. } => {
                     let before = control.registration;
                     if let Err(error) = control.cancel() {
-                        let transition = terminal_ordinary(entry, identity, error);
+                        let transition = terminal_ordinary(control, identity, error);
                         return Ok(self.remove_transient_on_failure(identity, transition));
                     }
                     let remove = !matches!(before, TimerRegistration::Running { .. })
@@ -1570,14 +1563,11 @@ impl TimerRegistry {
     ) -> Result<(), RegistryError> {
         // A normal remove-on-stop completion can delete its entry before the
         // post-run measurement is committed, leaving nothing to observe.
-        let Some(entry) = self.entries.get_mut(token.identity()) else {
-            return Ok(());
-        };
         // Identity reuse must not let a late callback write into a newer
         // registration's observations.
-        if !entry.owns_token_claim(token) {
+        let Ok(entry) = self.entry_mut(token.claim()) else {
             return Ok(());
-        }
+        };
 
         let memory = MemoryPageSample::new(memory_start, memory_end);
         match (&entry.kind, token.role) {
@@ -1724,6 +1714,14 @@ impl TimerRegistry {
         entry.take_work_handle(identity)
     }
 
+    pub(crate) fn take_provider_handles(&mut self, identity: &TimerIdentity) -> ProviderHandles {
+        self.entries
+            .get_mut(identity)
+            .map_or_else(ProviderHandles::default, |entry| {
+                entry.take_provider_handles(identity)
+            })
+    }
+
     pub(crate) fn take_provider_handles_for_claim(
         &mut self,
         claim: &RegistrationClaim,
@@ -1734,12 +1732,9 @@ impl TimerRegistry {
     }
 
     pub(crate) fn consume_provider_handle(&mut self, token: &CallbackToken) {
-        let Some(entry) = self.entries.get_mut(token.identity()) else {
+        let Ok(entry) = self.entry_mut(token.claim()) else {
             return;
         };
-        if !entry.owns_token_claim(token) {
-            return;
-        }
         let Some(slot) = entry.provider_slot_mut(token.role) else {
             return;
         };
@@ -1929,13 +1924,10 @@ fn clear_wakeup_if(identity: &TimerIdentity, clear_wakeup: bool) -> RegistryEffe
 }
 
 fn terminal_ordinary(
-    entry: &mut Entry,
+    control: &mut TimerControl,
     identity: &TimerIdentity,
     failure: TimerControlFailure,
 ) -> RegistryTransition {
-    let EntryKind::Ordinary { control, .. } = &mut entry.kind else {
-        return RegistryTransition::terminal(RegistryEffect::None, failure);
-    };
     let clear_wakeup = control.terminate(InactiveReason::ControlFailure(failure));
     RegistryTransition::terminal(clear_wakeup_if(identity, clear_wakeup), failure)
 }

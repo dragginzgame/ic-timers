@@ -4,6 +4,28 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+<<<<<<< HEAD
+## [0.10.22] - 2026-10-04
+
+### Changed
+
+- Use the canonical claim lookup for late measurement accounting and provider
+  handle consumption, preserving no-op behavior for missing or superseded claims
+  and the independent policy, role and handle-generation checks.
+- Detach provider-handle pairs through their registry entry during Watchdog
+  failure cleanup. Remove runtime pair assembly and the separate pair constructor,
+  preserving cleanup order and harmless cleanup of empty or missing entries.
+- Pass validated ordinary control directly to terminal-failure finalization,
+  removing its repeated policy check and unreachable fallback. Preserve terminal
+  reasons, wakeup cleanup and declaration-lifetime decisions.
+
+### Development
+
+- Extend the provider-cleanup fixture for empty and missing entries, and update
+  restoration cleanup to use registry-owned pair detachment.
+- Record the lookup cleanup and focused verification subjects in the
+  [0.10.22 release note](docs/changelog/0.10.22.md).
+=======
 ### Documentation
 
 - Distinguish historical Toko Miner composition receipts from the evidence
@@ -12,6 +34,7 @@ All notable changes to this project are recorded here.
   and update the documentation index to describe the record's current scope.
 - Correct the release helper's documented backup set to include all seven
   mutated metadata files, including the README.
+>>>>>>> 5eb5183abbc90c02b4e6fae2aad93dcbea9c7325
 
 ## [0.10.21] - 2026-10-04
 

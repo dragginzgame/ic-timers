@@ -1045,12 +1045,7 @@ fn clear_provider_handles(mut handles: ProviderHandles) {
 }
 
 fn clear_entry_provider_handles(identity: &TimerIdentity) -> Result<(), TimerError> {
-    let handles = with_registry_mut(|registry| {
-        Ok(ProviderHandles::from_parts(
-            registry.take_wakeup_handle(identity),
-            registry.take_work_handle(identity),
-        ))
-    })?;
+    let handles = with_registry_mut(|registry| Ok(registry.take_provider_handles(identity)))?;
     clear_provider_handles(handles);
     Ok(())
 }

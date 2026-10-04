@@ -1795,6 +1795,10 @@ fn provider_cleanup_borrow_failure_is_returned_instead_of_discarded() {
         .cancel()
         .expect("cleanup remains possible after the borrow is released");
     assert_eq!(timer_count(), 0);
+    clear_entry_provider_handles(&timer).expect("empty entry cleanup should be harmless");
+    registration.unregister().unwrap();
+    clear_entry_provider_handles(&timer).expect("missing entry cleanup should be harmless");
+    assert_eq!(timer_count(), 0);
 }
 
 #[test]
@@ -1877,16 +1881,12 @@ fn provider_restoration_drains_all_detached_handles_after_first_failure() {
         "the failed handle should clear while the remaining handle is restored"
     );
 
-    let (restored_wakeup, restored_work) = with_registry_mut(|registry| {
-        Ok((
-            registry.take_wakeup_handle(&timer),
-            registry.take_work_handle(&timer),
-        ))
-    })
-    .expect("restored handle should detach for fixture cleanup");
+    let mut restored = with_registry_mut(|registry| Ok(registry.take_provider_handles(&timer)))
+        .expect("restored handle should detach for fixture cleanup");
+    let restored_wakeup = restored.take_wakeup();
+    let restored_work = restored.take_work();
     assert!(restored_wakeup.is_none());
-    assert!(restored_work.is_some());
-    clear_provider_handles(ProviderHandles::from_parts(restored_wakeup, restored_work));
+    clear_provider_handle(restored_work.expect("work handle must have been restored"));
     assert_eq!(timer_count(), 0);
 }
 
