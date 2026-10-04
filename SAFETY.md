@@ -1,5 +1,34 @@
 # Safety boundary
 
+This document explains what IC Timers promises, what it cannot promise, and
+what the application using it must still do. The summaries below are an
+introduction. The detailed sections that follow define the exact technical
+contract.
+
+## In plain English
+
+IC Timers keeps a limited number of timers organized in one place. It checks
+timer identities and scheduling values, safely ignores old callbacks, and
+provides read-only information about timer activity.
+
+Watchdog mode prepares another attempt before it starts the application's
+work. This means another attempt can remain scheduled if that work crashes or
+uses too many instructions. It does not guarantee that work happens exactly
+once, and it cannot recover if its own small scheduling step fails.
+
+The application is still responsible for:
+
+- keeping the lasting record of what work is needed;
+- rebuilding its timers after an install or upgrade;
+- making repeated work safe to run again;
+- keeping each Watchdog task small and bounded; and
+- ensuring every component uses the same version of IC Timers.
+
+IC Timers is built on `ic-cdk-timers` and shares the Internet Computer's
+platform limits. Its own timer and handle limits do not place a fixed limit on
+the underlying provider's memory use or guarantee that every scheduled task
+will be delivered.
+
 `ic-timers` is a higher-level wrapper around `ic-cdk-timers`. The CDK remains
 the platform timer provider; this crate owns only the coordination it can
 actually enforce and test.

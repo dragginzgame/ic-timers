@@ -1,6 +1,12 @@
 # Releasing
 
-The workspace follows semantic versioning.
+This guide is for maintainers preparing and publishing a new IC Timers
+release. Library users do not need to follow this process.
+
+The workspace follows semantic versioning. Before releasing, maintainers
+classify the change, choose the appropriate version, prepare the matching
+changelog and release note, run the required validation, and then publish the
+release through the repository's release commands.
 
 ## Pre-1.0 compatibility
 

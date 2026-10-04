@@ -1,52 +1,67 @@
 # Documentation
 
-- [0.8 continuity and deadlines](design/0.8-registration-continuity-and-deadlines.md):
-  inert registration identity, interval-measurement limits, exact Watchdog
-  scheduling and downstream adoption requirements.
-- [Architecture](architecture.md): current boundary, implemented runtime, and
-  consumer integration.
-- [Observability contract](design/observability.md): implemented canonical
-  timer snapshot, counter semantics, and validated Canic adapter mapping.
-- [0.3 production runtime design](design/0.3-production-timer-runtime.md):
-  bounded registry, two-message watchdog protocol, lifecycle seam, and
-  completed recovery evidence gate.
+If IC Timers is new to you, begin with the [project overview](../README.md).
+It explains what the library does, when it is useful, and how its three
+scheduling modes differ.
+
+## Start here
+
+- [Safety boundary](../SAFETY.md): a plain-English summary followed by the
+  exact guarantees, limits, and application responsibilities.
+- [Architecture](architecture.md): an overview of who owns durable and
+  temporary state, followed by the implementation-level module design.
+- [Observability contract](design/observability.md): the precise meaning of
+  timer status, counters, instruction measurements, and memory observations.
+- [Continuity and deadlines](design/0.8-registration-continuity-and-deadlines.md):
+  registration identity, measurement limits, exact Watchdog scheduling, and
+  downstream adoption requirements.
+
+## Adoption records
+
+These documents record specific integrations and the evidence available for
+them. They are not general getting-started guides or proof that later versions
+and dependency combinations have been qualified.
+
+- [IcyDB adoption](adoption/icydb.md): shared-registry adoption, recovery
+  evidence, and measured costs.
+- [Canic adapter](adoption/canic.md): identity and policy mapping, custody
+  boundaries, and the required atomic migration.
+- [Toko Miner adoption](adoption/toko-miner.md): historical combined-system
+  evidence, the later dependency-graph blocker, and remaining work.
+
+## Design records
+
+These are detailed engineering records. They preserve the decisions and
+constraints for the release in which they were written.
+
+- [Production timer runtime](design/0.3-production-timer-runtime.md): bounded
+  registry, two-message Watchdog protocol, lifecycle seam, and recovery gate.
 - [0.3 Patch 1 contract](design/0.3-patch-1-contract.md): frozen capacity,
-  public API, policy/state, counters, provider evidence, MSRV, and measurement
-  decisions before runtime implementation.
-- [Safety boundary](../SAFETY.md): implemented guarantees, recovery limits,
-  and required evidence.
-- [Code-hygiene audit](audits/code-hygiene.md): recurring mechanical and API
-  review checklist.
-- [0.4 hygiene report](audits/code-hygiene-0.4-2026-08-15.md): hard-cut facade,
-  identity, snapshot authority, and DRY findings.
-- [0.4.1 hygiene report](audits/code-hygiene-0.4.1-2026-08-15.md): transient
-  cancellation, lifecycle reconciliation, and private scheduling cleanup.
-- [0.5 policy-specific callback authority](design/0.5-policy-specific-callback-authority.md):
-  typed work capabilities, removed runtime policy probing, and the request-
-  ordering audit.
+  public API, policy state, counters, provider evidence, and measurements.
+- [Policy-specific callback authority](design/0.5-policy-specific-callback-authority.md):
+  typed work capabilities and request ordering.
 - [Immediate Watchdog continuation](design/immediate-watchdog-continuation.md):
-  progress-sensitive zero-delay replacement, initial reconciliation, request
-  arbitration, rollback, observation, and release boundary.
-- [0.3.7 hygiene report](audits/code-hygiene-2026-08-15.md): module hierarchy,
-  public-surface, duplication, and comment audit.
-- [Prior hygiene report](audits/code-hygiene-2026-08-14.md): callback-authority
-  lifetime and release monotonicity findings, fixes, and evidence.
-- [Initial hygiene report](audits/code-hygiene-2026-08-13.md): adopted peer
-  practices, 0.3 closeout, and the 0.3.2 audit addendum.
-- [0.3 runtime evidence](audits/0.3-runtime-evidence-2026-08-13.md): PocketIC
-  matrix, Rust 1.88 verdict, Wasm/instruction/cycle cohorts, complexity, and
-  downstream adoption sketch.
+  immediate continuation, arbitration, rollback, and observation.
+
+## Evidence and audits
+
+- [Runtime evidence](audits/0.3-runtime-evidence-2026-08-13.md): PocketIC
+  recovery matrix, Rust support, resource cohorts, and complexity results.
 - [Immediate Watchdog evidence](audits/immediate-watchdog-continuation-2026-08-28.md):
-  zero-delay PocketIC behavior, retained recovery matrix, provider faults,
-  instruction/cycle observation, size cohorts, and complexity delta.
-- [IcyDB adoption record](adoption/icydb.md): accepted shared-registry hard cut,
-  downstream recovery evidence, and measured costs.
-- [Canic adapter contract](adoption/canic.md): required pre-1.0 hard cut,
-  identity/policy mapping, custody boundary, and parity gate.
-- [Toko Miner adoption evidence](adoption/toko-miner.md): current inspected
-  dependency-graph blocker, historical scoped composition receipts, and
-  remaining application work.
-- [Releasing](releasing.md): crate-impact classification, pre-1.0 SemVer, and
-  version/release commands.
+  historical pre-release evidence for immediate continuation and retained
+  recovery behavior.
+- [Recurring code-hygiene audit](audits/code-hygiene.md): the current review
+  checklist.
+- [Initial hygiene report](audits/code-hygiene-2026-08-13.md),
+  [follow-up report](audits/code-hygiene-2026-08-14.md),
+  [0.3.7 report](audits/code-hygiene-2026-08-15.md),
+  [0.4 report](audits/code-hygiene-0.4-2026-08-15.md), and
+  [0.4.1 report](audits/code-hygiene-0.4.1-2026-08-15.md): historical review
+  findings and fixes.
+
+## Maintainer documentation
+
+- [Releasing](releasing.md): version selection, validation, and publication.
 - [Changelog lines](changelog/README.md): release-line working notes.
-- [Current status](status/current.md): compact handoff for the next session.
+- [Current status](status/current.md): compact handoff for the next maintainer
+  session.
