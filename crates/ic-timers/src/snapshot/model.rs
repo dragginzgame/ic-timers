@@ -125,7 +125,8 @@ impl TryFrom<TimerDirective> for TimerDirectiveSnapshot {
 /// Typed terminal failure in pure timer control.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum TimerControlFailure {
-    /// A callback generation counter reached its maximum.
+    /// A new callback would exceed its generation counter's maximum.
+    /// Cancellation does not allocate a generation and cannot cause this failure.
     GenerationExhausted,
     /// Checked successor deadline arithmetic overflowed.
     DeadlineOverflow,
@@ -192,31 +193,6 @@ pub enum WatchdogAttemptStatus {
     Running,
 }
 
-/// One watchdog work attempt paired with an authoritative successor.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct WatchdogAttemptSnapshot {
-    generation: u64,
-    status: WatchdogAttemptStatus,
-}
-
-impl WatchdogAttemptSnapshot {
-    pub(crate) const fn new(generation: u64, status: WatchdogAttemptStatus) -> Self {
-        Self { generation, status }
-    }
-
-    /// Return the attempt generation.
-    #[must_use]
-    pub const fn generation(self) -> u64 {
-        self.generation
-    }
-
-    /// Return whether work is dispatched or running.
-    #[must_use]
-    pub const fn status(self) -> WatchdogAttemptStatus {
-        self.status
-    }
-}
-
 /// Coherent watchdog timer state.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum WatchdogRuntimeStateSnapshot {
@@ -229,12 +205,13 @@ pub enum WatchdogRuntimeStateSnapshot {
     },
     /// A successor is authoritative while one work attempt is outstanding.
     AwaitingWork {
-        /// Generation the successor scheduler must present.
+        /// Dispatch generation the successor scheduler must present, shared
+        /// with the paired work attempt.
         successor_generation: u64,
         /// Absolute successor deadline.
         successor_deadline_ns: u64,
-        /// The one paired work attempt.
-        attempt: WatchdogAttemptSnapshot,
+        /// Whether the paired work is dispatched or running.
+        attempt_status: WatchdogAttemptStatus,
     },
 }
 
@@ -306,19 +283,11 @@ impl From<TimerRuntimeStateSnapshot> for TimerRegistrationStatus {
             TimerRuntimeStateSnapshot::Watchdog(state) => match state {
                 WatchdogRuntimeStateSnapshot::Scheduled { .. }
                 | WatchdogRuntimeStateSnapshot::AwaitingWork {
-                    attempt:
-                        WatchdogAttemptSnapshot {
-                            status: WatchdogAttemptStatus::Dispatched,
-                            ..
-                        },
+                    attempt_status: WatchdogAttemptStatus::Dispatched,
                     ..
                 } => Self::Scheduled,
                 WatchdogRuntimeStateSnapshot::AwaitingWork {
-                    attempt:
-                        WatchdogAttemptSnapshot {
-                            status: WatchdogAttemptStatus::Running,
-                            ..
-                        },
+                    attempt_status: WatchdogAttemptStatus::Running,
                     ..
                 } => Self::Running,
             },

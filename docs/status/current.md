@@ -12,7 +12,7 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Release state
 
-- Workspace package version: `0.10.23`.
+- Workspace package version: `0.11.0`.
 - Cargo owns this version; the release helper updates the single projection above.
   Dated changelog sections and release-note statuses own release state. Read those
   sources to distinguish preparation from a completed release; do not duplicate
@@ -48,10 +48,13 @@ references and validation belong in [release notes](../changelog/README.md),
   command through dispatch and execution. Leaving either running or awaiting-work
   state discards its command. Public snapshots project these states without
   mutation authority.
-- Control counters own ordinary, Watchdog scheduler and Watchdog attempt generation
-  history; active states do not repeat those values. State, claim and role remain
-  part of callback authorization. Snapshots project active generations from the
-  counters; tokens and handles retain their independent delivery stamps.
+- Each control owns one callback-generation allocation history; active states
+  do not repeat it. Watchdog dispatch stamps successor and work with one fresh
+  generation, distinguished by role and separate provider slots. Requests while
+  awaiting work retain the pair until completion or recovery expires that attempt.
+  Awaiting-work snapshots project the shared generation and direct attempt status
+  without an attempt wrapper; tokens and handles retain independent
+  delivery stamps. The 0.11.0 observation change awaits deployment qualification.
 - Private callback tokens carry their registration claim. Context control and
   callback cleanup borrow it without claim reconstruction; running-work and
   provider ownership checks remain distinct. See the
@@ -64,8 +67,7 @@ references and validation belong in [release notes](../changelog/README.md),
   [lookup and detachment note](../changelog/0.10.22.md). Watchdog failure cleanup
   obtains paired handles through the entry's existing detachment owner, with
   provider clearing after the registry borrow is released. Ordinary terminal
-  request failures pass validated control directly to stop finalization rather
-  than repeating policy selection.
+  request failures stop their validated control directly in the request owner.
   The shared claim-transition operation validates context authority before
   detachment; lifecycle reconciliation directly verifies retained declarations.
   See the [runtime validation ownership note](../changelog/0.10.20.md).
@@ -73,7 +75,7 @@ references and validation belong in [release notes](../changelog/README.md),
   cancellation or schedule resolution; see the
   [validation and scheduler failure note](../changelog/0.10.23.md). Watchdog
   scheduler allocation and deadline errors share terminal finalization while
-  retaining generation-first validation and atomic allocation.
+  retaining generation-first validation and checking the deadline before allocation.
 - Registry transitions borrow identity from their claim or token for local
   lookup and removal. Queued effects, snapshots and detached capabilities retain
   owned identities; see the [identity borrowing note](../changelog/0.10.18.md).
@@ -93,6 +95,13 @@ references and validation belong in [release notes](../changelog/README.md),
 - Ordinary requests and authorized completion successors share checked arming;
   stopping selects its reason and allocates no generation. Lifetime removal is
   decided once per transition. See the [ordinary state ownership note](../changelog/0.10.8.md).
+- Cancellation allocates no callback generation. Scheduled/dispatched cancellation
+  selects inactive state and clears the existing handles; stale delivery is rejected
+  by state, claim and role. Rearming and dispatch still require fresh non-wrapping
+  generations.
+  Running cancellation remains a pending command applied on normal completion.
+  This semantic hard cut is prepared for the next minor line; its unexecuted
+  boundary fixtures and delivery scope are in the [0.11.0 note](../changelog/0.11.0.md).
 - Ordinary directive resolution returns canonical control failures directly.
   Explicit scheduling requests retain schedule errors at their input boundary;
   the registry owns terminal state and completion accounting. See the

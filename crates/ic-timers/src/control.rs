@@ -128,21 +128,6 @@ impl TimerControl {
         self.request_deadline(deadline_ns, DeadlineSelection::Earliest)
     }
 
-    /// Cancel scheduled state immediately.
-    ///
-    /// Running work is unchanged so the canonical registry can arbitrate its
-    /// pending command. Provider cleanup also remains the registry's decision.
-    pub(crate) fn cancel(&mut self) -> Result<(), TimerControlFailure> {
-        if matches!(self.registration, TimerRegistration::Scheduled { .. }) {
-            let generation = self.next_generation()?;
-            self.generation = generation;
-            self.registration = TimerRegistration::Inactive {
-                reason: InactiveReason::Cancelled,
-            };
-        }
-        Ok(())
-    }
-
     /// Reconcile this timer to one authoritative deadline.
     pub(crate) fn reconcile(
         &mut self,
@@ -260,7 +245,6 @@ mod tests {
         *pending = Some(OrdinaryPending::Unregister);
         assert_eq!(control.reconcile(300), Ok(None));
         assert_eq!(control.schedule(90), Ok(None));
-        assert_eq!(control.cancel(), Ok(()));
         assert_eq!(
             control.registration,
             TimerRegistration::Running {
@@ -300,26 +284,29 @@ mod tests {
     }
 
     #[test]
-    fn scheduled_cancel_invalidates_consumed_generation() {
+    fn stopping_invalidates_delivery_without_allocating_and_rearm_uses_next_generation() {
         let mut control = TimerControl::default();
         let generation = arm(&mut control, 100);
-        assert_eq!(control.cancel(), Ok(()));
+        assert!(control.terminate(InactiveReason::Cancelled));
         assert!(!control.begin(generation));
-        assert_eq!(control.generation(), 2);
+        assert_eq!(control.generation(), generation);
         assert_eq!(
             control.registration,
             TimerRegistration::Inactive {
                 reason: InactiveReason::Cancelled,
             }
         );
-        assert_eq!(control.cancel(), Ok(()));
-        assert_eq!(control.generation(), 2);
+        assert!(!control.terminate(InactiveReason::Cancelled));
+        assert_eq!(control.generation(), generation);
         assert_eq!(
             control.registration,
             TimerRegistration::Inactive {
                 reason: InactiveReason::Cancelled,
             }
         );
+        assert_eq!(arm(&mut control, 200), generation + 1);
+        assert!(!control.begin(generation));
+        assert!(control.begin(generation + 1));
     }
 
     #[test]
@@ -330,10 +317,6 @@ mod tests {
 
         assert_eq!(
             control.schedule(50),
-            Err(TimerControlFailure::GenerationExhausted)
-        );
-        assert_eq!(
-            control.cancel(),
             Err(TimerControlFailure::GenerationExhausted)
         );
         assert_eq!(

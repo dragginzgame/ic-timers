@@ -113,10 +113,11 @@ The current runtime provides:
   message instead of returning after losing the committed successor. Detached
   failure paths restore or clear every linear provider capability before
   returning an error. Terminal watchdog control failures also clear any
-  pending nested command and check paired scheduler/work generations before
-  mutating either counter. Provider-effect shape is checked before platform
+  pending nested command and check generation/deadline arithmetic before
+  advancing the allocation counter. Provider-effect shape is checked before platform
   calls, including exact identity and claim-generation agreement between a
-  Watchdog successor and its queued work. Arm effects distinguish initial from
+  Watchdog successor and its queued work, with one shared dispatch generation.
+  Arm effects distinguish initial from
   replacement ownership, while clear effects name a non-empty handle set; a
   no-op clear is not representable. Callback dispatch cannot consume a provider
   handle until the identity, registration claim generation, callback
@@ -139,6 +140,19 @@ clear, restore, or mutate a timer and must not become an alternate control
 path. `has_armed_wakeup` has the same observational boundary: it is neither
 durable authority nor a delivery guarantee, and consumers must still invoke
 the idempotent ensure operation whenever their authority requires a wake-up.
+
+The prepared 0.11.0 contract allocates generations only for new callback
+deliveries. Each Watchdog dispatch gives its successor and work one fresh
+generation with distinct roles and provider slots. Requests while dispatched or
+running cannot replace that pair before completion; a recovery scheduler expires
+the interrupted attempt before allocating a new pair. Cancellation selects
+inactive state or queues a running-work stop without advancing a counter.
+Inactive state rejects old delivery; rearming requires a fresh checked generation.
+Cancellation at exhausted counters and the changed cancel/rearm and shared-dispatch
+sequences have native fixtures awaiting deployment validation. The existing
+PocketIC cancellation and stop/resume
+subjects must qualify this change before extending the evidence claims above.
+See the [0.11.0 verification scope](docs/changelog/0.11.0.md).
 
 ## Limits and consumer obligations
 
