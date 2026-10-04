@@ -4,6 +4,11 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+### Documentation
+
+- Add the shared helper navigation menu linking the eight maintained helper
+  repositories through centrally hosted icons.
+
 ## [0.11.1] - 2026-10-04
 
 ### Changed
