@@ -1,3 +1,5 @@
+![IC Timers — Internet Computer helper library](../assets/ic-timers-readme-header.svg)
+
 # Canic adapter contract
 
 Status: historical exact-0.5.0 adapter record with runtime introspection schema 3.

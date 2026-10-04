@@ -1,3 +1,5 @@
+![IC Timers — Internet Computer helper library](../assets/ic-timers-readme-header.svg)
+
 # Immediate Watchdog continuation evidence
 
 Date: 2026-08-28. Status: historical pre-release evidence for 0.7.0.

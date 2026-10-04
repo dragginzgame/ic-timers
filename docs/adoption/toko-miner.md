@@ -1,3 +1,5 @@
+![IC Timers — Internet Computer helper library](../assets/ic-timers-readme-header.svg)
+
 # Toko Miner adoption evidence
 
 Status: current dirty graph selects two timer package identities; coordinated

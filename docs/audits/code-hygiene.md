@@ -1,3 +1,5 @@
+![IC Timers — Internet Computer helper library](../assets/ic-timers-readme-header.svg)
+
 # Recurring code-hygiene audit
 
 Use this narrow audit before a minor release or after a substantial public API

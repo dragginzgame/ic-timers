@@ -1,3 +1,5 @@
+![IC Timers — Internet Computer helper library](../assets/ic-timers-readme-header.svg)
+
 # Observability and Canic parity contract
 
 Status: canonical observations live; historical adoption evidence linked below.

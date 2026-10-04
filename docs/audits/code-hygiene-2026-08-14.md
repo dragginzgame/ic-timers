@@ -1,3 +1,5 @@
+![IC Timers — Internet Computer helper library](../assets/ic-timers-readme-header.svg)
+
 # Code-hygiene audit — 2026-08-14
 
 ## Summary

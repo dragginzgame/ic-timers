@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="650" viewBox="0 0 1400 650" role="img" aria-labelledby="title desc">
+<title id="title">IC Timers safety responsibility boundary</title>
+<desc id="desc">Three responsibility zones. The application owns durable demand, reconstruction and safe repeated work. IC Timers owns bounded coordination, validation, observations and Watchdog attempts. The platform or provider owns delivery, execution limits, cycles and provider memory.</desc>
+<rect width="1400" height="650" fill="#F7FAFD"/>
+<g font-family="Inter, Arial, sans-serif" fill="#102B50">
+  <text x="56" y="57" font-size="14" font-weight="700" letter-spacing="2" fill="#53718F">IC TIMERS · SAFETY RESPONSIBILITIES</text>
+  <text x="56" y="107" font-size="34" font-weight="700">Three zones of responsibility</text>
+  <text x="56" y="143" font-size="19" fill="#53718F">Each layer has a distinct part to play.</text>
+
+  <rect x="56" y="194" width="408" height="380" rx="20" fill="#F0FBFD" stroke="#009DBD" stroke-width="2"/>
+  <rect x="88" y="224" width="48" height="48" rx="12" fill="#DDF6FA"/>
+  <g transform="translate(98 233)" fill="none" stroke="#087C94" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="1" y="1" width="26" height="28" rx="5"/>
+    <path d="M7 10H21M7 17H21M7 24H15"/>
+  </g>
+  <text x="88" y="320" font-size="27" font-weight="700" fill="#087C94">Application</text>
+  <path d="M88 344H432" stroke="#A2DCE5" stroke-width="1.5"/>
+  <g fill="#087C94">
+    <circle cx="92" cy="389" r="4"/>
+    <circle cx="92" cy="435" r="4"/>
+    <circle cx="92" cy="481" r="4"/>
+  </g>
+  <g font-size="22">
+    <text x="112" y="397">Durable demand</text>
+    <text x="112" y="443">Reconstruction</text>
+    <text x="112" y="489">Safe repeated work</text>
+  </g>
+
+  <rect x="496" y="194" width="408" height="380" rx="20" fill="#F5F1FD" stroke="#7354C6" stroke-width="2"/>
+  <rect x="528" y="224" width="48" height="48" rx="12" fill="#EEE8FB"/>
+  <g transform="translate(538 233)" fill="none" stroke="#7354C6" stroke-width="2.3" stroke-linecap="round">
+    <circle cx="14" cy="15" r="13"/>
+    <path d="M14 7V15L21 20"/>
+  </g>
+  <text x="528" y="320" font-size="27" font-weight="700" fill="#7354C6">IC Timers</text>
+  <path d="M528 344H872" stroke="#C6B7E8" stroke-width="1.5"/>
+  <g fill="#7354C6">
+    <circle cx="532" cy="389" r="4"/>
+    <circle cx="532" cy="435" r="4"/>
+    <circle cx="532" cy="481" r="4"/>
+    <circle cx="532" cy="527" r="4"/>
+  </g>
+  <g font-size="22">
+    <text x="552" y="397">Bounded coordination</text>
+    <text x="552" y="443">Validation</text>
+    <text x="552" y="489">Observations</text>
+    <text x="552" y="535">Watchdog attempts</text>
+  </g>
+
+  <rect x="936" y="194" width="408" height="380" rx="20" fill="#EDF3F9" stroke="#A9BED3" stroke-width="2"/>
+  <rect x="968" y="224" width="48" height="48" rx="12" fill="#DFE9F3"/>
+  <g transform="translate(978 233)" fill="none" stroke="#53718F" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="0" y="1" width="28" height="12" rx="3"/>
+    <rect x="0" y="18" width="28" height="12" rx="3"/>
+    <path d="M6 7H7M13 7H22M6 24H7M13 24H22"/>
+  </g>
+  <text x="968" y="320" font-size="27" font-weight="700" fill="#53718F">Platform / provider</text>
+  <path d="M968 344H1312" stroke="#B8CBDF" stroke-width="1.5"/>
+  <g fill="#53718F">
+    <circle cx="972" cy="389" r="4"/>
+    <circle cx="972" cy="435" r="4"/>
+    <circle cx="972" cy="481" r="4"/>
+    <circle cx="972" cy="527" r="4"/>
+  </g>
+  <g font-size="22">
+    <text x="992" y="397">Delivery</text>
+    <text x="992" y="443">Execution limits</text>
+    <text x="992" y="489">Cycles</text>
+    <text x="992" y="535">Provider memory</text>
+  </g>
+</g>
+</svg>

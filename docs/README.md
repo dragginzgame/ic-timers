@@ -1,3 +1,5 @@
+![IC Timers — Internet Computer helper library](assets/ic-timers-readme-header.svg)
+
 # Documentation
 
 If IC Timers is new to you, begin with the [project overview](../README.md).
