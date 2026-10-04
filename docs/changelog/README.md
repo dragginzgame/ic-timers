@@ -40,3 +40,4 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.10.4 ordinary completion and failure ownership](0.10.4.md)
 - [0.10.5 state and request ownership](0.10.5.md)
 - [0.10.6 transition and pending-command ownership](0.10.6.md)
+- [0.10.7 claim finalization and removal decisions](0.10.7.md)

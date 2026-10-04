@@ -1848,12 +1848,14 @@ fn terminal_scheduler_failure_clears_queued_work_before_transient_removal() {
 }
 
 #[test]
-fn transition_error_restores_detached_claim_handles() {
+fn transition_error_restores_handles_or_retires_the_claim() {
     setup();
     let timer = identity("transition-error-restore");
-    let registration = register_once(timer, DeclarationLifetime::Retained, |_context| async {
-        TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop)
-    })
+    let registration = register_once(
+        timer.clone(),
+        DeclarationLifetime::Retained,
+        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+    )
     .expect("registration should succeed");
     registration
         .ensure_scheduled(TimerSchedule::At(15))
@@ -1879,6 +1881,25 @@ fn transition_error_restores_detached_claim_handles() {
             .expect("restored claim should remain readable")
     );
     assert_eq!(timer_count(), 1);
+
+    let handles = with_registry_mut(|registry| {
+        registry
+            .take_provider_handles_for_claim(&registration.claim)
+            .map_err(TimerError::from)
+    })
+    .expect("restored provider handle should detach again");
+    inject_provider_install_fault();
+    assert!(matches!(
+        finish_detached_claim_transition(
+            &registration.claim,
+            handles,
+            Err(TimerError::Schedule(ScheduleError::DeadlineOverflow)),
+        ),
+        Err(TimerError::OwnershipInvariant)
+    ));
+    assert!(!registration.has_armed_wakeup().unwrap());
+    assert_retained_provider_binding_failure(&timer, 1, 1);
+    assert_eq!(timer_count(), 0);
 
     registration
         .cancel()

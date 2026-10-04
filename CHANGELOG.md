@@ -4,6 +4,23 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.7]
+
+### Changed
+
+- Finalize detached public-claim transitions in one helper. Remove the separate
+  success-path helper while preserving restoration, retirement and typed errors.
+- Compute ordinary completion's removal-on-stop rule once for normal stopping,
+  invariant failure and checked failures. Derive cancellation removal directly
+  from execution state and declaration lifetime without a mutable removal flag.
+
+### Development
+
+- Extend the existing transition-error fixture to check failed restoration,
+  provider-handle cleanup, claim retirement and restoration-error precedence.
+- Record the pushed 0.10.6 baseline and private cleanup in the
+  [0.10.7 release note](docs/changelog/0.10.7.md).
+
 ## [0.10.6] - 2026-10-04
 
 ### Changed

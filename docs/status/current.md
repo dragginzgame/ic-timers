@@ -50,31 +50,29 @@ and the [safety boundary](../../SAFETY.md).
 
 ## Current follow-up
 
-The maintainer reports 0.10.5 live. Local HEAD, the peeled 0.10.5 tag and origin/main
-agree at `3c206495e4820f764aff7ac96b2958f42f78542e`. The completed state and
-request cleanup is recorded in the [0.10.5 note](../changelog/0.10.5.md).
+The maintainer reports 0.10.6 pushed. Local HEAD, the peeled 0.10.6 tag and origin/main
+agree at `75bfe4414f90ed902b9afa439508fcd559cc1a3f`. The completed transition
+and pending-command cleanup is recorded in the [0.10.6 note](../changelog/0.10.6.md).
 
-The [0.10.6 note](../changelog/0.10.6.md) records the prepared private cleanup.
-Ordinary scheduling and completion share one checked arming operation. Generation
-allocation remains atomic; eligibility, stopping and cancellation remain distinct.
-The registry constructs ordinary effects from successful transition inputs and
-the allocated generation, deleting two impossible contradictory-state recovery
-paths. Input, directive, callback-authority and provider validation remain.
+The [0.10.7 note](../changelog/0.10.7.md) records the prepared private cleanup.
+One detached-claim finalizer owns public control's registry-error restoration and
+successful-transition application. Its single-caller success helper is deleted.
+Restoration drains all handles before returning an error; unexpected restoration
+or provider failures still retire the exact claim. Callback finalization remains
+separate because Watchdog work must trap for unexpected completion failures.
 
-Watchdog awaiting-work state owns its pending command through dispatched and
-running phases. The independent field and explicit clearing assignments are
-deleted. Work acceptance preserves the command; leaving awaiting work discards
-it, including when a scheduler retires an unacknowledged attempt. Public snapshot
-shape, pending precedence, inactive reasons, paired generation allocation,
-cancellation counts, declaration lifetimes and provider ordering are unchanged.
+Ordinary completion computes its removal-on-stop rule once for normal stopping,
+invariant failure, directive failure and generation failure. Successful arms retain
+the entry. Ordinary cancellation derives removal without a mutable flag; running
+work retains pending authority. Pending precedence, reasons, declaration lifetimes,
+claim fencing, counters and provider ordering are unchanged.
 
-Existing Watchdog checked-failure fixtures retain public failure state, callback
-cleanup and allocation atomicity assertions; obsolete independent-pending-field
-assertions are removed. The native attempt-retirement fixture queues reconciliation
-on discarded work and checks that successor work does not inherit it. The existing
-dispatched-reconciliation fixture checks preservation through work acceptance.
-Control transition, ordinary completion, terminal-lifetime, running-command and
-provider-failure fixtures remain. Test execution stays maintainer-owned.
+The existing transition-error fixture now covers failed restoration as well as
+successful restoration. It checks that the restoration error takes precedence,
+handles are cleared and the retained claim becomes inactive with the provider
+binding failure reason. Existing restoration-draining, provider-failure,
+ordinary terminal-lifetime and pending-command fixtures remain.
+Test execution stays maintainer-owned.
 
 Ordinary/Watchdog command machines, effect confirmation and handle-restoration
 stages remain required by their distinct suspension and recovery contracts.
@@ -85,7 +83,7 @@ composed qualification.
 ## Evidence
 
 The latest inspected hosted validation remains scoped to 0.9.4 as recorded in
-its delivery note; the maintainer's 0.10.5 live report and local references do not
+its delivery note; the maintainer's 0.10.6 pushed report and local references do not
 establish new hosted or PocketIC results. No new runtime, recovery or performance
 result is claimed for this cleanup. Changed Rust is formatted. Diff whitespace,
 current release-truth and target-note structural preflight checks passed during

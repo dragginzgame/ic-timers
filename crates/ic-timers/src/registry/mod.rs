@@ -1072,11 +1072,10 @@ impl TimerRegistry {
                         let transition = terminal_ordinary(entry, identity.clone(), error);
                         return Ok(self.remove_transient_on_failure(&identity, transition));
                     }
-                    let mut remove = false;
+                    let remove = !matches!(before, TimerRegistration::Running { .. })
+                        && matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
                     let transition = match before {
                         TimerRegistration::Unregistered => {
-                            remove =
-                                matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
                             RegistryTransition::normal(RegistryEffect::None)
                         }
                         TimerRegistration::Running { .. } => {
@@ -1088,8 +1087,6 @@ impl TimerRegistry {
                         TimerRegistration::Scheduled { .. } => {
                             *inactive_reason = InactiveReason::Cancelled;
                             entry.observability.counters_mut().record_cancellation();
-                            remove =
-                                matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
                             RegistryTransition::normal(clear_callbacks(
                                 identity.clone(),
                                 CallbacksToClear::Wakeup,
@@ -1217,6 +1214,8 @@ impl TimerRegistry {
             let cadence = *cadence;
             let completion = result.completion();
             let pending_command = *pending;
+            let remove_on_stop = matches!(pending_command, Some(OrdinaryPending::Unregister))
+                || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
             let terminal_pending = matches!(
                 pending_command,
                 Some(OrdinaryPending::Cancel | OrdinaryPending::Unregister)
@@ -1232,9 +1231,7 @@ impl TimerRegistry {
             };
             if completion.outcome() == TimerCompletionOutcome::InvariantFailure {
                 let transition = stop_ordinary_completion(entry, completion, now_ns, None);
-                let remove = matches!(pending_command, Some(OrdinaryPending::Unregister))
-                    || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
-                (transition, remove)
+                (transition, remove_on_stop)
             } else {
                 let resolved = match effective_directive.resolve(now_ns, cadence) {
                     Ok(value) => value,
@@ -1245,13 +1242,11 @@ impl TimerRegistry {
                             now_ns,
                             Some(map_directive_failure(error)),
                         );
-                        let remove = matches!(pending_command, Some(OrdinaryPending::Unregister))
-                            || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
                         return Ok(remove_after(
                             &mut self.entries,
                             &identity,
                             transition,
-                            remove,
+                            remove_on_stop,
                         ));
                     }
                 };
@@ -1263,20 +1258,18 @@ impl TimerRegistry {
                 {
                     let transition =
                         stop_ordinary_completion(entry, completion, now_ns, Some(failure));
-                    let remove = matches!(pending_command, Some(OrdinaryPending::Unregister))
-                        || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
                     return Ok(remove_after(
                         &mut self.entries,
                         &identity,
                         transition,
-                        remove,
+                        remove_on_stop,
                     ));
                 }
                 *pending = None;
                 entry.latest_directive = Some(directive_snapshot);
                 entry.observability.record_completion(completion, now_ns);
 
-                let mut remove = false;
+                let remove = selected_schedule.is_none() && remove_on_stop;
                 let transition = if let Some(selected) = selected_schedule {
                     entry.scheduling_mode = selected.mode;
                     entry.latest_requested_delay_ns = selected.requested_delay_ns;
@@ -1297,8 +1290,6 @@ impl TimerRegistry {
                     } else {
                         InactiveReason::Stopped
                     };
-                    remove = matches!(pending_command, Some(OrdinaryPending::Unregister))
-                        || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
                     RegistryTransition::normal(RegistryEffect::None)
                 };
                 (transition, remove)

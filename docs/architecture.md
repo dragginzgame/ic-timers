@@ -51,6 +51,10 @@ The module hierarchy keeps six responsibilities separate:
    Watchdog awaiting-work state owns its pending command through both dispatch
    and execution. Work acceptance preserves it; leaving that state discards it,
    including when the scheduler retires an unacknowledged attempt.
+   Ordinary completion computes its removal-on-stop decision once from pending
+   unregister and declaration lifetime; every terminal exit uses it. A successful
+   arm retains its declaration. Ordinary cancellation derives immediate removal
+   from execution state and lifetime; running work retains pending authority.
    Ordinary schedule requests share counter, request-metadata and coalescing
    updates. Recurring ensure submits an existing scheduled deadline unchanged;
    it calculates a cadence deadline only for inactive or running declarations.
@@ -71,6 +75,9 @@ The module hierarchy keeps six responsibilities separate:
    than reconstructing authority from a snapshot. Synchronous operations that
    detach handles restore all of them before returning an unexpected registry
    error, retiring the exact claim if restoration cannot recover ownership.
+   One detached-claim finalizer owns registry-error restoration and successful
+   transition application, including retirement after unexpected provider failure.
+   Callback finalization remains separate to preserve Watchdog rollback rules.
    One consuming binding operation installs a raw provider handle or clears it
    on rejection after releasing the registry borrow. Arm and restoration callers
    receive only the typed error; Watchdog dispatch separately clears its installed

@@ -858,22 +858,14 @@ fn finish_detached_claim_transition(
     transition: Result<RegistryTransition, TimerError>,
 ) -> Result<(), TimerError> {
     match transition {
-        Ok(transition) => finish_claim_transition(claim, transition, handles),
+        Ok(transition) => match finish_transition(transition, handles) {
+            result @ (Ok(()) | Err(TimerError::ControlFailure(_))) => result,
+            Err(error) => retire_failed_claim(claim, error),
+        },
         Err(error) => match restore_provider_handles(handles) {
             Ok(()) => Err(error),
             Err(restoration_error) => retire_failed_claim(claim, restoration_error),
         },
-    }
-}
-
-fn finish_claim_transition(
-    claim: &RegistrationClaim,
-    transition: RegistryTransition,
-    handles: ProviderHandles,
-) -> Result<(), TimerError> {
-    match finish_transition(transition, handles) {
-        result @ (Ok(()) | Err(TimerError::ControlFailure(_))) => result,
-        Err(error) => retire_failed_claim(claim, error),
     }
 }
 
