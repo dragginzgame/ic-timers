@@ -108,6 +108,10 @@ The module hierarchy keeps six responsibilities separate:
    Watchdog completion decides removal once after selecting its final state:
    inactive declarations follow their lifetime and pending unregister command,
    while retained or replaced successors keep their declaration.
+   Watchdog cancellation selects the handles to clear in one state match. An
+   immediate stop uses that selection for state replacement, cancellation
+   accounting and provider cleanup; running work keeps its pending command, and
+   inactive cancellation preserves the existing reason. No generation is allocated.
    Ordinary schedule requests share counter, request-metadata and coalescing
    updates. Recurring ensure submits an existing scheduled deadline unchanged;
    it calculates a cadence deadline only for inactive or running declarations.

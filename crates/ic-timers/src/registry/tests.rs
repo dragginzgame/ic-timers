@@ -578,6 +578,21 @@ fn running_watchdog_unregistration_clears_its_committed_successor() {
             .effect(),
         &RegistryEffect::None
     );
+    assert_eq!(
+        registry.cancel(&claim).unwrap().effect(),
+        &RegistryEffect::None,
+        "cancellation must preserve pending unregistration and its successor"
+    );
+    assert_eq!(
+        registry
+            .snapshot(&timer)
+            .unwrap()
+            .observability()
+            .counters()
+            .cancelled(),
+        0,
+        "pending cancellation must not count as an immediate stop"
+    );
     let completed = registry
         .complete_watchdog_work(
             &work,
@@ -2309,7 +2324,11 @@ fn watchdog_cancellation_at_maximum_generation_clears_the_selected_callbacks() {
                 cancelled.effect(),
                 &RegistryEffect::ClearCallbacks {
                     identity: timer.clone(),
-                    handles: CallbacksToClear::wakeup_and_maybe_work(dispatched),
+                    handles: if dispatched {
+                        CallbacksToClear::WakeupAndWork
+                    } else {
+                        CallbacksToClear::Wakeup
+                    },
                 }
             );
             assert_eq!(

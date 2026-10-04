@@ -12,7 +12,7 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Release state
 
-- Workspace package version: `0.11.0`.
+- Workspace package version: `0.11.1`.
 - Cargo owns this version; the release helper updates the single projection above.
   Dated changelog sections and release-note statuses own release state. Read those
   sources to distinguish preparation from a completed release; do not duplicate
@@ -54,7 +54,8 @@ references and validation belong in [release notes](../changelog/README.md),
   awaiting work retain the pair until completion or recovery expires that attempt.
   Awaiting-work snapshots project the shared generation and direct attempt status
   without an attempt wrapper; tokens and handles retain independent
-  delivery stamps. The 0.11.0 observation change awaits deployment qualification.
+  delivery stamps. The 0.11.0 contract and evidence scope are recorded in its
+  [release note](../changelog/0.11.0.md).
 - Private callback tokens carry their registration claim. Context control and
   callback cleanup borrow it without claim reconstruction; running-work and
   provider ownership checks remain distinct. See the
@@ -100,8 +101,8 @@ references and validation belong in [release notes](../changelog/README.md),
   by state, claim and role. Rearming and dispatch still require fresh non-wrapping
   generations.
   Running cancellation remains a pending command applied on normal completion.
-  This semantic hard cut is prepared for the next minor line; its unexecuted
-  boundary fixtures and delivery scope are in the [0.11.0 note](../changelog/0.11.0.md).
+  The 0.11.0 semantic hard cut and its verification scope are recorded in the
+  [release note](../changelog/0.11.0.md).
 - Ordinary directive resolution returns canonical control failures directly.
   Explicit scheduling requests retain schedule errors at their input boundary;
   the registry owns terminal state and completion accounting. See the
@@ -122,8 +123,9 @@ references and validation belong in [release notes](../changelog/README.md),
 - Effect application binds wakeups and Watchdog dispatch in its validated match
   branches; confirmation retains its independent state and generation checks.
   Successor tokens share claim-based construction after authorization. Watchdog
-  cancellation selects cleanup once from its active state; see the
-  [registry command and effect ownership note](../changelog/0.10.19.md).
+  cancellation selects cleanup and immediate accounting together from its active
+  state in the registry command owner; see the
+  [cancellation decision note](../changelog/0.11.1.md).
 - Platform page reads and callback measurements share inert `MemoryPageExtent`
   values. The registry pairs start/end extents without a second representation.
 

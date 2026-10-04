@@ -145,14 +145,6 @@ impl CallbacksToClear {
     pub(crate) const fn includes_work(self) -> bool {
         matches!(self, Self::Work | Self::WakeupAndWork)
     }
-
-    const fn wakeup_and_maybe_work(include_work: bool) -> Self {
-        if include_work {
-            Self::WakeupAndWork
-        } else {
-            Self::Wakeup
-        }
-    }
 }
 
 impl RegistryEffect {
@@ -1011,46 +1003,62 @@ impl TimerRegistry {
         claim: &RegistrationClaim,
     ) -> Result<RegistryTransition, RegistryError> {
         let identity = claim.identity();
-        let (transition, remove) = {
+        let (effect, remove) = {
             let entry = self.entry_mut(claim)?;
             match &mut entry.kind {
                 EntryKind::Ordinary { control, .. } => {
                     let before = control.registration;
                     let remove = !matches!(before, TimerRegistration::Running { .. })
                         && matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
-                    let transition = if let TimerRegistration::Running { pending } =
+                    let effect = if let TimerRegistration::Running { pending } =
                         &mut control.registration
                     {
                         if !matches!(*pending, Some(OrdinaryPending::Unregister)) {
                             *pending = Some(OrdinaryPending::Cancel);
                         }
-                        RegistryTransition::normal(RegistryEffect::None)
+                        RegistryEffect::None
                     } else {
                         let clear_wakeup = matches!(before, TimerRegistration::Scheduled { .. });
                         if clear_wakeup {
                             control.terminate(InactiveReason::Cancelled);
                             entry.observability.counters_mut().record_cancellation();
                         }
-                        RegistryTransition::normal(clear_wakeup_if(identity, clear_wakeup))
+                        clear_wakeup_if(identity, clear_wakeup)
                     };
-                    (transition, remove)
+                    (effect, remove)
                 }
                 EntryKind::Watchdog { control, .. } => {
-                    let cancels_immediately = matches!(
-                        control.state,
-                        WatchdogState::Scheduled { .. }
-                            | WatchdogState::AwaitingWork {
-                                attempt_status: WatchdogAttemptStatus::Dispatched,
-                                ..
+                    let handles = match &mut control.state {
+                        WatchdogState::Inactive { .. } => None,
+                        WatchdogState::Scheduled { .. } => Some(CallbacksToClear::Wakeup),
+                        WatchdogState::AwaitingWork {
+                            attempt_status: WatchdogAttemptStatus::Dispatched,
+                            ..
+                        } => Some(CallbacksToClear::WakeupAndWork),
+                        WatchdogState::AwaitingWork {
+                            attempt_status: WatchdogAttemptStatus::Running,
+                            pending,
+                            ..
+                        } => {
+                            if !matches!(*pending, Some(WatchdogPending::Unregister)) {
+                                *pending = Some(WatchdogPending::Cancel);
                             }
-                    );
-                    let transition = cancel_watchdog(control, identity);
-                    if cancels_immediately {
+                            None
+                        }
+                    };
+                    let effect = handles.map_or(RegistryEffect::None, |handles| {
+                        control.state = WatchdogState::Inactive {
+                            reason: InactiveReason::Cancelled,
+                        };
                         entry.observability.counters_mut().record_cancellation();
-                    }
+                        RegistryEffect::ClearCallbacks {
+                            identity: identity.clone(),
+                            handles,
+                        }
+                    });
                     let stopped = matches!(control.state, WatchdogState::Inactive { .. });
                     (
-                        transition,
+                        effect,
                         stopped && matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped),
                     )
                 }
@@ -1060,7 +1068,7 @@ impl TimerRegistry {
         Ok(remove_after(
             &mut self.entries,
             identity,
-            transition,
+            RegistryTransition::normal(effect),
             remove,
         ))
     }
@@ -1982,39 +1990,6 @@ const fn select_pending_watchdog(
             Some(WatchdogPending::Cancel | WatchdogPending::Ensure) | None,
             WatchdogScheduleRequest::Cadence,
         ) => WatchdogPending::Ensure,
-    }
-}
-
-fn cancel_watchdog(control: &mut WatchdogControl, identity: &TimerIdentity) -> RegistryTransition {
-    match &mut control.state {
-        WatchdogState::Inactive { .. } => RegistryTransition::normal(RegistryEffect::None),
-        WatchdogState::AwaitingWork {
-            attempt_status: WatchdogAttemptStatus::Running,
-            pending,
-            ..
-        } => {
-            if !matches!(pending, Some(WatchdogPending::Unregister)) {
-                *pending = Some(WatchdogPending::Cancel);
-            }
-            RegistryTransition::normal(RegistryEffect::None)
-        }
-        WatchdogState::Scheduled { .. }
-        | WatchdogState::AwaitingWork {
-            attempt_status: WatchdogAttemptStatus::Dispatched,
-            ..
-        } => {
-            let cleanup = RegistryEffect::ClearCallbacks {
-                identity: identity.clone(),
-                handles: CallbacksToClear::wakeup_and_maybe_work(matches!(
-                    control.state,
-                    WatchdogState::AwaitingWork { .. }
-                )),
-            };
-            control.state = WatchdogState::Inactive {
-                reason: InactiveReason::Cancelled,
-            };
-            RegistryTransition::normal(cleanup)
-        }
     }
 }
 
