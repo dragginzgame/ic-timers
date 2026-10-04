@@ -2425,14 +2425,11 @@ fn watchdog_exact_pending_order_preserves_terminal_and_immediate_precedence() {
             .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(100)))
             .unwrap();
         match scenario {
-            0 | 7 => {
+            0 | 4 | 7 => {
                 registry.cancel(&claim).unwrap();
             }
             1 | 8 => {
                 registry.unregister(&claim).unwrap();
-                registry
-                    .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(200)))
-                    .unwrap();
             }
             2 => {
                 registry.ensure_watchdog_immediately(&claim, 10).unwrap();
@@ -2440,18 +2437,17 @@ fn watchdog_exact_pending_order_preserves_terminal_and_immediate_precedence() {
             3 => {
                 registry.ensure_recurring(&claim, 10).unwrap();
             }
-            4 => {
-                registry.cancel(&claim).unwrap();
-                registry
-                    .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(200)))
-                    .unwrap();
-            }
             5 => {
                 registry
                     .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(15)))
                     .unwrap();
             }
             _ => {}
+        }
+        if matches!(scenario, 1 | 4 | 8) {
+            registry
+                .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(200)))
+                .unwrap();
         }
         let completion = if scenario >= 6 {
             TimerCompletion::invariant_failure(0)

@@ -21,6 +21,8 @@ All notable changes to this project are recorded here.
 
 - Extend ordinary lifecycle fixtures for unregistration followed by control
   requests and for preservation of schedule metadata at equal deadlines.
+- Share repeated follow-up reconciliation setup in the Watchdog precedence
+  fixture, retaining all nine cases without a function-size lint exception.
 - Record the cleanup and pending verification in the
   [0.10.19 release note](docs/changelog/0.10.19.md).
 
