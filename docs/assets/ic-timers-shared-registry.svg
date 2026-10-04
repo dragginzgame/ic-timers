@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="870" viewBox="0 0 1440 870" role="img" aria-labelledby="title desc">
+<title id="title">Why wrap ic-cdk-timers? One shared IC Timers registry</title>
+<desc id="desc">On the left, cleanup jobs, queue workers and maintenance each manage separate timers through ic-cdk-timers. On the right, those same components use one shared IC Timers registry, which connects to ic-cdk-timers and provides one shared status view.</desc>
+<defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#71859A"/></marker>
+  <marker id="cyan-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#009DBD"/></marker>
+  <marker id="violet-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#7354C6"/></marker>
+  <g id="clock" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle r="12"/><path d="M0-7V0L5 4"/></g>
+</defs>
+<rect width="1440" height="870" fill="#F7FAFD"/>
+<g font-family="Inter, Arial, sans-serif" fill="#102B50">
+  <text x="56" y="57" font-size="14" font-weight="700" letter-spacing="2" fill="#53718F">IC TIMERS · SHARED REGISTRY</text>
+  <text x="56" y="107" font-size="34" font-weight="700">Why wrap ic-cdk-timers?</text>
+  <text x="56" y="143" font-size="19" fill="#53718F">Bring timer management and status into one shared registry.</text>
+  <rect x="56" y="182" width="650" height="628" rx="20" fill="white" stroke="#D7E3EF" stroke-width="1.5"/>
+  <rect x="730" y="182" width="654" height="628" rx="20" fill="white" stroke="#D7E3EF" stroke-width="1.5"/>
+  <text x="82" y="229" font-size="24" font-weight="700">Separate timer management</text>
+  <text x="82" y="261" font-size="17" fill="#53718F">Each component manages its own timers.</text>
+  <text x="756" y="229" font-size="24" font-weight="700">One shared IC Timers registry</text>
+  <text x="756" y="261" font-size="17" fill="#53718F">All components use the same registry.</text>
+
+  <g fill="#EDF3F9" stroke="#B8CBDF" stroke-width="1.5">
+    <rect x="82" y="301" width="264" height="68" rx="12"/>
+    <rect x="82" y="419" width="264" height="68" rx="12"/>
+    <rect x="82" y="537" width="264" height="68" rx="12"/>
+    <rect x="756" y="301" width="250" height="68" rx="12"/>
+    <rect x="756" y="419" width="250" height="68" rx="12"/>
+    <rect x="756" y="537" width="250" height="68" rx="12"/>
+  </g>
+  <g font-size="21" font-weight="600">
+    <text x="102" y="343">Cleanup jobs</text><text x="102" y="461">Queue workers</text><text x="102" y="579">Maintenance</text>
+    <text x="776" y="343">Cleanup jobs</text><text x="776" y="461">Queue workers</text><text x="776" y="579">Maintenance</text>
+  </g>
+  <g fill="#F4F7FA" stroke="#A9BED3" stroke-width="1.5">
+    <rect x="420" y="301" width="260" height="68" rx="12"/>
+    <rect x="420" y="419" width="260" height="68" rx="12"/>
+    <rect x="420" y="537" width="260" height="68" rx="12"/>
+  </g>
+  <g color="#53718F"><use href="#clock" x="449" y="335"/><use href="#clock" x="449" y="453"/><use href="#clock" x="449" y="571"/></g>
+  <g font-size="19" font-weight="600">
+    <text x="476" y="342">Cleanup timers</text><text x="476" y="460">Worker timers</text><text x="476" y="578">Maintenance timers</text>
+  </g>
+  <path d="M358 335H404M358 453H404M358 571H404" fill="none" stroke="#71859A" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <path d="M550 371V397H694V656M550 489V515H694M550 607V633H694" fill="none" stroke="#71859A" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M694 656H566V671" fill="none" stroke="#71859A" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <rect x="420" y="687" width="260" height="66" rx="12" fill="#EDF3F9" stroke="#B8CBDF" stroke-width="1.5"/>
+  <text x="550" y="728" font-size="20" text-anchor="middle" font-family="Consolas, monospace">ic-cdk-timers</text>
+
+  <path d="M1018 335H1044V571H1018M1018 453H1044" fill="none" stroke="#009DBD" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M1044 453H1061" fill="none" stroke="#009DBD" stroke-width="2.5" marker-end="url(#cyan-arrow)"/>
+  <rect x="1078" y="369" width="280" height="168" rx="18" fill="#102B50"/>
+  <use href="#clock" x="1218" y="405" color="#5CD7EA"/>
+  <text x="1218" y="453" font-size="25" font-weight="700" text-anchor="middle" fill="white">IC Timers</text>
+  <text x="1218" y="487" font-size="22" font-weight="600" text-anchor="middle" fill="#5CD7EA">Shared registry</text>
+  <path d="M1218 539V575" fill="none" stroke="#009DBD" stroke-width="2.5" marker-end="url(#cyan-arrow)"/>
+  <rect x="1078" y="591" width="280" height="62" rx="12" fill="#F0FBFD" stroke="#009DBD" stroke-width="1.5"/>
+  <text x="1218" y="630" font-size="20" text-anchor="middle" font-family="Consolas, monospace">ic-cdk-timers</text>
+  <path d="M1358 453H1370V688H1218V700" fill="none" stroke="#7354C6" stroke-width="2.5" stroke-linejoin="round" marker-end="url(#violet-arrow)"/>
+  <rect x="1078" y="716" width="280" height="62" rx="12" fill="#F5F1FD" stroke="#7354C6" stroke-width="1.5"/>
+  <text x="1218" y="754" font-size="20" font-weight="600" text-anchor="middle">One shared status view</text>
+</g>
+</svg>

@@ -13,6 +13,8 @@ reconstruction, and one coherent operational snapshot.
 The provider is a private implementation dependency. It is kept behind the
 crate's `platform` module and is never re-exported.
 
+![Application tasks flow through IC Timers to the Internet Computer timer system and one shared status view](docs/assets/ic-timers-how-it-helps.svg)
+
 ## 🌟 At a glance
 
 | | Current contract |
@@ -25,11 +27,15 @@ crate's `platform` module and is never re-exported.
 | 💾 Persistence | None; consumers retain durable application authority |
 | 🔎 Observation | Bounded snapshots, counters, instructions, and memory-page extents |
 
+![Application needs matched to IC Timers scheduling and observation capabilities](docs/assets/ic-timers-application-needs.svg)
+
 ## 💡 Why wrap `ic-cdk-timers`?
 
 `ic-cdk-timers` is the right low-level mechanism for scheduling a simple
 callback. The operational problem changes when a framework, a database, and
 application code all schedule work independently.
+
+![Separate component timers compared with one shared IC Timers registry and status view](docs/assets/ic-timers-shared-registry.svg)
 
 | Concern | Scattered direct timers | `ic-timers` |
 | --- | --- | --- |
@@ -57,11 +63,15 @@ above the CDK provider without creating another provider.
 
 ## 🧩 Choose the policy that matches the failure boundary
 
+![Once, After completion, and Watchdog scheduling modes explained in plain language](docs/assets/ic-timers-modes.svg)
+
 | Policy | Consumer work | Successor timing | Trap or exhaustion behavior |
 | --- | --- | --- | --- |
 | `Once` | Asynchronous | Only when explicitly requested | No automatic recovery |
 | `AfterCompletion` | Asynchronous | Armed after normal work completion | No automatic recovery |
 | `Watchdog` | Synchronous and bounded | Committed by a scheduler message before a separate work message | The committed successor survives failed consumer work |
+
+![Timelines showing when Once, AfterCompletion, and Watchdog schedule their work and successor](docs/assets/ic-timers-policy-timelines.svg)
 
 `Watchdog` deliberately uses two messages. The small scheduler callback
 validates its generation, arms the next cadence successor, queues immediate
@@ -270,6 +280,8 @@ demand requires a timer, call `ensure_scheduled()` or
 observation as a check-then-arm guard.
 
 ## 🔄 Lifecycle and shared-registry rules
+
+![Upgrade lifecycle from durable application state through timer reconstruction to resumed background work](docs/assets/ic-timers-upgrade-lifecycle.svg)
 
 1. The canister's existing lifecycle owner calls `initialize_runtime()`.
 2. Frameworks and applications reconcile their retained declarations from
