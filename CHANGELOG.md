@@ -4,6 +4,22 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.18]
+
+### Changed
+
+- Borrow claim and callback identities during registry cancellation, completion,
+  unregistration and provider cleanup. Remove temporary owned copies while
+  retaining independent identities in queued tokens, detached handles, effects
+  and snapshots.
+- Create the ordinary cleanup effect's owned identity only when a wakeup needs
+  clearing; inactive cancellation and no-effect terminal paths keep it borrowed.
+
+### Development
+
+- Record the identity ownership cleanup and focused verification subjects in
+  the [0.10.18 release note](docs/changelog/0.10.18.md).
+
 ## [0.10.17] - 2026-10-04
 
 ### Changed

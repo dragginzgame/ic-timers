@@ -919,7 +919,7 @@ impl TimerRegistry {
         let arm = match arm {
             Ok(arm) => arm,
             Err(error) => {
-                let transition = terminal_ordinary(entry, claim.identity.clone(), error);
+                let transition = terminal_ordinary(entry, claim.identity(), error);
                 return Ok(self.remove_transient_on_failure(claim.identity(), transition));
             }
         };
@@ -1039,15 +1039,15 @@ impl TimerRegistry {
         &mut self,
         claim: &RegistrationClaim,
     ) -> Result<RegistryTransition, RegistryError> {
-        let identity = claim.identity.clone();
+        let identity = claim.identity();
         let (transition, remove) = {
             let entry = self.entry_mut(claim)?;
             match &mut entry.kind {
                 EntryKind::Ordinary { control, .. } => {
                     let before = control.registration;
                     if let Err(error) = control.cancel() {
-                        let transition = terminal_ordinary(entry, identity.clone(), error);
-                        return Ok(self.remove_transient_on_failure(&identity, transition));
+                        let transition = terminal_ordinary(entry, identity, error);
+                        return Ok(self.remove_transient_on_failure(identity, transition));
                     }
                     let remove = !matches!(before, TimerRegistration::Running { .. })
                         && matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
@@ -1063,7 +1063,7 @@ impl TimerRegistry {
                         if clear_wakeup {
                             entry.observability.counters_mut().record_cancellation();
                         }
-                        RegistryTransition::normal(clear_wakeup_if(identity.clone(), clear_wakeup))
+                        RegistryTransition::normal(clear_wakeup_if(identity, clear_wakeup))
                     };
                     (transition, remove)
                 }
@@ -1076,7 +1076,7 @@ impl TimerRegistry {
                                 ..
                             }
                     );
-                    let transition = cancel_watchdog(control, &identity);
+                    let transition = cancel_watchdog(control, identity);
                     if cancels_immediately && transition.failure().is_none() {
                         entry.observability.counters_mut().record_cancellation();
                     }
@@ -1091,7 +1091,7 @@ impl TimerRegistry {
 
         Ok(remove_after(
             &mut self.entries,
-            &identity,
+            identity,
             transition,
             remove,
         ))
@@ -1106,7 +1106,7 @@ impl TimerRegistry {
         &mut self,
         claim: &RegistrationClaim,
     ) -> Result<RegistryTransition, RegistryError> {
-        let identity = claim.identity.clone();
+        let identity = claim.identity();
         let entry = self.entry_mut(claim)?;
         match &mut entry.kind {
             EntryKind::Ordinary {
@@ -1138,7 +1138,7 @@ impl TimerRegistry {
             }
             EntryKind::Ordinary { .. } | EntryKind::Watchdog { .. } => {
                 let transition = self.cancel(claim)?;
-                self.entries.remove(&identity);
+                self.entries.remove(identity);
                 Ok(transition)
             }
         }
@@ -1171,7 +1171,7 @@ impl TimerRegistry {
         now_ns: u64,
         result: TimerRunResult,
     ) -> Result<RegistryTransition, RegistryError> {
-        let identity = token.identity().clone();
+        let identity = token.identity();
         let (transition, remove) = {
             let entry = self.running_work_entry_mut(token)?;
             let EntryKind::Ordinary {
@@ -1209,7 +1209,7 @@ impl TimerRegistry {
                             stop_ordinary_completion(entry, completion, now_ns, Some(failure));
                         return Ok(remove_after(
                             &mut self.entries,
-                            &identity,
+                            identity,
                             transition,
                             remove_on_stop,
                         ));
@@ -1225,7 +1225,7 @@ impl TimerRegistry {
                         stop_ordinary_completion(entry, completion, now_ns, Some(failure));
                     return Ok(remove_after(
                         &mut self.entries,
-                        &identity,
+                        identity,
                         transition,
                         remove_on_stop,
                     ));
@@ -1263,7 +1263,7 @@ impl TimerRegistry {
 
         Ok(remove_after(
             &mut self.entries,
-            &identity,
+            identity,
             transition,
             remove,
         ))
@@ -1395,7 +1395,7 @@ impl TimerRegistry {
         now_ns: u64,
         result: WatchdogRunResult,
     ) -> Result<RegistryTransition, RegistryError> {
-        let identity = token.identity().clone();
+        let identity = token.identity();
         let (transition, remove) = {
             let entry = self.running_work_entry_mut(token)?;
             let EntryKind::Watchdog {
@@ -1500,7 +1500,7 @@ impl TimerRegistry {
 
         Ok(remove_after(
             &mut self.entries,
-            &identity,
+            identity,
             transition,
             remove,
         ))
@@ -1603,7 +1603,7 @@ impl TimerRegistry {
         claim: &RegistrationClaim,
         failure: TimerControlFailure,
     ) -> Result<ProviderHandles, RegistryError> {
-        let identity = claim.identity.clone();
+        let identity = claim.identity();
         let (handles, remove) = {
             let entry = self.entry_mut(claim)?;
             match &mut entry.kind {
@@ -1616,14 +1616,14 @@ impl TimerRegistry {
                     };
                 }
             }
-            let handles = entry.take_provider_handles(&identity);
+            let handles = entry.take_provider_handles(identity);
             (
                 handles,
                 matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped),
             )
         };
         if remove {
-            self.entries.remove(&identity);
+            self.entries.remove(identity);
         }
         Ok(handles)
     }
@@ -1729,9 +1729,9 @@ impl TimerRegistry {
         &mut self,
         claim: &RegistrationClaim,
     ) -> Result<ProviderHandles, RegistryError> {
-        let identity = claim.identity.clone();
+        let identity = claim.identity();
         let entry = self.entry_mut(claim)?;
-        Ok(entry.take_provider_handles(&identity))
+        Ok(entry.take_provider_handles(identity))
     }
 
     pub(crate) fn consume_provider_handle(&mut self, token: &CallbackToken) {
@@ -1927,9 +1927,9 @@ const fn clear_callbacks(identity: TimerIdentity, handles: CallbacksToClear) -> 
     RegistryEffect::ClearCallbacks { identity, handles }
 }
 
-fn clear_wakeup_if(identity: TimerIdentity, clear_wakeup: bool) -> RegistryEffect {
+fn clear_wakeup_if(identity: &TimerIdentity, clear_wakeup: bool) -> RegistryEffect {
     if clear_wakeup {
-        clear_callbacks(identity, CallbacksToClear::Wakeup)
+        clear_callbacks(identity.clone(), CallbacksToClear::Wakeup)
     } else {
         RegistryEffect::None
     }
@@ -1937,7 +1937,7 @@ fn clear_wakeup_if(identity: TimerIdentity, clear_wakeup: bool) -> RegistryEffec
 
 fn terminal_ordinary(
     entry: &mut Entry,
-    identity: TimerIdentity,
+    identity: &TimerIdentity,
     failure: TimerControlFailure,
 ) -> RegistryTransition {
     let EntryKind::Ordinary { control, .. } = &mut entry.kind else {

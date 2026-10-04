@@ -54,6 +54,9 @@ references and validation belong in [release notes](../changelog/README.md),
   callback cleanup borrow it without claim reconstruction; running-work and
   provider ownership checks remain distinct. See the
   [callback claim ownership note](../changelog/0.10.14.md).
+- Registry transitions borrow identity from their claim or token for local
+  lookup and removal. Queued effects, snapshots and detached capabilities retain
+  owned identities; see the [identity borrowing note](../changelog/0.10.18.md).
 - Classified completion counters own completed-work accounting. The public total
   projects their saturating sum; starts and unacknowledged attempts remain
   separate events. See the [completion counter note](../changelog/0.10.15.md).
