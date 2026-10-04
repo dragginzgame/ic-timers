@@ -59,7 +59,10 @@ All notable changes to this project are recorded here.
 
 - Add plain-English introductions to the safety, architecture, observability,
   and release guides, and reorganize the documentation index by audience while
-  preserving the detailed technical contracts and historical records.
+  preserving the detailed technical contracts and historical records. Add
+  graphics for module relationships, safety responsibilities, and Watchdog
+  failure behavior, and use the shared IC Timers banner across all reader-facing
+  documentation.
 
 ## [0.10.23] - 2026-10-04
 

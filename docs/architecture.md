@@ -1,3 +1,5 @@
+![IC Timers — Internet Computer helper library](assets/ic-timers-readme-header.svg)
+
 # Architecture
 
 This document is a technical reference for developers working on or
@@ -28,6 +30,8 @@ module is private. In particular, neither `platform`, `registry`, `schedule`,
 nor `snapshot` is a consumer import path.
 
 The module hierarchy keeps six responsibilities separate:
+
+![The schedule, snapshot, and control modules connect to the registry; the runtime coordinates callbacks and effects through the private platform boundary](assets/ic-timers-architecture-modules.svg)
 
 1. `schedule` owns validated cadence, requested schedules, post-run
    directives, and checked nanosecond/deadline conversion. Explicit requests

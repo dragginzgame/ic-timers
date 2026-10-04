@@ -1,3 +1,5 @@
+![IC Timers — Internet Computer helper library](../assets/ic-timers-readme-header.svg)
+
 # Code-hygiene audit — 2026-08-13
 
 This report began at the 0.2 value-model boundary. The 0.3 runtime closeout

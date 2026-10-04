@@ -1,3 +1,5 @@
+![IC Timers — Internet Computer helper library](assets/ic-timers-readme-header.svg)
+
 # Releasing
 
 This guide is for maintainers preparing and publishing a new IC Timers

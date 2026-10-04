@@ -1,3 +1,5 @@
+![IC Timers — Internet Computer helper library](../assets/ic-timers-readme-header.svg)
+
 # Immediate progress-sensitive Watchdog continuation
 
 Status: released in `0.7.0`.
