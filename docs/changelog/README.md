@@ -59,3 +59,4 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.11.0 cancellation and Watchdog generation ownership](0.11.0.md)
 - [0.11.1 cancellation decision ownership](0.11.1.md)
 - [0.11.2 callback acceptance and cancellation ownership](0.11.2.md)
+- [0.11.3 completion and control simplification](0.11.3.md)

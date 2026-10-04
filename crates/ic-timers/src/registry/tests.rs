@@ -1431,7 +1431,7 @@ fn watchdog_requests_preserve_dispatch_authority_until_completion_replaces_the_p
         if running {
             assert!(registry.begin_watchdog_work(&work).is_some());
         }
-        let before = registry.snapshot(&timer).unwrap().state();
+        let before = registry.snapshot(&timer).unwrap();
         assert_eq!(
             registry.ensure_recurring(&claim, 11).unwrap().effect(),
             &RegistryEffect::None
@@ -1450,7 +1450,9 @@ fn watchdog_requests_preserve_dispatch_authority_until_completion_replaces_the_p
                 .effect(),
             &RegistryEffect::None
         );
-        assert_eq!(registry.snapshot(&timer).unwrap().state(), before);
+        let pending = registry.snapshot(&timer).unwrap();
+        assert_eq!(pending.state(), before.state());
+        assert_eq!(pending.scheduling_mode(), before.scheduling_mode());
         assert!(registry.begin_watchdog_work(&successor).is_none());
         assert_eq!(
             registry.begin_watchdog_scheduler(&work, 15).effect(),
@@ -2266,6 +2268,10 @@ fn watchdog_cancellation_at_maximum_generation_clears_the_selected_callbacks() {
 }
 
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "One terminal-failure matrix checks both ordinary policies and lifetimes."
+)]
 fn ordinary_terminal_failures_respect_declaration_lifetime() {
     for lifetime in [
         DeclarationLifetime::Retained,
@@ -2277,7 +2283,14 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
                 cadence: cadence(1),
             },
         ] {
-            for subject in ["initial", "replacement", "completion"] {
+            for subject in [
+                "initial",
+                "replacement",
+                "completion",
+                "completion-delay",
+                "completion-deadline",
+            ] {
+                let completing = subject.starts_with("completion");
                 let mut registry = registry();
                 let timer = identity(subject);
                 let claim = match policy {
@@ -2304,20 +2317,34 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
                         .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(10)))
                         .unwrap());
                     assert_eq!(token.callback_generation(), u64::MAX);
-                    if subject == "completion" {
+                    if completing {
                         assert!(registry.begin_ordinary(&token).is_some());
                     }
                     Some(token)
                 };
-                let transition = if subject == "completion" {
+                let (now_ns, directive, failure) = match subject {
+                    "completion-delay" => (
+                        10,
+                        TimerDirective::RetryAfter(Duration::MAX),
+                        TimerControlFailure::DelayOutOfRange,
+                    ),
+                    "completion-deadline" => (
+                        u64::MAX,
+                        TimerDirective::RetryAfter(Duration::from_nanos(1)),
+                        TimerControlFailure::DeadlineOverflow,
+                    ),
+                    _ => (
+                        10,
+                        TimerDirective::ContinueImmediately,
+                        TimerControlFailure::GenerationExhausted,
+                    ),
+                };
+                let transition = if completing {
                     registry
                         .complete_ordinary(
                             token.as_ref().expect("completion has a running token"),
-                            10,
-                            TimerRunResult::new(
-                                TimerCompletion::success(3),
-                                TimerDirective::ContinueImmediately,
-                            ),
+                            now_ns,
+                            TimerRunResult::new(TimerCompletion::success(3), directive),
                         )
                         .unwrap()
                 } else {
@@ -2325,7 +2352,6 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
                         .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(1)))
                         .unwrap()
                 };
-                let failure = TimerControlFailure::GenerationExhausted;
                 assert_eq!(transition.failure(), Some(failure));
                 if lifetime == DeclarationLifetime::Retained {
                     let snapshot = registry.snapshot(&timer).unwrap();
@@ -2335,7 +2361,7 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
                             reason: InactiveReason::ControlFailure(failure),
                         }
                     );
-                    if subject == "completion" {
+                    if completing {
                         let counters = snapshot.observability().counters();
                         assert_eq!(counters.work_completed(), 1);
                         assert_eq!(counters.succeeded(), 0);
@@ -2347,6 +2373,10 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
                             Some(TimerLastOutcome::Completed(
                                 TimerCompletionOutcome::InvariantFailure
                             ))
+                        );
+                        assert_eq!(
+                            snapshot.latest_directive(),
+                            Some(TimerDirectiveSnapshot::Stop)
                         );
                     }
                 } else {
@@ -2459,6 +2489,10 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
             }
             if lifetime == DeclarationLifetime::Retained {
                 let snapshot = registry.snapshot(&timer).unwrap();
+                if subject == "replacement" {
+                    assert_eq!(snapshot.scheduling_mode(), TimerSchedulingMode::Watchdog);
+                    assert_eq!(snapshot.latest_requested_delay_ns(), Some(0));
+                }
                 let counters = snapshot.observability().counters();
                 assert_eq!(counters.cancelled(), 0);
                 assert_eq!(
@@ -2738,10 +2772,38 @@ fn watchdog_exact_replacement_rejects_stale_delivery_and_generation_exhaustion()
     control.generation = u64::MAX - 3;
     let (old, _) = arm(registry.ensure_recurring(&claim, 10).unwrap());
     let (new, kind) = arm(registry
-        .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(100)))
+        .reconcile_watchdog_schedule(
+            &claim,
+            10,
+            Some(TimerSchedule::After(Duration::from_nanos(90))),
+        )
         .unwrap());
     let deadline = scheduled_deadline(&registry, &new);
     assert_eq!((deadline, kind), (100, WakeupArm::Replacement));
+    let armed = registry.snapshot(&timer).unwrap();
+    assert_eq!(armed.scheduling_mode(), TimerSchedulingMode::Once);
+    assert_eq!(armed.latest_requested_delay_ns(), Some(90));
+    assert_eq!(
+        registry
+            .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(100)))
+            .unwrap()
+            .effect(),
+        &RegistryEffect::None
+    );
+    let exact = registry.snapshot(&timer).unwrap();
+    assert_eq!(exact.scheduling_mode(), TimerSchedulingMode::Once);
+    assert_eq!(exact.latest_requested_delay_ns(), None);
+    assert_eq!(
+        registry
+            .ensure_recurring(&claim, u64::MAX)
+            .unwrap()
+            .effect(),
+        &RegistryEffect::None
+    );
+    let coalesced = registry.snapshot(&timer).unwrap();
+    assert_eq!(coalesced.state(), armed.state());
+    assert_eq!(coalesced.scheduling_mode(), TimerSchedulingMode::Once);
+    assert_eq!(coalesced.latest_requested_delay_ns(), Some(5));
     assert_eq!(
         registry.begin_watchdog_scheduler(&old, 15).into_effect(),
         RegistryEffect::None

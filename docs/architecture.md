@@ -64,6 +64,10 @@ The module hierarchy keeps six responsibilities separate:
    explicit scheduling requests retain `ScheduleError` at their input boundary.
    The schedule owner classifies invalid successor proposals, while the registry
    owns terminal state and completion accounting.
+   Ordinary completion resolves the effective directive and validates its inert
+   projection before checking successor allocation. Resolution and allocation
+   failures share one terminal finalization branch and the common declaration
+   removal exit; explicit consumer invariant failure still stops directly.
    Cancellation in the registry stops scheduled state without allocating a
    generation and queues a command for running work. Stopping with a reason
    discards the running command through state replacement.
@@ -116,6 +120,9 @@ The module hierarchy keeps six responsibilities separate:
    Ordinary schedule requests share counter, request-metadata and coalescing
    updates. Recurring ensure submits an existing scheduled deadline unchanged;
    it calculates a cadence deadline only for inactive or running declarations.
+   Watchdog requests commit scheduling mode once after a successful initial or
+   replacement arm; coalesced, pending and failed arms preserve it while recording
+   requested delay. A cadence deadline is calculated only for an inactive Watchdog.
    Owned provider roles follow entry policy and handle slot rather than a copied
    field. Installation and consumption reject policy/role mismatches before using
    a slot; detached handles retain complete tokens for restoration and cleanup.
@@ -127,8 +134,9 @@ The module hierarchy keeps six responsibilities separate:
    callbacks for registry storage, exposes registration claims, applies
    provider effects, and drives live `Once`/`AfterCompletion` dispatch and the
    two-role watchdog protocol. Its three policy-specific delegated work
-   contexts wrap one private mechanism and are valid only for the exact
-   running callback token.
+   contexts store their exact private callback token directly. Their control
+   methods use the shared claim-transition boundary, which validates running-work
+   authority before handle detachment and the registry operation.
    Each private token contains its registration claim, callback generation and
    role. Context control and callback cleanup borrow that claim instead of
    reconstructing it. Owned delivery tokens remain cloneable; registration

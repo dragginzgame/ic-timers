@@ -4,6 +4,31 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.11.3]
+
+### Changed
+
+- Consolidate ordinary completion's directive and generation failures into one
+  terminal finalization branch and one declaration-removal exit. Preserve command
+  precedence, validation order, typed failures and completion accounting.
+- Give Watchdog initial and replacement requests one scheduling-mode update after
+  successful arming. Preserve observations for coalesced, pending and failed
+  requests, and calculate cadence deadlines only when required.
+- Remove the private callback-context forwarding wrapper. Policy-specific public
+  contexts carry their exact work token directly and use the existing shared
+  authorization and provider-transition path.
+
+### Development
+
+- Extend the ordinary terminal-failure matrix across both policies and lifetimes
+  to cover oversized retry delays and deadline overflow at exhausted generations.
+  Check that retained failures record a stopped directive and invariant completion.
+- Extend existing Watchdog fixtures to check mode retention for equal deadlines,
+  pending commands and exhausted replacements, including cadence coalescing at
+  maximum time without unnecessary deadline calculation.
+- Record scope and pending verification in the
+  [0.11.3 release note](docs/changelog/0.11.3.md).
+
 ## [0.11.2] - 2026-10-04
 
 ### Changed

@@ -43,6 +43,9 @@ references and validation belong in [release notes](../changelog/README.md),
   exact work token; retained claims own longer-lived control. Claims and generations
   do not wrap. Consumer durable authority reconstructs volatile retained declarations
   synchronously before downstream hooks; shared-registry adoption is atomic.
+  Policy-specific contexts store their token directly and use the shared
+  claim-transition validation boundary before provider-handle detachment; see the
+  [control simplification note](../changelog/0.11.3.md).
 - Ordinary inactive state owns its reason; running state owns its pending command.
   Watchdog inactive state owns its reason; awaiting-work state owns its pending
   command through dispatch and execution. Leaving either running or awaiting-work
@@ -106,8 +109,14 @@ references and validation belong in [release notes](../changelog/README.md),
   [release note](../changelog/0.11.0.md).
 - Ordinary directive resolution returns canonical control failures directly.
   Explicit scheduling requests retain schedule errors at their input boundary;
-  the registry owns terminal state and completion accounting. See the
-  [directive failure ownership note](../changelog/0.10.13.md).
+  the registry owns terminal state and completion accounting. Directive and
+  generation failures share one completion finalization branch and removal exit,
+  preserving validation before allocation. See the
+  [completion failure ownership note](../changelog/0.11.3.md).
+- Watchdog initial and replacement requests share one scheduling-mode update after
+  successful arming. Coalesced, pending and failed requests preserve it; requested
+  delays still record accepted demand, and cadence deadlines are checked only for
+  inactive control. See the [request observation note](../changelog/0.11.3.md).
 - Ordinary dispatch shares completion finalization for callback results and
   callback-borrow failures. Work measurements are recorded only after executed
   work; see the [ordinary callback finalization note](../changelog/0.10.9.md).
