@@ -4,6 +4,22 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.11.1]
+
+### Changed
+
+- Consolidate Watchdog cancellation state selection, handle cleanup and immediate
+  cancellation accounting in the registry command owner. Remove the separate
+  cancellation helper and boolean cleanup selector while preserving running
+  commands, generation history and declaration lifetimes.
+
+### Development
+
+- Extend running Watchdog unregistration coverage to check that a later
+  cancellation preserves removal and does not count as an immediate stop.
+- Record scope and pending verification in the
+  [0.11.1 release note](docs/changelog/0.11.1.md).
+
 ## [0.11.0] - 2026-10-04
 
 ### Changed
