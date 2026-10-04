@@ -1766,13 +1766,21 @@ fn watchdog_terminal_cancellation_makes_queued_callbacks_stale() {
     let claim = registry
         .register_watchdog(timer.clone(), cadence(5), DeclarationLifetime::Retained)
         .expect("claim should succeed");
-    assert_eq!(
-        registry.reconcile_ordinary(&claim, 0, None),
-        Err(RegistryError::PolicyMismatch { actual: "watchdog" })
-    );
     let (scheduler, _) = arm(registry
         .ensure_recurring(&claim, 0)
         .expect("ensure should succeed"));
+    let before = registry.inventory();
+    for schedule in [
+        None,
+        Some(TimerSchedule::At(20)),
+        Some(TimerSchedule::After(Duration::MAX)),
+    ] {
+        assert_eq!(
+            registry.reconcile_ordinary(&claim, 0, schedule),
+            Err(RegistryError::PolicyMismatch { actual: "watchdog" })
+        );
+        assert_eq!(registry.inventory(), before);
+    }
     let (successor, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 10));
     let cancelled = registry.cancel(&claim).expect("cancel should succeed");
     assert_eq!(
@@ -1971,58 +1979,64 @@ fn watchdog_checked_generation_exhaustion_is_terminal_and_atomic() {
         })
     );
 
-    let attempt_timer = identity("watchdog-attempt-overflow");
-    let attempt_claim = registry
-        .register_watchdog(
-            attempt_timer.clone(),
-            cadence(1),
-            DeclarationLifetime::Retained,
-        )
-        .expect("attempt-overflow claim should succeed");
-    {
+    for (name, now_ns) in [
+        ("watchdog-attempt-overflow", 1),
+        ("watchdog-combined-overflow", u64::MAX),
+    ] {
+        let attempt_timer = identity(name);
+        let attempt_claim = registry
+            .register_watchdog(
+                attempt_timer.clone(),
+                cadence(1),
+                DeclarationLifetime::Retained,
+            )
+            .expect("attempt-overflow claim should succeed");
+        {
+            let entry = registry
+                .entries
+                .get_mut(&attempt_timer)
+                .expect("attempt-overflow entry should exist");
+            let EntryKind::Watchdog { control, .. } = &mut entry.kind else {
+                panic!("fixture should be watchdog control");
+            };
+            control.attempt_generation = u64::MAX;
+        }
+        let initial = registry
+            .ensure_recurring(&attempt_claim, 0)
+            .expect("initial attempt-overflow ensure should succeed");
+        let (scheduler, _) = arm(initial);
+
+        let transition = registry.begin_watchdog_scheduler(&scheduler, now_ns);
+        assert_eq!(
+            transition.failure(),
+            Some(TimerControlFailure::GenerationExhausted)
+        );
+        assert!(matches!(
+            transition.effect(),
+            RegistryEffect::ClearCallbacks {
+                handles: CallbacksToClear::Work,
+                ..
+            }
+        ));
         let entry = registry
             .entries
-            .get_mut(&attempt_timer)
-            .expect("attempt-overflow entry should exist");
-        let EntryKind::Watchdog { control, .. } = &mut entry.kind else {
-            panic!("fixture should be watchdog control");
+            .get(&attempt_timer)
+            .expect("retained attempt-overflow entry should remain");
+        let EntryKind::Watchdog { control, .. } = &entry.kind else {
+            panic!("fixture should remain watchdog control");
         };
-        control.attempt_generation = u64::MAX;
+        assert_eq!(
+            control.scheduler_generation, 1,
+            "paired generation allocation must be atomic"
+        );
+        assert_eq!(control.attempt_generation, u64::MAX);
+        assert_eq!(
+            registry.snapshot(&attempt_timer).unwrap().state(),
+            TimerRuntimeStateSnapshot::Inactive {
+                reason: InactiveReason::ControlFailure(TimerControlFailure::GenerationExhausted),
+            }
+        );
     }
-    let initial = registry
-        .ensure_recurring(&attempt_claim, 0)
-        .expect("initial attempt-overflow ensure should succeed");
-    let (scheduler, _) = arm(initial);
-
-    let transition = registry.begin_watchdog_scheduler(&scheduler, 1);
-    assert_eq!(
-        transition.failure(),
-        Some(TimerControlFailure::GenerationExhausted)
-    );
-    assert!(matches!(
-        transition.effect(),
-        RegistryEffect::ClearCallbacks {
-            handles: CallbacksToClear::Work,
-            ..
-        }
-    ));
-    let entry = registry
-        .entries
-        .get(&attempt_timer)
-        .expect("retained attempt-overflow entry should remain");
-    let EntryKind::Watchdog { control, .. } = &entry.kind else {
-        panic!("fixture should remain watchdog control");
-    };
-    assert_eq!(
-        control.scheduler_generation, 1,
-        "paired generation allocation must be atomic"
-    );
-    assert_eq!(
-        registry.snapshot(&attempt_timer).unwrap().state(),
-        TimerRuntimeStateSnapshot::Inactive {
-            reason: InactiveReason::ControlFailure(TimerControlFailure::GenerationExhausted),
-        }
-    );
 }
 
 #[test]
