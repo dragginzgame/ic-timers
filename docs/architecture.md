@@ -1,5 +1,25 @@
 # Architecture
 
+This document is a technical reference for developers working on or
+integrating IC Timers. For a general introduction, start with the
+[project README](../README.md).
+
+## Overview
+
+The application owns the lasting record of what work needs to happen. IC
+Timers owns the temporary scheduling state used while the canister is running.
+After an upgrade, the application uses its lasting state to rebuild the timers
+it still needs.
+
+A registration capability lets one owner control one named timer. The runtime
+coordinates callbacks and scheduling, while one shared registry holds timer
+names, states, counters, callbacks, and provider handles. Only the private
+platform boundary talks directly to `ic-cdk-timers`.
+
+![Ownership and control flow from durable application state through the IC Timers runtime to its private platform boundary](assets/ic-timers-runtime-ownership.svg)
+
+The sections below describe these boundaries in implementation-level detail.
+
 ## Current runtime
 
 The crate root is the only public facade. It re-exports runtime operations and

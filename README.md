@@ -1,20 +1,22 @@
 ![IC Timers — Internet Computer helper library](docs/assets/ic-timers-readme-header.svg)
 
-# ⏱️ ic-timers
+> A shared scheduler for background tasks in applications running on the
+> Internet Computer.
 
-> A bounded, observable timer runtime for Internet Computer canisters, built on
-> top of [`ic-cdk-timers`](https://crates.io/crates/ic-cdk-timers).
+## What is IC Timers?
 
-`ic-timers` wraps the CDK timer provider; it does not replace it.
-`ic-cdk-timers` still arms and clears platform timers, while `ic-timers` adds
-logical identity, scheduling policy, callback arbitration, lifecycle
-reconstruction, and one coherent operational snapshot.
+The Internet Computer is a network that runs software. Programs on it are
+called *canisters*. Like other applications, a canister may need to do some
+work later or repeat work in the background.
 
-The provider is a private implementation dependency. It is kept behind the
-crate's `platform` module and is never re-exported.
+IC Timers is a tool that developers can add to a canister to organize that
+work. You can think of it as a shared alarm clock and task list for the whole
+application. It can tell the application when to run a task, keep related
+timers in one place, and report what happened when they ran.
 
-## 🌟 At a glance
+For example, an application might use IC Timers to:
 
+<<<<<<< HEAD
 | | Current contract |
 | --- | --- |
 | 🧩 API line | `0.11` |
@@ -24,22 +26,45 @@ crate's `platform` module and is never re-exported.
 | 🔄 Policies | `Once`, `AfterCompletion`, and pre-armed `Watchdog` |
 | 💾 Persistence | None; consumers retain durable application authority |
 | 🔎 Observation | Bounded snapshots, counters, instructions, and memory-page extents |
+=======
+- remove expired records;
+- process a queue a few items at a time;
+- run regular database maintenance;
+- try important work again after an interrupted attempt; or
+- show operators which background tasks are waiting, running, or stopped.
+>>>>>>> a60341aa568c2e2d28401b428f3f3579cb312faf
 
-## 💡 Why wrap `ic-cdk-timers`?
+People using the application do not interact with IC Timers directly. They
+benefit from background work that is easier for the application's developers
+to organize, monitor, and recover.
+
+IC Timers does not permanently store an application's tasks. The application
+keeps the lasting record of what needs to happen and rebuilds its timers after
+an upgrade. Its Watchdog mode can preserve another attempt when work fails,
+but it does not promise that a task will happen exactly once.
+
+![Application tasks flow through IC Timers to the Internet Computer timer system and one shared status view](docs/assets/ic-timers-how-it-helps.svg)
+
+## Technical overview
+
+The current API line is `0.10`. It is written in Rust 2024 and supports Rust
+1.88.0 and newer. It uses `ic-cdk-timers` 1.0.0 as its private, underlying
+timer service.
+
+One IC Timers runtime can manage up to 64 named timers and 128 timer handles.
+It supports one-time work, work that repeats after successful completion, and
+Watchdog work that prepares another attempt before it starts. It also reports
+timer status, outcomes, and bounded resource measurements.
+
+![Application needs matched to IC Timers scheduling and observation capabilities](docs/assets/ic-timers-application-needs.svg)
+
+## Why wrap `ic-cdk-timers`?
 
 `ic-cdk-timers` is the right low-level mechanism for scheduling a simple
 callback. The operational problem changes when a framework, a database, and
 application code all schedule work independently.
 
-| Concern | Scattered direct timers | `ic-timers` |
-| --- | --- | --- |
-| Identity | Private names and handles | Structured `owner / subsystem / name` identity |
-| Ownership | Distributed across subsystems | One bounded canister-local registry |
-| Recurrence | Usually an interval or local loop | Explicit policy with a documented failure boundary |
-| Upgrades | Each owner invents restoration | Synchronous, idempotent lifecycle reconciliation |
-| Cancellation | Provider handle knowledge leaks outward | Claim-scoped cancellation with exact handle ownership |
-| Metrics | Parallel counters and partial inventories | One inert, policy-specific snapshot |
-| Stale callbacks | Consumer-specific handling | Generation-checked harmless no-ops |
+![Separate component timers compared with one shared IC Timers registry and status view](docs/assets/ic-timers-shared-registry.svg)
 
 We thought this wrapper was worthwhile because these are canister-wide
 questions:
@@ -55,21 +80,22 @@ upgrade protocol, operators still lack one reliable inventory and the most
 failure-sensitive logic is duplicated. `ic-timers` puts that coordination
 above the CDK provider without creating another provider.
 
-## 🧩 Choose the policy that matches the failure boundary
+## Choose how a task should run
 
-| Policy | Consumer work | Successor timing | Trap or exhaustion behavior |
-| --- | --- | --- | --- |
-| `Once` | Asynchronous | Only when explicitly requested | No automatic recovery |
-| `AfterCompletion` | Asynchronous | Armed after normal work completion | No automatic recovery |
-| `Watchdog` | Synchronous and bounded | Committed by a scheduler message before a separate work message | The committed successor survives failed consumer work |
+IC Timers offers three modes. `Once` runs a task one time. `AfterCompletion`
+repeats a task after it finishes successfully. `Watchdog` prepares another
+attempt before starting important work. The timeline below shows the
+difference.
+
+![Timelines showing when Once, AfterCompletion, and Watchdog schedule their work and successor](docs/assets/ic-timers-policy-timelines.svg)
 
 `Watchdog` deliberately uses two messages. The small scheduler callback
 validates its generation, arms the next cadence successor, queues immediate
 work, and returns. Only the later work callback invokes consumer code.
 
-> ⚠️ The recovery guarantee covers the consumer-work message. It does not claim
-> recovery if the fixed scheduler message itself traps or exhausts its
-> instructions.
+> **Watchdog limit:** Watchdog protects against failure in the task itself. It
+> cannot promise recovery if its small scheduling step fails or exceeds the
+> Internet Computer's work limit.
 
 A Watchdog can drain successful bounded work without waiting a full cadence:
 
@@ -100,7 +126,7 @@ finish normally before another invocation is allowed. Use `Watchdog` only
 when committing the next wake-up before fallible synchronous work is the
 required protocol.
 
-## 🚀 Minimal `Once` example
+## Minimal `Once` example
 
 Add one exact package version when this crate participates in a shared
 framework/application registry:
@@ -154,15 +180,9 @@ For fixed declarations, use `reconcile_once`,
 inactive ones. Transient `RemoveWhenStopped` declarations use the direct
 registration functions.
 
-## 🏗️ Runtime ownership
+## Runtime ownership
 
-| Layer | Owns |
-| --- | --- |
-| Consumer | Durable demand, application outcomes, and lifecycle composition |
-| Registration capability | Claim-scoped control for one logical declaration |
-| `ic-timers` runtime | Callback execution, provider effects, and lifecycle reconciliation |
-| Canonical registry | Identities, generations, policy state, arbitration, callbacks, counters, and handles |
-| Private `platform` module | The only direct `ic-cdk-timers` and IC system-fact calls |
+![Ownership and control flow from durable application state through the IC Timers runtime to its private platform boundary](docs/assets/ic-timers-runtime-ownership.svg)
 
 The registry is volatile. It stores no stable timer policy, provider handle,
 generation, snapshot, epoch, or application recovery authority. After an
@@ -181,7 +201,9 @@ Return `Stop` when idle and reconstruct with `WatchdogReconcileState::ScheduledA
 when durable demand supplies a deadline. See the
 [0.8 contract](docs/design/0.8-registration-continuity-and-deadlines.md).
 
-## 📊 Truthful observability
+## Truthful observability
+
+![Timer state, outcomes, instruction use, memory growth, and registration identity flowing into one read-only operational snapshot](docs/assets/ic-timers-observability.svg)
 
 `timer_snapshot` and `timer_inventory` return inert values; snapshots never
 become mutation authority. The inventory carries the runtime epoch even when
@@ -269,7 +291,9 @@ demand requires a timer, call `ensure_scheduled()` or
 `ensure_scheduled_immediately()` unconditionally instead of using the
 observation as a check-then-arm guard.
 
-## 🔄 Lifecycle and shared-registry rules
+## Lifecycle and shared-registry rules
+
+![Upgrade lifecycle from durable application state through timer reconstruction to resumed background work](docs/assets/ic-timers-upgrade-lifecycle.svg)
 
 1. The canister's existing lifecycle owner calls `initialize_runtime()`.
 2. Frameworks and applications reconcile their retained declarations from
@@ -298,7 +322,7 @@ For a canister with one simple callback and no need for shared inventory,
 metrics, lifecycle reconciliation, or a recovery policy, using
 `ic-cdk-timers` directly remains the simpler choice.
 
-## 🛡️ Guarantees and limits
+## Guarantees and limits
 
 | Guarantee | Boundary |
 | --- | --- |
@@ -314,7 +338,7 @@ metrics, lifecycle reconciliation, or a recovery policy, using
 Read [SAFETY.md](SAFETY.md) before relying on the watchdog protocol or
 operational measurements.
 
-## 🧪 Development and evidence
+## Development and evidence
 
 | Command | Purpose |
 | --- | --- |
@@ -341,7 +365,7 @@ insufficient cycles followed by top-up, upgrade reconstruction, stop/resume,
 overdue coalescing, cancellation gaps, duplicate demand, simultaneous timers,
 trap isolation, and rejection of external executor ingress.
 
-## 📚 Documentation map
+## Documentation map
 
 | Document | Purpose |
 | --- | --- |
@@ -356,6 +380,6 @@ trap isolation, and rejection of external executor ingress.
 | [Current status](docs/status/current.md) | Compact maintainer handoff |
 | [Release guide](docs/releasing.md) | Versioning, validation, and publication workflow |
 
-## 📄 License
+## License
 
 MIT

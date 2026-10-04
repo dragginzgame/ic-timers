@@ -39,6 +39,12 @@ All notable changes to this project are recorded here.
 - Record the contract and pending verification in the
   [0.11.0 release note](docs/changelog/0.11.0.md).
 
+### Documentation
+
+- Add plain-English introductions to the safety, architecture, observability,
+  and release guides, and reorganize the documentation index by audience while
+  preserving the detailed technical contracts and historical records.
+
 ## [0.10.23] - 2026-10-04
 
 ### Changed

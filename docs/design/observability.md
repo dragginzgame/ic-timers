@@ -2,6 +2,24 @@
 
 Status: canonical observations live; historical adoption evidence linked below.
 
+## In plain English
+
+Observability means being able to see what the timers are doing without using
+those observations to control them. IC Timers provides one read-only snapshot
+of each timer's identity, current state, recent outcomes, counters, instruction
+use, and observed memory growth.
+
+The snapshot helps operators answer questions such as: Is this timer waiting or
+running? Did its last completed task succeed? How often has it run? Has its
+observed resource use grown?
+
+These measurements have limits. They do not prove that a task was delivered,
+measure the complete Internet Computer message, or identify the exact amount
+of memory still in use. A task that crashes or runs out of instructions cannot
+record a completed measurement after it stops.
+
+![Timer state, outcomes, instruction use, memory growth, and registration identity flowing into one read-only operational snapshot](../assets/ic-timers-observability.svg)
+
 ## Purpose
 
 The canonical `ic-timers` snapshot replaces duplicated timer instrumentation
