@@ -105,7 +105,7 @@ framework/application registry:
 
 ```toml
 [dependencies]
-ic-timers = "=0.10.21"
+ic-timers = "=0.10.22"
 ```
 
 Every framework and application crate linked into the same canister must use
