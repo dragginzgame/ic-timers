@@ -64,7 +64,6 @@ impl DeadlineSelection {
 impl TimerControl {
     /// Return the latest allocated callback generation.
     #[must_use]
-    #[cfg(test)]
     pub(crate) const fn generation(&self) -> u64 {
         self.generation
     }
@@ -91,8 +90,8 @@ impl TimerControl {
     }
 
     /// Schedule a deadline, retaining an already scheduled earlier deadline.
-    /// Return the arm kind when scheduled state changes; the registry reads
-    /// the authoritative generation and deadline from that resulting state.
+    /// Return the arm kind when scheduled state changes. Success with an arm
+    /// installs the supplied deadline and a newly allocated generation.
     pub(crate) fn schedule(
         &mut self,
         deadline_ns: u64,
@@ -137,12 +136,7 @@ impl TimerControl {
             }
         };
 
-        let generation = self.next_generation()?;
-        self.generation = generation;
-        self.registration = TimerRegistration::Scheduled {
-            generation,
-            deadline_ns,
-        };
+        self.arm_deadline(deadline_ns)?;
         Ok(Some(kind))
     }
 
@@ -165,21 +159,26 @@ impl TimerControl {
     /// Apply completion after the registry has authorized the exact running
     /// work token and selected its successor in the same atomic transition.
     /// Generation allocation remains checked before state mutation; the
-    /// registry observes the resulting registration and owns provider effects.
+    /// registry builds effects from that decision and the allocated generation.
     pub(crate) fn complete_running(
         &mut self,
         next_deadline_ns: Option<u64>,
     ) -> Result<(), TimerControlFailure> {
         if let Some(deadline_ns) = next_deadline_ns {
-            let next_generation = self.next_generation()?;
-            self.generation = next_generation;
-            self.registration = TimerRegistration::Scheduled {
-                generation: next_generation,
-                deadline_ns,
-            };
+            self.arm_deadline(deadline_ns)?;
         } else {
             self.registration = TimerRegistration::Unregistered;
         }
+        Ok(())
+    }
+
+    fn arm_deadline(&mut self, deadline_ns: u64) -> Result<(), TimerControlFailure> {
+        let generation = self.next_generation()?;
+        self.generation = generation;
+        self.registration = TimerRegistration::Scheduled {
+            generation,
+            deadline_ns,
+        };
         Ok(())
     }
 

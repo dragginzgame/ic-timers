@@ -50,37 +50,31 @@ and the [safety boundary](../../SAFETY.md).
 
 ## Current follow-up
 
-The maintainer reports 0.10.4 pushed. Local HEAD, the peeled 0.10.4 tag and origin/main
-agree at `d008c5f3c2fcfef6c69f2df865effeeecc410706`. The completed ordinary
-completion and failure cleanup is recorded in the [0.10.4 note](../changelog/0.10.4.md).
+The maintainer reports 0.10.5 live. Local HEAD, the peeled 0.10.5 tag and origin/main
+agree at `3c206495e4820f764aff7ac96b2958f42f78542e`. The completed state and
+request cleanup is recorded in the [0.10.5 note](../changelog/0.10.5.md).
 
-The [0.10.5 note](../changelog/0.10.5.md) records the prepared private cleanup.
-Watchdog inactive state owns its reason directly. The independent reason field
-and paired assignments are deleted; active states carry no inactive metadata.
-Fresh declarations, cancellation, normal stopping, invariant failure and control
-failure retain their existing reasons. Snapshot shape, paired generation
-allocation, cancellation counts, pending cleanup, declaration lifetimes and
-provider ordering are unchanged.
+The [0.10.6 note](../changelog/0.10.6.md) records the prepared private cleanup.
+Ordinary scheduling and completion share one checked arming operation. Generation
+allocation remains atomic; eligibility, stopping and cancellation remain distinct.
+The registry constructs ordinary effects from successful transition inputs and
+the allocated generation, deleting two impossible contradictory-state recovery
+paths. Input, directive, callback-authority and provider validation remain.
 
-Cancellation's shared exit now applies its complete removal decision once instead
-of following it with redundant failure cleanup. Ordinary early failure cleanup
-and running-work pending commands retain their existing behavior.
+Watchdog awaiting-work state owns its pending command through dispatched and
+running phases. The independent field and explicit clearing assignments are
+deleted. Work acceptance preserves the command; leaving awaiting work discards
+it, including when a scheduler retires an unacknowledged attempt. Public snapshot
+shape, pending precedence, inactive reasons, paired generation allocation,
+cancellation counts, declaration lifetimes and provider ordering are unchanged.
 
-Recurring ordinary ensure now shares the scheduling-request observation and
-coalescing path. It retains existing scheduled deadlines without recalculating
-an unused cadence successor or allocating a new generation. Callback-claim
-lookup drops its redundant expected-role argument; operation-specific provider
-and confirmation role/state/generation checks remain.
-
-Existing Watchdog exhaustion and deadline-overflow fixtures now assert public
-inactive state and reason while retaining atomicity and pending cleanup checks.
-The Watchdog failure/lifetime matrix also covers exhausted cancellation before
-and after dispatch, callback cleanup selection and unchanged cancellation counts.
-The recurring duplicate-ensure fixture covers cadence and exact schedules at
-generation and timestamp limits, preserving state, mode, observations and callback
-authority. Provider-role and malformed-effect fixtures remain.
-Fresh-declaration, result-matrix, cancellation, terminal-lifetime and provider-failure
-fixtures remain. Test execution stays maintainer-owned.
+Existing Watchdog checked-failure fixtures retain public failure state, callback
+cleanup and allocation atomicity assertions; obsolete independent-pending-field
+assertions are removed. The native attempt-retirement fixture queues reconciliation
+on discarded work and checks that successor work does not inherit it. The existing
+dispatched-reconciliation fixture checks preservation through work acceptance.
+Control transition, ordinary completion, terminal-lifetime, running-command and
+provider-failure fixtures remain. Test execution stays maintainer-owned.
 
 Ordinary/Watchdog command machines, effect confirmation and handle-restoration
 stages remain required by their distinct suspension and recovery contracts.
@@ -91,7 +85,7 @@ composed qualification.
 ## Evidence
 
 The latest inspected hosted validation remains scoped to 0.9.4 as recorded in
-its delivery note; the maintainer's 0.10.4 pushed report and local references do not
+its delivery note; the maintainer's 0.10.5 live report and local references do not
 establish new hosted or PocketIC results. No new runtime, recovery or performance
 result is claimed for this cleanup. Changed Rust is formatted. Diff whitespace,
 current release-truth and target-note structural preflight checks passed during

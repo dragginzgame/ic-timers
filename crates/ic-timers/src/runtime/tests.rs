@@ -1498,6 +1498,9 @@ fn watchdog_successor_retires_an_unacknowledged_dispatched_attempt() {
     set_time(15);
     assert!(run_next_due());
     assert_eq!(timer_count(), 2);
+    registration
+        .reconcile_schedule(Some(TimerSchedule::At(100)))
+        .expect("dispatched reconciliation should queue for this attempt");
     assert!(
         discard_next_due(),
         "simulate work without committed completion"
@@ -1516,6 +1519,19 @@ fn watchdog_successor_retires_an_unacknowledged_dispatched_attempt() {
         snapshot.observability().outcomes().last_outcome(),
         Some(TimerLastOutcome::Unacknowledged)
     );
+
+    assert!(run_next_due());
+    let completed = timer_snapshot(&timer).unwrap().unwrap();
+    assert_eq!(
+        completed.state(),
+        TimerRuntimeStateSnapshot::Inactive {
+            reason: InactiveReason::Stopped,
+        },
+        "the retired attempt's reconciliation must not override the successor's Stop"
+    );
+    assert_eq!(completed.observability().counters().unacknowledged(), 1);
+    assert_eq!(completed.observability().counters().work_completed(), 1);
+    assert_eq!(timer_count(), 0);
 }
 
 #[test]

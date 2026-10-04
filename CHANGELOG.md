@@ -4,6 +4,27 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.6]
+
+### Changed
+
+- Give ordinary scheduling and completion one checked arming operation that
+  allocates a generation and installs its deadline atomically.
+- Store Watchdog pending commands inside the awaiting-work state. Remove the
+  independent field and explicit clearing when leaving that state; preserve
+  reconciliation in the dispatched gap and running-work command precedence.
+- Build ordinary provider effects from successful transition inputs and the
+  allocated generation. Remove unreachable contradictory-state recovery paths
+  while retaining input, callback-authority and provider-ownership validation.
+
+### Development
+
+- Retain behavioral transition and failure fixtures; remove obsolete assertions
+  about an independent Watchdog pending field. Extend attempt-retirement coverage
+  to check that its queued command cannot affect successor work.
+- Record the live 0.10.5 baseline and this cleanup in the
+  [0.10.6 release note](docs/changelog/0.10.6.md).
+
 ## [0.10.5] - 2026-10-04
 
 ### Changed

@@ -1943,7 +1943,6 @@ fn watchdog_checked_generation_exhaustion_is_terminal_and_atomic() {
             reason: InactiveReason::ControlFailure(TimerControlFailure::GenerationExhausted),
         }
     );
-    assert_eq!(control.pending, None);
 }
 
 #[test]
@@ -1973,20 +1972,12 @@ fn watchdog_checked_deadline_overflow_is_terminal() {
             ..
         }
     ));
-    let entry = registry
-        .entries
-        .get(&deadline_timer)
-        .expect("retained deadline-overflow entry should remain");
-    let EntryKind::Watchdog { control, .. } = &entry.kind else {
-        panic!("fixture should remain watchdog control");
-    };
     assert_eq!(
         registry.snapshot(&deadline_timer).unwrap().state(),
         TimerRuntimeStateSnapshot::Inactive {
             reason: InactiveReason::ControlFailure(TimerControlFailure::DeadlineOverflow),
         }
     );
-    assert_eq!(control.pending, None);
 }
 
 #[test]

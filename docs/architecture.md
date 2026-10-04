@@ -33,7 +33,10 @@ The module hierarchy keeps six responsibilities separate:
    The registry builds provider effects and retains cancellation policy without a
    separate cancellation or completion action. Scheduling requests return only
    an optional initial or replacement arm kind; generation and deadline remain
-   in control state.
+   in control state. Scheduling and completion share one checked arming operation.
+   Within the same atomic transition, the registry builds each successful arm
+   from its selected deadline and the allocated generation without a second
+   registration-consistency recovery path.
 4. `registry` is the provider-call-free fixed-capacity canonical owner for
    structured identities, callback closures, claim generations,
    policy-specific state, the sole pending ordinary-command machine, nested
@@ -45,6 +48,9 @@ The module hierarchy keeps six responsibilities separate:
    observations are derived from that payload rather than stored separately.
    The private Watchdog inactive state owns its reason; active states carry no
    inactive reason, and snapshots project the reason from the state itself.
+   Watchdog awaiting-work state owns its pending command through both dispatch
+   and execution. Work acceptance preserves it; leaving that state discards it,
+   including when the scheduler retires an unacknowledged attempt.
    Ordinary schedule requests share counter, request-metadata and coalescing
    updates. Recurring ensure submits an existing scheduled deadline unchanged;
    it calculates a cadence deadline only for inactive or running declarations.

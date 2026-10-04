@@ -390,6 +390,7 @@ enum WatchdogState {
         successor_deadline_ns: u64,
         attempt_generation: u64,
         attempt_status: WatchdogAttemptStatus,
+        pending: Option<WatchdogPending>,
     },
 }
 
@@ -398,7 +399,6 @@ struct WatchdogControl {
     scheduler_generation: u64,
     attempt_generation: u64,
     state: WatchdogState,
-    pending: Option<WatchdogPending>,
 }
 
 impl Default for WatchdogControl {
@@ -409,7 +409,6 @@ impl Default for WatchdogControl {
             state: WatchdogState::Inactive {
                 reason: InactiveReason::NeverScheduled,
             },
-            pending: None,
         }
     }
 }
@@ -435,7 +434,6 @@ impl WatchdogControl {
             scheduler_generation: generation,
             deadline_ns,
         };
-        self.pending = None;
         RegistryTransition::normal(RegistryEffect::ArmWakeup {
             token: token_for(claim, generation, CallbackRole::WatchdogScheduler),
             delay_ns: deadline_ns.saturating_sub(now_ns),
@@ -461,7 +459,6 @@ impl WatchdogControl {
         self.state = WatchdogState::Inactive {
             reason: InactiveReason::ControlFailure(failure),
         };
-        self.pending = None;
         RegistryTransition::terminal(effect, failure)
     }
 }
@@ -547,6 +544,7 @@ impl Entry {
                     successor_deadline_ns,
                     attempt_generation,
                     attempt_status,
+                    ..
                 } => TimerRuntimeStateSnapshot::Watchdog(
                     WatchdogRuntimeStateSnapshot::AwaitingWork {
                         successor_generation,
@@ -955,22 +953,10 @@ impl TimerRegistry {
             entry.observability.counters_mut().record_coalesced();
             return Ok(RegistryTransition::normal(RegistryEffect::None));
         };
-        let TimerRegistration::Scheduled {
-            generation,
-            deadline_ns,
-        } = control.registration()
-        else {
-            let transition = terminal_ordinary(
-                entry,
-                claim.identity.clone(),
-                TimerControlFailure::DirectiveNotAllowed,
-            );
-            return Ok(self.remove_transient_on_failure(claim.identity(), transition));
-        };
         entry.scheduling_mode = requested.mode;
         Ok(RegistryTransition::normal(RegistryEffect::ArmWakeup {
-            token: token_for(claim, generation, CallbackRole::OrdinaryWork),
-            delay_ns: deadline_ns.saturating_sub(now_ns),
+            token: token_for(claim, control.generation(), CallbackRole::OrdinaryWork),
+            delay_ns: requested.deadline_ns.saturating_sub(now_ns),
             arm,
         }))
     }
@@ -995,7 +981,7 @@ impl TimerRegistry {
             WatchdogScheduleRequest::Immediate => Some(0),
             WatchdogScheduleRequest::Reconcile(requested) => requested.requested_delay_ns,
         };
-        let transition = match control.state {
+        let transition = match &mut control.state {
             WatchdogState::Inactive { .. } => {
                 let deadline_ns = match request {
                     WatchdogScheduleRequest::Cadence => cadence.deadline_after(now_ns)?,
@@ -1015,9 +1001,9 @@ impl TimerRegistry {
             }
             WatchdogState::Scheduled { deadline_ns, .. }
                 if match request {
-                    WatchdogScheduleRequest::Immediate => deadline_ns > now_ns,
+                    WatchdogScheduleRequest::Immediate => *deadline_ns > now_ns,
                     WatchdogScheduleRequest::Reconcile(requested) => {
-                        deadline_ns != requested.deadline_ns
+                        *deadline_ns != requested.deadline_ns
                     }
                     WatchdogScheduleRequest::Cadence => false,
                 } =>
@@ -1043,19 +1029,21 @@ impl TimerRegistry {
             }
             WatchdogState::AwaitingWork {
                 attempt_status: WatchdogAttemptStatus::Dispatched,
+                pending,
                 ..
             } => {
                 if let WatchdogScheduleRequest::Reconcile(requested) = request {
-                    control.pending = Some(WatchdogPending::Reconcile(requested));
+                    *pending = Some(WatchdogPending::Reconcile(requested));
                 }
                 entry.observability.counters_mut().record_coalesced();
                 RegistryTransition::normal(RegistryEffect::None)
             }
             WatchdogState::AwaitingWork {
                 attempt_status: WatchdogAttemptStatus::Running,
+                pending,
                 ..
             } => {
-                control.pending = Some(select_pending_watchdog(control.pending, request, now_ns));
+                *pending = Some(select_pending_watchdog(*pending, request, now_ns));
                 entry.observability.counters_mut().record_coalesced();
                 RegistryTransition::normal(RegistryEffect::None)
             }
@@ -1158,16 +1146,20 @@ impl TimerRegistry {
                 *pending = Some(OrdinaryPending::Unregister);
                 Ok(RegistryTransition::normal(RegistryEffect::None))
             }
-            EntryKind::Watchdog { control, .. }
-                if matches!(
-                    control.state,
-                    WatchdogState::AwaitingWork {
-                        attempt_status: WatchdogAttemptStatus::Running,
+            EntryKind::Watchdog {
+                control:
+                    WatchdogControl {
+                        state:
+                            WatchdogState::AwaitingWork {
+                                attempt_status: WatchdogAttemptStatus::Running,
+                                pending,
+                                ..
+                            },
                         ..
-                    }
-                ) =>
-            {
-                control.pending = Some(WatchdogPending::Unregister);
+                    },
+                ..
+            } => {
+                *pending = Some(WatchdogPending::Unregister);
                 Ok(RegistryTransition::normal(RegistryEffect::None))
             }
             EntryKind::Ordinary { .. } | EntryKind::Watchdog { .. } => {
@@ -1285,28 +1277,22 @@ impl TimerRegistry {
                 entry.observability.record_completion(completion, now_ns);
 
                 let mut remove = false;
-                let transition = match (control.registration(), selected_schedule) {
-                    (
-                        TimerRegistration::Scheduled {
-                            generation,
-                            deadline_ns,
-                        },
-                        Some(selected),
-                    ) => {
+                let transition = match selected_schedule {
+                    Some(selected) => {
                         entry.scheduling_mode = selected.mode;
                         entry.latest_requested_delay_ns = selected.requested_delay_ns;
                         RegistryTransition::normal(RegistryEffect::ArmWakeup {
                             token: CallbackToken::new(
                                 identity.clone(),
                                 entry.claim_generation,
-                                generation,
+                                control.generation(),
                                 CallbackRole::OrdinaryWork,
                             ),
-                            delay_ns: deadline_ns.saturating_sub(now_ns),
+                            delay_ns: selected.deadline_ns.saturating_sub(now_ns),
                             arm: WakeupArm::Initial,
                         })
                     }
-                    (TimerRegistration::Unregistered, None) => {
+                    None => {
                         *inactive_reason = if terminal_pending {
                             entry.observability.counters_mut().record_cancellation();
                             InactiveReason::Cancelled
@@ -1316,18 +1302,6 @@ impl TimerRegistry {
                         remove = matches!(pending_command, Some(OrdinaryPending::Unregister))
                             || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
                         RegistryTransition::normal(RegistryEffect::None)
-                    }
-                    _ => {
-                        let clear_wakeup = control.terminate();
-                        *inactive_reason = InactiveReason::ControlFailure(
-                            TimerControlFailure::DirectiveNotAllowed,
-                        );
-                        remove = matches!(pending_command, Some(OrdinaryPending::Unregister))
-                            || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
-                        RegistryTransition::terminal(
-                            clear_wakeup_if(identity.clone(), clear_wakeup),
-                            TimerControlFailure::DirectiveNotAllowed,
-                        )
                     }
                 };
                 (transition, remove)
@@ -1414,8 +1388,8 @@ impl TimerRegistry {
             successor_deadline_ns,
             attempt_generation,
             attempt_status: WatchdogAttemptStatus::Dispatched,
+            pending: None,
         };
-        control.pending = None;
         entry.scheduling_mode = TimerSchedulingMode::Watchdog;
         RegistryTransition::normal(RegistryEffect::DispatchWatchdog {
             successor: CallbackToken::new(
@@ -1490,6 +1464,7 @@ impl TimerRegistry {
             let WatchdogState::AwaitingWork {
                 successor_generation,
                 successor_deadline_ns,
+                pending,
                 ..
             } = control.state
             else {
@@ -1501,7 +1476,7 @@ impl TimerRegistry {
             let decision = if completion.outcome() == TimerCompletionOutcome::InvariantFailure {
                 WatchdogDecision::Stop
             } else {
-                match control.pending {
+                match pending {
                     Some(WatchdogPending::Cancel | WatchdogPending::Unregister) => {
                         WatchdogDecision::Stop
                     }
@@ -1515,13 +1490,12 @@ impl TimerRegistry {
                     None => result.decision(),
                 }
             };
-            let cancelled = matches!(control.pending, Some(WatchdogPending::Cancel));
-            let unregister = matches!(control.pending, Some(WatchdogPending::Unregister));
-            let pending_schedule = match control.pending {
+            let cancelled = matches!(pending, Some(WatchdogPending::Cancel));
+            let unregister = matches!(pending, Some(WatchdogPending::Unregister));
+            let pending_schedule = match pending {
                 Some(WatchdogPending::Reconcile(requested)) => Some(requested),
                 _ => None,
             };
-            control.pending = None;
 
             match decision {
                 WatchdogDecision::Continue => {
@@ -1711,7 +1685,6 @@ impl TimerRegistry {
                     control.state = WatchdogState::Inactive {
                         reason: InactiveReason::ControlFailure(failure),
                     };
-                    control.pending = None;
                 }
             }
             let handles = entry.take_provider_handles(&identity);
@@ -2198,14 +2171,15 @@ const fn select_pending_watchdog(
 }
 
 fn cancel_watchdog(control: &mut WatchdogControl, identity: &TimerIdentity) -> RegistryTransition {
-    match control.state {
+    match &mut control.state {
         WatchdogState::Inactive { .. } => RegistryTransition::normal(RegistryEffect::None),
         WatchdogState::AwaitingWork {
             attempt_status: WatchdogAttemptStatus::Running,
+            pending,
             ..
         } => {
-            if !matches!(control.pending, Some(WatchdogPending::Unregister)) {
-                control.pending = Some(WatchdogPending::Cancel);
+            if !matches!(pending, Some(WatchdogPending::Unregister)) {
+                *pending = Some(WatchdogPending::Cancel);
             }
             RegistryTransition::normal(RegistryEffect::None)
         }
@@ -2231,7 +2205,6 @@ fn cancel_watchdog(control: &mut WatchdogControl, identity: &TimerIdentity) -> R
             control.state = WatchdogState::Inactive {
                 reason: InactiveReason::Cancelled,
             };
-            control.pending = None;
             RegistryTransition::normal(clear_callbacks(
                 identity.clone(),
                 CallbacksToClear::wakeup_and_maybe_work(clear_work),
