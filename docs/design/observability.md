@@ -151,6 +151,11 @@ counter saturation:
 work_completed = succeeded + no_work + retryable_failure + invariant_failure
 ```
 
+The classified counters are authoritative. `work_completed()` projects their
+saturating sum instead of storing a second total. This preserves the completed
+count at saturation too: each committed completion increments exactly one class,
+and the projected total remains `u64::MAX` once their sum reaches that limit.
+
 `work_started` and `work_completed` must never be collapsed into one execution
 count.
 Canic currently records a callback start before it can record post-run

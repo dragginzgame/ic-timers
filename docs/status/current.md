@@ -51,6 +51,9 @@ references and validation belong in [release notes](../changelog/README.md),
   callback cleanup borrow it without claim reconstruction; running-work and
   provider ownership checks remain distinct. See the
   [callback claim ownership note](../changelog/0.10.14.md).
+- Classified completion counters own completed-work accounting. The public total
+  projects their saturating sum; starts and unacknowledged attempts remain
+  separate events. See the [completion counter note](../changelog/0.10.15.md).
 - Registry arbitration owns ordinary pending-command order and exact running-work
   authorization. Exact reconciliation replaces a discarded callback scheduling
   proposal before validation. Invariant failure remains terminal; unregister is
@@ -75,6 +78,10 @@ references and validation belong in [release notes](../changelog/README.md),
   restoration or provider failures. Unexpected Watchdog work completion failures
   trap for IC rollback. Effect confirmation uses one validated wakeup-generation
   marker. These distinct failure rules must remain separate.
+- Effect application binds wakeups and Watchdog dispatch in its validated match
+  branches; confirmation retains its independent state and generation checks.
+- Platform page reads and callback measurements share inert `MemoryPageExtent`
+  values. The registry pairs start/end extents without a second representation.
 
 ## Unresolved scope
 

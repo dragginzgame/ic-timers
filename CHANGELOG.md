@@ -4,6 +4,28 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.15]
+
+### Changed
+
+- Derive `TimerCounters::work_completed()` from the saturating sum of its four
+  classified completion counters. Remove the separately maintained total while
+  preserving public counter values and separate start and interruption counters.
+- Apply wakeup arms and Watchdog dispatch directly in the validated effect
+  branches. Remove two single-caller binding helpers and their redundant variant
+  checks while preserving provider ordering, confirmation and failure cleanup.
+- Carry inert `MemoryPageExtent` values directly from platform reads through
+  callback measurement accounting. Remove the identical private page-count type
+  and conversion helper while preserving units and sampling order.
+
+### Development
+
+- Replace the test-only completion-partition checker with direct outcome
+  assertions. Cover mixed completion outcomes reaching saturation in the counter
+  fixture; retain runtime failure, cleanup and lifecycle assertions.
+- Record the cleanup and verification scope in the
+  [0.10.15 release note](docs/changelog/0.10.15.md).
+
 ## [0.10.14] - 2026-10-04
 
 ### Changed

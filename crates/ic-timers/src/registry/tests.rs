@@ -687,7 +687,8 @@ fn once_coalesces_and_rotates_generations_while_nested_schedule_wins() {
     assert_eq!(counters.stale_wakeups(), 1);
     assert_eq!(counters.work_started(), 2);
     assert_eq!(counters.work_completed(), 2);
-    assert!(counters.completion_partition_is_valid());
+    assert_eq!(counters.succeeded(), 1);
+    assert_eq!(counters.no_work(), 1);
 }
 
 #[test]
@@ -2203,7 +2204,7 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
                     counters.work_completed(),
                     u64::from(subject.starts_with("completion-"))
                 );
-                assert!(counters.completion_partition_is_valid());
+                assert_eq!(counters.invariant_failure(), counters.work_completed());
                 assert_eq!(
                     snapshot.state(),
                     TimerRuntimeStateSnapshot::Inactive {

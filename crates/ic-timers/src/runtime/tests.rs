@@ -812,7 +812,6 @@ fn ordinary_callback_borrow_failure_stops_without_invoking_or_measuring_work() {
             assert_eq!(counters.work_started(), 1);
             assert_eq!(counters.work_completed(), 1);
             assert_eq!(counters.invariant_failure(), 1);
-            assert!(counters.completion_partition_is_valid());
             let performance = snapshot.observability().performance();
             assert_eq!(performance.work_instructions().samples(), 0);
             assert_eq!(performance.work_memory_pages().samples(), 0);
@@ -1424,7 +1423,6 @@ fn watchdog_invariant_failure_overrides_nested_cancellation_and_clears_handles()
             assert_eq!(counters.work_completed(), 1);
             assert_eq!(counters.invariant_failure(), 1);
             assert_eq!(counters.cancelled(), 0);
-            assert!(counters.completion_partition_is_valid());
         } else {
             assert!(snapshot.is_none());
             assert!(matches!(
@@ -2109,7 +2107,6 @@ fn watchdog_failed_dispatch_clears_handles_without_confirming_work() {
                 assert_eq!(counters.work_dispatched(), 0);
                 assert_eq!(counters.work_started(), 0);
                 assert_eq!(counters.work_completed(), 0);
-                assert!(counters.completion_partition_is_valid());
             } else {
                 assert!(timer_snapshot(&timer).unwrap().is_none());
                 assert!(matches!(
@@ -2509,7 +2506,9 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
     let terminal_counters = terminal.observability().counters();
     assert_eq!(terminal_counters.work_completed(), 4);
     assert_eq!(terminal_counters.invariant_failure(), 1);
-    assert!(terminal_counters.completion_partition_is_valid());
+    assert_eq!(terminal_counters.succeeded(), 1);
+    assert_eq!(terminal_counters.no_work(), 1);
+    assert_eq!(terminal_counters.retryable_failure(), 1);
 
     readiness.set(StartupReadiness::Recovering);
     reconcile_watchdog(

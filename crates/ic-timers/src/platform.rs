@@ -8,6 +8,7 @@
     reason = "Crate visibility forbids indirect public re-exports of platform authority."
 )]
 
+use crate::snapshot::MemoryPageExtent;
 use std::{future::Future, time::Duration};
 
 #[cfg(not(test))]
@@ -20,23 +21,6 @@ use ic_cdk_timers::{
 #[must_use = "bind or clear the platform timer handle"]
 #[derive(Debug, Eq, PartialEq)]
 pub(crate) struct TimerHandle(CdkTimerId);
-
-/// Copy-only page extents returned by the private system-fact boundary.
-#[derive(Clone, Copy)]
-pub(crate) struct MemoryPages {
-    wasm: u64,
-    stable: u64,
-}
-
-impl MemoryPages {
-    pub(crate) const fn wasm(self) -> u64 {
-        self.wasm
-    }
-
-    pub(crate) const fn stable(self) -> u64 {
-        self.stable
-    }
-}
 
 /// Arm one asynchronous one-shot callback.
 #[cfg(not(test))]
@@ -75,16 +59,13 @@ pub(crate) fn instruction_counter() -> u64 {
 /// Return current Wasm and stable memory extents in 64 KiB pages without
 /// allocation.
 #[cfg(not(test))]
-pub(crate) fn memory_pages() -> MemoryPages {
+pub(crate) fn memory_pages() -> MemoryPageExtent {
     #[cfg(target_arch = "wasm32")]
     let wasm = core::arch::wasm32::memory_size::<0>() as u64;
     #[cfg(not(target_arch = "wasm32"))]
     let wasm = 0;
 
-    MemoryPages {
-        wasm,
-        stable: ic0::stable64_size(),
-    }
+    MemoryPageExtent::new(wasm, ic0::stable64_size())
 }
 
 /// Abort the current message when an internal callback invariant is violated.
@@ -200,11 +181,11 @@ mod fake {
         INSTRUCTIONS.with(Cell::get)
     }
 
-    pub(crate) fn memory_pages() -> MemoryPages {
-        MemoryPages {
-            wasm: WASM_MEMORY_PAGES.with(Cell::get),
-            stable: STABLE_MEMORY_PAGES.with(Cell::get),
-        }
+    pub(crate) fn memory_pages() -> MemoryPageExtent {
+        MemoryPageExtent::new(
+            WASM_MEMORY_PAGES.with(Cell::get),
+            STABLE_MEMORY_PAGES.with(Cell::get),
+        )
     }
 
     pub(crate) fn trap(message: &str) -> ! {

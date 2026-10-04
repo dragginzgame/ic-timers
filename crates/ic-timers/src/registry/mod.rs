@@ -6,7 +6,7 @@
 
 use crate::{
     control::{OrdinaryPending, TimerControl, TimerRegistration, WakeupArm},
-    platform::{MemoryPages, TimerHandle},
+    platform::TimerHandle,
     schedule::{ResolvedSchedule, ScheduleError, TimerCadence, TimerDirective, TimerSchedule},
     snapshot::{
         DeclarationLifetime, InactiveReason, MemoryPageExtent, MemoryPageSample,
@@ -1566,8 +1566,8 @@ impl TimerRegistry {
         &mut self,
         token: &CallbackToken,
         instructions: u64,
-        memory_start: MemoryPages,
-        memory_end: MemoryPages,
+        memory_start: MemoryPageExtent,
+        memory_end: MemoryPageExtent,
     ) -> Result<(), RegistryError> {
         // A normal remove-on-stop completion can delete its entry before the
         // post-run measurement is committed, leaving nothing to observe.
@@ -1580,7 +1580,7 @@ impl TimerRegistry {
             return Ok(());
         }
 
-        let memory = memory_sample(memory_start, memory_end);
+        let memory = MemoryPageSample::new(memory_start, memory_end);
         match (&entry.kind, token.role) {
             (EntryKind::Watchdog { .. }, CallbackRole::WatchdogScheduler) => entry
                 .observability
@@ -1921,13 +1921,6 @@ fn detach_provider_handle(
         ),
         handle: owned.handle,
     }
-}
-
-const fn memory_sample(start: MemoryPages, end: MemoryPages) -> MemoryPageSample {
-    MemoryPageSample::new(
-        MemoryPageExtent::new(start.wasm(), start.stable()),
-        MemoryPageExtent::new(end.wasm(), end.stable()),
-    )
 }
 
 const fn clear_callbacks(identity: TimerIdentity, handles: CallbacksToClear) -> RegistryEffect {

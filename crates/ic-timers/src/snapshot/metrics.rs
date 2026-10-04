@@ -4,8 +4,8 @@ use super::{TimerCompletion, TimerCompletionOutcome, TimerEpoch, TimerOutcomeSna
 
 /// Registration-local timer event counters.
 ///
-/// Fields are private so mutation preserves saturation and the completion
-/// partition. The registry is the sole writer.
+/// Fields are private so mutation preserves saturation. Completed work is
+/// derived from its classified outcomes; the registry is the sole writer.
 /// A value equal to `u64::MAX` is conservatively saturated: do not derive an
 /// exact interval delta from that field. Compare registration identities before
 /// subtracting counters; runtime epoch equality alone does not prove continuity.
@@ -16,7 +16,6 @@ pub struct TimerCounters {
     work_dispatched: u64,
     scheduler_started: u64,
     work_started: u64,
-    work_completed: u64,
     succeeded: u64,
     no_work: u64,
     retryable_failure: u64,
@@ -35,7 +34,6 @@ impl TimerCounters {
         work_dispatched: 0,
         scheduler_started: 0,
         work_started: 0,
-        work_completed: 0,
         succeeded: 0,
         no_work: 0,
         retryable_failure: 0,
@@ -68,7 +66,6 @@ impl TimerCounters {
     }
 
     pub(crate) const fn record_completion(&mut self, outcome: TimerCompletionOutcome) {
-        self.work_completed = self.work_completed.saturating_add(1);
         match outcome {
             TimerCompletionOutcome::Success => {
                 self.succeeded = self.succeeded.saturating_add(1);
@@ -136,9 +133,14 @@ impl TimerCounters {
     }
 
     /// Return consumer work whose completion accounting committed.
+    ///
+    /// This is the saturating sum of the four classified completion counters.
     #[must_use]
     pub const fn work_completed(self) -> u64 {
-        self.work_completed
+        self.succeeded
+            .saturating_add(self.no_work)
+            .saturating_add(self.retryable_failure)
+            .saturating_add(self.invariant_failure)
     }
 
     /// Return successful-work completions.
@@ -193,18 +195,6 @@ impl TimerCounters {
     #[must_use]
     pub const fn unacknowledged(self) -> u64 {
         self.unacknowledged
-    }
-
-    /// Check the owner-local completion partition invariant.
-    #[must_use]
-    #[cfg(test)]
-    pub(crate) const fn completion_partition_is_valid(self) -> bool {
-        self.work_completed
-            == self
-                .succeeded
-                .saturating_add(self.no_work)
-                .saturating_add(self.retryable_failure)
-                .saturating_add(self.invariant_failure)
     }
 }
 
@@ -571,7 +561,6 @@ mod tests {
             work_dispatched: u64::MAX,
             scheduler_started: u64::MAX,
             work_started: u64::MAX,
-            work_completed: u64::MAX,
             succeeded: u64::MAX,
             no_work: u64::MAX,
             retryable_failure: u64::MAX,
@@ -588,7 +577,14 @@ mod tests {
         counters.record_work_dispatched();
         counters.record_scheduler_started();
         counters.record_work_started();
-        counters.record_completion(TimerCompletionOutcome::Success);
+        for outcome in [
+            TimerCompletionOutcome::Success,
+            TimerCompletionOutcome::NoWork,
+            TimerCompletionOutcome::RetryableFailure,
+            TimerCompletionOutcome::InvariantFailure,
+        ] {
+            counters.record_completion(outcome);
+        }
         counters.record_cancellation();
         counters.record_stale_wakeup();
         counters.record_stale_work();
@@ -599,12 +595,51 @@ mod tests {
         assert_eq!(counters.wakeups_armed(), u64::MAX);
         assert_eq!(counters.work_dispatched(), u64::MAX);
         assert_eq!(counters.work_completed(), u64::MAX);
+        assert_eq!(counters.succeeded(), u64::MAX);
+        assert_eq!(counters.no_work(), u64::MAX);
+        assert_eq!(counters.retryable_failure(), u64::MAX);
+        assert_eq!(counters.invariant_failure(), u64::MAX);
         assert_eq!(counters.cancelled(), u64::MAX);
         assert_eq!(counters.stale_wakeups(), u64::MAX);
         assert_eq!(counters.stale_work(), u64::MAX);
         assert_eq!(counters.coalesced(), u64::MAX);
         assert_eq!(counters.unacknowledged(), u64::MAX);
-        assert!(counters.completion_partition_is_valid());
+    }
+
+    #[test]
+    fn completion_totals_follow_classifications_and_saturate_across_outcomes() {
+        let mut counters = TimerCounters::EMPTY;
+        assert_eq!(counters.work_completed(), 0);
+        for (outcome, total) in [
+            (TimerCompletionOutcome::Success, 1),
+            (TimerCompletionOutcome::NoWork, 2),
+            (TimerCompletionOutcome::RetryableFailure, 3),
+            (TimerCompletionOutcome::InvariantFailure, 4),
+        ] {
+            counters.record_completion(outcome);
+            assert_eq!(counters.work_completed(), total);
+        }
+        assert_eq!(counters.succeeded(), 1);
+        assert_eq!(counters.no_work(), 1);
+        assert_eq!(counters.retryable_failure(), 1);
+        assert_eq!(counters.invariant_failure(), 1);
+        assert_eq!(counters.work_started(), 0);
+
+        let mut counters = TimerCounters {
+            succeeded: u64::MAX - 2,
+            ..TimerCounters::EMPTY
+        };
+        counters.record_completion(TimerCompletionOutcome::NoWork);
+        assert_eq!(counters.work_completed(), u64::MAX - 1);
+        counters.record_completion(TimerCompletionOutcome::RetryableFailure);
+        assert_eq!(counters.work_completed(), u64::MAX);
+        counters.record_completion(TimerCompletionOutcome::InvariantFailure);
+        counters.record_completion(TimerCompletionOutcome::Success);
+        assert_eq!(counters.work_completed(), u64::MAX);
+        assert_eq!(counters.succeeded(), u64::MAX - 1);
+        assert_eq!(counters.no_work(), 1);
+        assert_eq!(counters.retryable_failure(), 1);
+        assert_eq!(counters.invariant_failure(), 1);
     }
 
     #[test]

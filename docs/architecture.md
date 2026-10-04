@@ -18,9 +18,10 @@ The module hierarchy keeps six responsibilities separate:
 2. `snapshot` owns inert public identity and observation values. Its private
    `identity`, `model`, and `metrics` children separate validation, closed
    state/outcome types, and saturating measurements. Only the registry builds
-   the top-level timer and atomic inventory snapshots or initializes their
-   observation fragments; nested values expose no alternate construction or
-   control path.
+   the top-level timer and atomic inventory snapshots and initializes their
+   observation aggregates. Platform reads construct inert `MemoryPageExtent`
+   values directly. Those aggregates and extents expose no public construction
+   or control path.
 3. `control` is the private ordinary generation/registration state machine. It
    owns checked callback generations, immediate schedule, reconciliation and
    cancellation transitions. One counter owns ordinary allocation history and
@@ -81,6 +82,8 @@ The module hierarchy keeps six responsibilities separate:
    a slot; detached handles retain complete tokens for restoration and cleanup.
 5. `platform` is the private direct boundary to `ic-cdk-timers` and required
    IC system facts. Its handle is linear and it owns no recurrence policy.
+   Page reads return the same inert extent representation used in snapshots,
+   without a parallel platform value or a registry conversion.
 6. `runtime` owns the one canister-local registry static, erases consumer
    callbacks for registry storage, exposes registration claims, applies
    provider effects, and drives live `Once`/`AfterCompletion` dispatch and the
@@ -106,9 +109,10 @@ The module hierarchy keeps six responsibilities separate:
    receive only the typed error; Watchdog dispatch separately clears its installed
    successor if later work binding fails. Work binding and dispatch confirmation
    share a cleanup exit, with confirmation strictly after successful installation.
-   Each provider binding consumes one complete registry effect; its shape is
-   validated before cleanup or platform calls rather than duplicating token
-   and delay arguments beside the canonical effect. One initial/replacement
+   Effect application consumes one complete registry effect; its shape is
+   validated before cleanup or platform calls. Its matched branches perform
+   binding directly without passing the effect through another variant match or
+   duplicating token and delay arguments beside it. One initial/replacement
    arm kind flows from ordinary control through provider binding, and the
    non-empty set of callbacks to clear is also a closed value rather than
    independent booleans. The entry-local exact-claim predicate is shared by

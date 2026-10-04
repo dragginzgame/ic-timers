@@ -9,8 +9,9 @@ use crate::{
     },
     schedule::{ScheduleError, TimerCadence, TimerDirective, TimerSchedule},
     snapshot::{
-        DeclarationLifetime, TimerCompletion, TimerControlFailure, TimerEpoch, TimerIdentity,
-        TimerInventorySnapshot, TimerPolicy, TimerRunResult, TimerSnapshot, WatchdogRunResult,
+        DeclarationLifetime, MemoryPageExtent, TimerCompletion, TimerControlFailure, TimerEpoch,
+        TimerIdentity, TimerInventorySnapshot, TimerPolicy, TimerRunResult, TimerSnapshot,
+        WatchdogRunResult,
     },
 };
 use std::{cell::RefCell, future::Future, rc::Rc, time::Duration};
@@ -889,7 +890,11 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
     }
     match effect {
         RegistryEffect::None => restore_provider_handles(handles),
-        RegistryEffect::ArmWakeup { token, arm, .. } => {
+        RegistryEffect::ArmWakeup {
+            token,
+            delay_ns,
+            arm,
+        } => {
             if arm.replaces_existing() {
                 let replaced = take_detached_or_owned_handle(handles.take_wakeup(), |registry| {
                     registry.take_wakeup_handle(token.identity())
@@ -899,7 +904,21 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
                 }
             }
             restore_provider_handles(handles)?;
-            arm_wakeup(effect)
+            let task_token = token.clone();
+            let handle = platform::set_timer(Duration::from_nanos(*delay_ns), async move {
+                dispatch_wakeup(task_token).await;
+            });
+            bind_provider_handle(token, handle)?;
+            if let Err(error) = confirm_effect(effect) {
+                let handle = with_registry_mut(|registry| {
+                    registry
+                        .take_wakeup_handle(token.identity())
+                        .ok_or(TimerError::OwnershipInvariant)
+                })?;
+                clear_provider_handle(handle);
+                return Err(error);
+            }
+            Ok(())
         }
         RegistryEffect::ClearCallbacks {
             identity,
@@ -923,7 +942,11 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
             }
             restore_provider_handles(handles)
         }
-        RegistryEffect::DispatchWatchdog { successor, .. } => {
+        RegistryEffect::DispatchWatchdog {
+            successor,
+            successor_delay_ns,
+            work,
+        } => {
             if let Some(wakeup) = handles.take_wakeup() {
                 clear_provider_handle(wakeup);
             }
@@ -933,7 +956,24 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
             if let Some(replaced_work) = replaced_work {
                 clear_provider_handle(replaced_work);
             }
-            dispatch_watchdog_effect(effect)
+            let successor_token = successor.clone();
+            let successor_handle =
+                platform::set_timer(Duration::from_nanos(*successor_delay_ns), async move {
+                    dispatch_watchdog_scheduler(&successor_token);
+                });
+            bind_provider_handle(successor, successor_handle)?;
+
+            let work_token = work.clone();
+            let work_handle = platform::set_timer(Duration::ZERO, async move {
+                dispatch_watchdog_work(&work_token);
+            });
+            if let Err(error) =
+                bind_provider_handle(work, work_handle).and_then(|()| confirm_effect(effect))
+            {
+                clear_entry_provider_handles(successor.identity())?;
+                return Err(error);
+            }
+            Ok(())
         }
     }
 }
@@ -946,60 +986,6 @@ fn take_detached_or_owned_handle(
         || with_registry_mut(|registry| Ok(take_owned(registry))),
         |handle| Ok(Some(handle)),
     )
-}
-
-fn arm_wakeup(effect: &RegistryEffect) -> Result<(), TimerError> {
-    let RegistryEffect::ArmWakeup {
-        token, delay_ns, ..
-    } = effect
-    else {
-        return Err(TimerError::OwnershipInvariant);
-    };
-    let task_token = token.clone();
-    let handle = platform::set_timer(Duration::from_nanos(*delay_ns), async move {
-        dispatch_wakeup(task_token).await;
-    });
-    bind_provider_handle(token, handle)?;
-    if let Err(error) = confirm_effect(effect) {
-        let handle = with_registry_mut(|registry| {
-            registry
-                .take_wakeup_handle(token.identity())
-                .ok_or(TimerError::OwnershipInvariant)
-        })?;
-        clear_provider_handle(handle);
-        return Err(error);
-    }
-    Ok(())
-}
-
-fn dispatch_watchdog_effect(effect: &RegistryEffect) -> Result<(), TimerError> {
-    let RegistryEffect::DispatchWatchdog {
-        successor,
-        successor_delay_ns,
-        work,
-        ..
-    } = effect
-    else {
-        return Err(TimerError::OwnershipInvariant);
-    };
-    let successor_token = successor.clone();
-    let successor_handle =
-        platform::set_timer(Duration::from_nanos(*successor_delay_ns), async move {
-            dispatch_watchdog_scheduler(&successor_token);
-        });
-    bind_provider_handle(successor, successor_handle)?;
-
-    let work_token = work.clone();
-    let work_handle = platform::set_timer(Duration::ZERO, async move {
-        dispatch_watchdog_work(&work_token);
-    });
-    if let Err(error) =
-        bind_provider_handle(work, work_handle).and_then(|()| confirm_effect(effect))
-    {
-        clear_entry_provider_handles(successor.identity())?;
-        return Err(error);
-    }
-    Ok(())
 }
 
 /// Consume a provider handle by installing it or clearing it on rejection.
@@ -1256,7 +1242,7 @@ fn fail_claim_provider_binding(claim: &RegistrationClaim) -> Result<(), TimerErr
 #[derive(Clone, Copy)]
 struct CallbackMeasurementStart {
     instructions_before: u64,
-    memory_start: platform::MemoryPages,
+    memory_start: MemoryPageExtent,
 }
 
 impl CallbackMeasurementStart {
@@ -1285,8 +1271,8 @@ impl CallbackMeasurementStart {
 #[derive(Clone, Copy)]
 struct CallbackMeasurement {
     instructions: u64,
-    memory_start: platform::MemoryPages,
-    memory_end: platform::MemoryPages,
+    memory_start: MemoryPageExtent,
+    memory_end: MemoryPageExtent,
 }
 
 fn record_callback_measurements(token: &CallbackToken, measurement: CallbackMeasurement) {
