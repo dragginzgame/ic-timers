@@ -39,10 +39,9 @@ pub enum CallbackRole {
 }
 
 /// Identity and generations an internal callback must present.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct CallbackToken {
-    identity: TimerIdentity,
-    claim_generation: u64,
+    claim: RegistrationClaim,
     callback_generation: u64,
     role: CallbackRole,
 }
@@ -55,15 +54,21 @@ impl CallbackToken {
         role: CallbackRole,
     ) -> Self {
         Self {
-            identity,
-            claim_generation,
+            claim: RegistrationClaim {
+                identity,
+                claim_generation,
+            },
             callback_generation,
             role,
         }
     }
 
     pub(crate) const fn identity(&self) -> &TimerIdentity {
-        &self.identity
+        self.claim.identity()
+    }
+
+    pub(crate) const fn claim(&self) -> &RegistrationClaim {
+        &self.claim
     }
 
     #[cfg(test)]
@@ -76,7 +81,20 @@ impl CallbackToken {
     }
 
     pub(crate) fn belongs_to_same_claim(&self, other: &Self) -> bool {
-        self.identity == other.identity && self.claim_generation == other.claim_generation
+        self.claim == other.claim
+    }
+}
+
+impl Clone for CallbackToken {
+    fn clone(&self) -> Self {
+        // Queued deliveries need owned tokens. Retained registration capabilities
+        // remain non-clone, and running contexts borrow this token's exact claim.
+        Self::new(
+            self.identity().clone(),
+            self.claim.claim_generation,
+            self.callback_generation,
+            self.role,
+        )
     }
 }
 
@@ -87,13 +105,6 @@ impl RegistrationClaim {
 
     pub(crate) const fn claim_generation(&self) -> u64 {
         self.claim_generation
-    }
-
-    pub(crate) fn from_callback(token: &CallbackToken) -> Self {
-        Self {
-            identity: token.identity.clone(),
-            claim_generation: token.claim_generation,
-        }
     }
 }
 
@@ -588,7 +599,7 @@ impl Entry {
     }
 
     const fn owns_token_claim(&self, token: &CallbackToken) -> bool {
-        self.claim_generation == token.claim_generation
+        self.claim_generation == token.claim().claim_generation()
     }
 
     // Registry lookups select this entry by token identity first.
@@ -1160,7 +1171,7 @@ impl TimerRegistry {
         now_ns: u64,
         result: TimerRunResult,
     ) -> Result<RegistryTransition, RegistryError> {
-        let identity = token.identity.clone();
+        let identity = token.identity().clone();
         let (transition, remove) = {
             let entry = self.running_work_entry_mut(token)?;
             let EntryKind::Ordinary {
@@ -1306,14 +1317,14 @@ impl TimerRegistry {
         let Some((successor_generation, attempt_generation)) = control.next_dispatch_generations()
         else {
             let transition = control.terminate(
-                clear_callbacks(token.identity.clone(), CallbacksToClear::Work),
+                clear_callbacks(token.identity().clone(), CallbacksToClear::Work),
                 TimerControlFailure::GenerationExhausted,
             );
             return self.remove_transient_on_failure(token.identity(), transition);
         };
         let Ok(successor_deadline_ns) = cadence.deadline_after(now_ns) else {
             let transition = control.terminate(
-                clear_callbacks(token.identity.clone(), CallbacksToClear::Work),
+                clear_callbacks(token.identity().clone(), CallbacksToClear::Work),
                 TimerControlFailure::DeadlineOverflow,
             );
             return self.remove_transient_on_failure(token.identity(), transition);
@@ -1329,14 +1340,14 @@ impl TimerRegistry {
         entry.scheduling_mode = TimerSchedulingMode::Watchdog;
         RegistryTransition::normal(RegistryEffect::DispatchWatchdog {
             successor: CallbackToken::new(
-                token.identity.clone(),
+                token.identity().clone(),
                 entry.claim_generation,
                 successor_generation,
                 CallbackRole::WatchdogScheduler,
             ),
             successor_delay_ns: cadence.as_nanos(),
             work: CallbackToken::new(
-                token.identity.clone(),
+                token.identity().clone(),
                 entry.claim_generation,
                 attempt_generation,
                 CallbackRole::WatchdogWork,
@@ -1384,7 +1395,7 @@ impl TimerRegistry {
         now_ns: u64,
         result: WatchdogRunResult,
     ) -> Result<RegistryTransition, RegistryError> {
-        let identity = token.identity.clone();
+        let identity = token.identity().clone();
         let (transition, remove) = {
             let entry = self.running_work_entry_mut(token)?;
             let EntryKind::Watchdog {
@@ -1456,8 +1467,12 @@ impl TimerRegistry {
                         };
                         RegistryTransition::normal(RegistryEffect::None)
                     } else {
-                        let claim = RegistrationClaim::from_callback(token);
-                        control.arm_scheduler(&claim, now_ns, deadline_ns, WakeupArm::Replacement)
+                        control.arm_scheduler(
+                            token.claim(),
+                            now_ns,
+                            deadline_ns,
+                            WakeupArm::Replacement,
+                        )
                     }
                 }
                 WatchdogDecision::Stop => {

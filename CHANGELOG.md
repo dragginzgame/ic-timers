@@ -4,6 +4,23 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.14]
+
+### Changed
+
+- Carry the exact registration claim inside private callback tokens and borrow
+  it for context control, Watchdog completion and provider cleanup. Remove claim
+  reconstruction and its forwarding helpers while retaining exact running-work
+  validation and non-clone public registration capabilities.
+
+### Development
+
+- Adapt the existing running-work negative fixture to construct stale claim and
+  callback generations through the token constructor. Keep context-expiration,
+  identity-reuse, cross-claim dispatch and provider cleanup subjects unchanged.
+- Record the cleanup and verification scope in the
+  [0.10.14 release note](docs/changelog/0.10.14.md).
+
 ## [0.10.13] - 2026-10-04
 
 ### Changed

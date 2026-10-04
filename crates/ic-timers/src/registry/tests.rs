@@ -147,17 +147,19 @@ fn running_work_boundaries_reject_unstarted_stale_and_completed_tokens() {
                 },
             );
         }
+        let current_claim_generation = token.claim().claim_generation();
         for (claim_generation, callback_generation) in [
-            (token.claim_generation + 1, token.callback_generation),
-            (token.claim_generation, token.callback_generation + 1),
+            (current_claim_generation + 1, token.callback_generation),
+            (current_claim_generation, token.callback_generation + 1),
         ] {
             assert_running_work_rejected(
                 &mut registry,
-                &CallbackToken {
+                &CallbackToken::new(
+                    token.identity().clone(),
                     claim_generation,
                     callback_generation,
-                    ..token.clone()
-                },
+                    token.role(),
+                ),
             );
         }
 

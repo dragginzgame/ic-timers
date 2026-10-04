@@ -46,3 +46,4 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.10.11 Watchdog dispatch-failure coverage](0.10.11.md)
 - [0.10.12 generation ownership, provider binding and workspace formatting](0.10.12.md)
 - [0.10.13 directive failure ownership](0.10.13.md)
+- [0.10.14 callback claim ownership](0.10.14.md)

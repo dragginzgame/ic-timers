@@ -87,6 +87,11 @@ The module hierarchy keeps six responsibilities separate:
    two-role watchdog protocol. Its three policy-specific delegated work
    contexts wrap one private mechanism and are valid only for the exact
    running callback token.
+   Each private token contains its registration claim, callback generation and
+   role. Context control and callback cleanup borrow that claim instead of
+   reconstructing it. Owned delivery tokens remain cloneable; registration
+   capabilities remain non-clone. Borrowed claims still require the operation's
+   exact running-work or provider-ownership validation.
    Claim-originated effect failures retire the declaration instead of leaving
    registry state scheduled without a provider handle. Lifecycle verification
    checks the exact claim and immutable declaration metadata directly rather

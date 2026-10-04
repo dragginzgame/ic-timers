@@ -47,6 +47,10 @@ references and validation belong in [release notes](../changelog/README.md),
   history; active states do not repeat those values. State, claim and role remain
   part of callback authorization. Snapshots project active generations from the
   counters; tokens and handles retain their independent delivery stamps.
+- Private callback tokens carry their registration claim. Context control and
+  callback cleanup borrow it without claim reconstruction; running-work and
+  provider ownership checks remain distinct. See the
+  [callback claim ownership note](../changelog/0.10.14.md).
 - Registry arbitration owns ordinary pending-command order and exact running-work
   authorization. Exact reconciliation replaces a discarded callback scheduling
   proposal before validation. Invariant failure remains terminal; unregister is

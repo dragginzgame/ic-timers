@@ -91,36 +91,32 @@ impl CallbackContext {
         Self { token }
     }
 
-    fn claim(&self) -> RegistrationClaim {
-        RegistrationClaim::from_callback(&self.token)
-    }
-
     const fn identity(&self) -> &TimerIdentity {
         self.token.identity()
     }
 
     fn cancel(&self) -> Result<(), TimerError> {
-        cancel_claim(&self.claim(), Some(&self.token))
+        cancel_claim(self.token.claim(), Some(&self.token))
     }
 
     fn schedule_once(&self, schedule: TimerSchedule) -> Result<(), TimerError> {
-        ensure_once_claim(&self.claim(), Some(&self.token), schedule)
+        ensure_once_claim(self.token.claim(), Some(&self.token), schedule)
     }
 
     fn schedule_recurring(&self) -> Result<(), TimerError> {
-        ensure_recurring_claim(&self.claim(), Some(&self.token))
+        ensure_recurring_claim(self.token.claim(), Some(&self.token))
     }
 
     fn schedule_watchdog_immediately(&self) -> Result<(), TimerError> {
-        ensure_watchdog_immediately_claim(&self.claim(), Some(&self.token))
+        ensure_watchdog_immediately_claim(self.token.claim(), Some(&self.token))
     }
 
     fn reconcile_watchdog(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
-        reconcile_watchdog_claim(&self.claim(), Some(&self.token), schedule)
+        reconcile_watchdog_claim(self.token.claim(), Some(&self.token), schedule)
     }
 
     fn reconcile_ordinary(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
-        reconcile_ordinary_claim(&self.claim(), Some(&self.token), schedule)
+        reconcile_ordinary_claim(self.token.claim(), Some(&self.token), schedule)
     }
 }
 
@@ -1149,8 +1145,7 @@ fn dispatch_watchdog_scheduler(token: &CallbackToken) {
     let measurement = CallbackMeasurementStart::capture();
     let dispatched = with_registry_mut(|registry| {
         registry.consume_provider_handle(token);
-        let claim = RegistrationClaim::from_callback(token);
-        let handles = match registry.take_provider_handles_for_claim(&claim) {
+        let handles = match registry.take_provider_handles_for_claim(token.claim()) {
             Ok(handles) => handles,
             // An already removed or superseded claim is a normal stale delivery.
             Err(RegistryError::UnknownRegistration | RegistryError::StaleRegistration) => {
@@ -1204,14 +1199,13 @@ fn dispatch_watchdog_work(token: &CallbackToken) {
 }
 
 fn finish_watchdog_dispatch(token: &CallbackToken, result: WatchdogRunResult) {
-    let claim = RegistrationClaim::from_callback(token);
     // Unlike synchronous public control, an unexpected callback-completion
     // failure must trap. IC message rollback restores these temporarily
     // detached heap capabilities while the previously committed successor
     // remains armed by the scheduler message.
     let completed = with_registry_mut(|registry| {
         let handles = registry
-            .take_provider_handles_for_claim(&claim)
+            .take_provider_handles_for_claim(token.claim())
             .map_err(TimerError::from)?;
         #[cfg(test)]
         {
@@ -1242,16 +1236,11 @@ fn finish_callback_transition(
             if token.role() == CallbackRole::WatchdogWork {
                 trap_callback_failure("watchdog provider-handle completion", &error);
             }
-            fail_provider_binding(token).unwrap_or_else(|binding_error| {
+            fail_claim_provider_binding(token.claim()).unwrap_or_else(|binding_error| {
                 trap_callback_failure("provider-binding failure cleanup", &binding_error)
             });
         }
     }
-}
-
-fn fail_provider_binding(token: &CallbackToken) -> Result<(), TimerError> {
-    let claim = RegistrationClaim::from_callback(token);
-    fail_claim_provider_binding(&claim)
 }
 
 fn fail_claim_provider_binding(claim: &RegistrationClaim) -> Result<(), TimerError> {
