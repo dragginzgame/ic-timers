@@ -4,6 +4,30 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.11.4]
+
+### Changed
+
+- Record Watchdog request coalescing once after the selected transition, removing
+  duplicate scheduled, dispatched and running updates. Terminal failures remain
+  distinct from successful requests satisfied without another arm.
+- Commit ordinary request scheduling mode once for successful arms or exact
+  reconciliation, preserving mode changes when an exact deadline coalesces and
+  mode retention for coalesced ensures.
+
+### Development
+
+- Extend existing fixtures to check dispatched and running request counts,
+  non-coalesced terminal failures and exact ordinary mode observations at an
+  unchanged deadline.
+- Record scope and pending verification in the
+  [0.11.4 release note](docs/changelog/0.11.4.md).
+
+### Documentation
+
+- Restore the README's single structured API-line projection after the overview
+  rewrite, allowing version-bump and release-truth checks to maintain it.
+
 ## [0.11.3] - 2026-10-04
 
 ### Changed

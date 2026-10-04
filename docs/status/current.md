@@ -117,6 +117,10 @@ references and validation belong in [release notes](../changelog/README.md),
   successful arming. Coalesced, pending and failed requests preserve it; requested
   delays still record accepted demand, and cadence deadlines are checked only for
   inactive control. See the [request observation note](../changelog/0.11.3.md).
+  Coalescing is recorded once for a no-effect transition without failure. Ordinary
+  request mode updates have one owner for successful arms or exact reconciliation;
+  coalesced ensures preserve the existing mode. See the
+  [request accounting note](../changelog/0.11.4.md).
 - Ordinary dispatch shares completion finalization for callback results and
   callback-borrow failures. Work measurements are recorded only after executed
   work; see the [ordinary callback finalization note](../changelog/0.10.9.md).

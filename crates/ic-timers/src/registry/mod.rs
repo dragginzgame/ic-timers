@@ -883,7 +883,7 @@ impl TimerRegistry {
         if let TimerRegistration::Running { pending } = &mut control.registration {
             *pending = Some(select_pending_ordinary(*pending, request, requested));
         }
-        if matches!(request, OrdinaryRequest::Reconcile) {
+        if arm.is_some() || matches!(request, OrdinaryRequest::Reconcile) {
             entry.scheduling_mode = requested.mode;
         }
 
@@ -891,7 +891,6 @@ impl TimerRegistry {
             entry.observability.counters_mut().record_coalesced();
             return Ok(RegistryTransition::normal(RegistryEffect::None));
         };
-        entry.scheduling_mode = requested.mode;
         Ok(RegistryTransition::normal(RegistryEffect::ArmWakeup {
             token: token_for(claim, control.generation(), CallbackRole::OrdinaryWork),
             delay_ns: requested.deadline_ns.saturating_sub(now_ns),
@@ -947,10 +946,7 @@ impl TimerRegistry {
                 };
                 control.arm_scheduler(claim, now_ns, deadline_ns, WakeupArm::Replacement)
             }
-            WatchdogState::Scheduled { .. } => {
-                entry.observability.counters_mut().record_coalesced();
-                RegistryTransition::normal(RegistryEffect::None)
-            }
+            WatchdogState::Scheduled { .. } => RegistryTransition::normal(RegistryEffect::None),
             WatchdogState::AwaitingWork {
                 attempt_status: WatchdogAttemptStatus::Dispatched,
                 pending,
@@ -959,7 +955,6 @@ impl TimerRegistry {
                 if let WatchdogScheduleRequest::Reconcile(requested) = request {
                     *pending = Some(WatchdogPending::Reconcile(requested));
                 }
-                entry.observability.counters_mut().record_coalesced();
                 RegistryTransition::normal(RegistryEffect::None)
             }
             WatchdogState::AwaitingWork {
@@ -968,12 +963,17 @@ impl TimerRegistry {
                 ..
             } => {
                 *pending = Some(select_pending_watchdog(*pending, request, now_ns));
-                entry.observability.counters_mut().record_coalesced();
                 RegistryTransition::normal(RegistryEffect::None)
             }
         };
         if matches!(transition.effect(), RegistryEffect::ArmWakeup { .. }) {
             entry.scheduling_mode = mode;
+        }
+        if matches!(
+            (transition.effect(), transition.failure()),
+            (RegistryEffect::None, None)
+        ) {
+            entry.observability.counters_mut().record_coalesced();
         }
         entry.observability.counters_mut().record_schedule_request();
         entry.latest_requested_delay_ns = requested_delay_ns;

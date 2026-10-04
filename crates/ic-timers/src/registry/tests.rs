@@ -1020,6 +1020,19 @@ fn ordinary_reconciliation_is_authoritative_and_registry_pending_is_ordered() {
     let deadline = scheduled_deadline(&registry, &current);
     assert_eq!(deadline, 200);
     assert_eq!(arm_kind, WakeupArm::Replacement);
+    let before = registry.snapshot(&timer).unwrap();
+    let equal = registry
+        .reconcile_ordinary(
+            &claim,
+            0,
+            Some(TimerSchedule::After(Duration::from_nanos(200))),
+        )
+        .unwrap();
+    assert_eq!(equal.effect(), &RegistryEffect::None);
+    let exact = registry.snapshot(&timer).unwrap();
+    assert_eq!(exact.state(), before.state());
+    assert_eq!(exact.scheduling_mode(), TimerSchedulingMode::Once);
+    assert_eq!(exact.latest_requested_delay_ns(), Some(200));
     assert!(registry.begin_ordinary(&replaced).is_none());
     assert!(registry.begin_ordinary(&current).is_some());
 
@@ -1453,6 +1466,8 @@ fn watchdog_requests_preserve_dispatch_authority_until_completion_replaces_the_p
         let pending = registry.snapshot(&timer).unwrap();
         assert_eq!(pending.state(), before.state());
         assert_eq!(pending.scheduling_mode(), before.scheduling_mode());
+        assert_eq!(pending.observability().counters().schedule_requests(), 5);
+        assert_eq!(pending.observability().counters().coalesced(), 3);
         assert!(registry.begin_watchdog_work(&successor).is_none());
         assert_eq!(
             registry.begin_watchdog_scheduler(&work, 15).effect(),
@@ -2495,6 +2510,7 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
                 }
                 let counters = snapshot.observability().counters();
                 assert_eq!(counters.cancelled(), 0);
+                assert_eq!(counters.coalesced(), 0, "{subject}");
                 assert_eq!(
                     counters.work_completed(),
                     u64::from(subject.starts_with("completion-")),

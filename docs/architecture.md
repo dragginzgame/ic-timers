@@ -120,9 +120,13 @@ The module hierarchy keeps six responsibilities separate:
    Ordinary schedule requests share counter, request-metadata and coalescing
    updates. Recurring ensure submits an existing scheduled deadline unchanged;
    it calculates a cadence deadline only for inactive or running declarations.
+   The request owner commits mode once for successful arms or exact reconciliation;
+   coalesced ensures retain it, while equal exact requests update it.
    Watchdog requests commit scheduling mode once after a successful initial or
    replacement arm; coalesced, pending and failed arms preserve it while recording
    requested delay. A cadence deadline is calculated only for an inactive Watchdog.
+   The common Watchdog request exit records coalescing for a no-effect transition
+   without failure, keeping exhausted initial arms distinct from coalesced demand.
    Owned provider roles follow entry policy and handle slot rather than a copied
    field. Installation and consumption reject policy/role mismatches before using
    a slot; detached handles retain complete tokens for restoration and cleanup.
