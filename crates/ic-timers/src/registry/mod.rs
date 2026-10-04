@@ -778,7 +778,12 @@ impl TimerRegistry {
         now_ns: u64,
         schedule: Option<TimerSchedule>,
     ) -> Result<RegistryTransition, RegistryError> {
-        self.validate_ordinary_claim(claim)?;
+        let entry = self.entry(claim)?;
+        if !matches!(entry.kind, EntryKind::Ordinary { .. }) {
+            return Err(RegistryError::PolicyMismatch {
+                actual: entry.kind.policy().label(),
+            });
+        }
         let Some(schedule) = schedule else {
             return self.cancel(claim);
         };
@@ -788,20 +793,6 @@ impl TimerRegistry {
             schedule.resolve(now_ns)?,
             OrdinaryRequest::Reconcile,
         )
-    }
-
-    pub(crate) fn validate_ordinary_claim(
-        &self,
-        claim: &RegistrationClaim,
-    ) -> Result<(), RegistryError> {
-        let entry = self.entry(claim)?;
-        if matches!(entry.kind, EntryKind::Ordinary { .. }) {
-            Ok(())
-        } else {
-            Err(RegistryError::PolicyMismatch {
-                actual: entry.kind.policy().label(),
-            })
-        }
     }
 
     pub(crate) fn ensure_recurring(
@@ -1302,26 +1293,28 @@ impl TimerRegistry {
         if matches!(control.state, WatchdogState::AwaitingWork { .. }) {
             entry.observability.record_unacknowledged(now_ns);
         }
-        let Some((successor_generation, attempt_generation)) = control.next_dispatch_generations()
-        else {
-            let transition = control.terminate(
-                RegistryEffect::ClearCallbacks {
-                    identity: token.identity().clone(),
-                    handles: CallbacksToClear::Work,
-                },
-                TimerControlFailure::GenerationExhausted,
-            );
-            return self.remove_transient_on_failure(token.identity(), transition);
-        };
-        let Ok(successor_deadline_ns) = cadence.deadline_after(now_ns) else {
-            let transition = control.terminate(
-                RegistryEffect::ClearCallbacks {
-                    identity: token.identity().clone(),
-                    handles: CallbacksToClear::Work,
-                },
-                TimerControlFailure::DeadlineOverflow,
-            );
-            return self.remove_transient_on_failure(token.identity(), transition);
+        let next_dispatch = control
+            .next_dispatch_generations()
+            .ok_or(TimerControlFailure::GenerationExhausted)
+            .and_then(|(successor_generation, attempt_generation)| {
+                cadence
+                    .deadline_after(now_ns)
+                    .map(|deadline_ns| (successor_generation, attempt_generation, deadline_ns))
+                    .map_err(|_| TimerControlFailure::DeadlineOverflow)
+            });
+        let (successor_generation, attempt_generation, successor_deadline_ns) = match next_dispatch
+        {
+            Ok(next) => next,
+            Err(failure) => {
+                let transition = control.terminate(
+                    RegistryEffect::ClearCallbacks {
+                        identity: token.identity().clone(),
+                        handles: CallbacksToClear::Work,
+                    },
+                    failure,
+                );
+                return self.remove_transient_on_failure(token.identity(), transition);
+            }
         };
 
         control.scheduler_generation = successor_generation;

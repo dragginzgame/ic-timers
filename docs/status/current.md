@@ -10,7 +10,7 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Release state
 
-- Workspace package version: `0.10.22`.
+- Workspace package version: `0.10.23`.
 - Cargo owns this version; the release helper updates the single projection above.
   Dated changelog sections and release-note statuses own release state. Read those
   sources to distinguish preparation from a completed release; do not duplicate
@@ -67,6 +67,11 @@ references and validation belong in [release notes](../changelog/README.md),
   The shared claim-transition operation validates context authority before
   detachment; lifecycle reconciliation directly verifies retained declarations.
   See the [runtime validation ownership note](../changelog/0.10.20.md).
+  Ordinary reconciliation owns claim-policy validation directly, before
+  cancellation or schedule resolution; see the
+  [validation and scheduler failure note](../changelog/0.10.23.md). Watchdog
+  scheduler allocation and deadline errors share terminal finalization while
+  retaining generation-first validation and atomic allocation.
 - Registry transitions borrow identity from their claim or token for local
   lookup and removal. Queued effects, snapshots and detached capabilities retain
   owned identities; see the [identity borrowing note](../changelog/0.10.18.md).

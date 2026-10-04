@@ -4,7 +4,28 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
-<<<<<<< HEAD
+## [0.10.23] - 2026-10-04
+
+### Changed
+
+- Move ordinary claim-policy validation into reconciliation and delete its
+  single-caller helper. Preserve claim and policy rejection before cancellation
+  or schedule resolution.
+- Finalize Watchdog scheduler generation and deadline failures through one
+  terminal path, preserving generation-first error selection, atomic allocation,
+  queued-work cleanup and declaration lifetimes.
+
+### Development
+
+- Extend the Watchdog cancellation fixture to assert that ordinary reconciliation
+  rejects inactivity, valid deadlines and oversized delays without changing the
+  armed declaration or its inventory.
+- Extend the scheduler exhaustion fixture for simultaneous generation and
+  deadline overflow, retaining terminal-state, cleanup and unchanged-counter
+  assertions.
+- Record the cleanup and pending verification in the
+  [0.10.23 release note](docs/changelog/0.10.23.md).
+
 ## [0.10.22] - 2026-10-04
 
 ### Changed
@@ -25,16 +46,6 @@ All notable changes to this project are recorded here.
   restoration cleanup to use registry-owned pair detachment.
 - Record the lookup cleanup and focused verification subjects in the
   [0.10.22 release note](docs/changelog/0.10.22.md).
-=======
-### Documentation
-
-- Distinguish historical Toko Miner composition receipts from the evidence
-  required for each new combined dependency graph.
-- Mark the immediate-Watchdog report as historical 0.7.0 pre-release evidence
-  and update the documentation index to describe the record's current scope.
-- Correct the release helper's documented backup set to include all seven
-  mutated metadata files, including the README.
->>>>>>> 5eb5183abbc90c02b4e6fae2aad93dcbea9c7325
 
 ## [0.10.21] - 2026-10-04
 
