@@ -417,11 +417,7 @@ impl WatchdogControl {
         arm: WakeupArm,
     ) -> RegistryTransition {
         let Some(generation) = self.scheduler_generation.checked_add(1) else {
-            let cleanup = if arm.replaces_existing() {
-                clear_callbacks(claim.identity.clone(), CallbacksToClear::Wakeup)
-            } else {
-                RegistryEffect::None
-            };
+            let cleanup = clear_wakeup_if(claim.identity(), arm.replaces_existing());
             return self.terminate(cleanup, TimerControlFailure::GenerationExhausted);
         };
         self.scheduler_generation = generation;
@@ -1238,9 +1234,8 @@ impl TimerRegistry {
                     entry.scheduling_mode = selected.mode;
                     entry.latest_requested_delay_ns = selected.requested_delay_ns;
                     RegistryTransition::normal(RegistryEffect::ArmWakeup {
-                        token: CallbackToken::new(
-                            identity.clone(),
-                            entry.claim_generation,
+                        token: token_for(
+                            token.claim(),
                             control.generation(),
                             CallbackRole::OrdinaryWork,
                         ),
@@ -1317,14 +1312,20 @@ impl TimerRegistry {
         let Some((successor_generation, attempt_generation)) = control.next_dispatch_generations()
         else {
             let transition = control.terminate(
-                clear_callbacks(token.identity().clone(), CallbacksToClear::Work),
+                RegistryEffect::ClearCallbacks {
+                    identity: token.identity().clone(),
+                    handles: CallbacksToClear::Work,
+                },
                 TimerControlFailure::GenerationExhausted,
             );
             return self.remove_transient_on_failure(token.identity(), transition);
         };
         let Ok(successor_deadline_ns) = cadence.deadline_after(now_ns) else {
             let transition = control.terminate(
-                clear_callbacks(token.identity().clone(), CallbacksToClear::Work),
+                RegistryEffect::ClearCallbacks {
+                    identity: token.identity().clone(),
+                    handles: CallbacksToClear::Work,
+                },
                 TimerControlFailure::DeadlineOverflow,
             );
             return self.remove_transient_on_failure(token.identity(), transition);
@@ -1339,16 +1340,14 @@ impl TimerRegistry {
         };
         entry.scheduling_mode = TimerSchedulingMode::Watchdog;
         RegistryTransition::normal(RegistryEffect::DispatchWatchdog {
-            successor: CallbackToken::new(
-                token.identity().clone(),
-                entry.claim_generation,
+            successor: token_for(
+                token.claim(),
                 successor_generation,
                 CallbackRole::WatchdogScheduler,
             ),
             successor_delay_ns: cadence.as_nanos(),
-            work: CallbackToken::new(
-                token.identity().clone(),
-                entry.claim_generation,
+            work: token_for(
+                token.claim(),
                 attempt_generation,
                 CallbackRole::WatchdogWork,
             ),
@@ -1486,10 +1485,10 @@ impl TimerRegistry {
                         InactiveReason::Stopped
                     };
                     control.state = WatchdogState::Inactive { reason };
-                    RegistryTransition::normal(clear_callbacks(
-                        identity.clone(),
-                        CallbacksToClear::Wakeup,
-                    ))
+                    RegistryTransition::normal(RegistryEffect::ClearCallbacks {
+                        identity: identity.clone(),
+                        handles: CallbacksToClear::Wakeup,
+                    })
                 }
             };
             let remove = matches!(control.state, WatchdogState::Inactive { .. })
@@ -1923,13 +1922,12 @@ fn detach_provider_handle(
     }
 }
 
-const fn clear_callbacks(identity: TimerIdentity, handles: CallbacksToClear) -> RegistryEffect {
-    RegistryEffect::ClearCallbacks { identity, handles }
-}
-
 fn clear_wakeup_if(identity: &TimerIdentity, clear_wakeup: bool) -> RegistryEffect {
     if clear_wakeup {
-        clear_callbacks(identity.clone(), CallbacksToClear::Wakeup)
+        RegistryEffect::ClearCallbacks {
+            identity: identity.clone(),
+            handles: CallbacksToClear::Wakeup,
+        }
     } else {
         RegistryEffect::None
     }
@@ -2000,25 +1998,16 @@ const fn select_pending_ordinary(
     request: OrdinaryRequest,
     requested: ResolvedSchedule,
 ) -> OrdinaryPending {
-    if matches!(current, Some(OrdinaryPending::Unregister)) {
-        return OrdinaryPending::Unregister;
-    }
-    match request {
-        OrdinaryRequest::Reconcile => OrdinaryPending::Reconcile(requested),
-        OrdinaryRequest::EnsureOnce | OrdinaryRequest::EnsureRecurring => match current {
-            Some(OrdinaryPending::Reconcile(current) | OrdinaryPending::Schedule(current))
-                if current.deadline_ns <= requested.deadline_ns =>
-            {
-                OrdinaryPending::Schedule(current)
-            }
-            Some(
-                OrdinaryPending::Cancel
-                | OrdinaryPending::Reconcile(_)
-                | OrdinaryPending::Schedule(_),
-            )
-            | None => OrdinaryPending::Schedule(requested),
-            Some(OrdinaryPending::Unregister) => OrdinaryPending::Unregister,
-        },
+    match (current, request) {
+        (Some(OrdinaryPending::Unregister), _) => OrdinaryPending::Unregister,
+        (_, OrdinaryRequest::Reconcile) => OrdinaryPending::Reconcile(requested),
+        (
+            Some(OrdinaryPending::Reconcile(current) | OrdinaryPending::Schedule(current)),
+            OrdinaryRequest::EnsureOnce | OrdinaryRequest::EnsureRecurring,
+        ) if current.deadline_ns <= requested.deadline_ns => OrdinaryPending::Schedule(current),
+        (_, OrdinaryRequest::EnsureOnce | OrdinaryRequest::EnsureRecurring) => {
+            OrdinaryPending::Schedule(requested)
+        }
     }
 }
 
@@ -2066,27 +2055,24 @@ fn cancel_watchdog(control: &mut WatchdogControl, identity: &TimerIdentity) -> R
             attempt_status: WatchdogAttemptStatus::Dispatched,
             ..
         } => {
-            let clear_work = matches!(control.state, WatchdogState::AwaitingWork { .. });
+            let cleanup = RegistryEffect::ClearCallbacks {
+                identity: identity.clone(),
+                handles: CallbacksToClear::wakeup_and_maybe_work(matches!(
+                    control.state,
+                    WatchdogState::AwaitingWork { .. }
+                )),
+            };
             let Some((scheduler_generation, attempt_generation)) =
                 control.next_dispatch_generations()
             else {
-                return control.terminate(
-                    clear_callbacks(
-                        identity.clone(),
-                        CallbacksToClear::wakeup_and_maybe_work(clear_work),
-                    ),
-                    TimerControlFailure::GenerationExhausted,
-                );
+                return control.terminate(cleanup, TimerControlFailure::GenerationExhausted);
             };
             control.scheduler_generation = scheduler_generation;
             control.attempt_generation = attempt_generation;
             control.state = WatchdogState::Inactive {
                 reason: InactiveReason::Cancelled,
             };
-            RegistryTransition::normal(clear_callbacks(
-                identity.clone(),
-                CallbacksToClear::wakeup_and_maybe_work(clear_work),
-            ))
+            RegistryTransition::normal(cleanup)
         }
     }
 }

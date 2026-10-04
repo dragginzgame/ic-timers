@@ -51,3 +51,4 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.10.16 measurement ownership and failure accounting](0.10.16.md)
 - [0.10.17 lazy runtime initialization](0.10.17.md)
 - [0.10.18 borrowed transition identities](0.10.18.md)
+- [0.10.19 registry command and effect ownership](0.10.19.md)

@@ -4,6 +4,26 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.19]
+
+### Changed
+
+- Express ordinary pending-command precedence in one match, removing the
+  duplicated sticky-unregistration branch while preserving exact reconciliation
+  and earliest-demand scheduling.
+- Build ordinary successors and Watchdog dispatch tokens from their validated
+  claims through the existing token constructor, without repeating ownership
+  fields in each transition.
+- Remove the forwarding cleanup-effect constructor. Select Watchdog cancellation
+  cleanup once and share conditional wakeup cleanup on generation exhaustion.
+
+### Development
+
+- Extend ordinary lifecycle fixtures for unregistration followed by control
+  requests and for preservation of schedule metadata at equal deadlines.
+- Record the cleanup and pending verification in the
+  [0.10.19 release note](docs/changelog/0.10.19.md).
+
 ## [0.10.18] - 2026-10-04
 
 ### Changed

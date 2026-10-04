@@ -64,6 +64,9 @@ references and validation belong in [release notes](../changelog/README.md),
   authorization. Exact reconciliation replaces a discarded callback scheduling
   proposal before validation. Invariant failure remains terminal; unregister is
   sticky; ensure selects earliest demand. The effective exact directive is observed.
+  Pending scheduling commands select precedence in one match and retain the
+  existing schedule metadata at equal deadlines; see the
+  [ordinary command precedence note](../changelog/0.10.19.md).
 - Ordinary requests and authorized completion successors share checked arming;
   stopping selects its reason and allocates no generation. Lifetime removal is
   decided once per transition. See the [ordinary state ownership note](../changelog/0.10.8.md).
@@ -86,6 +89,9 @@ references and validation belong in [release notes](../changelog/README.md),
   marker. These distinct failure rules must remain separate.
 - Effect application binds wakeups and Watchdog dispatch in its validated match
   branches; confirmation retains its independent state and generation checks.
+  Successor tokens share claim-based construction after authorization. Watchdog
+  cancellation selects cleanup once from its active state; see the
+  [registry command and effect ownership note](../changelog/0.10.19.md).
 - Platform page reads and callback measurements share inert `MemoryPageExtent`
   values. The registry pairs start/end extents without a second representation.
 

@@ -441,37 +441,61 @@ fn explicit_unregistration_consumes_scheduled_and_running_claims() {
     assert!(registry.snapshot(&scheduled_id).is_none());
     assert_eq!(registry.begin_ordinary(&queued), CallbackAcceptance::Stale);
 
-    let running_id = identity("unregister-running");
-    let running = registry
-        .register_once(running_id.clone(), DeclarationLifetime::Retained)
-        .expect("claim should succeed");
-    let running_transition = registry
-        .ensure_once(&running, 0, TimerSchedule::At(10))
-        .expect("ensure should succeed");
-    confirm(&mut registry, &running_transition);
-    let (active, _) = arm(running_transition);
-    assert_eq!(
-        registry.begin_ordinary(&active),
-        CallbackAcceptance::Accepted
-    );
-    assert_eq!(
-        registry
-            .unregister(&running)
-            .expect("running unregistration should defer")
-            .effect(),
-        &RegistryEffect::None
-    );
-    registry
-        .complete_ordinary(
-            &active,
-            11,
-            TimerRunResult::new(
-                TimerCompletion::success(1),
-                TimerDirective::ContinueImmediately,
-            ),
-        )
-        .expect("normal completion should finalize removal");
-    assert!(registry.snapshot(&running_id).is_none());
+    for once in [true, false] {
+        for command in 0..3 {
+            let running_id = identity("unregister-running");
+            let running = if once {
+                registry.register_once(running_id.clone(), DeclarationLifetime::Retained)
+            } else {
+                registry.register_after_completion(
+                    running_id.clone(),
+                    cadence(5),
+                    DeclarationLifetime::Retained,
+                )
+            }
+            .unwrap();
+            let running_transition = registry
+                .reconcile_ordinary(&running, 0, Some(TimerSchedule::At(10)))
+                .unwrap();
+            confirm(&mut registry, &running_transition);
+            let (active, _) = arm(running_transition);
+            assert_eq!(
+                registry.begin_ordinary(&active),
+                CallbackAcceptance::Accepted
+            );
+            assert_eq!(
+                registry.unregister(&running).unwrap().effect(),
+                &RegistryEffect::None
+            );
+            let later_request = match command {
+                0 => {
+                    if once {
+                        registry.ensure_once(&running, 10, TimerSchedule::At(20))
+                    } else {
+                        registry.ensure_recurring(&running, 10)
+                    }
+                }
+                1 => registry.reconcile_ordinary(&running, 10, Some(TimerSchedule::At(30))),
+                _ => registry.cancel(&running),
+            }
+            .unwrap();
+            assert_eq!(later_request.effect(), &RegistryEffect::None);
+            let completed = registry
+                .complete_ordinary(
+                    &active,
+                    11,
+                    TimerRunResult::new(
+                        TimerCompletion::success(1),
+                        TimerDirective::ContinueImmediately,
+                    ),
+                )
+                .unwrap();
+            assert_eq!(completed.failure(), None);
+            assert_eq!(completed.effect(), &RegistryEffect::None);
+            assert!(registry.snapshot(&running_id).is_none());
+            assert_eq!(registry.begin_ordinary(&active), CallbackAcceptance::Stale);
+        }
+    }
 }
 
 #[test]
@@ -648,6 +672,10 @@ fn once_coalesces_and_rotates_generations_while_nested_schedule_wins() {
         .ensure_once(&claim, 20, TimerSchedule::At(80))
         .expect("nested ensure should succeed");
     assert_eq!(nested.effect(), &RegistryEffect::None);
+    let equal = registry
+        .ensure_once(&claim, 20, TimerSchedule::After(Duration::from_nanos(60)))
+        .expect("equal relative demand should coalesce");
+    assert_eq!(equal.effect(), &RegistryEffect::None);
     let second_transition = registry
         .complete_ordinary(
             &first,
@@ -659,6 +687,9 @@ fn once_coalesces_and_rotates_generations_while_nested_schedule_wins() {
     let (second, _) = arm(second_transition);
     let deadline = scheduled_deadline(&registry, &second);
     assert_eq!(deadline, 80);
+    let snapshot = registry.snapshot(&timer).unwrap();
+    assert_eq!(snapshot.scheduling_mode(), TimerSchedulingMode::Deadline);
+    assert_eq!(snapshot.latest_requested_delay_ns(), None);
     assert_eq!(second.callback_generation(), 2);
     assert_eq!(registry.begin_ordinary(&first), CallbackAcceptance::Stale);
     assert_eq!(
@@ -681,9 +712,9 @@ fn once_coalesces_and_rotates_generations_while_nested_schedule_wins() {
         }
     );
     let counters = snapshot.observability().counters();
-    assert_eq!(counters.schedule_requests(), 3);
+    assert_eq!(counters.schedule_requests(), 4);
     assert_eq!(counters.wakeups_armed(), 2);
-    assert_eq!(counters.coalesced(), 2);
+    assert_eq!(counters.coalesced(), 3);
     assert_eq!(counters.stale_wakeups(), 1);
     assert_eq!(counters.work_started(), 2);
     assert_eq!(counters.work_completed(), 2);
@@ -826,50 +857,55 @@ fn exact_ordinary_reconciliation_discards_invalid_callback_proposals() {
 
 #[test]
 fn relative_exact_reconciliation_preserves_request_observations_after_suspension() {
-    let mut registry = registry();
-    let timer = identity("relative-exact-completion");
-    let claim = registry
-        .register_after_completion(timer.clone(), cadence(5), DeclarationLifetime::Retained)
-        .unwrap();
-    let (token, _) = arm(registry
-        .reconcile_ordinary(&claim, 10, Some(TimerSchedule::At(10)))
-        .unwrap());
-    assert_eq!(
-        registry.begin_ordinary(&token),
-        CallbackAcceptance::Accepted
-    );
-    registry
-        .reconcile_ordinary(
-            &claim,
-            10,
-            Some(TimerSchedule::After(Duration::from_nanos(3))),
-        )
-        .unwrap();
-    let transition = registry
-        .complete_ordinary(
-            &token,
-            20,
-            TimerRunResult::new(
-                TimerCompletion::success(1),
-                TimerDirective::RetryAfter(Duration::MAX),
-            ),
-        )
-        .unwrap();
-    assert_eq!(transition.failure(), None);
-    assert!(matches!(
-        transition.effect(),
-        RegistryEffect::ArmWakeup { delay_ns: 0, .. }
-    ));
-    confirm(&mut registry, &transition);
-    let snapshot = registry.snapshot(&timer).unwrap();
-    assert_eq!(snapshot.next_deadline_ns(), Some(13));
-    assert_eq!(
-        snapshot.latest_directive(),
-        Some(TimerDirectiveSnapshot::ScheduleAt { deadline_ns: 13 })
-    );
-    assert_eq!(snapshot.scheduling_mode(), TimerSchedulingMode::Once);
-    assert_eq!(snapshot.latest_requested_delay_ns(), Some(3));
-    assert_eq!(snapshot.latest_armed_delay_ns(), Some(0));
+    for ensure_equal in [false, true] {
+        let mut registry = registry();
+        let timer = identity("relative-exact-completion");
+        let claim = registry
+            .register_after_completion(timer.clone(), cadence(3), DeclarationLifetime::Retained)
+            .unwrap();
+        let (token, _) = arm(registry
+            .reconcile_ordinary(&claim, 10, Some(TimerSchedule::At(10)))
+            .unwrap());
+        assert_eq!(
+            registry.begin_ordinary(&token),
+            CallbackAcceptance::Accepted
+        );
+        registry
+            .reconcile_ordinary(
+                &claim,
+                10,
+                Some(TimerSchedule::After(Duration::from_nanos(3))),
+            )
+            .unwrap();
+        let directive = if ensure_equal {
+            registry.ensure_recurring(&claim, 10).unwrap();
+            TimerDirective::ScheduleAt(13)
+        } else {
+            TimerDirective::RetryAfter(Duration::MAX)
+        };
+        let transition = registry
+            .complete_ordinary(
+                &token,
+                20,
+                TimerRunResult::new(TimerCompletion::success(1), directive),
+            )
+            .unwrap();
+        assert_eq!(transition.failure(), None);
+        assert!(matches!(
+            transition.effect(),
+            RegistryEffect::ArmWakeup { delay_ns: 0, .. }
+        ));
+        confirm(&mut registry, &transition);
+        let snapshot = registry.snapshot(&timer).unwrap();
+        assert_eq!(snapshot.next_deadline_ns(), Some(13));
+        assert_eq!(
+            snapshot.latest_directive(),
+            Some(TimerDirectiveSnapshot::ScheduleAt { deadline_ns: 13 })
+        );
+        assert_eq!(snapshot.scheduling_mode(), TimerSchedulingMode::Once);
+        assert_eq!(snapshot.latest_requested_delay_ns(), Some(3));
+        assert_eq!(snapshot.latest_armed_delay_ns(), Some(0));
+    }
 }
 
 #[test]
@@ -2464,7 +2500,10 @@ fn watchdog_exact_pending_order_preserves_terminal_and_immediate_precedence() {
         if matches!(scenario, 0 | 1 | 6..=8) {
             assert_eq!(
                 transition.effect(),
-                &clear_callbacks(timer.clone(), CallbacksToClear::Wakeup)
+                &RegistryEffect::ClearCallbacks {
+                    identity: timer.clone(),
+                    handles: CallbacksToClear::Wakeup,
+                }
             );
         }
         if scenario == 5 {
