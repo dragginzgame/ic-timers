@@ -2073,6 +2073,10 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
 }
 
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "One terminal-failure matrix checks both lifetimes and policy cleanup."
+)]
 fn watchdog_terminal_failures_respect_declaration_lifetime() {
     for lifetime in [
         DeclarationLifetime::Retained,
@@ -2086,6 +2090,8 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
             "dispatch-deadline",
             "cancel-scheduled",
             "cancel-dispatched",
+            "completion-immediate",
+            "completion-deadline",
         ] {
             let mut registry = registry();
             let timer = identity(subject);
@@ -2097,16 +2103,33 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
             } else {
                 Some(arm(registry.ensure_recurring(&claim, 0).unwrap()).0)
             };
-            if subject == "cancel-dispatched" {
-                let (_successor, _work) =
+            let work = if matches!(
+                subject,
+                "cancel-dispatched" | "completion-immediate" | "completion-deadline"
+            ) {
+                let (_successor, work) =
                     dispatch(registry.begin_watchdog_scheduler(scheduler.as_ref().unwrap(), 1));
-            }
+                if subject.starts_with("completion-") {
+                    assert_eq!(
+                        registry.begin_watchdog_work(&work),
+                        CallbackAcceptance::Accepted
+                    );
+                }
+                Some(work)
+            } else {
+                None
+            };
             let entry = registry.entries.get_mut(&timer).unwrap();
             let EntryKind::Watchdog { control, .. } = &mut entry.kind else {
                 panic!("fixture must be a watchdog");
             };
             match subject {
-                "initial" | "replacement" | "dispatch-generation" | "cancel-scheduled" => {
+                "initial"
+                | "replacement"
+                | "dispatch-generation"
+                | "cancel-scheduled"
+                | "completion-immediate"
+                | "completion-deadline" => {
                     control.scheduler_generation = u64::MAX;
                 }
                 "dispatch-attempt" | "cancel-dispatched" => control.attempt_generation = u64::MAX,
@@ -2117,6 +2140,20 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
                 "initial" => registry.ensure_recurring(&claim, 0).unwrap(),
                 "replacement" => registry.ensure_watchdog_immediately(&claim, 0).unwrap(),
                 "cancel-scheduled" | "cancel-dispatched" => registry.cancel(&claim).unwrap(),
+                "completion-immediate" | "completion-deadline" => registry
+                    .complete_watchdog_work(
+                        work.as_ref().unwrap(),
+                        1,
+                        WatchdogRunResult::new(
+                            TimerCompletion::success(1),
+                            if subject == "completion-immediate" {
+                                WatchdogDecision::ContinueImmediately
+                            } else {
+                                WatchdogDecision::ScheduleAt(10)
+                            },
+                        ),
+                    )
+                    .unwrap(),
                 _ => registry.begin_watchdog_scheduler(
                     scheduler.as_ref().unwrap(),
                     if subject == "dispatch-deadline" {
@@ -2132,7 +2169,7 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
                 TimerControlFailure::GenerationExhausted
             };
             assert_eq!(transition.failure(), Some(failure));
-            if subject.starts_with("cancel-") {
+            if subject.starts_with("cancel-") || subject.starts_with("completion-") {
                 let handles = if subject == "cancel-dispatched" {
                     CallbacksToClear::WakeupAndWork
                 } else {
@@ -2146,7 +2183,13 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
             }
             if lifetime == DeclarationLifetime::Retained {
                 let snapshot = registry.snapshot(&timer).unwrap();
-                assert_eq!(snapshot.observability().counters().cancelled(), 0);
+                let counters = snapshot.observability().counters();
+                assert_eq!(counters.cancelled(), 0);
+                assert_eq!(
+                    counters.work_completed(),
+                    u64::from(subject.starts_with("completion-"))
+                );
+                assert!(counters.completion_partition_is_valid());
                 assert_eq!(
                     snapshot.state(),
                     TimerRuntimeStateSnapshot::Inactive {
@@ -2165,6 +2208,78 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
                 assert!(replacement.claim_generation() > claim.claim_generation());
             }
         }
+    }
+}
+
+#[test]
+fn transient_watchdog_completion_keeps_retained_or_replaced_successors() {
+    for decision in [
+        WatchdogDecision::Continue,
+        WatchdogDecision::ContinueImmediately,
+        WatchdogDecision::ScheduleAt(2),
+        WatchdogDecision::ScheduleAt(10),
+    ] {
+        let mut registry = registry();
+        let timer = identity("transient-watchdog-continuation");
+        let claim = registry
+            .register_watchdog(
+                timer.clone(),
+                cadence(1),
+                DeclarationLifetime::RemoveWhenStopped,
+            )
+            .unwrap();
+        let (scheduler, _) = arm(registry.ensure_recurring(&claim, 0).unwrap());
+        let (successor, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 1));
+        assert_eq!(
+            registry.begin_watchdog_work(&work),
+            CallbackAcceptance::Accepted
+        );
+        let replaces_successor = matches!(decision, WatchdogDecision::ScheduleAt(10));
+        if !replaces_successor {
+            let EntryKind::Watchdog { control, .. } =
+                &mut registry.entries.get_mut(&timer).unwrap().kind
+            else {
+                panic!("fixture must be a watchdog");
+            };
+            control.scheduler_generation = u64::MAX;
+        }
+
+        let transition = registry
+            .complete_watchdog_work(
+                &work,
+                2,
+                WatchdogRunResult::new(TimerCompletion::success(1), decision),
+            )
+            .unwrap();
+        assert_eq!(transition.failure(), None);
+        if replaces_successor {
+            let (replacement, arm) = arm(transition);
+            assert_eq!(arm, WakeupArm::Replacement);
+            assert!(replacement.callback_generation() > successor.callback_generation());
+            assert_eq!(scheduled_deadline(&registry, &replacement), 10);
+        } else {
+            assert_eq!(transition.effect(), &RegistryEffect::None);
+            assert_eq!(scheduled_deadline(&registry, &successor), 2);
+        }
+        assert_eq!(
+            registry.declaration_matches(
+                &claim,
+                TimerPolicy::Watchdog {
+                    cadence: cadence(1)
+                },
+                DeclarationLifetime::RemoveWhenStopped
+            ),
+            Ok(true)
+        );
+        assert_eq!(
+            registry
+                .snapshot(&timer)
+                .unwrap()
+                .observability()
+                .counters()
+                .work_completed(),
+            1
+        );
     }
 }
 

@@ -1446,13 +1446,12 @@ impl TimerRegistry {
                 }
             };
             let cancelled = matches!(pending, Some(WatchdogPending::Cancel));
-            let unregister = matches!(pending, Some(WatchdogPending::Unregister));
             let pending_schedule = match pending {
                 Some(WatchdogPending::Reconcile(requested)) => Some(requested),
                 _ => None,
             };
 
-            match decision {
+            let transition = match decision {
                 WatchdogDecision::Continue => {
                     control.state = WatchdogState::Scheduled {
                         scheduler_generation: successor_generation,
@@ -1460,7 +1459,7 @@ impl TimerRegistry {
                     };
                     entry.scheduling_mode = TimerSchedulingMode::Watchdog;
                     entry.latest_requested_delay_ns = Some(cadence.as_nanos());
-                    (RegistryTransition::normal(RegistryEffect::None), false)
+                    RegistryTransition::normal(RegistryEffect::None)
                 }
                 WatchdogDecision::ContinueImmediately | WatchdogDecision::ScheduleAt(_) => {
                     let (deadline_ns, retain_successor) =
@@ -1480,18 +1479,10 @@ impl TimerRegistry {
                             scheduler_generation: successor_generation,
                             deadline_ns: successor_deadline_ns,
                         };
-                        (RegistryTransition::normal(RegistryEffect::None), false)
+                        RegistryTransition::normal(RegistryEffect::None)
                     } else {
                         let claim = RegistrationClaim::from_callback(token);
-                        let transition = control.arm_scheduler(
-                            &claim,
-                            now_ns,
-                            deadline_ns,
-                            WakeupArm::Replacement,
-                        );
-                        let remove = transition.failure().is_some()
-                            && matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
-                        (transition, remove)
+                        control.arm_scheduler(&claim, now_ns, deadline_ns, WakeupArm::Replacement)
                     }
                 }
                 WatchdogDecision::Stop => {
@@ -1505,16 +1496,16 @@ impl TimerRegistry {
                         InactiveReason::Stopped
                     };
                     control.state = WatchdogState::Inactive { reason };
-                    (
-                        RegistryTransition::normal(clear_callbacks(
-                            identity.clone(),
-                            CallbacksToClear::Wakeup,
-                        )),
-                        unregister
-                            || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped),
-                    )
+                    RegistryTransition::normal(clear_callbacks(
+                        identity.clone(),
+                        CallbacksToClear::Wakeup,
+                    ))
                 }
-            }
+            };
+            let remove = matches!(control.state, WatchdogState::Inactive { .. })
+                && (matches!(pending, Some(WatchdogPending::Unregister))
+                    || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped));
+            (transition, remove)
         };
 
         Ok(remove_after(

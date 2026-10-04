@@ -53,6 +53,9 @@ references and validation belong in [release notes](../changelog/README.md),
 - Ordinary dispatch shares completion finalization for callback results and
   callback-borrow failures. Work measurements are recorded only after executed
   work; see the [ordinary callback finalization note](../changelog/0.10.9.md).
+- Watchdog completion decides lifetime removal once from final inactive state
+  and pending unregister, after selecting its successor or terminal transition;
+  see the [Watchdog completion removal note](../changelog/0.10.10.md).
 - Registry and owned-handle bounds do not bound the provider heap. Cancelled future
   deadline records remain queued. Page extents do not establish allocator bounds.
 - Public control failures retire false scheduled state. One detached-claim finalizer

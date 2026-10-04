@@ -58,6 +58,9 @@ The module hierarchy keeps six responsibilities separate:
    unregister and declaration lifetime; every terminal exit uses it. A successful
    arm retains its declaration. Ordinary cancellation derives immediate removal
    from execution state and lifetime; running work retains pending authority.
+   Watchdog completion decides removal once after selecting its final state:
+   inactive declarations follow their lifetime and pending unregister command,
+   while retained or replaced successors keep their declaration.
    Ordinary schedule requests share counter, request-metadata and coalescing
    updates. Recurring ensure submits an existing scheduled deadline unchanged;
    it calculates a cadence deadline only for inactive or running declarations.

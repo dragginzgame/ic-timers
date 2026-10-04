@@ -4,6 +4,24 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.10]
+
+### Changed
+
+- Decide Watchdog completion's declaration removal once from its final inactive
+  state, lifetime and pending unregister command. Remove the separate decisions
+  in normal stop and failed successor replacement while preserving continuation,
+  terminal reasons and provider cleanup.
+
+### Development
+
+- Extend the Watchdog terminal-failure lifetime fixture to cover generation
+  exhaustion during immediate and exact-deadline completion replacement.
+- Check that remove-on-stop Watchdogs retain their declaration when keeping or
+  replacing a successor, including retention with an exhausted generation counter.
+- Record the cleanup and verification scope in the
+  [0.10.10 release note](docs/changelog/0.10.10.md).
+
 ## [0.10.9] - 2026-10-04
 
 ### Changed
