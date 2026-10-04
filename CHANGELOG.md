@@ -19,6 +19,8 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Use `if let` for ordinary completion's optional successor selection, addressing
+  the maintainer-reported Clippy diagnostic without changing transition behavior.
 - Retain behavioral transition and failure fixtures; remove obsolete assertions
   about an independent Watchdog pending field. Extend attempt-retirement coverage
   to check that its queued command cannot affect successor work.

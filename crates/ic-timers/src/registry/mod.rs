@@ -1277,32 +1277,29 @@ impl TimerRegistry {
                 entry.observability.record_completion(completion, now_ns);
 
                 let mut remove = false;
-                let transition = match selected_schedule {
-                    Some(selected) => {
-                        entry.scheduling_mode = selected.mode;
-                        entry.latest_requested_delay_ns = selected.requested_delay_ns;
-                        RegistryTransition::normal(RegistryEffect::ArmWakeup {
-                            token: CallbackToken::new(
-                                identity.clone(),
-                                entry.claim_generation,
-                                control.generation(),
-                                CallbackRole::OrdinaryWork,
-                            ),
-                            delay_ns: selected.deadline_ns.saturating_sub(now_ns),
-                            arm: WakeupArm::Initial,
-                        })
-                    }
-                    None => {
-                        *inactive_reason = if terminal_pending {
-                            entry.observability.counters_mut().record_cancellation();
-                            InactiveReason::Cancelled
-                        } else {
-                            InactiveReason::Stopped
-                        };
-                        remove = matches!(pending_command, Some(OrdinaryPending::Unregister))
-                            || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
-                        RegistryTransition::normal(RegistryEffect::None)
-                    }
+                let transition = if let Some(selected) = selected_schedule {
+                    entry.scheduling_mode = selected.mode;
+                    entry.latest_requested_delay_ns = selected.requested_delay_ns;
+                    RegistryTransition::normal(RegistryEffect::ArmWakeup {
+                        token: CallbackToken::new(
+                            identity.clone(),
+                            entry.claim_generation,
+                            control.generation(),
+                            CallbackRole::OrdinaryWork,
+                        ),
+                        delay_ns: selected.deadline_ns.saturating_sub(now_ns),
+                        arm: WakeupArm::Initial,
+                    })
+                } else {
+                    *inactive_reason = if terminal_pending {
+                        entry.observability.counters_mut().record_cancellation();
+                        InactiveReason::Cancelled
+                    } else {
+                        InactiveReason::Stopped
+                    };
+                    remove = matches!(pending_command, Some(OrdinaryPending::Unregister))
+                        || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
+                    RegistryTransition::normal(RegistryEffect::None)
                 };
                 (transition, remove)
             }
