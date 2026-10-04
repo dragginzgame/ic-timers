@@ -1,3 +1,5 @@
+![IC Timers — Internet Computer helper library](docs/assets/ic-timers-readme-header.svg)
+
 # ⏱️ ic-timers
 
 > A bounded, observable timer runtime for Internet Computer canisters, built on
