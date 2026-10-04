@@ -23,13 +23,16 @@ The module hierarchy keeps six responsibilities separate:
    control path.
 3. `control` is the private ordinary generation/registration state machine. It
    owns checked callback generations, immediate schedule, reconciliation and
-   cancellation transitions. The registry owns exact running-work authorization
-   and pending commands. Completion applies the registry-selected successor
-   after that authorization in the same atomic transition, without a second
-   generation argument or stale-result path. Checked transitions return the
-   canonical `TimerControlFailure` directly, without a private error conversion.
+   cancellation transitions. Its inactive state owns its reason, its running
+   state owns its pending command, and scheduled state carries neither. The
+   registry owns exact running-work authorization and command arbitration.
+   Completion arms its selected successor through the shared checked arming
+   operation or stops with its selected reason, in the same atomic transition.
+   Checked arming and cancellation return canonical `TimerControlFailure`
+   values directly, without a private error conversion.
    Cancellation invalidates a scheduled generation while leaving running work
-   unchanged. Completion and cancellation return success or a typed failure.
+   unchanged. Stopping with a reason allocates no generation and discards the
+   running command through state replacement.
    The registry builds provider effects and retains cancellation policy without a
    separate cancellation or completion action. Scheduling requests return only
    an optional initial or replacement arm kind; generation and deadline remain
@@ -46,8 +49,8 @@ The module hierarchy keeps six responsibilities separate:
    containing its control and correctly typed callback. An ordinary payload
    without cadence is Once; one with cadence is AfterCompletion. Public policy
    observations are derived from that payload rather than stored separately.
-   The private Watchdog inactive state owns its reason; active states carry no
-   inactive reason, and snapshots project the reason from the state itself.
+   Both policy state machines own their inactive reasons; active states carry
+   no inactive reason, and snapshots project the reason from the state itself.
    Watchdog awaiting-work state owns its pending command through both dispatch
    and execution. Work acceptance preserves it; leaving that state discards it,
    including when the scheduler retires an unacknowledged attempt.

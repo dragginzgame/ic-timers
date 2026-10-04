@@ -4,6 +4,26 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.8]
+
+### Changed
+
+- Store ordinary inactive reasons and pending commands in their corresponding
+  inactive and running states. Remove the independent entry fields, paired
+  terminal assignments and manual pending-command clearing.
+- Use the same checked arming operation for ordinary requests and authorized
+  completion successors. Stop directly with its selected reason without a
+  separate optional-successor control operation.
+
+### Development
+
+- Update control fixtures for reason-bearing inactive state and verify that
+  failed generation allocation preserves a running attempt's pending command.
+- Keep the compact handoff focused on current architecture and unresolved work;
+  release state remains authoritative in Cargo, changelog and release-note status.
+- Record the live 0.10.7 baseline and cleanup in the
+  [0.10.8 release note](docs/changelog/0.10.8.md).
+
 ## [0.10.7] - 2026-10-04
 
 ### Changed

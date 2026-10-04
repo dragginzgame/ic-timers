@@ -4,14 +4,28 @@
 //! time source. The canonical registry owns running-work authorization and
 //! pending-command arbitration.
 
-use crate::snapshot::TimerControlFailure;
+use crate::{
+    schedule::ResolvedSchedule,
+    snapshot::{InactiveReason, TimerControlFailure},
+};
+
+/// A command arbitrated by the registry during ordinary work.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum OrdinaryPending {
+    Cancel,
+    Reconcile(ResolvedSchedule),
+    Unregister,
+    Schedule(ResolvedSchedule),
+}
 
 /// Current registration state for one timer identity.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
-pub enum TimerRegistration {
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum TimerRegistration {
     /// No callback is scheduled or running.
-    #[default]
-    Unregistered,
+    Inactive {
+        /// Why the retained declaration has no scheduled or running work.
+        reason: InactiveReason,
+    },
     /// One generation is scheduled for an absolute nanosecond deadline.
     Scheduled {
         /// Generation owned by the scheduled callback.
@@ -23,7 +37,17 @@ pub enum TimerRegistration {
     Running {
         /// Generation owned by the running callback.
         generation: u64,
+        /// Registry-owned command arbitration for this running attempt.
+        pending: Option<OrdinaryPending>,
     },
+}
+
+impl Default for TimerRegistration {
+    fn default() -> Self {
+        Self::Inactive {
+            reason: InactiveReason::NeverScheduled,
+        }
+    }
 }
 
 /// Whether one arm fills an empty wake-up slot or replaces its current handle.
@@ -41,9 +65,9 @@ impl WakeupArm {
 
 /// Pure state machine for one logical timer identity.
 #[derive(Debug, Default)]
-pub struct TimerControl {
+pub(crate) struct TimerControl {
     generation: u64,
-    registration: TimerRegistration,
+    pub(crate) registration: TimerRegistration,
 }
 
 #[derive(Clone, Copy)]
@@ -73,19 +97,22 @@ impl TimerControl {
         self.generation = u64::MAX;
     }
 
-    /// Return the current logical registration.
+    /// Return the command associated with the current running work, if any.
     #[must_use]
-    pub(crate) const fn registration(&self) -> TimerRegistration {
-        self.registration
+    pub(crate) const fn pending(&self) -> Option<OrdinaryPending> {
+        match self.registration {
+            TimerRegistration::Running { pending, .. } => pending,
+            TimerRegistration::Inactive { .. } | TimerRegistration::Scheduled { .. } => None,
+        }
     }
 
-    /// Terminate pure control after a checked terminal failure.
+    /// Stop ordinary control with the registry-selected inactive reason.
     ///
     /// Returns whether a scheduled wake-up must be cleared. A running callback
     /// has already consumed its provider wake-up.
-    pub(crate) const fn terminate(&mut self) -> bool {
+    pub(crate) const fn terminate(&mut self, reason: InactiveReason) -> bool {
         let clear_wakeup = matches!(self.registration, TimerRegistration::Scheduled { .. });
-        self.registration = TimerRegistration::Unregistered;
+        self.registration = TimerRegistration::Inactive { reason };
         clear_wakeup
     }
 
@@ -107,7 +134,9 @@ impl TimerControl {
         if matches!(self.registration, TimerRegistration::Scheduled { .. }) {
             let generation = self.next_generation()?;
             self.generation = generation;
-            self.registration = TimerRegistration::Unregistered;
+            self.registration = TimerRegistration::Inactive {
+                reason: InactiveReason::Cancelled,
+            };
         }
         Ok(())
     }
@@ -126,7 +155,7 @@ impl TimerControl {
         selection: DeadlineSelection,
     ) -> Result<Option<WakeupArm>, TimerControlFailure> {
         let kind = match self.registration {
-            TimerRegistration::Unregistered => WakeupArm::Initial,
+            TimerRegistration::Inactive { .. } => WakeupArm::Initial,
             TimerRegistration::Scheduled {
                 deadline_ns: current_deadline_ns,
                 ..
@@ -147,32 +176,21 @@ impl TimerControl {
                 generation: scheduled_generation,
                 ..
             } if scheduled_generation == generation => {
-                self.registration = TimerRegistration::Running { generation };
+                self.registration = TimerRegistration::Running {
+                    generation,
+                    pending: None,
+                };
                 true
             }
-            TimerRegistration::Unregistered
+            TimerRegistration::Inactive { .. }
             | TimerRegistration::Scheduled { .. }
             | TimerRegistration::Running { .. } => false,
         }
     }
 
-    /// Apply completion after the registry has authorized the exact running
-    /// work token and selected its successor in the same atomic transition.
-    /// Generation allocation remains checked before state mutation; the
-    /// registry builds effects from that decision and the allocated generation.
-    pub(crate) fn complete_running(
-        &mut self,
-        next_deadline_ns: Option<u64>,
-    ) -> Result<(), TimerControlFailure> {
-        if let Some(deadline_ns) = next_deadline_ns {
-            self.arm_deadline(deadline_ns)?;
-        } else {
-            self.registration = TimerRegistration::Unregistered;
-        }
-        Ok(())
-    }
-
-    fn arm_deadline(&mut self, deadline_ns: u64) -> Result<(), TimerControlFailure> {
+    /// Install a selected deadline after request eligibility or exact running
+    /// work authorization. Check allocation before replacing the current state.
+    pub(crate) fn arm_deadline(&mut self, deadline_ns: u64) -> Result<(), TimerControlFailure> {
         let generation = self.next_generation()?;
         self.generation = generation;
         self.registration = TimerRegistration::Scheduled {
@@ -195,7 +213,7 @@ mod tests {
 
     fn arm(control: &mut TimerControl, deadline_ns: u64) -> u64 {
         assert_eq!(control.schedule(deadline_ns), Ok(Some(WakeupArm::Initial)));
-        let TimerRegistration::Scheduled { generation, .. } = control.registration() else {
+        let TimerRegistration::Scheduled { generation, .. } = control.registration else {
             panic!("initial schedule should arm");
         };
         generation
@@ -208,7 +226,7 @@ mod tests {
         assert_eq!(control.schedule(100), Ok(None));
         assert_eq!(control.schedule(200), Ok(None));
         assert_eq!(
-            control.registration(),
+            control.registration,
             TimerRegistration::Scheduled {
                 generation: 1,
                 deadline_ns: 100
@@ -222,7 +240,7 @@ mod tests {
         let old_generation = arm(&mut control, 100);
         assert_eq!(control.schedule(50), Ok(Some(WakeupArm::Replacement)));
         assert_eq!(
-            control.registration(),
+            control.registration,
             TimerRegistration::Scheduled {
                 generation: 2,
                 deadline_ns: 50,
@@ -238,7 +256,7 @@ mod tests {
         let old_generation = arm(&mut control, 100);
         assert_eq!(control.reconcile(200), Ok(Some(WakeupArm::Replacement)));
         assert_eq!(
-            control.registration(),
+            control.registration,
             TimerRegistration::Scheduled {
                 generation: 2,
                 deadline_ns: 200,
@@ -253,12 +271,19 @@ mod tests {
         let mut control = TimerControl::default();
         let generation = arm(&mut control, 100);
         assert!(control.begin(generation));
+        let TimerRegistration::Running { pending, .. } = &mut control.registration else {
+            panic!("accepted fixture should be running");
+        };
+        *pending = Some(OrdinaryPending::Unregister);
         assert_eq!(control.reconcile(300), Ok(None));
         assert_eq!(control.schedule(90), Ok(None));
         assert_eq!(control.cancel(), Ok(()));
         assert_eq!(
-            control.registration(),
-            TimerRegistration::Running { generation }
+            control.registration,
+            TimerRegistration::Running {
+                generation,
+                pending: Some(OrdinaryPending::Unregister),
+            }
         );
         assert_eq!(control.generation(), generation);
     }
@@ -269,9 +294,9 @@ mod tests {
             let mut control = TimerControl::default();
             let generation = arm(&mut control, 100);
             assert!(control.begin(generation));
-            assert_eq!(control.complete_running(Some(deadline_ns)), Ok(()));
+            assert_eq!(control.arm_deadline(deadline_ns), Ok(()));
             assert_eq!(
-                control.registration(),
+                control.registration,
                 TimerRegistration::Scheduled {
                     generation: 2,
                     deadline_ns,
@@ -286,8 +311,13 @@ mod tests {
         let mut control = TimerControl::default();
         let generation = arm(&mut control, 100);
         assert!(control.begin(generation));
-        assert_eq!(control.complete_running(None), Ok(()));
-        assert_eq!(control.registration(), TimerRegistration::Unregistered);
+        assert!(!control.terminate(InactiveReason::Stopped));
+        assert_eq!(
+            control.registration,
+            TimerRegistration::Inactive {
+                reason: InactiveReason::Stopped,
+            }
+        );
     }
 
     #[test]
@@ -297,10 +327,20 @@ mod tests {
         assert_eq!(control.cancel(), Ok(()));
         assert!(!control.begin(generation));
         assert_eq!(control.generation(), 2);
-        assert_eq!(control.registration(), TimerRegistration::Unregistered);
+        assert_eq!(
+            control.registration,
+            TimerRegistration::Inactive {
+                reason: InactiveReason::Cancelled,
+            }
+        );
         assert_eq!(control.cancel(), Ok(()));
         assert_eq!(control.generation(), 2);
-        assert_eq!(control.registration(), TimerRegistration::Unregistered);
+        assert_eq!(
+            control.registration,
+            TimerRegistration::Inactive {
+                reason: InactiveReason::Cancelled,
+            }
+        );
     }
 
     #[test]
@@ -322,7 +362,7 @@ mod tests {
             Err(TimerControlFailure::GenerationExhausted)
         );
         assert_eq!(
-            control.registration(),
+            control.registration,
             TimerRegistration::Scheduled {
                 generation: u64::MAX,
                 deadline_ns: 100
@@ -330,22 +370,28 @@ mod tests {
         );
 
         assert!(control.begin(u64::MAX));
+        let TimerRegistration::Running { pending, .. } = &mut control.registration else {
+            panic!("accepted fixture should be running");
+        };
+        *pending = Some(OrdinaryPending::Cancel);
         assert_eq!(
-            control.complete_running(Some(200)),
+            control.arm_deadline(200),
             Err(TimerControlFailure::GenerationExhausted)
         );
         assert_eq!(
-            control.registration(),
+            control.registration,
             TimerRegistration::Running {
-                generation: u64::MAX
+                generation: u64::MAX,
+                pending: Some(OrdinaryPending::Cancel),
             }
         );
-        assert_eq!(
-            control.complete_running(None),
-            Ok(()),
-            "stopping does not allocate a successor generation"
-        );
+        assert!(!control.terminate(InactiveReason::Cancelled));
         assert_eq!(control.generation(), u64::MAX);
-        assert_eq!(control.registration(), TimerRegistration::Unregistered);
+        assert_eq!(
+            control.registration,
+            TimerRegistration::Inactive {
+                reason: InactiveReason::Cancelled,
+            }
+        );
     }
 }

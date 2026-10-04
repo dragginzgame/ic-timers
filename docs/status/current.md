@@ -4,18 +4,17 @@ Last updated: 2026-10-04
 
 ## Purpose
 
-This is the compact session handoff. Historical implementation and validation
-belongs in [release notes](../changelog/README.md), [audits](../audits/code-hygiene.md)
-and the [safety boundary](../../SAFETY.md).
+This is the compact session handoff. Historical implementation, delivery
+references and validation belong in [release notes](../changelog/README.md),
+[audits](../audits/code-hygiene.md) and the [safety boundary](../../SAFETY.md).
 
 ## Release state
 
 - Workspace package version: `0.10.7`.
 - Cargo owns this version; the release helper updates the single projection above.
-  Dated changelog sections and released note statuses record completed releases.
-- The last inspected delivery record includes the maintainer's live report and
-  scoped hosted validation. See the [delivery record](../changelog/0.9.4.md).
-  Those jobs do not establish fresh PocketIC or downstream qualification.
+  Dated changelog sections and release-note statuses own release state. Read those
+  sources to distinguish preparation from a completed release; do not duplicate
+  that distinction or current commit/tag references in handoff prose.
 - Public removals or incompatible semantic changes require the next minor line;
   private behavior-preserving simplifications may use a patch. See the
   [ordinary arbitration hard cut](../changelog/0.9.0.md).
@@ -39,62 +38,48 @@ and the [safety boundary](../../SAFETY.md).
   exact work token; retained claims own longer-lived control. Claims and generations
   do not wrap. Consumer durable authority reconstructs volatile retained declarations
   synchronously before downstream hooks; shared-registry adoption is atomic.
-- Ordinary exact reconciliation replaces a discarded callback scheduling proposal
-  before validation. Invariant failure remains terminal; unregister is sticky;
-  ensure selects earliest demand. The effective exact directive is observed.
+- Ordinary inactive state owns its reason; running state owns its pending command.
+  Watchdog inactive state owns its reason; awaiting-work state owns its pending
+  command through dispatch and execution. Leaving either running or awaiting-work
+  state discards its command. Public snapshots project these states without
+  mutation authority.
+- Registry arbitration owns ordinary pending-command order and exact running-work
+  authorization. Exact reconciliation replaces a discarded callback scheduling
+  proposal before validation. Invariant failure remains terminal; unregister is
+  sticky; ensure selects earliest demand. The effective exact directive is observed.
+- Ordinary requests and authorized completion successors share checked arming;
+  stopping selects its reason and allocates no generation. Lifetime removal is
+  decided once per transition. See the [ordinary state ownership note](../changelog/0.10.8.md).
 - Registry and owned-handle bounds do not bound the provider heap. Cancelled future
   deadline records remain queued. Page extents do not establish allocator bounds.
-- Public control failures retire false scheduled state. Unexpected Watchdog work
-  completion failures trap for IC rollback; detached handles are restored or cleared.
-  Effect confirmation uses one validated wakeup-generation marker.
+- Public control failures retire false scheduled state. One detached-claim finalizer
+  restores handles after registry errors and retires claims after unexpected
+  restoration or provider failures. Unexpected Watchdog work completion failures
+  trap for IC rollback. Effect confirmation uses one validated wakeup-generation
+  marker. These distinct failure rules must remain separate.
 
-## Current follow-up
+## Unresolved scope
 
-The maintainer reports 0.10.6 pushed. Local HEAD, the peeled 0.10.6 tag and origin/main
-agree at `75bfe4414f90ed902b9afa439508fcd559cc1a3f`. The completed transition
-and pending-command cleanup is recorded in the [0.10.6 note](../changelog/0.10.6.md).
-
-The [0.10.7 note](../changelog/0.10.7.md) records the prepared private cleanup.
-One detached-claim finalizer owns public control's registry-error restoration and
-successful-transition application. Its single-caller success helper is deleted.
-Restoration drains all handles before returning an error; unexpected restoration
-or provider failures still retire the exact claim. Callback finalization remains
-separate because Watchdog work must trap for unexpected completion failures.
-
-Ordinary completion computes its removal-on-stop rule once for normal stopping,
-invariant failure, directive failure and generation failure. Successful arms retain
-the entry. Ordinary cancellation derives removal without a mutable flag; running
-work retains pending authority. Pending precedence, reasons, declaration lifetimes,
-claim fencing, counters and provider ordering are unchanged.
-
-The existing transition-error fixture now covers failed restoration as well as
-successful restoration. It checks that the restoration error takes precedence,
-handles are cleared and the retained claim becomes inactive with the provider
-binding failure reason. Existing restoration-draining, provider-failure,
-ordinary terminal-lifetime and pending-command fixtures remain.
-Test execution stays maintainer-owned.
-
-Ordinary/Watchdog command machines, effect confirmation and handle-restoration
-stages remain required by their distinct suspension and recovery contracts.
 Downstream work is deferred at the maintainer's request. Historical adoption
 records remain scoped to their recorded subjects; do not treat them as current
-composed qualification.
+composed qualification. Ordinary and Watchdog command machines, effect confirmation
+and handle-restoration stages retain their distinct suspension and recovery roles.
 
 ## Evidence
 
-The latest inspected hosted validation remains scoped to 0.9.4 as recorded in
-its delivery note; the maintainer's 0.10.6 pushed report and local references do not
-establish new hosted or PocketIC results. No new runtime, recovery or performance
-result is claimed for this cleanup. Changed Rust is formatted. Diff whitespace,
-current release-truth and target-note structural preflight checks passed during
-preparation.
-Tests, builds, lint gates and deployment validation remain user-owned.
+Inspected hosted validation for 0.9.4 is scoped in its
+[delivery note](../changelog/0.9.4.md). Release reports and Git references alone do
+not establish new hosted or PocketIC results. Each change's verification record
+belongs in its release note rather than a repeated handoff claim.
 The native mock does not simulate IC rollback or provider heap allocation;
-maintained PocketIC subjects remain required for those claims.
+maintained PocketIC subjects remain required for those claims. Tests, builds,
+lint gates and deployment validation remain user-owned.
 
 ## Next action
 
-Review the changes and prepared changelog, then run the maintainer-owned
-focused checks and deployment validation. The automated contributor leaves Cargo
-versions, both lockfiles and Git release state unchanged. Release commands always
-perform the requested bump; preparing notes does not advance the workspace version.
+Establish release state from Cargo, the changelog and matching release notes,
+then continue the maintainer's requested work within the ownership boundaries
+above. Record each change and its scoped verification in the release notes.
+Leave Cargo versions, both lockfiles and Git release execution to the maintainer.
+Release commands always perform the requested bump; preparing notes does not
+advance the workspace version.
