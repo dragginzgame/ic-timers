@@ -4,6 +4,39 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.12]
+
+### Changed
+
+- Keep callback generation authority in the ordinary and Watchdog control
+  counters. Remove repeated generations from private active states while
+  preserving snapshot values, stale-callback rejection and checked allocation.
+- Select the provider-handle slot in the registry's policy, role, state and
+  generation validation match. Remove the second role lookup while preserving
+  stale-token rejection, occupied-slot errors and rejected-handle cleanup.
+
+### Development
+
+- Seed exhaustion fixtures before arming callbacks so they reach the generation
+  limit with real active tokens. Preserve cancellation, completion, successor
+  retention and declaration-lifetime assertions.
+- Format and check Rust in both workspaces through `make fmt` and `fmt-check`.
+  Reuse the same check from `testing-check`, the commit hook and repository gates.
+- Extend the existing staged-snapshot hook fixture to reject unformatted nested
+  Rust while preserving the index and unrelated working edits.
+- Keep provider churn page growth diagnostic rather than requiring a larger
+  memory extent for test success. Preserve cancellation, continued work and stale
+  deadline checks, plus the page measurements.
+- Remove the release-prose advisory's obsolete `Open release line:` exemption
+  and use the current workspace-version marker in its clean fixture.
+
+### Documentation
+
+- Describe ordinary arbitration as current behavior and link historical downstream
+  qualification receipts instead of repeating their verdict in the observability
+  contract. Record the cleanup and pending verification in the
+  [0.10.12 release note](docs/changelog/0.10.12.md).
+
 ## [0.10.11] - 2026-10-04
 
 ### Development

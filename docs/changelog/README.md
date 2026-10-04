@@ -44,3 +44,4 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.10.9 ordinary callback finalization](0.10.9.md)
 - [0.10.10 Watchdog completion removal](0.10.10.md)
 - [0.10.11 Watchdog dispatch-failure coverage](0.10.11.md)
+- [0.10.12 generation ownership, provider binding and workspace formatting](0.10.12.md)

@@ -166,10 +166,12 @@ changes for a tagged version are rejected. A push-only failure can be retried
 with `make release-push`. These phase targets do not repeat deployment tests;
 the completed pre-bump gate remains the evidence for the prepared code.
 
-The formatting hook checks the staged snapshot in a temporary directory.
-It never formats or stages files. Unrelated working edits and partial staging
-are preserved; unformatted staged Rust is rejected even when its working copy
-is formatted. Run formatting and stage the intended content before retrying.
+`make fmt` and `make fmt-check` cover both the root and `testing/` workspaces.
+`testing-check` uses that same formatting check before its nested probe lints.
+The formatting hook checks both workspaces in the staged snapshot in a temporary
+directory. It never formats or stages files. Unrelated working edits and partial
+staging are preserved; unformatted staged Rust is rejected even when its working
+copy is formatted. Run formatting and stage the intended content before retrying.
 
 The non-release `make patch`, `make minor`, `make major`, and
 `make bump-x VERSION=...` targets stop after the version-file update for

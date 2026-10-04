@@ -1,12 +1,11 @@
 # Observability and Canic parity contract
 
-Status: canonical observations live; downstream adapter evidence recorded for exact 0.5.0
+Status: canonical observations live; historical adoption evidence linked below.
 
 ## Purpose
 
-`ic-timers` should replace duplicated timer instrumentation, not merely add a
-pleasant inventory beside it. Its canonical snapshot is defined as a semantic
-superset of the timer information Canic exposes today.
+The canonical `ic-timers` snapshot replaces duplicated timer instrumentation
+and covers the recorded Canic parity baseline below.
 
 Ordinary and watchdog state, scheduler dispatch, work, stale,
 unacknowledged, instruction, and memory-page observations are live. Normally
@@ -17,8 +16,9 @@ The provider dispatch prefix, provider return/reply tail, page reads, and
 post-interval measurement-summary update are outside the instruction delta.
 It is therefore not a complete IC-message measurement and must not be used
 alone as proof against the IC message instruction limit. Trapped and exhausted
-work record no sample. Canic validates the real adapter without parallel
-instrumentation; combined qualification remains an external gate.
+work record no sample. Real-adapter parity and combined qualification are
+downstream evidence obligations, described in the
+[consumer integration contract](../architecture.md#consumer-integration).
 
 This contract describes provider-neutral runtime data. `ic-timers` owns the
 identity, counters, measurements, and snapshot semantics. Canic, IcyDB, and
@@ -63,9 +63,9 @@ behavior. The latest directive should retain deadline, retry, immediate
 continuation, recurrence, and stop decisions without pretending that a retry
 temporarily changes the timer's configured policy.
 
-In the prepared 0.9.0 hard cut, an ordinary exact reconciliation winning at
-completion replaces the callback proposal before validation. `latest_directive`
-then projects the effective absolute `ScheduleAt` directive. A relative exact
+An ordinary exact reconciliation winning at completion replaces the callback
+proposal before validation. `latest_directive` then projects the effective
+absolute `ScheduleAt` directive. A relative exact
 request still retains its once-resolved deadline, scheduling mode and requested
 delay through the selected registry command. Cancellation and explicit invariant
 failure project `Stop`. Overridden proposals are not separately retained.
@@ -283,8 +283,8 @@ provide feedback as the pre-1.0 API evolves:
 
 ## Canic parity baseline
 
-The contract covers the following Canic operator information without parallel
-timer instrumentation:
+The following tables describe the recorded exact-0.5.0 Canic operator baseline
+without parallel timer instrumentation. They do not qualify later deployments.
 
 | Recorded Canic surface | Required projection from `ic-timers` |
 | --- | --- |
@@ -293,12 +293,12 @@ timer instrumentation:
 | Detailed state in `crates/canic-core/src/dto/runtime.rs` | One canonical snapshot containing semantically equivalent identity, policy, state, outcome, and timing fields. |
 | Former test-only global `TimerScheduled` count | No public projection requirement; remove it rather than retain parallel instrumentation. Canonical requested and armed counters remain separately observable. |
 
-The compatibility requirement is semantic rather than type-level. Canic's
-exact-0.5.0 adoption advances runtime introspection to schema 3, derives the
-maintained fields from `ic-timers` alone, and exports the bounded memory-page
+The compatibility requirement is semantic rather than type-level. The
+[exact-0.5.0 Canic adoption record](../adoption/canic.md) documents schema-3
+runtime introspection derived from `ic-timers`, including bounded memory-page
 observations.
 
-The exact existing-field projection is now frozen:
+The recorded field projection is:
 
 | Canic field | Canonical source |
 | --- | --- |
@@ -314,8 +314,8 @@ The exact existing-field projection is now frozen:
 | total/latest/maximum instructions | matching work-instruction aggregate |
 
 `schedule_requests` is intentionally not the legacy schedule count: it also
-includes coalesced demand that did not commit a provider arm. The validated
-Canic worktree hard-cuts its unconditional `generation: u64` to `Option<u64>`
+includes coalesced demand that did not commit a provider arm. The recorded
+Canic adoption hard-cuts its unconditional `generation: u64` to `Option<u64>`
 so inactive declarations do not fabricate generation zero.
 
 The removed global `TimerScheduled` counter was a test-only implementation
@@ -341,15 +341,11 @@ The accepted contract requires all of the following:
 6. `ic-timers` has no dependency on Canic-specific DTO, Candid, or metric-row
    types.
 
-Trap, instruction-exhaustion, and upgrade behavior has focused PocketIC
-evidence. Canic's exact-0.5.0 adoption satisfies the real-adapter criterion and
-removes its separate `TimerMetrics`, timer-specific performance storage,
-duplicated workflow counters, and direct provider path.
-
-The local tests include a Canic-shaped projection fixture proving the fields
-are available. Canic's maintained downstream status reports focused adapter,
-lifecycle, inventory, protocol, and PocketIC paired instruction/memory
-evidence passing with schema 3. IcyDB independently resolves exact 0.5.0.
-Combined qualification remains open until one final Wasm proves one registry,
-both owners in one inventory, lifecycle reconstruction, IcyDB Watchdog
-recovery, and continued Canic timer progress.
+The local tests include Canic-shaped projection fixtures proving the fields
+are available. Historical adapter and composition evidence belongs in the
+[Canic adoption record](../adoption/canic.md),
+[IcyDB adoption record](../adoption/icydb.md), and
+[Toko Miner receipt](../adoption/toko-miner.md), each scoped to its recorded
+subject. The [consumer integration contract](../architecture.md#consumer-integration)
+defines the evidence required for a new combined subject. Historical receipts
+do not qualify later dependency combinations or deployments.

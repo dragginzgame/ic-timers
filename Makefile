@@ -19,7 +19,7 @@ REPOSITORY_TARGETS := actions-check shell-check release-check provider-check fmt
 help:
 	@echo "Available commands:"
 	@echo ""
-	@echo "  fmt / fmt-check     Format Rust or verify formatting"
+	@echo "  fmt / fmt-check     Format or check Rust in both workspaces"
 	@echo "  check / clippy      Compile all targets and lint with warnings denied"
 	@echo "  docs-check          Build public API docs with warnings denied"
 	@echo "  test                Run workspace unit tests"
@@ -29,7 +29,7 @@ help:
 	@echo "  pocketic-cohorts    Build and run comparable timer policy cohorts"
 	@echo "  pocketic-check      Install or verify the audited PocketIC evidence binary"
 	@echo "  provider-check      Enforce the private ic-cdk-timers provider boundary"
-	@echo "  testing-check       Lint every supported nested probe configuration"
+	@echo "  testing-check       Check formatting and lint supported nested probes"
 	@echo "  release-verify      Run the complete fail-closed release evidence gate"
 	@echo "  release-impact      Classify changes since the current version tag"
 	@echo "  repository-check    Validate a non-published repository-only update"
@@ -48,9 +48,11 @@ version:
 
 fmt:
 	cargo fmt --all
+	cargo fmt --manifest-path testing/Cargo.toml --all
 
 fmt-check:
 	cargo fmt --all -- --check
+	cargo fmt --manifest-path testing/Cargo.toml --all -- --check
 
 check:
 	cargo check --workspace --all-targets --all-features --locked
@@ -71,7 +73,7 @@ msrv:
 	cargo +$(MSRV) check --workspace --all-targets --all-features --locked
 
 testing-check:
-	cargo fmt --manifest-path testing/Cargo.toml --all -- --check
+	+$(MAKE) --no-print-directory fmt-check
 	cargo +$(MSRV) clippy --manifest-path testing/Cargo.toml \
 		-p ic-timers-runtime-probe -p ic-timers-pocketic --all-targets --locked -- -D warnings
 	cargo +$(MSRV) clippy --manifest-path testing/Cargo.toml \

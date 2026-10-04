@@ -10,14 +10,14 @@ trap 'rm -f "${status_file}"; rmdir "${fixture_root}"' EXIT
 printf '%s\n' \
     '# Current status' \
     '' \
-    '- Open release line: `0.3.7`; package remains `0.3.6`.' \
+    '- Workspace package version: `0.3.7`.' \
     '' \
     '## Next action' \
     '' \
     'Review the bounded hygiene patch.' > "${status_file}"
 clean_output="$(bash "${checker}" 0.3.7 "${status_file}" 2>&1)"
 if [[ -n "${clean_output}" ]]; then
-    echo "error: advisory warned about clean candidate prose" >&2
+    echo "error: advisory warned about clean status prose" >&2
     echo "${clean_output}" >&2
     exit 1
 fi

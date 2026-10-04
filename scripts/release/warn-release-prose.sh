@@ -25,9 +25,6 @@ matches="$(
             if ($0 ~ /^## /) {
                 in_next_action = (lower == "## next action")
             }
-            if ($0 ~ /^- Open release line:/) {
-                next
-            }
             if (index($0, target) > 0 &&
                 lower ~ /(candidate|unreleased|after[[:space:]]+(the[[:space:]]+)?release|release[[:space:]]+next|publish)/) {
                 report("target-version wording")

@@ -23,7 +23,9 @@ The module hierarchy keeps six responsibilities separate:
    control path.
 3. `control` is the private ordinary generation/registration state machine. It
    owns checked callback generations, immediate schedule, reconciliation and
-   cancellation transitions. Its inactive state owns its reason, its running
+   cancellation transitions. One counter owns ordinary allocation history and
+   the active callback generation; state variants do not store another copy.
+   Its inactive state owns its reason, its running
    state owns its pending command, and scheduled state carries neither. The
    registry owns exact running-work authorization and command arbitration.
    Completion arms its selected successor through the shared checked arming
@@ -54,6 +56,12 @@ The module hierarchy keeps six responsibilities separate:
    Watchdog awaiting-work state owns its pending command through both dispatch
    and execution. Work acceptance preserves it; leaving that state discards it,
    including when the scheduler retires an unacknowledged attempt.
+   Watchdog control retains separate scheduler and work-attempt counters because
+   successor replacement advances only the scheduler. Scheduled and awaiting-work
+   states store no copies of those counters. Callback authorization checks the
+   appropriate counter together with state, claim and role; public snapshots
+   project the active generations from the counters. Callback tokens and owned
+   handles keep their independent delivery stamps for stale-callback rejection.
    Ordinary completion computes its removal-on-stop decision once from pending
    unregister and declaration lifetime; every terminal exit uses it. A successful
    arm retains its declaration. Ordinary cancellation derives immediate removal

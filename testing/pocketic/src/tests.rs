@@ -767,7 +767,7 @@ fn churn_observation(pic: &PocketIc, canister_id: Principal) -> ChurnObservation
 }
 
 #[test]
-fn provider_replacement_churn_records_memory_beyond_live_handle_bounds() {
+fn provider_replacement_churn_preserves_cancellation_and_reports_memory() {
     let pic = PocketIc::new();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
@@ -784,10 +784,8 @@ fn provider_replacement_churn_records_memory_beyond_live_handle_bounds() {
     assert_eq!(replaced.inventory_len, 1);
     assert!(!replaced.armed);
     assert_eq!(replaced.completed, 0);
-    assert!(
-        replaced.wasm_pages > before.wasm_pages,
-        "many cancelled future deadlines can grow memory despite zero owned handles"
-    );
+    // Churn may reuse existing allocation capacity. Report page extents without
+    // requiring memory growth for cancellation and continued work to be correct.
     update_unit(&pic, canister_id, "start_immediate_churn");
     for _ in 0..768 {
         pic.tick();

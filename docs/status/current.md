@@ -43,6 +43,10 @@ references and validation belong in [release notes](../changelog/README.md),
   command through dispatch and execution. Leaving either running or awaiting-work
   state discards its command. Public snapshots project these states without
   mutation authority.
+- Control counters own ordinary, Watchdog scheduler and Watchdog attempt generation
+  history; active states do not repeat those values. State, claim and role remain
+  part of callback authorization. Snapshots project active generations from the
+  counters; tokens and handles retain their independent delivery stamps.
 - Registry arbitration owns ordinary pending-command order and exact running-work
   authorization. Exact reconciliation replaces a discarded callback scheduling
   proposal before validation. Invariant failure remains terminal; unregister is
@@ -73,6 +77,9 @@ and handle-restoration stages retain their distinct suspension and recovery role
 The native dispatch-failure fixture and its verification scope are documented in
 the [0.10.11 note](../changelog/0.10.11.md). Native injection does not simulate IC
 rollback; deployment validation remains maintainer-owned.
+
+Generation ownership, provider binding, workspace formatting and audit follow-up
+are recorded in the [0.10.12 note](../changelog/0.10.12.md).
 
 ## Evidence
 

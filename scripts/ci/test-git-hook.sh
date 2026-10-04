@@ -47,4 +47,56 @@ if bash "${repository_root}/.githooks/pre-commit" > "${temporary_root}/output" 2
     exit 1
 fi
 assert_unchanged
+
+# The production formatting target must also reject an unformatted nested
+# workspace in the index while preserving formatted or dirty working copies.
+mkdir -p "${temporary_root}/workspaces"/{src,testing/src}
+cd "${temporary_root}/workspaces"
+git init -q
+git config user.name 'ic-timers hook test'
+git config user.email 'hook-test@example.invalid'
+cp "${repository_root}/Makefile" Makefile
+cat > Cargo.toml <<'EOF'
+[workspace]
+
+[package]
+name = "hook-root-fixture"
+version = "0.0.0"
+edition = "2024"
+EOF
+cat > testing/Cargo.toml <<'EOF'
+[workspace]
+
+[package]
+name = "hook-nested-fixture"
+version = "0.0.0"
+edition = "2024"
+EOF
+printf '%s\n' 'pub fn fixture() {}' > src/lib.rs
+cp src/lib.rs testing/src/lib.rs
+git add Makefile Cargo.toml src/lib.rs testing/Cargo.toml testing/src/lib.rs
+git -c core.hooksPath=/dev/null commit -qm 'two-workspace fixture'
+
+printf '%s\n' 'pub fn fixture( ){}' > testing/src/lib.rs
+git add testing/src/lib.rs
+printf '%s\n' 'pub fn fixture() {}' > testing/src/lib.rs
+printf '%s\n' 'pub fn fixture( ) { }' > src/lib.rs
+sha256sum src/lib.rs testing/src/lib.rs > "${temporary_root}/before.sha256"
+git diff --cached --binary > "${temporary_root}/before-index"
+if bash "${repository_root}/.githooks/pre-commit" > "${temporary_root}/output" 2>&1; then
+    echo 'error: commit hook accepted unformatted staged nested Rust' >&2
+    exit 1
+fi
+if [[ "$(cat "${temporary_root}/output")" != *'testing/src/lib.rs'* ]]; then
+    cat "${temporary_root}/output" >&2
+    echo 'error: commit hook did not reach the nested formatting check' >&2
+    exit 1
+fi
+assert_unchanged
+
+git add testing/src/lib.rs
+sha256sum src/lib.rs testing/src/lib.rs > "${temporary_root}/before.sha256"
+git diff --cached --binary > "${temporary_root}/before-index"
+bash "${repository_root}/.githooks/pre-commit"
+assert_unchanged
 echo 'Commit hook snapshot checks passed'

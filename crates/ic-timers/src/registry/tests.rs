@@ -1143,6 +1143,12 @@ fn recurring_duplicate_ensure_is_idempotent_without_deadline_recalculation() {
         let claim = registry
             .register_after_completion(timer.clone(), cadence(5), DeclarationLifetime::Retained)
             .expect("claim should succeed");
+        let EntryKind::Ordinary { control, .. } =
+            &mut registry.entries.get_mut(&timer).unwrap().kind
+        else {
+            panic!("fixture must be ordinary control");
+        };
+        control.seed_generation_for_test(u64::MAX - 1);
         let initial = if exact_deadline {
             registry.reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(40)))
         } else {
@@ -1151,13 +1157,6 @@ fn recurring_duplicate_ensure_is_idempotent_without_deadline_recalculation() {
         .expect("initial schedule should succeed");
         confirm(&mut registry, &initial);
         let before = registry.snapshot(&timer).unwrap();
-        let EntryKind::Ordinary { control, .. } =
-            &mut registry.entries.get_mut(&timer).unwrap().kind
-        else {
-            panic!("fixture must be ordinary control");
-        };
-        control.exhaust_generation_for_test();
-
         let duplicate = registry
             .ensure_recurring(&claim, u64::MAX)
             .expect("existing schedule should satisfy duplicate demand without allocation");
@@ -1179,6 +1178,7 @@ fn recurring_duplicate_ensure_is_idempotent_without_deadline_recalculation() {
         assert_eq!(snapshot.observability().counters().wakeups_armed(), 1);
         assert_eq!(snapshot.observability().counters().coalesced(), 1);
         let (token, _) = arm(initial);
+        assert_eq!(token.callback_generation(), u64::MAX);
         assert_eq!(
             registry.begin_ordinary(&token),
             CallbackAcceptance::Accepted
@@ -1899,10 +1899,6 @@ fn watchdog_checked_generation_exhaustion_is_terminal_and_atomic() {
             DeclarationLifetime::Retained,
         )
         .expect("attempt-overflow claim should succeed");
-    let initial = registry
-        .ensure_recurring(&attempt_claim, 0)
-        .expect("initial attempt-overflow ensure should succeed");
-    let (scheduler, _) = arm(initial);
     {
         let entry = registry
             .entries
@@ -1913,6 +1909,10 @@ fn watchdog_checked_generation_exhaustion_is_terminal_and_atomic() {
         };
         control.attempt_generation = u64::MAX;
     }
+    let initial = registry
+        .ensure_recurring(&attempt_claim, 0)
+        .expect("initial attempt-overflow ensure should succeed");
+    let (scheduler, _) = arm(initial);
 
     let transition = registry.begin_watchdog_scheduler(&scheduler, 1);
     assert_eq!(
@@ -2002,12 +2002,23 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
                         .unwrap(),
                     TimerPolicy::Watchdog { .. } => unreachable!("ordinary fixture policies"),
                 };
+                let EntryKind::Ordinary { control, .. } =
+                    &mut registry.entries.get_mut(&timer).unwrap().kind
+                else {
+                    panic!("fixture must be ordinary control");
+                };
+                control.seed_generation_for_test(if subject == "initial" {
+                    u64::MAX
+                } else {
+                    u64::MAX - 1
+                });
                 let token = if subject == "initial" {
                     None
                 } else {
                     let (token, _) = arm(registry
                         .reconcile_ordinary(&claim, 0, Some(TimerSchedule::At(10)))
                         .unwrap());
+                    assert_eq!(token.callback_generation(), u64::MAX);
                     if subject == "completion" {
                         assert_eq!(
                             registry.begin_ordinary(&token),
@@ -2016,11 +2027,6 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
                     }
                     Some(token)
                 };
-                let entry = registry.entries.get_mut(&timer).unwrap();
-                let EntryKind::Ordinary { control, .. } = &mut entry.kind else {
-                    panic!("fixture must be ordinary control");
-                };
-                control.exhaust_generation_for_test();
                 let transition = if subject == "cancel" {
                     registry.cancel(&claim).unwrap()
                 } else if subject == "completion" {
@@ -2098,6 +2104,26 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
             let claim = registry
                 .register_watchdog(timer.clone(), cadence(1), lifetime)
                 .unwrap();
+            let EntryKind::Watchdog { control, .. } =
+                &mut registry.entries.get_mut(&timer).unwrap().kind
+            else {
+                panic!("fixture must be a watchdog");
+            };
+            // Seed allocation history before callbacks exist. The operation
+            // under test must encounter exhaustion with its real active token.
+            match subject {
+                "initial" => control.scheduler_generation = u64::MAX,
+                "replacement" | "dispatch-generation" | "cancel-scheduled" => {
+                    control.scheduler_generation = u64::MAX - 1;
+                }
+                "completion-immediate" | "completion-deadline" => {
+                    control.scheduler_generation = u64::MAX - 2;
+                }
+                "dispatch-attempt" => control.attempt_generation = u64::MAX,
+                "cancel-dispatched" => control.attempt_generation = u64::MAX - 1,
+                "dispatch-deadline" => {}
+                _ => unreachable!("closed fixture subjects"),
+            }
             let scheduler = if subject == "initial" {
                 None
             } else {
@@ -2107,35 +2133,21 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
                 subject,
                 "cancel-dispatched" | "completion-immediate" | "completion-deadline"
             ) {
-                let (_successor, work) =
+                let (successor, work) =
                     dispatch(registry.begin_watchdog_scheduler(scheduler.as_ref().unwrap(), 1));
                 if subject.starts_with("completion-") {
+                    assert_eq!(successor.callback_generation(), u64::MAX);
                     assert_eq!(
                         registry.begin_watchdog_work(&work),
                         CallbackAcceptance::Accepted
                     );
+                } else {
+                    assert_eq!(work.callback_generation(), u64::MAX);
                 }
                 Some(work)
             } else {
                 None
             };
-            let entry = registry.entries.get_mut(&timer).unwrap();
-            let EntryKind::Watchdog { control, .. } = &mut entry.kind else {
-                panic!("fixture must be a watchdog");
-            };
-            match subject {
-                "initial"
-                | "replacement"
-                | "dispatch-generation"
-                | "cancel-scheduled"
-                | "completion-immediate"
-                | "completion-deadline" => {
-                    control.scheduler_generation = u64::MAX;
-                }
-                "dispatch-attempt" | "cancel-dispatched" => control.attempt_generation = u64::MAX,
-                "dispatch-deadline" => {}
-                _ => unreachable!("closed fixture subjects"),
-            }
             let transition = match subject {
                 "initial" => registry.ensure_recurring(&claim, 0).unwrap(),
                 "replacement" => registry.ensure_watchdog_immediately(&claim, 0).unwrap(),
@@ -2228,12 +2240,6 @@ fn transient_watchdog_completion_keeps_retained_or_replaced_successors() {
                 DeclarationLifetime::RemoveWhenStopped,
             )
             .unwrap();
-        let (scheduler, _) = arm(registry.ensure_recurring(&claim, 0).unwrap());
-        let (successor, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 1));
-        assert_eq!(
-            registry.begin_watchdog_work(&work),
-            CallbackAcceptance::Accepted
-        );
         let replaces_successor = matches!(decision, WatchdogDecision::ScheduleAt(10));
         if !replaces_successor {
             let EntryKind::Watchdog { control, .. } =
@@ -2241,8 +2247,14 @@ fn transient_watchdog_completion_keeps_retained_or_replaced_successors() {
             else {
                 panic!("fixture must be a watchdog");
             };
-            control.scheduler_generation = u64::MAX;
+            control.scheduler_generation = u64::MAX - 2;
         }
+        let (scheduler, _) = arm(registry.ensure_recurring(&claim, 0).unwrap());
+        let (successor, work) = dispatch(registry.begin_watchdog_scheduler(&scheduler, 1));
+        assert_eq!(
+            registry.begin_watchdog_work(&work),
+            CallbackAcceptance::Accepted
+        );
 
         let transition = registry
             .complete_watchdog_work(
@@ -2258,6 +2270,7 @@ fn transient_watchdog_completion_keeps_retained_or_replaced_successors() {
             assert!(replacement.callback_generation() > successor.callback_generation());
             assert_eq!(scheduled_deadline(&registry, &replacement), 10);
         } else {
+            assert_eq!(successor.callback_generation(), u64::MAX);
             assert_eq!(transition.effect(), &RegistryEffect::None);
             assert_eq!(scheduled_deadline(&registry, &successor), 2);
         }
@@ -2449,6 +2462,11 @@ fn watchdog_exact_replacement_rejects_stale_delivery_and_generation_exhaustion()
     let claim = registry
         .register_watchdog(timer.clone(), cadence(5), DeclarationLifetime::Retained)
         .unwrap();
+    let EntryKind::Watchdog { control, .. } = &mut registry.entries.get_mut(&timer).unwrap().kind
+    else {
+        panic!("watchdog")
+    };
+    control.scheduler_generation = u64::MAX - 3;
     let (old, _) = arm(registry.ensure_recurring(&claim, 10).unwrap());
     let (new, kind) = arm(registry
         .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(100)))
@@ -2459,16 +2477,12 @@ fn watchdog_exact_replacement_rejects_stale_delivery_and_generation_exhaustion()
         registry.begin_watchdog_scheduler(&old, 15).into_effect(),
         RegistryEffect::None
     );
-    let (_, work) = dispatch(registry.begin_watchdog_scheduler(&new, 100));
+    let (successor, work) = dispatch(registry.begin_watchdog_scheduler(&new, 100));
+    assert_eq!(successor.callback_generation(), u64::MAX);
     assert_eq!(
         registry.begin_watchdog_work(&work),
         CallbackAcceptance::Accepted
     );
-    let EntryKind::Watchdog { control, .. } = &mut registry.entries.get_mut(&timer).unwrap().kind
-    else {
-        panic!("watchdog")
-    };
-    control.scheduler_generation = u64::MAX;
     let transition = registry
         .complete_watchdog_work(
             &work,

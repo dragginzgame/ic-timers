@@ -28,15 +28,11 @@ pub enum TimerRegistration {
     },
     /// One generation is scheduled for an absolute nanosecond deadline.
     Scheduled {
-        /// Generation owned by the scheduled callback.
-        generation: u64,
         /// Absolute IC timestamp in nanoseconds.
         deadline_ns: u64,
     },
     /// One generation currently owns logical execution.
     Running {
-        /// Generation owned by the running callback.
-        generation: u64,
         /// Registry-owned command arbitration for this running attempt.
         pending: Option<OrdinaryPending>,
     },
@@ -66,6 +62,8 @@ impl WakeupArm {
 /// Pure state machine for one logical timer identity.
 #[derive(Debug, Default)]
 pub struct TimerControl {
+    // Active callbacks use this generation; inactive control retains allocation
+    // history. State changes never keep an active callback from an older generation.
     generation: u64,
     pub(crate) registration: TimerRegistration,
 }
@@ -93,15 +91,19 @@ impl TimerControl {
     }
 
     #[cfg(test)]
-    pub(crate) const fn exhaust_generation_for_test(&mut self) {
-        self.generation = u64::MAX;
+    pub(crate) const fn seed_generation_for_test(&mut self, generation: u64) {
+        assert!(matches!(
+            self.registration,
+            TimerRegistration::Inactive { .. }
+        ));
+        self.generation = generation;
     }
 
     /// Return the command associated with the current running work, if any.
     #[must_use]
     pub(crate) const fn pending(&self) -> Option<OrdinaryPending> {
         match self.registration {
-            TimerRegistration::Running { pending, .. } => pending,
+            TimerRegistration::Running { pending } => pending,
             TimerRegistration::Inactive { .. } | TimerRegistration::Scheduled { .. } => None,
         }
     }
@@ -158,7 +160,6 @@ impl TimerControl {
             TimerRegistration::Inactive { .. } => WakeupArm::Initial,
             TimerRegistration::Scheduled {
                 deadline_ns: current_deadline_ns,
-                ..
             } if selection.replaces(current_deadline_ns, deadline_ns) => WakeupArm::Replacement,
             TimerRegistration::Scheduled { .. } | TimerRegistration::Running { .. } => {
                 return Ok(None);
@@ -172,14 +173,8 @@ impl TimerControl {
     /// Begin the scheduled generation, rejecting stale callbacks.
     pub(crate) const fn begin(&mut self, generation: u64) -> bool {
         match self.registration {
-            TimerRegistration::Scheduled {
-                generation: scheduled_generation,
-                ..
-            } if scheduled_generation == generation => {
-                self.registration = TimerRegistration::Running {
-                    generation,
-                    pending: None,
-                };
+            TimerRegistration::Scheduled { .. } if self.generation == generation => {
+                self.registration = TimerRegistration::Running { pending: None };
                 true
             }
             TimerRegistration::Inactive { .. }
@@ -193,10 +188,7 @@ impl TimerControl {
     pub(crate) fn arm_deadline(&mut self, deadline_ns: u64) -> Result<(), TimerControlFailure> {
         let generation = self.next_generation()?;
         self.generation = generation;
-        self.registration = TimerRegistration::Scheduled {
-            generation,
-            deadline_ns,
-        };
+        self.registration = TimerRegistration::Scheduled { deadline_ns };
         Ok(())
     }
 
@@ -213,10 +205,7 @@ mod tests {
 
     fn arm(control: &mut TimerControl, deadline_ns: u64) -> u64 {
         assert_eq!(control.schedule(deadline_ns), Ok(Some(WakeupArm::Initial)));
-        let TimerRegistration::Scheduled { generation, .. } = control.registration else {
-            panic!("initial schedule should arm");
-        };
-        generation
+        control.generation()
     }
 
     #[test]
@@ -225,12 +214,10 @@ mod tests {
         assert_eq!(arm(&mut control, 100), 1);
         assert_eq!(control.schedule(100), Ok(None));
         assert_eq!(control.schedule(200), Ok(None));
+        assert_eq!(control.generation(), 1);
         assert_eq!(
             control.registration,
-            TimerRegistration::Scheduled {
-                generation: 1,
-                deadline_ns: 100
-            }
+            TimerRegistration::Scheduled { deadline_ns: 100 }
         );
     }
 
@@ -239,12 +226,10 @@ mod tests {
         let mut control = TimerControl::default();
         let old_generation = arm(&mut control, 100);
         assert_eq!(control.schedule(50), Ok(Some(WakeupArm::Replacement)));
+        assert_eq!(control.generation(), 2);
         assert_eq!(
             control.registration,
-            TimerRegistration::Scheduled {
-                generation: 2,
-                deadline_ns: 50,
-            }
+            TimerRegistration::Scheduled { deadline_ns: 50 }
         );
         assert!(!control.begin(old_generation));
         assert!(control.begin(2));
@@ -255,12 +240,10 @@ mod tests {
         let mut control = TimerControl::default();
         let old_generation = arm(&mut control, 100);
         assert_eq!(control.reconcile(200), Ok(Some(WakeupArm::Replacement)));
+        assert_eq!(control.generation(), 2);
         assert_eq!(
             control.registration,
-            TimerRegistration::Scheduled {
-                generation: 2,
-                deadline_ns: 200,
-            }
+            TimerRegistration::Scheduled { deadline_ns: 200 }
         );
         assert!(!control.begin(old_generation));
         assert!(control.begin(2));
@@ -271,7 +254,7 @@ mod tests {
         let mut control = TimerControl::default();
         let generation = arm(&mut control, 100);
         assert!(control.begin(generation));
-        let TimerRegistration::Running { pending, .. } = &mut control.registration else {
+        let TimerRegistration::Running { pending } = &mut control.registration else {
             panic!("accepted fixture should be running");
         };
         *pending = Some(OrdinaryPending::Unregister);
@@ -281,7 +264,6 @@ mod tests {
         assert_eq!(
             control.registration,
             TimerRegistration::Running {
-                generation,
                 pending: Some(OrdinaryPending::Unregister),
             }
         );
@@ -297,10 +279,7 @@ mod tests {
             assert_eq!(control.arm_deadline(deadline_ns), Ok(()));
             assert_eq!(
                 control.registration,
-                TimerRegistration::Scheduled {
-                    generation: 2,
-                    deadline_ns,
-                }
+                TimerRegistration::Scheduled { deadline_ns }
             );
             assert_eq!(control.generation(), 2);
         }
@@ -345,13 +324,9 @@ mod tests {
 
     #[test]
     fn exhausted_generation_rejects_successors_without_preventing_stop() {
-        let mut control = TimerControl {
-            generation: u64::MAX,
-            registration: TimerRegistration::Scheduled {
-                generation: u64::MAX,
-                deadline_ns: 100,
-            },
-        };
+        let mut control = TimerControl::default();
+        control.seed_generation_for_test(u64::MAX - 1);
+        assert_eq!(arm(&mut control, 100), u64::MAX);
 
         assert_eq!(
             control.schedule(50),
@@ -363,14 +338,12 @@ mod tests {
         );
         assert_eq!(
             control.registration,
-            TimerRegistration::Scheduled {
-                generation: u64::MAX,
-                deadline_ns: 100
-            }
+            TimerRegistration::Scheduled { deadline_ns: 100 }
         );
+        assert_eq!(control.generation(), u64::MAX);
 
         assert!(control.begin(u64::MAX));
-        let TimerRegistration::Running { pending, .. } = &mut control.registration else {
+        let TimerRegistration::Running { pending } = &mut control.registration else {
             panic!("accepted fixture should be running");
         };
         *pending = Some(OrdinaryPending::Cancel);
@@ -381,10 +354,10 @@ mod tests {
         assert_eq!(
             control.registration,
             TimerRegistration::Running {
-                generation: u64::MAX,
                 pending: Some(OrdinaryPending::Cancel),
             }
         );
+        assert_eq!(control.generation(), u64::MAX);
         assert!(!control.terminate(InactiveReason::Cancelled));
         assert_eq!(control.generation(), u64::MAX);
         assert_eq!(
