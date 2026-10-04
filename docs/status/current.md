@@ -10,7 +10,7 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Release state
 
-- Workspace package version: `0.10.20`.
+- Workspace package version: `0.10.21`.
 - Cargo owns this version; the release helper updates the single projection above.
   Dated changelog sections and release-note statuses own release state. Read those
   sources to distinguish preparation from a completed release; do not duplicate
@@ -54,6 +54,9 @@ references and validation belong in [release notes](../changelog/README.md),
   callback cleanup borrow it without claim reconstruction; running-work and
   provider ownership checks remain distinct. See the
   [callback claim ownership note](../changelog/0.10.14.md).
+  Provider installation and effect confirmation use the canonical mutable claim
+  lookup with callback-specific stale-error translation; see the
+  [claim lookup note](../changelog/0.10.21.md).
   The shared claim-transition operation validates context authority before
   detachment; lifecycle reconciliation directly verifies retained declarations.
   See the [runtime validation ownership note](../changelog/0.10.20.md).
@@ -125,6 +128,9 @@ maintained PocketIC subjects remain required for those claims. Tests, builds,
 lint gates and deployment validation remain user-owned.
 Measurement ownership across identity reuse and policy-specific completion
 failure assertions are scoped in the [0.10.16 note](../changelog/0.10.16.md).
+Public lifecycle rejection fixtures cover identity, lifetime, cadence, expired
+claims and occupied-identity reconstruction from an empty slot; their pending
+verification is scoped in the [0.10.21 note](../changelog/0.10.21.md).
 
 ## Next action
 

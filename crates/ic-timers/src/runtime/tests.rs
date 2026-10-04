@@ -1180,7 +1180,7 @@ fn replacement_and_cancellation_clear_actual_owned_handles() {
 }
 
 #[test]
-fn duplicate_registration_does_not_replace_callback_and_remove_on_stop_releases_capacity() {
+fn duplicate_registration_and_reconstruction_preserve_live_work_and_release_capacity() {
     setup();
     let timer = identity("duplicate");
     let first_calls = Rc::new(Cell::new(0_u64));
@@ -1194,6 +1194,10 @@ fn duplicate_registration_does_not_replace_callback_and_remove_on_stop_releases_
         },
     )
     .expect("registration should succeed");
+    registration
+        .ensure_scheduled(TimerSchedule::At(20))
+        .expect("ensure should succeed");
+    let before = timer_inventory().unwrap();
     let duplicate = register_once(
         timer.clone(),
         DeclarationLifetime::Retained,
@@ -1207,10 +1211,26 @@ fn duplicate_registration_does_not_replace_callback_and_remove_on_stop_releases_
             RegisterError::IdentityAlreadyRegistered(_)
         ))
     ));
+    assert_eq!(timer_inventory().unwrap(), before);
+    assert_eq!(timer_count(), 1);
+    assert!(registration.has_armed_wakeup().unwrap());
 
-    registration
-        .ensure_scheduled(TimerSchedule::At(10))
-        .expect("ensure should succeed");
+    let mut empty_slot = None;
+    let reconstruction = reconcile_once(&mut empty_slot, &timer, None, |_| async {
+        TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop)
+    });
+    assert!(matches!(
+        reconstruction,
+        Err(TimerError::Register(
+            RegisterError::IdentityAlreadyRegistered(ref occupied)
+        )) if occupied == &timer
+    ));
+    assert!(empty_slot.is_none());
+    assert_eq!(timer_inventory().unwrap(), before);
+    assert_eq!(timer_count(), 1);
+    assert!(registration.has_armed_wakeup().unwrap());
+
+    set_time(20);
     assert!(run_next_due());
     assert_eq!(first_calls.get(), 1);
     assert!(
@@ -2629,6 +2649,218 @@ fn assert_icydb_lifecycle_measurements(snapshot: &TimerSnapshot) {
             .latest()
             .is_some_and(|value| value >= 13)
     );
+}
+
+#[test]
+fn once_reconciliation_rejects_identity_mismatch_without_disturbing_live_work() {
+    setup();
+    let timer = identity("reconcile-once-identity");
+    let other = identity("reconcile-once-other");
+    let calls = Rc::new(Cell::new(0_u64));
+    let callback_calls = Rc::clone(&calls);
+    let mut registration = Some(
+        register_once(timer.clone(), DeclarationLifetime::Retained, move |_| {
+            callback_calls.set(callback_calls.get() + 1);
+            async { TimerRunResult::new(TimerCompletion::success(1), TimerDirective::Stop) }
+        })
+        .unwrap(),
+    );
+    registration
+        .as_ref()
+        .unwrap()
+        .ensure_scheduled(TimerSchedule::At(20))
+        .unwrap();
+    let before = timer_inventory().unwrap();
+
+    let rejected = reconcile_once(&mut registration, &other, None, |_| async {
+        TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop)
+    });
+    assert!(matches!(rejected, Err(TimerError::ReconciliationConflict)));
+    assert_eq!(timer_inventory().unwrap(), before);
+    assert_eq!(timer_count(), 1);
+    let original = registration.as_ref().unwrap();
+    assert_eq!(original.identity(), &timer);
+    assert!(original.has_armed_wakeup().unwrap());
+
+    set_time(20);
+    assert!(run_next_due());
+    assert_eq!(
+        calls.get(),
+        1,
+        "the original callback must remain installed"
+    );
+    assert_eq!(timer_count(), 0);
+}
+
+#[test]
+fn after_completion_reconciliation_rejects_transient_lifetime_without_cancelling_work() {
+    setup();
+    let timer = identity("reconcile-after-lifetime");
+    let cadence = TimerCadence::from_nanos(5).unwrap();
+    let calls = Rc::new(Cell::new(0_u64));
+    let callback_calls = Rc::clone(&calls);
+    let mut registration = Some(
+        register_after_completion(
+            timer.clone(),
+            cadence,
+            DeclarationLifetime::RemoveWhenStopped,
+            move |_| {
+                callback_calls.set(callback_calls.get() + 1);
+                async { TimerRunResult::new(TimerCompletion::success(1), TimerDirective::Stop) }
+            },
+        )
+        .unwrap(),
+    );
+    registration.as_ref().unwrap().ensure_scheduled().unwrap();
+    let before = timer_inventory().unwrap();
+
+    let rejected = reconcile_after_completion(
+        &mut registration,
+        &timer,
+        cadence,
+        TimerReconcileState::Inactive,
+        |_| async {
+            TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop)
+        },
+    );
+    assert!(matches!(rejected, Err(TimerError::ReconciliationConflict)));
+    assert_eq!(timer_inventory().unwrap(), before);
+    assert_eq!(timer_count(), 1);
+    let original = registration.as_ref().unwrap();
+    assert_eq!(original.identity(), &timer);
+    assert!(original.has_armed_wakeup().unwrap());
+
+    set_time(15);
+    assert!(run_next_due());
+    assert_eq!(
+        calls.get(),
+        1,
+        "the original callback must remain installed"
+    );
+    assert_eq!(timer_count(), 0);
+    assert!(timer_snapshot(&timer).unwrap().is_none());
+}
+
+#[test]
+fn after_completion_reconciliation_rejects_cadence_mismatch_without_disturbing_live_work() {
+    setup();
+    let timer = identity("reconcile-after-cadence");
+    let cadence = TimerCadence::from_nanos(5).unwrap();
+    let other_cadence = TimerCadence::from_nanos(6).unwrap();
+    let calls = Rc::new(Cell::new(0_u64));
+    let callback_calls = Rc::clone(&calls);
+    let mut registration = Some(
+        register_after_completion(
+            timer.clone(),
+            cadence,
+            DeclarationLifetime::Retained,
+            move |_| {
+                callback_calls.set(callback_calls.get() + 1);
+                async { TimerRunResult::new(TimerCompletion::success(1), TimerDirective::Stop) }
+            },
+        )
+        .unwrap(),
+    );
+    registration.as_ref().unwrap().ensure_scheduled().unwrap();
+    let before = timer_inventory().unwrap();
+
+    let rejected = reconcile_after_completion(
+        &mut registration,
+        &timer,
+        other_cadence,
+        TimerReconcileState::Inactive,
+        |_| async {
+            TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop)
+        },
+    );
+    assert!(matches!(rejected, Err(TimerError::ReconciliationConflict)));
+    assert_eq!(timer_inventory().unwrap(), before);
+    assert_eq!(timer_count(), 1);
+    let original = registration.as_ref().unwrap();
+    assert_eq!(original.identity(), &timer);
+    assert!(original.has_armed_wakeup().unwrap());
+
+    set_time(14);
+    assert!(!run_next_due());
+    assert_eq!(calls.get(), 0);
+    set_time(15);
+    assert!(run_next_due());
+    assert_eq!(
+        calls.get(),
+        1,
+        "the original callback must run at its original deadline"
+    );
+    assert_eq!(timer_count(), 0);
+}
+
+#[test]
+fn watchdog_reconciliation_rejects_reused_identity_claim_without_clearing_replacement() {
+    setup();
+    let timer = identity("reconcile-watchdog-expired");
+    let cadence = TimerCadence::from_nanos(5).unwrap();
+    let calls = Rc::new(Cell::new(0_u64));
+    let expired_calls = Rc::clone(&calls);
+    let mut expired = Some(
+        register_watchdog(
+            timer.clone(),
+            cadence,
+            DeclarationLifetime::RemoveWhenStopped,
+            move |_| {
+                expired_calls.set(expired_calls.get() + 1);
+                WatchdogRunResult::new(TimerCompletion::success(1), WatchdogDecision::Stop)
+            },
+        )
+        .unwrap(),
+    );
+    expired.as_ref().unwrap().ensure_scheduled().unwrap();
+    expired.as_ref().unwrap().cancel().unwrap();
+    assert!(timer_snapshot(&timer).unwrap().is_none());
+    let replacement_count = Rc::new(Cell::new(0_u64));
+    let replacement_calls = Rc::clone(&replacement_count);
+    let replacement = register_watchdog(
+        timer.clone(),
+        cadence,
+        DeclarationLifetime::Retained,
+        move |_| {
+            replacement_calls.set(replacement_calls.get() + 1);
+            WatchdogRunResult::new(TimerCompletion::success(1), WatchdogDecision::Stop)
+        },
+    )
+    .unwrap();
+    replacement.ensure_scheduled().unwrap();
+    let before = timer_inventory().unwrap();
+
+    let rejected = reconcile_watchdog(
+        &mut expired,
+        &timer,
+        cadence,
+        WatchdogReconcileState::Inactive,
+        |_| {
+            WatchdogRunResult::new(
+                TimerCompletion::invariant_failure(0),
+                WatchdogDecision::Stop,
+            )
+        },
+    );
+    assert!(matches!(rejected, Err(TimerError::RegistrationExpired)));
+    assert!(matches!(
+        expired.as_ref().unwrap().has_armed_wakeup(),
+        Err(TimerError::RegistrationExpired)
+    ));
+    assert_eq!(timer_inventory().unwrap(), before);
+    assert_eq!(timer_count(), 1);
+    assert!(replacement.has_armed_wakeup().unwrap());
+
+    set_time(15);
+    assert!(run_next_due());
+    assert!(run_next_due());
+    assert_eq!(calls.get(), 0, "expired work must not execute");
+    assert_eq!(
+        replacement_count.get(),
+        1,
+        "replacement work must execute once"
+    );
+    assert_eq!(timer_count(), 0);
 }
 
 #[test]
