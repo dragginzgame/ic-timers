@@ -2058,39 +2058,79 @@ fn after_completion_provider_install_failure_retires_false_scheduled_state() {
 
 #[test]
 fn watchdog_failed_dispatch_clears_handles_without_confirming_work() {
-    for fail_confirmation in [false, true] {
-        setup();
-        let timer = identity("provider-watchdog-dispatch-fault");
-        let registration = register_watchdog(
-            timer.clone(),
-            TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
-            DeclarationLifetime::Retained,
-            |_context| {
-                WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue)
-            },
-        )
-        .expect("registration should succeed");
-        registration
-            .ensure_scheduled()
-            .expect("initial scheduler should arm");
+    for lifetime in [
+        DeclarationLifetime::Retained,
+        DeclarationLifetime::RemoveWhenStopped,
+    ] {
+        for failure_stage in ["successor-binding", "work-binding", "confirmation"] {
+            setup();
+            let timer = identity("provider-watchdog-dispatch-fault");
+            let calls = Rc::new(Cell::new(0));
+            let callback_calls = Rc::clone(&calls);
+            let registration = register_watchdog(
+                timer.clone(),
+                TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
+                lifetime,
+                move |_context| {
+                    callback_calls.set(callback_calls.get() + 1);
+                    WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue)
+                },
+            )
+            .expect("registration should succeed");
+            registration
+                .ensure_scheduled()
+                .expect("initial scheduler should arm");
 
-        if fail_confirmation {
-            inject_provider_confirmation_fault();
-        } else {
-            inject_provider_install_fault_after(1);
+            match failure_stage {
+                "successor-binding" => inject_provider_install_fault(),
+                "work-binding" => inject_provider_install_fault_after(1),
+                "confirmation" => inject_provider_confirmation_fault(),
+                _ => unreachable!("closed failure stages"),
+            }
+            set_time(15);
+            assert!(run_next_due(), "scheduler callback should execute");
+            assert_eq!(timer_count(), 0, "failed dispatch must clear every handle");
+            assert!(
+                !run_next_due(),
+                "failed dispatch must not leave queued work"
+            );
+            assert_eq!(
+                calls.get(),
+                0,
+                "failed dispatch must not invoke consumer work"
+            );
+
+            if lifetime == DeclarationLifetime::Retained {
+                assert_retained_provider_binding_failure(&timer, 1, 1);
+                assert!(!registration.has_armed_wakeup().unwrap());
+                let snapshot = timer_snapshot(&timer).unwrap().unwrap();
+                let counters = snapshot.observability().counters();
+                assert_eq!(counters.scheduler_started(), 1);
+                assert_eq!(counters.work_dispatched(), 0);
+                assert_eq!(counters.work_started(), 0);
+                assert_eq!(counters.work_completed(), 0);
+                assert!(counters.completion_partition_is_valid());
+            } else {
+                assert!(timer_snapshot(&timer).unwrap().is_none());
+                assert!(matches!(
+                    registration.has_armed_wakeup(),
+                    Err(TimerError::RegistrationExpired)
+                ));
+                let replacement = register_once(timer, DeclarationLifetime::Retained, |_| async {
+                    TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop)
+                })
+                .expect("failed transient dispatch should release the identity");
+                replacement.ensure_scheduled(TimerSchedule::At(25)).unwrap();
+                assert!(replacement.has_armed_wakeup().unwrap());
+                assert!(matches!(
+                    registration.has_armed_wakeup(),
+                    Err(TimerError::RegistrationExpired)
+                ));
+                assert_eq!(timer_count(), 1);
+                replacement.unregister().unwrap();
+                assert_eq!(timer_count(), 0);
+            }
         }
-        set_time(15);
-        assert!(run_next_due(), "scheduler callback should execute");
-        assert_eq!(timer_count(), 0, "failed dispatch must clear every handle");
-        assert_retained_provider_binding_failure(&timer, 1, 1);
-        assert!(!registration.has_armed_wakeup().unwrap());
-        let snapshot = timer_snapshot(&timer).unwrap().unwrap();
-        assert_eq!(snapshot.observability().counters().work_dispatched(), 0);
-        assert_eq!(snapshot.observability().counters().work_started(), 0);
-        assert!(
-            !run_next_due(),
-            "failed dispatch must not leave queued work"
-        );
     }
 }
 

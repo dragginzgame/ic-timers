@@ -3,7 +3,6 @@
 Release-line notes track unfinished design and evidence across multiple
 changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 
-
 - [0.1 line](0.1.md)
 - [0.2 design slice](0.2.md)
 - [0.3 production runtime slice](0.3.md)
@@ -44,3 +43,4 @@ changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
 - [0.10.8 ordinary state ownership and compact handoff](0.10.8.md)
 - [0.10.9 ordinary callback finalization](0.10.9.md)
 - [0.10.10 Watchdog completion removal](0.10.10.md)
+- [0.10.11 Watchdog dispatch-failure coverage](0.10.11.md)

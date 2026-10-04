@@ -4,6 +4,17 @@ All notable changes to this project are recorded here.
 
 ## [Unreleased]
 
+## [0.10.11]
+
+### Development
+
+- Extend the native Watchdog dispatch-failure fixture to cover successor binding,
+  work binding and effect confirmation for both declaration lifetimes. Check
+  provider cleanup, absent consumer work, truthful retained counters and transient
+  claim expiration across identity reuse. Test execution remains maintainer-owned.
+- Record the test-only scope and verification subject in the
+  [0.10.11 release note](docs/changelog/0.10.11.md).
+
 ## [0.10.10] - 2026-10-04
 
 ### Changed

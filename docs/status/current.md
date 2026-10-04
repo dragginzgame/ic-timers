@@ -70,6 +70,9 @@ Downstream work is deferred at the maintainer's request. Historical adoption
 records remain scoped to their recorded subjects; do not treat them as current
 composed qualification. Ordinary and Watchdog command machines, effect confirmation
 and handle-restoration stages retain their distinct suspension and recovery roles.
+The native dispatch-failure fixture and its verification scope are documented in
+the [0.10.11 note](../changelog/0.10.11.md). Native injection does not simulate IC
+rollback; deployment validation remains maintainer-owned.
 
 ## Evidence
 
