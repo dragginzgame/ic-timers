@@ -94,8 +94,9 @@ references and validation belong in [release notes](../changelog/README.md),
   existing schedule metadata at equal deadlines; see the
   [ordinary command precedence note](../changelog/0.10.19.md).
 - Ordinary requests and authorized completion successors share checked arming;
-  stopping selects its reason and allocates no generation. Lifetime removal is
-  decided once per transition. See the [ordinary state ownership note](../changelog/0.10.8.md).
+  allocation is checked directly in that operation. Stopping selects its reason
+  and allocates no generation. Cancellation applies lifetime removal once from
+  the final policy state. See the [state ownership note](../changelog/0.11.2.md).
 - Cancellation allocates no callback generation. Scheduled/dispatched cancellation
   selects inactive state and clears the existing handles; stale delivery is rejected
   by state, claim and role. Rearming and dispatch still require fresh non-wrapping
@@ -110,6 +111,10 @@ references and validation belong in [release notes](../changelog/README.md),
 - Ordinary dispatch shares completion finalization for callback results and
   callback-borrow failures. Work measurements are recorded only after executed
   work; see the [ordinary callback finalization note](../changelog/0.10.9.md).
+  Ordinary and Watchdog work acceptance returns the typed callback directly from
+  the validated entry. Dispatch releases that borrow before consumer work and
+  has no second callback lookup. Context and completion authorization remain
+  independent; see the [callback acceptance note](../changelog/0.11.2.md).
 - Watchdog completion decides lifetime removal once from final inactive state
   and pending unregister, after selecting its successor or terminal transition;
   see the [Watchdog completion removal note](../changelog/0.10.10.md).
