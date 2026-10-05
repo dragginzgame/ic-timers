@@ -31,6 +31,11 @@ All notable changes to this project are recorded here.
   produce apparently valid records. Preserve nested workflow paths and temporary
   file cleanup, and extend the repository fixture across discovery, search and
   ordering failures with empty or matching output.
+- Fetch the selected root and testing lockfiles' dependencies before the
+  user-operated release gate, including target-specific sources needed by offline
+  metadata checks. Add `make fetch` for cache preparation without building or
+  changing versions. Preserve Cargo metadata failures before JSON parsing so a
+  missing archive does not produce a second, misleading parse error.
 
 ## [0.11.7] - 2026-10-05
 

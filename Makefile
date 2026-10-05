@@ -1,5 +1,5 @@
 .PHONY: \
-	actions-check build bump-x check ci clean clippy docs-check ensure-clean fmt fmt-check help \
+	actions-check build bump-x check ci clean clippy docs-check ensure-clean fetch fmt fmt-check help \
 	install-hooks major minor msrv package patch pocketic-cohorts pocketic-watchdog publish release-check release-commit \
 	pocketic-check provider-check release-major release-minor release-patch release-push release-stage \
 	release-impact release-tag-check release-verify release-x repository-check shell-check test testing-check update-dev \
@@ -13,7 +13,7 @@ POCKET_IC_BIN ?= $(CURDIR)/target/tools/pocket-ic/$(POCKET_IC_VERSION)/pocket-ic
 POCKET_IC_AUTO_INSTALL := $(if $(filter undefined,$(POCKET_IC_BIN_ORIGIN)),1,0)
 
 CI_TARGETS := actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package
-RELEASE_TARGETS := pocketic-check ci msrv testing-check pocketic-watchdog pocketic-cohorts
+RELEASE_TARGETS := fetch pocketic-check ci msrv testing-check pocketic-watchdog pocketic-cohorts
 REPOSITORY_TARGETS := actions-check shell-check release-check provider-check fmt-check
 
 help:
@@ -25,6 +25,7 @@ help:
 	@echo "  test                Run workspace unit tests"
 	@echo "  wasm-check          Compile the library for wasm32-unknown-unknown"
 	@echo "  package             Verify the publishable crate package"
+	@echo "  fetch               Download locked dependencies for both workspaces"
 	@echo "  pocketic-watchdog   Build and run the focused watchdog canister evidence"
 	@echo "  pocketic-cohorts    Build and run comparable timer policy cohorts"
 	@echo "  pocketic-check      Install or verify the audited PocketIC evidence binary"
@@ -45,6 +46,11 @@ help:
 
 version:
 	@bash scripts/release/workspace-version.sh
+
+# Prepare every target's locked sources before offline metadata validation.
+fetch:
+	cargo fetch --manifest-path Cargo.toml --locked
+	cargo fetch --manifest-path testing/Cargo.toml --locked
 
 fmt:
 	cargo fmt --all

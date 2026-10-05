@@ -76,6 +76,44 @@ temporary_root="$(mktemp -d)"
 trap 'rm -rf -- "${temporary_root}"' EXIT
 cp "${makefile}" "${temporary_root}/Makefile"
 cd "${temporary_root}"
+
+# Exercise real fetch recipes with a recording Cargo stub, never the network.
+mkdir -p bin
+cat > bin/cargo <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> fetch-events
+if [[ "${FIXTURE_FAIL_FETCH:-}" == "${3:-}" ]]; then
+    echo "injected fetch failure: ${3}" >&2
+    exit 101
+fi
+EOF
+chmod +x bin/cargo
+fetch_calls=('fetch --manifest-path Cargo.toml --locked'
+    'fetch --manifest-path testing/Cargo.toml --locked')
+for failed_manifest in '' Cargo.toml testing/Cargo.toml; do
+    if PATH="${temporary_root}/bin:${PATH}" FIXTURE_FAIL_FETCH="${failed_manifest}" \
+        make --no-print-directory fetch >fetch-output 2>&1; then
+        if [[ -n "${failed_manifest}" ]]; then
+            echo "error: dependency preparation accepted failed ${failed_manifest} fetch" >&2
+            exit 1
+        fi
+    elif [[ -z "${failed_manifest}" ]]; then
+        cat fetch-output >&2
+        echo 'error: dependency preparation rejected successful fetches' >&2
+        exit 1
+    fi
+    expected_fetch_calls=("${fetch_calls[@]}")
+    if [[ "${failed_manifest}" == Cargo.toml ]]; then expected_fetch_calls=("${fetch_calls[0]}"); fi
+    printf '%s\n' "${expected_fetch_calls[@]}" > expected-fetch-events
+    if ! cmp -s expected-fetch-events fetch-events; then
+        cat fetch-events >&2
+        echo 'error: dependency preparation changed locked inputs or continued after failure' >&2
+        exit 1
+    fi
+    rm fetch-events
+done
+
 # Exercise the actual recipe and Make variable origins without provisioning.
 mkdir -p scripts/ci
 cat > scripts/ci/check-pocketic.sh <<'EOF'
@@ -114,14 +152,14 @@ for source in default environment command-line same-as-default empty; do
 done
 rm provisioning
 cat > overrides.mk <<'EOF'
-actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package pocketic-check msrv testing-check pocketic-watchdog pocketic-cohorts:
+fetch actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package pocketic-check msrv testing-check pocketic-watchdog pocketic-cohorts:
 	@printf '%s\n' '$@' >> checks-ran
 	@if [ '$@' = '$(FAIL_TARGET)' ]; then echo 'failed $@' >&2; exit 1; fi
 EOF
 fixture_make=(make --no-print-directory -f Makefile -f overrides.mk
     'MAKE=make --no-print-directory -f Makefile -f overrides.mk')
 ci_targets=(actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package)
-release_targets=(pocketic-check "${ci_targets[@]}" msrv testing-check
+release_targets=(fetch pocketic-check "${ci_targets[@]}" msrv testing-check
     pocketic-check pocketic-watchdog pocketic-check pocketic-cohorts)
 for gate in ci release-verify pocketic-watchdog pocketic-cohorts; do
     case "${gate}" in

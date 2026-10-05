@@ -42,6 +42,11 @@ references and validation belong in [release notes](../changelog/README.md),
   searches/orderings before accepting records. The existing repository fixture
   covers producer failures and discovery cleanup; its pending execution and
   syntax/source-review scope are recorded in the release guide.
+  The user-operated release gate now prepares both locked dependency caches
+  before validation, after the reported offline `js-sys` metadata failure during
+  version preparation. Metadata parsing preserves Cargo's original failure.
+  Fetch-order and metadata-failure fixtures remain unexecuted; source/syntax
+  scope and the failed attempt are recorded in the release guide.
 - Public removals or incompatible semantic changes require the next minor line;
   private behavior-preserving simplifications may use a patch. See the
   [ordinary arbitration hard cut](../changelog/0.9.0.md).

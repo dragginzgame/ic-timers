@@ -5,7 +5,10 @@ set -euo pipefail
 # --no-deps would skip resolution and accept stale path-package versions.
 version="$(bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh")"
 for manifest in Cargo.toml testing/Cargo.toml; do
-    cargo metadata --manifest-path "${manifest}" --locked --offline --format-version 1 \
+    # Parse only successful Cargo output; preserve download/resolution failures
+    # rather than adding a JSON error for empty or partial producer output.
+    metadata_json="$(cargo metadata --manifest-path "${manifest}" --locked --offline --format-version 1)"
+    printf '%s\n' "${metadata_json}" \
         | IC_TIMERS_EXPECTED_VERSION="${version}" perl -MJSON::PP -0777 -e '
             my $metadata = decode_json(<>);
             my @timers = grep { $_->{name} eq "ic-timers" } @{$metadata->{packages}};

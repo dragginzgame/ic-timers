@@ -294,6 +294,28 @@ gate can also be run directly before committing, tagging and pushing:
 make release-verify
 ```
 
+The gate starts with `make fetch`: `cargo fetch --locked` for both root and
+`testing/` manifests, without restricting the target. This explicitly prepares
+the selected lockfiles' sources, including target-specific dependencies that
+native builds may never download but unfiltered offline metadata needs. Fetching
+uses the configured Cargo registry/cache and network policy; a download failure
+stops before validation and version mutation. No offline failure is retried
+online, no dependency version is selected anew, and no build runs in this phase.
+The full validation gate follows successful preparation.
+
+For standalone version preparation or offline work, prepare the cache while
+network access is available:
+
+```text
+make fetch
+```
+
+An error such as `failed to download js-sys ... --offline was specified` means
+the selected archive is absent from the cache. A different cached version is
+insufficient. Populate both lockfiles' caches and retry the requested operation;
+retain their selected versions. `update-dev` installs the toolchain and hook,
+and does not prepare these dependency caches.
+
 That gate includes `make ci`, the Rust 1.88 MSRV check, warning-denied linting
 of every supported nested probe configuration, the maintained watchdog/recovery,
 ordinary-await and provider-churn PocketIC subjects, and the four policy cohorts.
@@ -311,6 +333,20 @@ resolution against both manifests through `check-lockfiles.sh`. This catches
 stale path-package versions without building either workspace or repeating
 the evidence suite. `--no-deps` is not sufficient because it skips lockfile
 validation. `release-stage` stages both lockfiles automatically.
+
+The checker captures successful Cargo output before parsing JSON. Cargo failures
+retain their exit status and diagnostic without a cascading parse error from
+empty or partial output. The release-gate fixture records both locked fetch
+commands and rejection at either download boundary, and checks that preparation
+runs first and stops the gate on failure. The lockfile fixture covers empty and
+matching JSON from failed metadata commands for each manifest while preserving
+both locks. Shell and embedded fixture-shell syntax, recipe inspection and diff
+whitespace checks passed; these fixtures and real downloads have not been run by
+an automated contributor. The maintainer's reported 0.11.8 preparation attempt
+failed on uncached `js-sys 0.3.104`, then reported metadata rollback. Read-only
+inspection found that archive and eight other selected testing archives absent
+from the local default cache; it does not establish results in another cache or
+native macOS qualification.
 
 `release-stage` selects only the five outputs the bump owns. Workspace members
 inherit their versions, so their manifests are not version-bump outputs and

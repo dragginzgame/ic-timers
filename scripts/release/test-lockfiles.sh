@@ -39,6 +39,41 @@ cargo generate-lockfile --offline --quiet
 cargo generate-lockfile --manifest-path testing/Cargo.toml --offline --quiet
 bash "${checker}"
 
+# Preserve Cargo's failure status before parsing empty or plausible JSON output.
+mkdir -p bin
+IC_TIMERS_FIXTURE_CARGO="$(command -v cargo)"
+export IC_TIMERS_FIXTURE_CARGO
+cat > bin/cargo <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1:-}" == metadata && "${3:-}" == "${FIXTURE_FAIL_METADATA:-}" ]]; then
+    if [[ "${FIXTURE_METADATA_OUTPUT:-}" == matching ]]; then
+        printf '%s\n' '{"packages":[{"name":"ic-timers","version":"0.1.0"}]}'
+    fi
+    echo 'injected offline metadata failure' >&2
+    exit 101
+fi
+exec "${IC_TIMERS_FIXTURE_CARGO}" "$@"
+EOF
+chmod +x bin/cargo
+cp Cargo.lock original-root.lock
+cp testing/Cargo.lock original-testing.lock
+for failed_manifest in Cargo.toml testing/Cargo.toml; do
+    for produced_output in empty matching; do
+        failure_status=0
+        output="$(PATH="${temporary_root}/bin:${PATH}" \
+            FIXTURE_FAIL_METADATA="${failed_manifest}" FIXTURE_METADATA_OUTPUT="${produced_output}" \
+            bash "${checker}" 2>&1)" || failure_status=$?
+        if [[ "${failure_status}" != 101 || "${output}" != *'injected offline metadata failure'* ]]; then
+            echo "error: metadata check lost Cargo failure for ${failed_manifest}: ${output}" >&2
+            exit 1
+        fi
+        cmp Cargo.lock original-root.lock
+        cmp testing/Cargo.lock original-testing.lock
+    done
+done
+rm bin/cargo original-root.lock original-testing.lock
+
 for lockfile in Cargo.lock testing/Cargo.lock; do
     cp "${lockfile}" original.lock
     perl -pi -e 's/^version = "0\.1\.0"$/version = "0.0.0"/' "${lockfile}"
