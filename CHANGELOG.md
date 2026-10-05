@@ -2,6 +2,25 @@
 
 All notable changes to this project are recorded here.
 
+## [0.11.7]
+
+### Development
+
+- Compare gate-fixture records directly instead of converting them through Bash
+  4's `mapfile` and joined arrays. Preserve exact check order, duplicate PocketIC
+  prerequisites, empty overrides and failure-stop verification without that
+  newer-shell dependency. Check the full repository-gate prefix on failure rather
+  than only its last recorded check.
+- Refresh the reviewed Shared Tooling documentation baseline to `ca319ba`, using
+  committed source bytes and `DRAGGINZGAME.md` as the shared entry point. Retain
+  local contributor instructions and explicit maintainer ownership of validation
+  and release execution.
+- Adopt exact-symbol cleanup reporting and record required macOS host workflows
+  and qualification gaps without changing the pinned PocketIC release gate.
+- Keep successful changelog-finalization fixtures quiet while showing child
+  diagnostics on unexpected failure. Preserve empty-note warnings during actual
+  release preparation.
+
 ## [0.11.6] - 2026-10-05
 
 ### Changed

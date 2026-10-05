@@ -6,6 +6,15 @@ finalizer="${repository_root}/scripts/release/finalize-changelog.sh"
 temporary_root="$(mktemp -d)"
 trap 'rm -rf -- "${temporary_root}"' EXIT
 
+# Empty-note fixtures intentionally warn. Keep successful child output private,
+# but show the full diagnostic if finalization unexpectedly fails.
+finalize_fixture() {
+    if ! bash "${finalizer}" "$@" > "${temporary_root}/finalizer.log" 2>&1; then
+        cat "${temporary_root}/finalizer.log" >&2
+        return 1
+    fi
+}
+
 cat > "${temporary_root}/history.md" <<'HISTORY'
 ## [0.1.0] - 2026-08-01
 
@@ -17,9 +26,9 @@ for label in Draft 0.1.1; do
     cat "${temporary_root}/history.md" >> "${temporary_root}/CHANGELOG.md"
     cp "${temporary_root}/CHANGELOG.md" "${temporary_root}/original.md"
     chmod 0640 "${temporary_root}/CHANGELOG.md"
-    bash "${finalizer}" --check 0.1.1 2026-08-02 "${temporary_root}/CHANGELOG.md"
+    finalize_fixture --check 0.1.1 2026-08-02 "${temporary_root}/CHANGELOG.md"
     cmp "${temporary_root}/original.md" "${temporary_root}/CHANGELOG.md"
-    bash "${finalizer}" 0.1.1 2026-08-02 "${temporary_root}/CHANGELOG.md"
+    finalize_fixture 0.1.1 2026-08-02 "${temporary_root}/CHANGELOG.md"
     printf '# Changelog\n\n## [0.1.1] - 2026-08-02\n\n- Fix terminal cleanup.\n\n' > "${temporary_root}/expected.md"
     cat "${temporary_root}/history.md" >> "${temporary_root}/expected.md"
     cmp "${temporary_root}/expected.md" "${temporary_root}/CHANGELOG.md"
@@ -45,13 +54,13 @@ for scenario in empty-draft missing-draft missing-file misplaced-draft; do
         fi
         cp "${temporary_root}/CHANGELOG.md" "${temporary_root}/original.md"
     fi
-    bash "${finalizer}" --check 0.1.1 2026-08-02 "${temporary_root}/CHANGELOG.md"
+    finalize_fixture --check 0.1.1 2026-08-02 "${temporary_root}/CHANGELOG.md"
     if [[ "${scenario}" == missing-file ]]; then
         test ! -e "${temporary_root}/CHANGELOG.md"
     else
         cmp "${temporary_root}/original.md" "${temporary_root}/CHANGELOG.md"
     fi
-    bash "${finalizer}" 0.1.1 2026-08-02 "${temporary_root}/CHANGELOG.md"
+    finalize_fixture 0.1.1 2026-08-02 "${temporary_root}/CHANGELOG.md"
     test "$(awk '/^## / { print; exit }' "${temporary_root}/CHANGELOG.md")" = '## [0.1.1] - 2026-08-02'
     if [[ "${scenario}" != missing-file ]]; then
         perl -0ne 'if (/^(## \[0.1.0\].*)/ms) { my $history = $1;

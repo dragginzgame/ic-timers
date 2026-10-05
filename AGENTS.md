@@ -4,8 +4,8 @@ This file is normative for automated contributors.
 
 ## Shared baseline and local overlay
 
-- Apply the [reviewed Shared Tooling baseline](docs/shared-tooling/AGENTS.md)
-  from revision `f4bd8657938836521493d3fda3e8387586d44504`. Its provenance and
+- Apply the [reviewed Shared Tooling baseline](docs/shared-tooling/DRAGGINZGAME.md)
+  from revision `ca319ba05c5a8016f3cdbf5af073fca2e6279268`. Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
@@ -16,7 +16,13 @@ This file is normative for automated contributors.
   the maintainer's deployment workflow rather than duplicating its validation.
 - All release execution remains user-owned: version bumps, release commands,
   staging, commits, tags, pushes and publication. An ordinary request to prepare
-  a release authorizes changelog preparation only.
+  a release authorizes changelog preparation only. This is a maintainer-approved
+  command-authority exception to the common baseline, preserving the established
+  deployment workflow alongside the validation exception above.
+- macOS host workflows are required by the shared baseline. The local
+  [host matrix](docs/releasing.md#host-support) records current qualification
+  gaps; Linux evidence does not qualify macOS. A baseline refresh alone does
+  not close those gaps or authorize weakening the pinned PocketIC gate.
 - The native `platform` substitute is test-only evidence, not simulated IC
   recovery. Production platform paths and PocketIC evidence retain their own
   contracts; never use a test configuration to change production guarantees.

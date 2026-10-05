@@ -188,10 +188,42 @@ The non-release `make patch`, `make minor`, `make major`, and
 `make bump-x VERSION=...` targets stop after the version-file update for
 review without running build, lint or test suites.
 
+### Host support
+
+macOS host workflows are required by the
+[adopted engineering baseline](shared-tooling/DRAGGINZGAME.md#host-support).
+The requirement is separate from executed qualification; canister execution
+continues to target Wasm on the Internet Computer.
+
+| Host | Current workflow configuration and evidence scope |
+| --- | --- |
+| Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The release gate pins the audited PocketIC 15.0.0 Linux x86_64 artifact. Recorded results remain scoped to their original subjects. |
+| macOS | Required; supported versions and architectures still need a declared and natively qualified matrix. No macOS CI job or native qualification is recorded here. |
+
 Version preparation uses Bash, Perl, Git and Cargo. It owns regular metadata
-files; symlinked or non-file outputs are rejected before mutation. The current
-release fixtures also use GNU utilities. Linux execution does not establish
-macOS qualification; the [adoption record](shared-tooling.md) scopes host evidence.
+files; symlinked or non-file outputs are rejected before mutation. Applicable
+Make targets use GNU Make; release fixtures additionally rely on GNU utilities
+whose macOS setup must be qualified at their owning workflow boundary.
+
+The repository and release-gate fixtures compare ordered newline records
+directly with `cmp`. They no longer depend on Bash 4's `mapfile` or turn those
+records into joined arrays. Expected gate order remains independent of Makefile
+variables, including repeated PocketIC prerequisites and the exact prefix before
+an injected leaf failure. Provisioning checks compare both override path and
+automatic-install selection, including an empty override. Source and shell syntax
+were reviewed; the changed fixtures have not been executed. This removes one
+known Bash 3.2 obstacle without establishing native macOS qualification.
+
+The current PocketIC verifier accepts only the pinned Linux binary's hash, even
+for an explicit override, and automatic installation is limited to Linux x86_64.
+A macOS release gate needs a separately audited host artifact and its own pinned
+digest while retaining exact version/hash validation and strict override
+ownership. An available upstream download or a Linux pass does not qualify that
+gate. This baseline refresh changes no executable or validation boundary and
+does not establish macOS support evidence. The
+[adoption record](shared-tooling.md) scopes the refresh and local exceptions.
+
+### Deployment validation
 
 Deployment validation belongs to the user. The combined `release-*` targets
 run the complete release gate before bumping the version. The

@@ -21,6 +21,12 @@ references and validation belong in [release notes](../changelog/README.md),
   Its [adoption record](../shared-tooling.md) scopes provenance and exceptions.
   Historical release notes retain evidence; no new versioned note or mutable
   handoff release marker is required for version preparation.
+  The reviewed baseline is now `ca319ba05c5a8016f3cdbf5af073fca2e6279268`, with
+  shared rules in `DRAGGINZGAME.md`. Maintainer-owned validation and release
+  exceptions remain explicit; the [local host matrix](../releasing.md#host-support)
+  records required macOS workflows and their unresolved qualification.
+  Repository and release-gate fixtures now compare ordered records directly,
+  removing their `mapfile` dependency; scoped verification remains in that matrix.
 - Public removals or incompatible semantic changes require the next minor line;
   private behavior-preserving simplifications may use a patch. See the
   [ordinary arbitration hard cut](../changelog/0.9.0.md).
