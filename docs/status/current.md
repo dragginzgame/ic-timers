@@ -17,6 +17,12 @@ references and validation belong in [release notes](../changelog/README.md),
   accepted batch under its automatically selected, undated next version.
   The maintainer's bump finalizes and dates it; a dated section alone does not prove
   tagging, publication or deployment.
+- The maintainer's release commit `6eedf5a` and local tag `v0.13.0` match the
+  current Cargo version and finalized changelog. Publication and deployment
+  were not independently checked. The selected undated 0.13.1 section starts
+  with repository-only documentation corrections; it changes no public contract
+  and keeps the complete user-operated release gate. Further compatible work
+  extends that same section. No version or lockfile mutation is authorized here.
 - Apply the pinned [Shared Tooling baseline and local overlay](../../AGENTS.md).
   Its [adoption record](../shared-tooling.md) scopes provenance and exceptions.
   Historical release notes retain evidence; no new versioned note or mutable
@@ -36,8 +42,9 @@ references and validation belong in [release notes](../changelog/README.md),
   native-substitute evidence, with no broad suite or PocketIC qualification.
   [Registry adoption](https://github.com/dragginzgame/ic-timers/issues/9) remains
   committed by the maintainer at `685b4ff` during these checks, with the compatible
-  `0.1.3` requirement and both locks still selecting the verified package. The
-  documentation edits remain uncommitted; native release/CI qualification is separate.
+  `0.1.3` requirement and both locks still selecting the verified package. That
+  adoption is included in the tagged 0.13.0 source; the focused evidence remains
+  separate from broad native, release and CI qualification.
   The maintainer's subsequent test-target lint reported an empty-slice assertion,
   missing unit-expression semicolon and redundant identity clone in delivery
   fixtures. Those are corrected without changing fixture semantics; source
@@ -56,8 +63,8 @@ references and validation belong in [release notes](../changelog/README.md),
   executed during adoption. The shared hook formats only fully staged selected
   files, and the local formatting/gate owners cover both workspaces with pinned
   cargo-sort 2.1.4. Local hook activation remains separate from snapshot adoption.
-  The pending 0.13.0 remains appropriate for the public Abandoned variant and
-  ordinary delivery-retirement semantic cut; consumers must handle both.
+  The 0.13.0 minor boundary covers the public Abandoned variant and ordinary
+  delivery-retirement semantic cut; consumers adopting it must handle both.
   Snapshot integrity, shell syntax and metadata-preserving manifest sorting
   passed during snapshot adoption; both lockfiles were then byte-identical. The GitHub description matches
   current scope. New recovery/hook fixture execution remains user-owned; source/snapshot scope
@@ -156,7 +163,7 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Canonical runtime
 
-- The current draft implements retirement of confirmed ordinary deliveries dropped
+- The 0.13 runtime implements retirement of confirmed ordinary deliveries dropped
   before normal completion. A queued-token guard is created before the first poll;
   exact ownership checks exclude stale, cancelled, replaced and unconfirmed work.
   Retained state becomes Abandoned/Failed with Unacknowledged accounting; transients
@@ -164,8 +171,9 @@ references and validation belong in [release notes](../changelog/README.md),
   Normal live-await control and Watchdog prearming remain separate. Native drop and
   PocketIC pre-await/continuation trap fixtures are unexecuted; cleanup qualification
   and cost deltas remain pending with the [callback contract](../design/0.5-policy-specific-callback-authority.md#ordinary-delivery-abandonment).
-  The single top changelog section records the selected minor release target;
-  package versions and lockfiles remain maintainer-owned.
+  The finalized 0.13.0 section records the minor semantic cut; the undated 0.13.1
+  section records subsequent documentation. Package versions and lockfiles remain
+  maintainer-owned.
 
 - One volatile canister-local registry owns at most 64 structured identities,
   declaration claims, callback generations, policy states, pending commands,
@@ -245,7 +253,7 @@ references and validation belong in [release notes](../changelog/README.md),
   generations.
   Running cancellation remains a pending command applied on normal completion;
   confirmed ordinary abandonment retires the delivery and discards that command
-  under the current draft contract above.
+  under the 0.13 contract above.
   The 0.11.0 semantic hard cut and its verification scope are recorded in the
   [release note](../changelog/0.11.0.md).
 - Ordinary directive resolution returns canonical control failures directly.

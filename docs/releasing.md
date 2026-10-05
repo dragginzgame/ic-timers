@@ -76,7 +76,7 @@ impact or silently weakens validation. A `none` subject is still rejected.
 Keep completed user-visible changes in one numbered, undated section at the top:
 
 ```text
-## [0.13.0]
+## [0.13.1]
 ```
 
 Automated contributors derive the candidate from the latest finalized release

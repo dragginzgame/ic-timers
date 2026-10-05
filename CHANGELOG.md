@@ -2,6 +2,23 @@
 
 All notable changes to this project are recorded here.
 
+## [0.13.1]
+
+### Changed
+
+- Use published `ic-metrics 0.1.5` for the Wasm call-context instruction reader
+  and shared summary, retaining callback attribution, registration identity and
+  consumer-owned native/test behavior
+  ([#9](https://github.com/dragginzgame/ic-timers/issues/9)).
+
+### Development
+
+- Align the handoff, callback contract and Shared Tooling adoption notes with
+  the tagged 0.13.0 release and published registry `ic-metrics 0.1.3`. Separate
+  release identity from recorded validation and remove obsolete pending-release
+  and sibling-dependency instructions. This is repository-only documentation;
+  runtime behavior and the public API are unchanged.
+
 ## [0.13.0] - 2026-10-05
 
 ### Changed

@@ -35,12 +35,14 @@ metadata plus both lockfiles byte-for-byte. The GitHub description was inspected
 and matches the current purpose. New recovery/hook fixtures and hosted setup
 remain unexecuted; hook activation is a separate maintainer setup action.
 
-The exact local ic-metrics pin and both lockfiles now select the maintainer-tagged
-0.1.1 package. Locked offline metadata resolves one canonical package in both
-workspaces. The focused library check completes with an unused-assignment warning
-in separate delivery-retirement work (`runtime/mod.rs:1090`); it is not a
-warning-free qualification of that work. The temporary path remains pending
-[registry adoption](https://github.com/dragginzgame/ic-timers/issues/9).
+The 0.13.0 release uses published registry `ic-metrics 0.1.3` in the root
+dependency catalog and both lockfiles, with one resolved registry package per
+workspace. The temporary sibling path and local 0.1.1 selection belong to the
+earlier extraction, superseded by
+[registry adoption](https://github.com/dragginzgame/ic-timers/issues/9). Its
+initial focused library check reported an unused-assignment warning in separate
+delivery-retirement work; that historical result does not qualify the current
+runtime. Later focused evidence is scoped in the [handoff](status/current.md).
 
 Focused measurement tests passed for role-specific accounting and registration
 identity during extraction. Subsequent unrelated delivery-retirement changes
