@@ -1,6 +1,9 @@
 //! Closed policy, state, outcome, and epoch values.
 
-use crate::schedule::{ScheduleError, TimerCadence, TimerDirective, duration_ns};
+use crate::{
+    callback::{AfterCompletionDecision, OnceDecision},
+    schedule::{OrdinaryDirective, ScheduleError, TimerCadence, duration_ns},
+};
 
 /// Configured recurrence policy for one logical timer.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -106,19 +109,35 @@ pub enum TimerDirectiveSnapshot {
     RecurAfterCompletion,
 }
 
-impl TryFrom<TimerDirective> for TimerDirectiveSnapshot {
+impl TryFrom<OrdinaryDirective> for TimerDirectiveSnapshot {
     type Error = ScheduleError;
 
-    fn try_from(value: TimerDirective) -> Result<Self, Self::Error> {
+    fn try_from(value: OrdinaryDirective) -> Result<Self, Self::Error> {
         Ok(match value {
-            TimerDirective::Stop => Self::Stop,
-            TimerDirective::ContinueImmediately => Self::ContinueImmediately,
-            TimerDirective::RetryAfter(delay) => Self::RetryAfter {
+            OrdinaryDirective::Stop => Self::Stop,
+            OrdinaryDirective::ContinueImmediately => Self::ContinueImmediately,
+            OrdinaryDirective::RetryAfter(delay) => Self::RetryAfter {
                 delay_ns: duration_ns(delay)?,
             },
-            TimerDirective::ScheduleAt(deadline_ns) => Self::ScheduleAt { deadline_ns },
-            TimerDirective::RecurAfterCompletion => Self::RecurAfterCompletion,
+            OrdinaryDirective::ScheduleAt(deadline_ns) => Self::ScheduleAt { deadline_ns },
+            OrdinaryDirective::RecurAfterCompletion => Self::RecurAfterCompletion,
         })
+    }
+}
+
+impl TryFrom<OnceDecision> for TimerDirectiveSnapshot {
+    type Error = ScheduleError;
+
+    fn try_from(value: OnceDecision) -> Result<Self, Self::Error> {
+        Self::try_from(OrdinaryDirective::from(value))
+    }
+}
+
+impl TryFrom<AfterCompletionDecision> for TimerDirectiveSnapshot {
+    type Error = ScheduleError;
+
+    fn try_from(value: AfterCompletionDecision) -> Result<Self, Self::Error> {
+        Self::try_from(OrdinaryDirective::from(value))
     }
 }
 
@@ -132,7 +151,8 @@ pub enum TimerControlFailure {
     DeadlineOverflow,
     /// A requested relative delay cannot be encoded as `u64` nanoseconds.
     DelayOutOfRange,
-    /// A directive is not legal for the timer's configured policy.
+    /// An internal erased proposal is inconsistent with its configured policy.
+    /// Public callback result types cannot express a policy-invalid decision.
     DirectiveNotAllowed,
     /// A checked registry effect could not establish canonical provider ownership.
     ProviderBindingFailed,
@@ -416,44 +436,6 @@ impl TimerCompletion {
     }
 }
 
-/// Ordinary callback result with one scheduling proposal.
-///
-/// The registry validates proposals participating in scheduling against the
-/// configured policy. A winning exact reconciliation or terminal pending command
-/// discards the proposal before validation. Explicit invariant failure stops.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct TimerRunResult {
-    completion: TimerCompletion,
-    directive: TimerDirective,
-}
-
-impl TimerRunResult {
-    /// Construct a result, forcing invariant failures to stop.
-    #[must_use]
-    pub const fn new(completion: TimerCompletion, directive: TimerDirective) -> Self {
-        Self {
-            directive: if matches!(completion.outcome, TimerCompletionOutcome::InvariantFailure) {
-                TimerDirective::Stop
-            } else {
-                directive
-            },
-            completion,
-        }
-    }
-
-    /// Return the completion classification and work count.
-    #[must_use]
-    pub const fn completion(self) -> TimerCompletion {
-        self.completion
-    }
-
-    /// Return the post-run scheduling proposal.
-    #[must_use]
-    pub const fn directive(self) -> TimerDirective {
-        self.directive
-    }
-}
-
 /// Watchdog decision after one synchronous bounded work attempt.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum WatchdogDecision {
@@ -706,12 +688,6 @@ mod tests {
 
     #[test]
     fn invariant_results_are_forced_to_stop() {
-        let ordinary = TimerRunResult::new(
-            TimerCompletion::invariant_failure(2),
-            TimerDirective::ContinueImmediately,
-        );
-        assert_eq!(ordinary.directive(), TimerDirective::Stop);
-
         let watchdog = WatchdogRunResult::new(
             TimerCompletion::invariant_failure(3),
             WatchdogDecision::ContinueImmediately,

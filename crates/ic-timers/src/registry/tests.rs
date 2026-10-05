@@ -65,7 +65,7 @@ fn assert_running_work_rejected(registry: &mut TimerRegistry, token: &CallbackTo
         registry.complete_ordinary(
             token,
             20,
-            TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop),
+            OrdinaryRunResult::new(TimerCompletion::no_work(), OrdinaryDirective::Stop),
         ),
         Err(RegistryError::StaleCallback)
     );
@@ -173,7 +173,7 @@ fn running_work_boundaries_reject_unstarted_stale_and_completed_tokens() {
                 .complete_ordinary(
                     &token,
                     20,
-                    TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop),
+                    OrdinaryRunResult::new(TimerCompletion::no_work(), OrdinaryDirective::Stop),
                 )
                 .unwrap();
         }
@@ -562,9 +562,9 @@ fn explicit_unregistration_consumes_scheduled_and_running_claims() {
                 .complete_ordinary(
                     &active,
                     11,
-                    TimerRunResult::new(
+                    OrdinaryRunResult::new(
                         TimerCompletion::success(1),
-                        TimerDirective::ContinueImmediately,
+                        OrdinaryDirective::ContinueImmediately,
                     ),
                 )
                 .unwrap();
@@ -767,7 +767,7 @@ fn once_coalesces_and_rotates_generations_while_nested_schedule_wins() {
         .complete_ordinary(
             &first,
             30,
-            TimerRunResult::new(TimerCompletion::success(1), TimerDirective::Stop),
+            OrdinaryRunResult::new(TimerCompletion::success(1), OrdinaryDirective::Stop),
         )
         .expect("completion should succeed");
     confirm(&mut registry, &second_transition);
@@ -784,7 +784,7 @@ fn once_coalesces_and_rotates_generations_while_nested_schedule_wins() {
         .complete_ordinary(
             &second,
             40,
-            TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop),
+            OrdinaryRunResult::new(TimerCompletion::no_work(), OrdinaryDirective::Stop),
         )
         .expect("terminal completion should succeed");
 
@@ -828,9 +828,9 @@ fn nested_cancel_and_ensure_use_latest_request_order() {
         .complete_ordinary(
             &first,
             11,
-            TimerRunResult::new(
+            OrdinaryRunResult::new(
                 TimerCompletion::success(1),
-                TimerDirective::ContinueImmediately,
+                OrdinaryDirective::ContinueImmediately,
             ),
         )
         .expect("completion should succeed");
@@ -860,7 +860,7 @@ fn nested_cancel_and_ensure_use_latest_request_order() {
         .complete_ordinary(
             &second,
             22,
-            TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop),
+            OrdinaryRunResult::new(TimerCompletion::no_work(), OrdinaryDirective::Stop),
         )
         .expect("later ensure should override cancellation"));
     let deadline = scheduled_deadline(&registry, &scheduled_token);
@@ -880,9 +880,9 @@ fn nested_cancel_and_ensure_use_latest_request_order() {
 #[test]
 fn exact_ordinary_reconciliation_discards_invalid_callback_proposals() {
     for directive in [
-        TimerDirective::RetryAfter(Duration::MAX),
-        TimerDirective::RetryAfter(Duration::from_nanos(10)),
-        TimerDirective::RecurAfterCompletion,
+        OrdinaryDirective::RetryAfter(Duration::MAX),
+        OrdinaryDirective::RetryAfter(Duration::from_nanos(10)),
+        OrdinaryDirective::RecurAfterCompletion,
     ] {
         for once in [false, true] {
             let mut registry = registry();
@@ -911,7 +911,7 @@ fn exact_ordinary_reconciliation_discards_invalid_callback_proposals() {
                 .complete_ordinary(
                     &token,
                     u64::MAX - 5,
-                    TimerRunResult::new(TimerCompletion::success(1), directive),
+                    OrdinaryRunResult::new(TimerCompletion::success(1), directive),
                 )
                 .unwrap();
             assert_eq!(transition.failure(), None);
@@ -951,15 +951,15 @@ fn relative_exact_reconciliation_preserves_request_observations_after_suspension
             .unwrap();
         let directive = if ensure_equal {
             registry.ensure_recurring(&claim, 10).unwrap();
-            TimerDirective::ScheduleAt(13)
+            OrdinaryDirective::ScheduleAt(13)
         } else {
-            TimerDirective::RetryAfter(Duration::MAX)
+            OrdinaryDirective::RetryAfter(Duration::MAX)
         };
         let transition = registry
             .complete_ordinary(
                 &token,
                 20,
-                TimerRunResult::new(TimerCompletion::success(1), directive),
+                OrdinaryRunResult::new(TimerCompletion::success(1), directive),
             )
             .unwrap();
         assert_eq!(transition.failure(), None);
@@ -1000,9 +1000,9 @@ fn explicit_invariant_failure_still_overrides_exact_ordinary_reconciliation() {
             .complete_ordinary(
                 &token,
                 2,
-                TimerRunResult::new(
+                OrdinaryRunResult::new(
                     TimerCompletion::invariant_failure(1),
-                    TimerDirective::ContinueImmediately,
+                    OrdinaryDirective::ContinueImmediately,
                 ),
             )
             .unwrap();
@@ -1067,7 +1067,10 @@ fn ordinary_reconciliation_is_authoritative_and_registry_pending_is_ordered() {
         .complete_ordinary(
             &current,
             201,
-            TimerRunResult::new(TimerCompletion::success(1), TimerDirective::ScheduleAt(225)),
+            OrdinaryRunResult::new(
+                TimerCompletion::success(1),
+                OrdinaryDirective::ScheduleAt(225),
+            ),
         )
         .expect("authoritative request should replace the callback directive"));
     let deadline = scheduled_deadline(&registry, &successor);
@@ -1084,7 +1087,10 @@ fn ordinary_reconciliation_is_authoritative_and_registry_pending_is_ordered() {
         .complete_ordinary(
             &successor,
             302,
-            TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::ScheduleAt(375)),
+            OrdinaryRunResult::new(
+                TimerCompletion::no_work(),
+                OrdinaryDirective::ScheduleAt(375),
+            ),
         )
         .expect("completion should use the ordered pending request"));
     let deadline = scheduled_deadline(&registry, &scheduled_token);
@@ -1118,9 +1124,9 @@ fn after_completion_owns_cadence_and_failure_state() {
         .complete_ordinary(
             &first,
             20,
-            TimerRunResult::new(
+            OrdinaryRunResult::new(
                 TimerCompletion::retryable_failure(2),
-                TimerDirective::RecurAfterCompletion,
+                OrdinaryDirective::RecurAfterCompletion,
             ),
         )
         .expect("recurrence should succeed"));
@@ -1132,7 +1138,7 @@ fn after_completion_owns_cadence_and_failure_state() {
         .complete_ordinary(
             &second,
             30,
-            TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop),
+            OrdinaryRunResult::new(TimerCompletion::no_work(), OrdinaryDirective::Stop),
         )
         .expect("stop should succeed");
     assert_eq!(registry.consecutive_expected_failures(&timer), Some(0));
@@ -1156,9 +1162,9 @@ fn ordinary_directive_matrix_preserves_mode_and_checked_deadline() {
         .complete_ordinary(
             &first,
             10,
-            TimerRunResult::new(
+            OrdinaryRunResult::new(
                 TimerCompletion::success(1),
-                TimerDirective::ContinueImmediately,
+                OrdinaryDirective::ContinueImmediately,
             ),
         )
         .expect("immediate continuation should succeed");
@@ -1178,9 +1184,9 @@ fn ordinary_directive_matrix_preserves_mode_and_checked_deadline() {
         .complete_ordinary(
             &second,
             20,
-            TimerRunResult::new(
+            OrdinaryRunResult::new(
                 TimerCompletion::retryable_failure(0),
-                TimerDirective::RetryAfter(Duration::from_nanos(5)),
+                OrdinaryDirective::RetryAfter(Duration::from_nanos(5)),
             ),
         )
         .expect("retry should succeed");
@@ -1200,7 +1206,10 @@ fn ordinary_directive_matrix_preserves_mode_and_checked_deadline() {
         .complete_ordinary(
             &third,
             30,
-            TimerRunResult::new(TimerCompletion::success(1), TimerDirective::ScheduleAt(40)),
+            OrdinaryRunResult::new(
+                TimerCompletion::success(1),
+                OrdinaryDirective::ScheduleAt(40),
+            ),
         )
         .expect("absolute scheduling should succeed");
     confirm(&mut registry, &absolute);
@@ -1218,7 +1227,7 @@ fn ordinary_directive_matrix_preserves_mode_and_checked_deadline() {
         .complete_ordinary(
             &fourth,
             41,
-            TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop),
+            OrdinaryRunResult::new(TimerCompletion::no_work(), OrdinaryDirective::Stop),
         )
         .expect("stop should succeed");
     assert_eq!(
@@ -1278,7 +1287,9 @@ fn recurring_duplicate_ensure_is_idempotent_without_deadline_recalculation() {
 }
 
 #[test]
-fn illegal_once_recurrence_and_invariant_result_stop_truthfully() {
+fn erased_policy_mismatch_and_invariant_result_stop_truthfully() {
+    // Inject a private erased-policy mismatch. Public Once results cannot
+    // express recurrence; the registry still guards its internal boundary.
     let mut registry = registry();
     let illegal_id = identity("illegal");
     let illegal = registry
@@ -1292,9 +1303,9 @@ fn illegal_once_recurrence_and_invariant_result_stop_truthfully() {
         .complete_ordinary(
             &token,
             2,
-            TimerRunResult::new(
+            OrdinaryRunResult::new(
                 TimerCompletion::success(1),
-                TimerDirective::RecurAfterCompletion,
+                OrdinaryDirective::RecurAfterCompletion,
             ),
         )
         .expect("illegal directive becomes a terminal transition");
@@ -1323,9 +1334,9 @@ fn illegal_once_recurrence_and_invariant_result_stop_truthfully() {
         .complete_ordinary(
             &token,
             2,
-            TimerRunResult::new(
+            OrdinaryRunResult::new(
                 TimerCompletion::invariant_failure(3),
-                TimerDirective::ContinueImmediately,
+                OrdinaryDirective::ContinueImmediately,
             ),
         )
         .expect("invariant completion should stop normally");
@@ -2358,17 +2369,17 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
                 let (now_ns, directive, failure) = match subject {
                     "completion-delay" => (
                         10,
-                        TimerDirective::RetryAfter(Duration::MAX),
+                        OrdinaryDirective::RetryAfter(Duration::MAX),
                         TimerControlFailure::DelayOutOfRange,
                     ),
                     "completion-deadline" => (
                         u64::MAX,
-                        TimerDirective::RetryAfter(Duration::from_nanos(1)),
+                        OrdinaryDirective::RetryAfter(Duration::from_nanos(1)),
                         TimerControlFailure::DeadlineOverflow,
                     ),
                     _ => (
                         10,
-                        TimerDirective::ContinueImmediately,
+                        OrdinaryDirective::ContinueImmediately,
                         TimerControlFailure::GenerationExhausted,
                     ),
                 };
@@ -2377,7 +2388,7 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
                         .complete_ordinary(
                             token.as_ref().expect("completion has a running token"),
                             now_ns,
-                            TimerRunResult::new(TimerCompletion::success(3), directive),
+                            OrdinaryRunResult::new(TimerCompletion::success(3), directive),
                         )
                         .unwrap()
                 } else {

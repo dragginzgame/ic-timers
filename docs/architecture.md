@@ -26,15 +26,24 @@ The sections below describe these boundaries in implementation-level detail.
 
 The crate root is the only public facade. It re-exports runtime operations and
 provider-neutral values directly; every implementation and value-grouping
-module is private. In particular, neither `platform`, `registry`, `schedule`,
+module is private. In particular, neither `callback`, `platform`, `registry`, `schedule`,
 nor `snapshot` is a consumer import path.
 
-The module hierarchy keeps six responsibilities separate:
+The private `callback` module owns public `OnceDecision` / `OnceRunResult` and
+`AfterCompletionDecision` / `AfterCompletionRunResult`. Public futures cannot
+return the other policy's result; only after-completion decisions contain
+configured recurrence. The existing runtime erasure owner creates the consumer
+future before wrapping its result conversion, preserving synchronous callback
+factory timing and suspension across the original future. One private
+`OrdinaryRunResult` and `OrdinaryDirective` feed the existing arbitration. There
+is no public generic policy marker or conversion between result policies.
+
+The remaining module hierarchy keeps six responsibilities separate:
 
 ![The schedule, snapshot, and control modules connect to the registry; the runtime coordinates callbacks and effects through the private platform boundary](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-architecture-modules.svg)
 
 1. `schedule` owns validated cadence, requested schedules, post-run
-   directives, and checked nanosecond/deadline conversion. Explicit requests
+   private erased directives, and checked nanosecond/deadline conversion. Explicit requests
    and ordinary directives resolve to one private `ResolvedSchedule` carrying
    deadline, requested delay and mode; Stop resolves to no successor. Pending
    commands retain that value directly, and completion does not derive control

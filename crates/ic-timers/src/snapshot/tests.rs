@@ -1,7 +1,9 @@
 use super::*;
 use crate::{
-    ScheduleError, TimerCadence, TimerDirective, TimerRunResult, TimerSchedule,
+    ScheduleError, TimerCadence, TimerSchedule,
+    callback::OrdinaryRunResult,
     registry::{RegistryEffect, TimerRegistry},
+    schedule::OrdinaryDirective,
 };
 use std::time::Duration;
 
@@ -114,7 +116,7 @@ fn policies_and_directive_snapshots_preserve_validated_values() {
     assert_eq!(policy.label(), "watchdog");
     assert_eq!(policy.cadence().map(TimerCadence::as_nanos), Some(5_000));
 
-    let directive = TimerDirective::RetryAfter(Duration::from_millis(25));
+    let directive = OrdinaryDirective::RetryAfter(Duration::from_millis(25));
     let snapshot = TimerDirectiveSnapshot::try_from(directive)
         .expect("25 milliseconds should fit in nanoseconds");
     assert_eq!(
@@ -124,7 +126,7 @@ fn policies_and_directive_snapshots_preserve_validated_values() {
         }
     );
     assert_eq!(
-        TimerDirectiveSnapshot::try_from(TimerDirective::RetryAfter(Duration::MAX)),
+        TimerDirectiveSnapshot::try_from(OrdinaryDirective::RetryAfter(Duration::MAX)),
         Err(ScheduleError::DelayOutOfRange)
     );
 }
@@ -222,9 +224,9 @@ fn canonical_registry_snapshot_projects_canic_surface_without_parallel_metrics()
         .complete_ordinary(
             &token,
             200,
-            TimerRunResult::new(
+            OrdinaryRunResult::new(
                 TimerCompletion::retryable_failure(2),
-                TimerDirective::RetryAfter(Duration::from_secs(2)),
+                OrdinaryDirective::RetryAfter(Duration::from_secs(2)),
             ),
         )
         .expect("completion should succeed");
@@ -292,9 +294,9 @@ fn canic_projection_combines_completion_and_stale_classes_without_fabrication() 
         .complete_ordinary(
             &first,
             2,
-            TimerRunResult::new(
+            OrdinaryRunResult::new(
                 TimerCompletion::success(1),
-                TimerDirective::ContinueImmediately,
+                OrdinaryDirective::ContinueImmediately,
             ),
         )
         .expect("continuation should succeed");
@@ -310,7 +312,7 @@ fn canic_projection_combines_completion_and_stale_classes_without_fabrication() 
         .complete_ordinary(
             &second,
             3,
-            TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop),
+            OrdinaryRunResult::new(TimerCompletion::no_work(), OrdinaryDirective::Stop),
         )
         .expect("terminal completion should succeed");
     assert!(registry.begin_ordinary(&first).is_none());
@@ -348,7 +350,10 @@ fn retryable_terminal_completion_projects_failed_canic_condition() {
         .complete_ordinary(
             &token,
             102,
-            TimerRunResult::new(TimerCompletion::retryable_failure(0), TimerDirective::Stop),
+            OrdinaryRunResult::new(
+                TimerCompletion::retryable_failure(0),
+                OrdinaryDirective::Stop,
+            ),
         )
         .expect("terminal retryable completion should succeed");
 

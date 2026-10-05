@@ -1,8 +1,8 @@
 use super::*;
 use crate::{
-    InactiveReason, MemoryPageSample, TimerLastOutcome, TimerPolicy, TimerProcessCondition,
-    TimerRegistrationStatus, TimerRuntimeStateSnapshot, TimerSchedulingMode, WatchdogDecision,
-    WatchdogRuntimeStateSnapshot,
+    AfterCompletionDecision, InactiveReason, MemoryPageSample, OnceDecision, TimerLastOutcome,
+    TimerPolicy, TimerProcessCondition, TimerRegistrationStatus, TimerRuntimeStateSnapshot,
+    TimerSchedulingMode, WatchdogDecision, WatchdogRuntimeStateSnapshot,
     control::WakeupArm,
     platform::{
         advance_instructions, discard_next_due, grow_memory_pages, run_next_due, set_time,
@@ -69,7 +69,7 @@ fn suspended_once_work_allows_other_timers_and_arbitrates_external_commands() {
                 *callback_slot.borrow_mut() = Some(context);
                 async move {
                     gate.wait().await;
-                    TimerRunResult::new(TimerCompletion::success(1), TimerDirective::ScheduleAt(80))
+                    OnceRunResult::new(TimerCompletion::success(1), OnceDecision::ScheduleAt(80))
                 }
             })
             .unwrap();
@@ -153,6 +153,136 @@ fn suspended_once_work_allows_other_timers_and_arbitrates_external_commands() {
 }
 
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "Keep both policy paths and their arbitration observations in one decision matrix."
+)]
+fn policy_specific_results_schedule_through_live_runtime() {
+    for recurring in [false, true] {
+        for case in 0..8 {
+            if !recurring && case == 4 {
+                continue;
+            }
+            for reconcile in [false, true] {
+                setup();
+                let timer = identity("typed-results");
+                let completion = if case == 7 {
+                    TimerCompletion::invariant_failure(2)
+                } else {
+                    TimerCompletion::retryable_failure(2)
+                };
+                if recurring {
+                    let decision = match case {
+                        0 => AfterCompletionDecision::Stop,
+                        1 | 7 => AfterCompletionDecision::ContinueImmediately,
+                        2 => AfterCompletionDecision::RetryAfter(Duration::from_nanos(7)),
+                        3 => AfterCompletionDecision::ScheduleAt(50),
+                        4 => AfterCompletionDecision::RecurAfterCompletion,
+                        5 => AfterCompletionDecision::RetryAfter(Duration::MAX),
+                        6 => AfterCompletionDecision::RetryAfter(Duration::from_nanos(u64::MAX)),
+                        _ => unreachable!("fixed decision cases"),
+                    };
+                    let registration = register_after_completion(
+                        timer.clone(),
+                        TimerCadence::from_nanos(5).unwrap(),
+                        DeclarationLifetime::Retained,
+                        move |context| async move {
+                            if reconcile {
+                                context
+                                    .reconcile_schedule(Some(TimerSchedule::At(100)))
+                                    .unwrap();
+                            }
+                            AfterCompletionRunResult::new(completion, decision)
+                        },
+                    )
+                    .unwrap();
+                    registration
+                        .reconcile_schedule(Some(TimerSchedule::At(20)))
+                        .unwrap();
+                } else {
+                    let decision = match case {
+                        0 => OnceDecision::Stop,
+                        1 | 7 => OnceDecision::ContinueImmediately,
+                        2 => OnceDecision::RetryAfter(Duration::from_nanos(7)),
+                        3 => OnceDecision::ScheduleAt(50),
+                        5 => OnceDecision::RetryAfter(Duration::MAX),
+                        6 => OnceDecision::RetryAfter(Duration::from_nanos(u64::MAX)),
+                        _ => unreachable!("Once has no configured recurrence"),
+                    };
+                    let registration = register_once(
+                        timer.clone(),
+                        DeclarationLifetime::Retained,
+                        move |context| async move {
+                            if reconcile {
+                                context
+                                    .reconcile_schedule(Some(TimerSchedule::At(100)))
+                                    .unwrap();
+                            }
+                            OnceRunResult::new(completion, decision)
+                        },
+                    )
+                    .unwrap();
+                    registration
+                        .ensure_scheduled(TimerSchedule::At(20))
+                        .unwrap();
+                }
+                set_time(20);
+                assert!(run_next_due());
+                let snapshot = timer_snapshot(&timer).unwrap().unwrap();
+                let deadline = if reconcile && case != 7 {
+                    Some(100)
+                } else {
+                    match case {
+                        1 => Some(20),
+                        2 => Some(27),
+                        3 => Some(50),
+                        4 => Some(25),
+                        _ => None,
+                    }
+                };
+                assert_eq!(snapshot.next_deadline_ns(), deadline);
+                assert_eq!(timer_count(), usize::from(deadline.is_some()));
+                if case == 7 {
+                    assert_eq!(
+                        snapshot.state(),
+                        TimerRuntimeStateSnapshot::Inactive {
+                            reason: InactiveReason::InvariantFailure,
+                        }
+                    );
+                } else if !reconcile && matches!(case, 5 | 6) {
+                    let failure = if case == 5 {
+                        TimerControlFailure::DelayOutOfRange
+                    } else {
+                        TimerControlFailure::DeadlineOverflow
+                    };
+                    assert_eq!(
+                        snapshot.state(),
+                        TimerRuntimeStateSnapshot::Inactive {
+                            reason: InactiveReason::ControlFailure(failure),
+                        }
+                    );
+                } else if reconcile {
+                    assert_eq!(
+                        snapshot.latest_directive(),
+                        Some(crate::TimerDirectiveSnapshot::ScheduleAt { deadline_ns: 100 })
+                    );
+                }
+                assert_eq!(
+                    snapshot.observability().outcomes().last_outcome(),
+                    Some(TimerLastOutcome::Completed(
+                        if !reconcile && matches!(case, 5 | 6) {
+                            crate::TimerCompletionOutcome::InvariantFailure
+                        } else {
+                            completion.outcome()
+                        }
+                    ))
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn suspended_after_completion_uses_completion_time_and_exact_reconciliation() {
     for reconcile in [false, true] {
         setup();
@@ -167,9 +297,9 @@ fn suspended_after_completion_uses_completion_time_and_exact_reconciliation() {
                 let gate = callback_gate.clone();
                 async move {
                     gate.wait().await;
-                    TimerRunResult::new(
+                    AfterCompletionRunResult::new(
                         TimerCompletion::success(1),
-                        TimerDirective::RecurAfterCompletion,
+                        AfterCompletionDecision::RecurAfterCompletion,
                     )
                 }
             },
@@ -314,7 +444,7 @@ fn fresh_inactive_reconciliation_reserves_complete_retained_inventory() {
     let mut watchdog = None;
 
     reconcile_once(&mut once, &once_identity, None, |_context| async {
-        TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop)
+        OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
     })
     .expect("fresh inactive once declaration should be retained");
     reconcile_after_completion(
@@ -322,7 +452,9 @@ fn fresh_inactive_reconciliation_reserves_complete_retained_inventory() {
         &after_identity,
         cadence,
         TimerReconcileState::Inactive,
-        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+        |_context| async {
+            AfterCompletionRunResult::new(TimerCompletion::no_work(), AfterCompletionDecision::Stop)
+        },
     )
     .expect("fresh inactive after-completion declaration should be retained");
     reconcile_watchdog(
@@ -380,14 +512,16 @@ fn fresh_transient_cancellation_expires_every_registration_policy() {
     let once = register_once(
         once_identity.clone(),
         DeclarationLifetime::RemoveWhenStopped,
-        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+        |_context| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
     )
     .expect("once registration should succeed");
     let after = register_after_completion(
         after_identity.clone(),
         cadence,
         DeclarationLifetime::RemoveWhenStopped,
-        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+        |_context| async {
+            AfterCompletionRunResult::new(TimerCompletion::no_work(), AfterCompletionDecision::Stop)
+        },
     )
     .expect("after-completion registration should succeed");
     let watchdog = register_watchdog(
@@ -435,14 +569,16 @@ fn registration_claims_report_exact_provider_wakeup_ownership() {
     let once = register_once(
         identity("liveness-once"),
         DeclarationLifetime::Retained,
-        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+        |_context| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
     )
     .expect("once registration should succeed");
     let after = register_after_completion(
         identity("liveness-after"),
         TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
         DeclarationLifetime::Retained,
-        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+        |_context| async {
+            AfterCompletionRunResult::new(TimerCompletion::no_work(), AfterCompletionDecision::Stop)
+        },
     )
     .expect("after-completion registration should succeed");
     let watchdog = register_watchdog(
@@ -664,7 +800,7 @@ fn removed_transient_claim_cannot_report_wakeup_liveness() {
     let timer = register_once(
         timer_identity.clone(),
         DeclarationLifetime::RemoveWhenStopped,
-        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+        |_context| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
     )
     .expect("registration should succeed");
     timer
@@ -682,7 +818,7 @@ fn removed_transient_claim_cannot_report_wakeup_liveness() {
     let replacement = register_once(
         timer_identity,
         DeclarationLifetime::Retained,
-        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+        |_context| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
     )
     .expect("replacement registration should succeed");
     replacement
@@ -718,7 +854,7 @@ fn once_owns_one_provider_handle_and_executes_without_registry_borrow() {
                 .is_some();
             async move {
                 assert!(visible);
-                TimerRunResult::new(TimerCompletion::success(1), TimerDirective::Stop)
+                OnceRunResult::new(TimerCompletion::success(1), OnceDecision::Stop)
             }
         },
     )
@@ -770,31 +906,59 @@ fn once_owns_one_provider_handle_and_executes_without_registry_borrow() {
 
 #[test]
 fn ordinary_callback_borrow_failure_stops_without_invoking_or_measuring_work() {
-    for lifetime in [
-        DeclarationLifetime::Retained,
-        DeclarationLifetime::RemoveWhenStopped,
+    for (recurring, lifetime) in [
+        (false, DeclarationLifetime::Retained),
+        (false, DeclarationLifetime::RemoveWhenStopped),
+        (true, DeclarationLifetime::Retained),
+        (true, DeclarationLifetime::RemoveWhenStopped),
     ] {
         setup();
         let timer = identity("ordinary-borrow-failure");
         let calls = Rc::new(Cell::new(0));
         let callback_calls = Rc::clone(&calls);
-        let callback = erase_ordinary_callback(
-            move |_context| {
-                callback_calls.set(callback_calls.get() + 1);
-                async { TimerRunResult::new(TimerCompletion::success(1), TimerDirective::Stop) }
-            },
-            OnceContext::new,
-        );
+        let callback = if recurring {
+            erase_ordinary_callback(
+                move |_context| {
+                    callback_calls.set(callback_calls.get() + 1);
+                    async {
+                        AfterCompletionRunResult::new(
+                            TimerCompletion::success(1),
+                            AfterCompletionDecision::RecurAfterCompletion,
+                        )
+                    }
+                },
+                AfterCompletionContext::new,
+                OrdinaryRunResult::from,
+            )
+        } else {
+            erase_ordinary_callback(
+                move |_context| {
+                    callback_calls.set(callback_calls.get() + 1);
+                    async { OnceRunResult::new(TimerCompletion::success(1), OnceDecision::Stop) }
+                },
+                OnceContext::new,
+                OrdinaryRunResult::from,
+            )
+        };
         let claim = with_registry_mut(|registry| {
-            registry
-                .register_once_with_callback(timer.clone(), lifetime, Rc::clone(&callback))
-                .map_err(TimerError::from)
+            let registered = if recurring {
+                registry.register_after_completion_with_callback(
+                    timer.clone(),
+                    TimerCadence::from_nanos(5).unwrap(),
+                    lifetime,
+                    Rc::clone(&callback),
+                )
+            } else {
+                registry.register_once_with_callback(timer.clone(), lifetime, Rc::clone(&callback))
+            };
+            registered.map_err(TimerError::from)
         })
         .unwrap();
-        let registration = OnceRegistration { claim };
-        registration
-            .ensure_scheduled(TimerSchedule::At(15))
-            .unwrap();
+        if recurring {
+            ensure_recurring_claim(&claim, None).unwrap();
+        } else {
+            ensure_once_claim(&claim, None, TimerSchedule::At(15)).unwrap();
+        }
         assert_eq!(timer_count(), 1);
 
         // Keep the callback unavailable while dispatch accepts and completes work.
@@ -822,14 +986,69 @@ fn ordinary_callback_borrow_failure_stops_without_invoking_or_measuring_work() {
             let performance = snapshot.observability().performance();
             assert_eq!(performance.work_instructions().samples(), 0);
             assert_eq!(performance.work_memory_pages().samples(), 0);
-            assert!(!registration.has_armed_wakeup().unwrap());
+            assert!(!has_armed_wakeup_claim(&claim).unwrap());
         } else {
             assert!(snapshot.is_none());
             assert!(matches!(
-                registration.has_armed_wakeup(),
+                has_armed_wakeup_claim(&claim),
                 Err(TimerError::RegistrationExpired)
             ));
         }
+    }
+}
+
+#[test]
+fn after_completion_recurrence_follows_returned_completion_classification() {
+    for completion in [
+        TimerCompletion::success(3),
+        TimerCompletion::no_work(),
+        TimerCompletion::retryable_failure(2),
+        TimerCompletion::invariant_failure(4),
+    ] {
+        setup();
+        let timer = identity("classified-recurrence");
+        let registration = register_after_completion(
+            timer.clone(),
+            TimerCadence::from_nanos(5).unwrap(),
+            DeclarationLifetime::Retained,
+            move |_| async move {
+                AfterCompletionRunResult::new(
+                    completion,
+                    AfterCompletionDecision::RecurAfterCompletion,
+                )
+            },
+        )
+        .unwrap();
+        registration.ensure_scheduled().unwrap();
+        set_time(15);
+        assert!(run_next_due());
+        let snapshot = timer_snapshot(&timer).unwrap().unwrap();
+        let invariant = completion.outcome() == crate::TimerCompletionOutcome::InvariantFailure;
+        assert_eq!(
+            snapshot.next_deadline_ns(),
+            if invariant { None } else { Some(20) }
+        );
+        assert_eq!(registration.has_armed_wakeup().unwrap(), !invariant);
+        assert_eq!(timer_count(), usize::from(!invariant));
+        let outcomes = snapshot.observability().outcomes();
+        assert_eq!(
+            outcomes.last_outcome(),
+            Some(TimerLastOutcome::Completed(completion.outcome()))
+        );
+        assert_eq!(outcomes.last_work_count(), Some(completion.work_count()));
+        assert_eq!(
+            outcomes.consecutive_expected_failures(),
+            u64::from(completion.outcome() == crate::TimerCompletionOutcome::RetryableFailure)
+        );
+        assert_eq!(snapshot.observability().counters().work_completed(), 1);
+        assert_eq!(
+            snapshot.latest_directive(),
+            Some(if invariant {
+                crate::TimerDirectiveSnapshot::Stop
+            } else {
+                crate::TimerDirectiveSnapshot::RecurAfterCompletion
+            })
+        );
     }
 }
 
@@ -848,11 +1067,11 @@ fn after_completion_rearms_from_actual_completion_time() {
             callback_calls.set(call);
             async move {
                 let directive = if call == 1 {
-                    TimerDirective::RecurAfterCompletion
+                    AfterCompletionDecision::RecurAfterCompletion
                 } else {
-                    TimerDirective::Stop
+                    AfterCompletionDecision::Stop
                 };
-                TimerRunResult::new(TimerCompletion::success(1), directive)
+                AfterCompletionRunResult::new(TimerCompletion::success(1), directive)
             }
         },
     )
@@ -900,7 +1119,10 @@ fn after_completion_context_can_restore_recurrence_after_nested_cancel() {
                         .ensure_scheduled()
                         .expect("later nested ensure should succeed");
                 }
-                TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop)
+                AfterCompletionRunResult::new(
+                    TimerCompletion::no_work(),
+                    AfterCompletionDecision::Stop,
+                )
             }
         },
     )
@@ -947,7 +1169,7 @@ fn once_context_can_restore_scheduling_after_nested_cancel() {
                         .ensure_scheduled(TimerSchedule::At(30))
                         .expect("later nested ensure should succeed");
                 }
-                TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop)
+                OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
             }
         },
     )
@@ -987,11 +1209,11 @@ fn retained_once_context_expires_after_its_work_attempt() {
             callback_calls.set(call);
             let directive = if call == 1 {
                 *callback_context.borrow_mut() = Some(context);
-                TimerDirective::ContinueImmediately
+                OnceDecision::ContinueImmediately
             } else {
-                TimerDirective::Stop
+                OnceDecision::Stop
             };
-            async move { TimerRunResult::new(TimerCompletion::no_work(), directive) }
+            async move { OnceRunResult::new(TimerCompletion::no_work(), directive) }
         },
     )
     .expect("registration should succeed");
@@ -1047,7 +1269,7 @@ fn stale_reused_identity_callback_cannot_change_handles_or_measurements() {
     let old = register_once(
         timer_identity.clone(),
         DeclarationLifetime::RemoveWhenStopped,
-        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+        |_context| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
     )
     .expect("old registration should succeed");
     old.ensure_scheduled(TimerSchedule::At(15))
@@ -1077,7 +1299,7 @@ fn stale_reused_identity_callback_cannot_change_handles_or_measurements() {
         |_context| async {
             advance_instructions(7);
             grow_memory_pages(2, 3);
-            TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop)
+            OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
         },
     )
     .expect("replacement registration should succeed");
@@ -1150,7 +1372,7 @@ fn replacement_and_cancellation_clear_actual_owned_handles() {
         DeclarationLifetime::Retained,
         move |_context| {
             callback_calls.set(callback_calls.get() + 1);
-            async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) }
+            async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
         },
     )
     .expect("registration should succeed");
@@ -1211,7 +1433,7 @@ fn duplicate_registration_and_reconstruction_preserve_live_work_and_release_capa
         DeclarationLifetime::RemoveWhenStopped,
         move |_context| {
             callback_calls.set(callback_calls.get() + 1);
-            async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) }
+            async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
         },
     )
     .expect("registration should succeed");
@@ -1223,7 +1445,7 @@ fn duplicate_registration_and_reconstruction_preserve_live_work_and_release_capa
         timer.clone(),
         DeclarationLifetime::Retained,
         |_context| async {
-            TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop)
+            OnceRunResult::new(TimerCompletion::invariant_failure(0), OnceDecision::Stop)
         },
     );
     assert!(matches!(
@@ -1238,7 +1460,7 @@ fn duplicate_registration_and_reconstruction_preserve_live_work_and_release_capa
 
     let mut empty_slot = None;
     let reconstruction = reconcile_once(&mut empty_slot, &timer, None, |_| async {
-        TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop)
+        OnceRunResult::new(TimerCompletion::invariant_failure(0), OnceDecision::Stop)
     });
     assert!(matches!(
         reconstruction,
@@ -1848,7 +2070,7 @@ fn rejected_provider_binding_clears_handles_for_unavailable_or_expired_authority
     let registration = register_once(
         timer.clone(),
         DeclarationLifetime::Retained,
-        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+        |_context| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
     )
     .expect("registration should succeed");
     registration
@@ -1937,7 +2159,7 @@ fn detached_provider_selection_does_not_reborrow_the_registry() {
     let registration = register_once(
         timer.clone(),
         DeclarationLifetime::Retained,
-        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+        |_context| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
     )
     .expect("registration should succeed");
     registration
@@ -2014,7 +2236,7 @@ fn terminal_scheduler_failure_clears_queued_work_before_transient_removal() {
             ));
             assert!(
                 register_once(timer, DeclarationLifetime::Retained, |_| async {
-                    TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop)
+                    OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
                 })
                 .is_ok()
             );
@@ -2029,7 +2251,7 @@ fn transition_error_restores_handles_or_retires_the_claim() {
     let registration = register_once(
         timer.clone(),
         DeclarationLifetime::Retained,
-        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+        |_context| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
     )
     .expect("registration should succeed");
     registration
@@ -2093,7 +2315,7 @@ fn public_provider_install_failure_retires_false_scheduled_state() {
         DeclarationLifetime::Retained,
         move |_context| {
             callback_calls.set(callback_calls.get() + 1);
-            async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) }
+            async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
         },
     )
     .expect("registration should succeed");
@@ -2131,7 +2353,7 @@ fn initial_once_provider_install_failure_retires_false_scheduled_state() {
     let registration = register_once(
         timer.clone(),
         DeclarationLifetime::Retained,
-        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+        |_context| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
     )
     .expect("registration should succeed");
 
@@ -2152,7 +2374,9 @@ fn after_completion_provider_install_failure_retires_false_scheduled_state() {
         timer.clone(),
         TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
         DeclarationLifetime::Retained,
-        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+        |_context| async {
+            AfterCompletionRunResult::new(TimerCompletion::no_work(), AfterCompletionDecision::Stop)
+        },
     )
     .expect("registration should succeed");
 
@@ -2225,7 +2449,7 @@ fn watchdog_failed_dispatch_clears_handles_without_confirming_work() {
                     Err(TimerError::RegistrationExpired)
                 ));
                 let replacement = register_once(timer, DeclarationLifetime::Retained, |_| async {
-                    TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop)
+                    OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
                 })
                 .expect("failed transient dispatch should release the identity");
                 replacement.ensure_scheduled(TimerSchedule::At(25)).unwrap();
@@ -2249,7 +2473,7 @@ fn provider_confirmation_failure_clears_the_installed_handle() {
     let registration = register_once(
         timer.clone(),
         DeclarationLifetime::Retained,
-        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+        |_context| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
     )
     .expect("registration should succeed");
 
@@ -2437,7 +2661,7 @@ fn remove_on_stop_provider_failure_removes_the_expired_claim() {
     let registration = register_once(
         timer.clone(),
         DeclarationLifetime::RemoveWhenStopped,
-        |_context| async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) },
+        |_context| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
     )
     .expect("registration should succeed");
 
@@ -2774,7 +2998,7 @@ fn once_reconciliation_rejects_identity_mismatch_without_disturbing_live_work() 
     let mut registration = Some(
         register_once(timer.clone(), DeclarationLifetime::Retained, move |_| {
             callback_calls.set(callback_calls.get() + 1);
-            async { TimerRunResult::new(TimerCompletion::success(1), TimerDirective::Stop) }
+            async { OnceRunResult::new(TimerCompletion::success(1), OnceDecision::Stop) }
         })
         .unwrap(),
     );
@@ -2786,7 +3010,7 @@ fn once_reconciliation_rejects_identity_mismatch_without_disturbing_live_work() 
     let before = timer_inventory().unwrap();
 
     let rejected = reconcile_once(&mut registration, &other, None, |_| async {
-        TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop)
+        OnceRunResult::new(TimerCompletion::invariant_failure(0), OnceDecision::Stop)
     });
     assert!(matches!(rejected, Err(TimerError::ReconciliationConflict)));
     assert_eq!(timer_inventory().unwrap(), before);
@@ -2819,7 +3043,12 @@ fn after_completion_reconciliation_rejects_transient_lifetime_without_cancelling
             DeclarationLifetime::RemoveWhenStopped,
             move |_| {
                 callback_calls.set(callback_calls.get() + 1);
-                async { TimerRunResult::new(TimerCompletion::success(1), TimerDirective::Stop) }
+                async {
+                    AfterCompletionRunResult::new(
+                        TimerCompletion::success(1),
+                        AfterCompletionDecision::Stop,
+                    )
+                }
             },
         )
         .unwrap(),
@@ -2833,7 +3062,10 @@ fn after_completion_reconciliation_rejects_transient_lifetime_without_cancelling
         cadence,
         TimerReconcileState::Inactive,
         |_| async {
-            TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop)
+            AfterCompletionRunResult::new(
+                TimerCompletion::invariant_failure(0),
+                AfterCompletionDecision::Stop,
+            )
         },
     );
     assert!(matches!(rejected, Err(TimerError::ReconciliationConflict)));
@@ -2869,7 +3101,12 @@ fn after_completion_reconciliation_rejects_cadence_mismatch_without_disturbing_l
             DeclarationLifetime::Retained,
             move |_| {
                 callback_calls.set(callback_calls.get() + 1);
-                async { TimerRunResult::new(TimerCompletion::success(1), TimerDirective::Stop) }
+                async {
+                    AfterCompletionRunResult::new(
+                        TimerCompletion::success(1),
+                        AfterCompletionDecision::Stop,
+                    )
+                }
             },
         )
         .unwrap(),
@@ -2883,7 +3120,10 @@ fn after_completion_reconciliation_rejects_cadence_mismatch_without_disturbing_l
         other_cadence,
         TimerReconcileState::Inactive,
         |_| async {
-            TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop)
+            AfterCompletionRunResult::new(
+                TimerCompletion::invariant_failure(0),
+                AfterCompletionDecision::Stop,
+            )
         },
     );
     assert!(matches!(rejected, Err(TimerError::ReconciliationConflict)));
@@ -2991,7 +3231,12 @@ fn after_completion_reconstruction_reuses_its_exact_claim() {
         TimerReconcileState::Scheduled,
         move |_context| {
             callback_calls.set(callback_calls.get().saturating_add(1));
-            async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) }
+            async {
+                AfterCompletionRunResult::new(
+                    TimerCompletion::no_work(),
+                    AfterCompletionDecision::Stop,
+                )
+            }
         },
     )
     .expect("fresh reconstruction should succeed");
@@ -3001,7 +3246,10 @@ fn after_completion_reconstruction_reuses_its_exact_claim() {
         cadence,
         TimerReconcileState::Scheduled,
         |_context| async {
-            TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop)
+            AfterCompletionRunResult::new(
+                TimerCompletion::invariant_failure(0),
+                AfterCompletionDecision::Stop,
+            )
         },
     )
     .expect("repeated reconstruction should coalesce");
@@ -3030,7 +3278,7 @@ fn once_reconciliation_owns_one_exact_deadline_and_retains_its_callback() {
         Some(TimerSchedule::At(20)),
         move |_context| {
             callback_calls.set(callback_calls.get().saturating_add(1));
-            async { TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop) }
+            async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
         },
     )
     .expect("fresh reconstruction should register and arm");
@@ -3039,7 +3287,7 @@ fn once_reconciliation_owns_one_exact_deadline_and_retains_its_callback() {
         &timer,
         Some(TimerSchedule::At(40)),
         |_context| async {
-            TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop)
+            OnceRunResult::new(TimerCompletion::invariant_failure(0), OnceDecision::Stop)
         },
     )
     .expect("authoritative reconciliation should move the deadline later");
@@ -3052,7 +3300,7 @@ fn once_reconciliation_owns_one_exact_deadline_and_retains_its_callback() {
     );
 
     reconcile_once(&mut registration, &timer, None, |_context| async {
-        TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop)
+        OnceRunResult::new(TimerCompletion::invariant_failure(0), OnceDecision::Stop)
     })
     .expect("inactive reconciliation should clear the exact handle");
     assert_eq!(timer_count(), 0);
@@ -3077,7 +3325,7 @@ fn registration_identity_survives_control_but_changes_on_replacement_and_restart
     let timer = identity("continuity");
     let create = || {
         register_once(timer.clone(), DeclarationLifetime::Retained, |_| async {
-            TimerRunResult::new(TimerCompletion::success(1), TimerDirective::Stop)
+            OnceRunResult::new(TimerCompletion::success(1), OnceDecision::Stop)
         })
         .unwrap()
     };

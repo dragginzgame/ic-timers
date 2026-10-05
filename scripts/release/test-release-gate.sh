@@ -70,7 +70,11 @@ mkdir -p bin
 cat > bin/cargo <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-printf '%s\n' "$*" >> fetch-events
+printf '%s\n' "$*" >> "${FIXTURE_CARGO_LOG:-fetch-events}"
+if [[ "${FIXTURE_FAIL_CARGO_CALL:-}" == "$*" ]]; then
+    echo 'injected Cargo failure' >&2
+    exit 101
+fi
 if [[ "${FIXTURE_FAIL_FETCH:-}" == "${3:-}" ]]; then
     echo "injected fetch failure: ${3}" >&2
     exit 101
@@ -100,6 +104,39 @@ for failed_manifest in '' Cargo.toml testing/Cargo.toml; do
         exit 1
     fi
     rm fetch-events
+done
+
+# Execute the test and MSRV recipes only through the recording Cargo stub.
+# API compile-fail doctests must run in both toolchains, after their first check;
+# failures at either command stop the owning target.
+for target in test msrv; do
+    case "${target}" in
+        test) calls=('test --workspace --all-targets --all-features --locked'
+            'test --workspace --doc --all-features --locked') ;;
+        msrv) calls=('+1.88.0 check --workspace --all-targets --all-features --locked'
+            '+1.88.0 test --workspace --doc --all-features --locked') ;;
+    esac
+    for failed_call in '' "${calls[@]}"; do
+        : > api-test-events
+        if PATH="${temporary_root}/bin:${PATH}" FIXTURE_CARGO_LOG=api-test-events \
+            FIXTURE_FAIL_CARGO_CALL="${failed_call}" make --no-print-directory \
+            "${target}" MSRV=1.88.0 >api-test-output 2>&1; then
+            if [[ -n "${failed_call}" ]]; then
+                echo "error: ${target} ignored Cargo failure" >&2
+                exit 1
+            fi
+        elif [[ -z "${failed_call}" ]]; then
+            cat api-test-output >&2
+            echo "error: ${target} rejected recorded Cargo success" >&2
+            exit 1
+        fi
+        : > expected-api-test-events
+        for call in "${calls[@]}"; do
+            printf '%s\n' "${call}" >> expected-api-test-events
+            if [[ "${call}" == "${failed_call}" ]]; then break; fi
+        done
+        cmp expected-api-test-events api-test-events
+    done
 done
 
 # Exercise the actual recipe and Make variable origins without provisioning.

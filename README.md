@@ -64,7 +64,7 @@ IC Timers is written in Rust 2024 and supports Rust
 timer service.
 
 One IC Timers runtime can manage up to 64 named timers and 128 timer handles.
-It supports one-time work, work that repeats after successful completion, and
+It supports one-time work, work that repeats after returning normally, and
 Watchdog work that prepares another attempt before it starts. It also reports
 timer status, outcomes, and bounded resource measurements.
 
@@ -94,10 +94,10 @@ above the CDK provider without creating another provider.
 
 ## Choose how a task should run
 
-IC Timers offers three modes. `Once` runs a task one time. `AfterCompletion`
-repeats a task after it finishes successfully. `Watchdog` prepares another
-attempt before starting important work. The timeline below shows the
-difference.
+IC Timers offers three modes. `Once` runs a task one time unless explicitly
+rescheduled. `AfterCompletion` can repeat after a normal return when its result
+requests recurrence. `Watchdog` prepares another attempt before starting important
+work. The timeline below shows the difference.
 
 ![Timelines showing when Once, AfterCompletion, and Watchdog schedule their work and successor](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-policy-timelines.svg)
 
@@ -138,7 +138,23 @@ finish normally before another invocation is allowed. Use `Watchdog` only
 when committing the next wake-up before fallible synchronous work is the
 required protocol.
 
+Ordinary callback results follow their policy. `register_once` and
+`reconcile_once` require futures returning `OnceRunResult` with a `OnceDecision`;
+the after-completion entry points require `AfterCompletionRunResult` with an
+`AfterCompletionDecision`. Both permit Stop, immediate continuation, a relative
+retry and an absolute deadline. Only `AfterCompletionDecision` includes
+`RecurAfterCompletion`, which uses the configured cadence. A Once declaration
+can still explicitly reschedule itself. Invariant-failure results force Stop,
+and authoritative nested commands keep their existing arbitration precedence.
+Configured recurrence can follow success, no work or a returned retryable
+failure. A trap or instruction exhaustion prevents ordinary completion from
+scheduling it; recovery-critical work needs Watchdog.
+
 ## Minimal `Once` example
+
+The callback examples in this checkout use the prepared 0.12 API hard cut.
+Package identity below follows the current Cargo version until the maintainer
+runs the minor bump; the typed API requires the coordinated 0.12 release.
 
 Add one exact package version when this crate participates in a shared
 framework/application registry:
@@ -158,8 +174,8 @@ timer, retain its non-clone registration capability, and schedule it:
 
 ```rust
 use ic_timers::{
-    DeclarationLifetime, OnceRegistration, TimerCompletion, TimerDirective,
-    TimerIdentity, TimerRunResult, TimerSchedule, initialize_runtime,
+    DeclarationLifetime, OnceRegistration, TimerCompletion, OnceDecision,
+    TimerIdentity, OnceRunResult, TimerSchedule, initialize_runtime,
     register_once,
 };
 use std::{error::Error, time::Duration};
@@ -172,7 +188,7 @@ fn declare_cleanup_timer() -> Result<OnceRegistration, Box<dyn Error>> {
         DeclarationLifetime::Retained,
         |_context| async {
             // Perform one bounded unit of application work.
-            TimerRunResult::new(TimerCompletion::success(1), TimerDirective::Stop)
+            OnceRunResult::new(TimerCompletion::success(1), OnceDecision::Stop)
         },
     )?;
 

@@ -238,6 +238,15 @@ combinations.
 
 ## Failure and measurement semantics
 
+The prepared ordinary callback return contract is policy-specific: Once uses
+`OnceRunResult` / `OnceDecision`, and AfterCompletion uses
+`AfterCompletionRunResult` / `AfterCompletionDecision`. Only the latter permits
+configured recurrence. Explicit rescheduling remains legal for Once, and
+invariant failures force Stop. The private erased completion boundary still
+checks inconsistent policy data; snapshots remain observations. Compile-fail,
+native and PocketIC validation for this cut is pending the maintainer's gate;
+see the [callback contract and evidence scope](docs/design/0.5-policy-specific-callback-authority.md#ordinary-callback-results).
+
 Callback starts and completions are deliberately separate. A trap or
 instruction exhaustion can prevent all post-run code, so the runtime must not
 invent a completion, zero instruction cost, memory-page sample, elapsed

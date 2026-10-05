@@ -1,17 +1,17 @@
 //! Canister-local owner and live timer execution.
 
 use crate::{
+    callback::{AfterCompletionRunResult, OnceRunResult, OrdinaryRunResult},
     platform::{self, TimerHandle},
     registry::{
         CallbackRole, CallbackToken, OrdinaryCallback, ProviderHandle, ProviderHandles,
         RegisterError, RegistrationClaim, RegistryEffect, RegistryError, RegistryTransition,
         TimerRegistry, WatchdogCallback,
     },
-    schedule::{ScheduleError, TimerCadence, TimerDirective, TimerSchedule},
+    schedule::{OrdinaryDirective, ScheduleError, TimerCadence, TimerSchedule},
     snapshot::{
         DeclarationLifetime, MemoryPageExtent, TimerCompletion, TimerControlFailure, TimerEpoch,
-        TimerIdentity, TimerInventorySnapshot, TimerPolicy, TimerRunResult, TimerSnapshot,
-        WatchdogRunResult,
+        TimerIdentity, TimerInventorySnapshot, TimerPolicy, TimerSnapshot, WatchdogRunResult,
     },
 };
 use std::{cell::RefCell, future::Future, rc::Rc, time::Duration};
@@ -485,6 +485,18 @@ impl AfterCompletionRegistration {
 }
 
 /// Register one asynchronous `Once` callback without scheduling it.
+///
+/// The future must return [`OnceRunResult`]; a recurring policy's result cannot
+/// be used here, even when its decision is Stop:
+///
+/// ```compile_fail,E0271
+/// use ic_timers::{register_once, TimerIdentity, DeclarationLifetime,
+///     TimerCompletion, AfterCompletionDecision, AfterCompletionRunResult};
+/// let identity = TimerIdentity::try_new("app", "jobs", "once").unwrap();
+/// let _ = register_once(identity, DeclarationLifetime::Retained, |_| async {
+///     AfterCompletionRunResult::new(TimerCompletion::no_work(), AfterCompletionDecision::Stop)
+/// });
+/// ```
 pub fn register_once<F, Fut>(
     identity: TimerIdentity,
     lifetime: DeclarationLifetime,
@@ -492,9 +504,9 @@ pub fn register_once<F, Fut>(
 ) -> Result<OnceRegistration, TimerError>
 where
     F: FnMut(OnceContext) -> Fut + 'static,
-    Fut: Future<Output = TimerRunResult> + 'static,
+    Fut: Future<Output = OnceRunResult> + 'static,
 {
-    let callback = erase_ordinary_callback(callback, OnceContext::new);
+    let callback = erase_ordinary_callback(callback, OnceContext::new, OrdinaryRunResult::from);
     let claim = with_registry_mut(|registry| {
         registry
             .register_once_with_callback(identity, lifetime, callback)
@@ -504,6 +516,18 @@ where
 }
 
 /// Register one asynchronous callback with configured after-completion recurrence.
+///
+/// The future must return [`AfterCompletionRunResult`]:
+///
+/// ```compile_fail,E0271
+/// use ic_timers::{register_after_completion, TimerIdentity, TimerCadence,
+///     DeclarationLifetime, TimerCompletion, OnceDecision, OnceRunResult};
+/// let identity = TimerIdentity::try_new("app", "jobs", "recurring").unwrap();
+/// let cadence = TimerCadence::from_nanos(5).unwrap();
+/// let _ = register_after_completion(identity, cadence, DeclarationLifetime::Retained, |_| async {
+///     OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
+/// });
+/// ```
 pub fn register_after_completion<F, Fut>(
     identity: TimerIdentity,
     cadence: TimerCadence,
@@ -512,9 +536,13 @@ pub fn register_after_completion<F, Fut>(
 ) -> Result<AfterCompletionRegistration, TimerError>
 where
     F: FnMut(AfterCompletionContext) -> Fut + 'static,
-    Fut: Future<Output = TimerRunResult> + 'static,
+    Fut: Future<Output = AfterCompletionRunResult> + 'static,
 {
-    let callback = erase_ordinary_callback(callback, AfterCompletionContext::new);
+    let callback = erase_ordinary_callback(
+        callback,
+        AfterCompletionContext::new,
+        OrdinaryRunResult::from,
+    );
     let claim = with_registry_mut(|registry| {
         registry
             .register_after_completion_with_callback(identity, cadence, lifetime, callback)
@@ -557,6 +585,18 @@ where
 /// inventory, including on a fresh heap. Lifecycle reconciliation always owns
 /// a [`DeclarationLifetime::Retained`] declaration; transient
 /// `RemoveWhenStopped` callbacks use [`register_once`] directly.
+///
+/// Lifecycle reconstruction retains the same policy-specific result boundary:
+///
+/// ```compile_fail,E0271
+/// use ic_timers::{reconcile_once, TimerIdentity, TimerCompletion,
+///     AfterCompletionDecision, AfterCompletionRunResult};
+/// let identity = TimerIdentity::try_new("app", "jobs", "once").unwrap();
+/// let mut registration = None;
+/// let _ = reconcile_once(&mut registration, &identity, None, |_| async {
+///     AfterCompletionRunResult::new(TimerCompletion::no_work(), AfterCompletionDecision::Stop)
+/// });
+/// ```
 pub fn reconcile_once<F, Fut>(
     registration: &mut Option<OnceRegistration>,
     identity: &TimerIdentity,
@@ -565,7 +605,7 @@ pub fn reconcile_once<F, Fut>(
 ) -> Result<(), TimerError>
 where
     F: FnMut(OnceContext) -> Fut + 'static,
-    Fut: Future<Output = TimerRunResult> + 'static,
+    Fut: Future<Output = OnceRunResult> + 'static,
 {
     let registration = reconcile_registration(registration, identity, TimerPolicy::Once, || {
         register_once(identity.clone(), DeclarationLifetime::Retained, callback)
@@ -581,6 +621,20 @@ where
 /// replace its callback. The installed declaration is always retained;
 /// transient `RemoveWhenStopped` recurrence uses
 /// [`register_after_completion`] directly.
+///
+/// Lifecycle reconstruction also requires [`AfterCompletionRunResult`]:
+///
+/// ```compile_fail,E0271
+/// use ic_timers::{reconcile_after_completion, TimerIdentity, TimerCadence,
+///     TimerReconcileState, TimerCompletion, OnceDecision, OnceRunResult};
+/// let identity = TimerIdentity::try_new("app", "jobs", "recurring").unwrap();
+/// let cadence = TimerCadence::from_nanos(5).unwrap();
+/// let mut registration = None;
+/// let _ = reconcile_after_completion(&mut registration, &identity, cadence,
+///     TimerReconcileState::Inactive, |_| async {
+///         OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
+///     });
+/// ```
 pub fn reconcile_after_completion<F, Fut>(
     registration: &mut Option<AfterCompletionRegistration>,
     identity: &TimerIdentity,
@@ -590,7 +644,7 @@ pub fn reconcile_after_completion<F, Fut>(
 ) -> Result<(), TimerError>
 where
     F: FnMut(AfterCompletionContext) -> Fut + 'static,
-    Fut: Future<Output = TimerRunResult> + 'static,
+    Fut: Future<Output = AfterCompletionRunResult> + 'static,
 {
     let registration = reconcile_registration(
         registration,
@@ -704,16 +758,18 @@ fn has_armed_wakeup_claim(claim: &RegistrationClaim) -> Result<bool, TimerError>
     with_registry(|registry| registry.has_armed_wakeup(claim).map_err(TimerError::from))
 }
 
-fn erase_ordinary_callback<Context: 'static, F, Fut>(
+fn erase_ordinary_callback<Context: 'static, Output: 'static, F, Fut>(
     mut callback: F,
     context: fn(CallbackToken) -> Context,
+    erase_result: fn(Output) -> OrdinaryRunResult,
 ) -> OrdinaryCallback
 where
     F: FnMut(Context) -> Fut + 'static,
-    Fut: Future<Output = TimerRunResult> + 'static,
+    Fut: Future<Output = Output> + 'static,
 {
     Rc::new(RefCell::new(Box::new(move |token| {
-        Box::pin(callback(context(token)))
+        let future = callback(context(token));
+        Box::pin(async move { erase_result(future.await) })
     })))
 }
 
@@ -1040,7 +1096,10 @@ async fn dispatch_ordinary(token: CallbackToken) {
         let Ok(mut callback) = callback.try_borrow_mut() else {
             finish_ordinary_callback(
                 &token,
-                TimerRunResult::new(TimerCompletion::invariant_failure(0), TimerDirective::Stop),
+                OrdinaryRunResult::new(
+                    TimerCompletion::invariant_failure(0),
+                    OrdinaryDirective::Stop,
+                ),
             );
             return;
         };
@@ -1051,7 +1110,7 @@ async fn dispatch_ordinary(token: CallbackToken) {
     record_callback_measurements(&token, measurement.finish());
 }
 
-fn finish_ordinary_callback(token: &CallbackToken, result: TimerRunResult) {
+fn finish_ordinary_callback(token: &CallbackToken, result: OrdinaryRunResult) {
     let transition = with_registry_mut(|registry| {
         registry
             .complete_ordinary(token, platform::time_ns(), result)

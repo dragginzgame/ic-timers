@@ -5,16 +5,17 @@
 //! authority.
 
 use crate::{
+    callback::OrdinaryRunResult,
     control::{OrdinaryPending, TimerControl, TimerRegistration, WakeupArm},
     platform::TimerHandle,
-    schedule::{ResolvedSchedule, ScheduleError, TimerCadence, TimerDirective, TimerSchedule},
+    schedule::{OrdinaryDirective, ResolvedSchedule, ScheduleError, TimerCadence, TimerSchedule},
     snapshot::{
         DeclarationLifetime, InactiveReason, MemoryPageExtent, MemoryPageSample,
         OrdinaryRuntimeStateSnapshot, TimerCompletion, TimerCompletionOutcome, TimerControlFailure,
         TimerDirectiveSnapshot, TimerEpoch, TimerIdentity, TimerInventorySnapshot,
-        TimerObservabilitySnapshot, TimerPolicy, TimerRegistrationId, TimerRunResult,
-        TimerRuntimeStateSnapshot, TimerSchedulingMode, TimerSnapshot, WatchdogAttemptStatus,
-        WatchdogDecision, WatchdogRunResult, WatchdogRuntimeStateSnapshot,
+        TimerObservabilitySnapshot, TimerPolicy, TimerRegistrationId, TimerRuntimeStateSnapshot,
+        TimerSchedulingMode, TimerSnapshot, WatchdogAttemptStatus, WatchdogDecision,
+        WatchdogRunResult, WatchdogRuntimeStateSnapshot,
     },
 };
 use std::{cell::RefCell, collections::BTreeMap, future::Future, pin::Pin, rc::Rc};
@@ -237,8 +238,8 @@ pub enum RegistryError {
     Schedule(#[from] ScheduleError),
 }
 
-type OrdinaryFuture = Pin<Box<dyn Future<Output = TimerRunResult>>>;
-pub type OrdinaryCallback = Rc<RefCell<Box<dyn FnMut(CallbackToken) -> OrdinaryFuture>>>;
+type OrdinaryFuture = Pin<Box<dyn Future<Output = OrdinaryRunResult>>>;
+pub(crate) type OrdinaryCallback = Rc<RefCell<Box<dyn FnMut(CallbackToken) -> OrdinaryFuture>>>;
 pub type WatchdogCallback = Rc<RefCell<Box<dyn FnMut(CallbackToken) -> WatchdogRunResult>>>;
 
 struct OwnedProviderHandle {
@@ -1162,7 +1163,7 @@ impl TimerRegistry {
         &mut self,
         token: &CallbackToken,
         now_ns: u64,
-        result: TimerRunResult,
+        result: OrdinaryRunResult,
     ) -> Result<RegistryTransition, RegistryError> {
         let identity = token.identity();
         let (transition, remove) = {
@@ -1185,9 +1186,11 @@ impl TimerRegistry {
             // Arbitrate authoritative commands before resolving a discarded
             // callback proposal. Explicit consumer invariant failure still wins.
             let effective_directive = match pending_command {
-                Some(OrdinaryPending::Cancel | OrdinaryPending::Unregister) => TimerDirective::Stop,
+                Some(OrdinaryPending::Cancel | OrdinaryPending::Unregister) => {
+                    OrdinaryDirective::Stop
+                }
                 Some(OrdinaryPending::Reconcile(requested)) => {
-                    TimerDirective::ScheduleAt(requested.deadline_ns)
+                    OrdinaryDirective::ScheduleAt(requested.deadline_ns)
                 }
                 Some(OrdinaryPending::Schedule(_)) | None => result.directive(),
             };

@@ -22,7 +22,7 @@ help:
 	@echo "  fmt / fmt-check     Format or check Rust in both workspaces"
 	@echo "  check / clippy      Compile all targets and lint with warnings denied"
 	@echo "  docs-check          Build public API docs with warnings denied"
-	@echo "  test                Run workspace unit tests"
+	@echo "  test                Run workspace unit and API documentation tests"
 	@echo "  wasm-check          Compile the library for wasm32-unknown-unknown"
 	@echo "  package             Verify the publishable crate package"
 	@echo "  fetch               Download locked dependencies for both workspaces"
@@ -71,12 +71,14 @@ docs-check:
 
 test:
 	cargo test --workspace --all-targets --all-features --locked
+	cargo test --workspace --doc --all-features --locked
 
 wasm-check:
 	cargo check --workspace --all-features --locked --target wasm32-unknown-unknown
 
 msrv:
 	cargo +$(MSRV) check --workspace --all-targets --all-features --locked
+	cargo +$(MSRV) test --workspace --doc --all-features --locked
 
 testing-check:
 	+$(MAKE) --no-print-directory fmt-check

@@ -2,6 +2,39 @@
 
 All notable changes to this project are recorded here.
 
+## [0.12.0]
+
+### Changed
+
+- Hard-cut ordinary callback returns to `OnceRunResult` / `OnceDecision` and
+  `AfterCompletionRunResult` / `AfterCompletionDecision`. Update both registration
+  and lifecycle reconciliation entry points; Once keeps explicit continuation,
+  retry and absolute deadlines but cannot request configured recurrence.
+- Remove the shared public `TimerRunResult` and `TimerDirective` surface without
+  aliases or conversions between policy result types. Retain one private erased
+  result and scheduling owner for registry arbitration, checked overflow handling,
+  invariant-failure stopping and inert snapshot projection. Keep Watchdog's
+  callback contract and snapshot meanings unchanged.
+- Update current examples, native fixtures and both probe canisters to typed
+  results. Project either public decision into `TimerDirectiveSnapshot` through
+  the existing checked conversion owner; retain no reverse conversion.
+
+### Development
+
+- Add positive and compile-fail API doctests covering all four ordinary entry
+  points, crossed decisions/results and unavailable Once recurrence. Run doctests
+  in the existing test and MSRV targets, and extend recording-Cargo gate fixtures
+  to reject failures at either recipe command. Extend native runtime coverage
+  across legal scheduling choices, overflow and authoritative reconciliation;
+  keep private erased-policy corruption coverage. Execution remains pending
+  maintainer validation, including the full PocketIC and policy-cohort gate.
+- Cover callback-borrow rejection for both typed ordinary policies and both
+  declaration lifetimes, including retained failure observations, transient
+  removal and absent work measurements. Add live native recurrence cases for
+  success, no work, retryable failure and invariant failure; correct the README
+  to distinguish a normal return requesting recurrence from success-only
+  recurrence. These fixture additions remain unexecuted.
+
 ## [0.11.10] - 2026-10-05
 
 ### Development

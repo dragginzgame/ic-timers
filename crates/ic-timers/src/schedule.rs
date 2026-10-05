@@ -66,9 +66,9 @@ impl TimerSchedule {
     }
 }
 
-/// Scheduling decision returned after one bounded ordinary invocation.
+/// Private scheduling proposal after erasing a policy-specific callback result.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum TimerDirective {
+pub(crate) enum OrdinaryDirective {
     /// Do not schedule another invocation.
     Stop,
     /// Continue as soon as the runtime can execute another message.
@@ -81,7 +81,7 @@ pub enum TimerDirective {
     RecurAfterCompletion,
 }
 
-impl TimerDirective {
+impl OrdinaryDirective {
     pub(super) fn resolve(
         self,
         now_ns: u64,
@@ -210,9 +210,9 @@ mod tests {
                 mode: TimerSchedulingMode::Deadline,
             })
         );
-        assert_eq!(TimerDirective::Stop.resolve(10, None), Ok(None));
+        assert_eq!(OrdinaryDirective::Stop.resolve(10, None), Ok(None));
         assert_eq!(
-            TimerDirective::ContinueImmediately.resolve(10, None),
+            OrdinaryDirective::ContinueImmediately.resolve(10, None),
             Ok(Some(ResolvedSchedule {
                 deadline_ns: 10,
                 requested_delay_ns: Some(0),
@@ -220,7 +220,7 @@ mod tests {
             }))
         );
         assert_eq!(
-            TimerDirective::RetryAfter(Duration::from_nanos(5)).resolve(10, None),
+            OrdinaryDirective::RetryAfter(Duration::from_nanos(5)).resolve(10, None),
             Ok(Some(ResolvedSchedule {
                 deadline_ns: 15,
                 requested_delay_ns: Some(5),
@@ -228,7 +228,7 @@ mod tests {
             }))
         );
         assert_eq!(
-            TimerDirective::ScheduleAt(7).resolve(10, None),
+            OrdinaryDirective::ScheduleAt(7).resolve(10, None),
             Ok(Some(ResolvedSchedule {
                 deadline_ns: 7,
                 requested_delay_ns: None,
@@ -238,7 +238,7 @@ mod tests {
 
         let cadence = TimerCadence::from_nanos(9).expect("fixture cadence should be valid");
         assert_eq!(
-            TimerDirective::RecurAfterCompletion.resolve(10, Some(cadence)),
+            OrdinaryDirective::RecurAfterCompletion.resolve(10, Some(cadence)),
             Ok(Some(ResolvedSchedule {
                 deadline_ns: 19,
                 requested_delay_ns: Some(9),
@@ -246,19 +246,19 @@ mod tests {
             }))
         );
         assert_eq!(
-            TimerDirective::RecurAfterCompletion.resolve(10, None),
+            OrdinaryDirective::RecurAfterCompletion.resolve(10, None),
             Err(TimerControlFailure::DirectiveNotAllowed)
         );
         assert_eq!(
-            TimerDirective::RetryAfter(Duration::from_nanos(1)).resolve(u64::MAX, None),
+            OrdinaryDirective::RetryAfter(Duration::from_nanos(1)).resolve(u64::MAX, None),
             Err(TimerControlFailure::DeadlineOverflow)
         );
         assert_eq!(
-            TimerDirective::RetryAfter(Duration::MAX).resolve(0, None),
+            OrdinaryDirective::RetryAfter(Duration::MAX).resolve(0, None),
             Err(TimerControlFailure::DelayOutOfRange)
         );
         assert_eq!(
-            TimerDirective::RecurAfterCompletion.resolve(u64::MAX, Some(cadence)),
+            OrdinaryDirective::RecurAfterCompletion.resolve(u64::MAX, Some(cadence)),
             Err(TimerControlFailure::DeadlineOverflow)
         );
     }

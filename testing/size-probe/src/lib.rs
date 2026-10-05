@@ -9,12 +9,12 @@ use std::cell::RefCell;
 
 #[cfg(feature = "after-completion")]
 use ic_timers::{
-    AfterCompletionRegistration, TimerCadence, TimerCompletion, TimerDirective, TimerRunResult,
-    register_after_completion,
+    AfterCompletionDecision, AfterCompletionRegistration, AfterCompletionRunResult, TimerCadence,
+    TimerCompletion, register_after_completion,
 };
 #[cfg(feature = "once")]
 use ic_timers::{
-    OnceRegistration, TimerCompletion, TimerDirective, TimerRunResult, TimerSchedule, register_once,
+    OnceDecision, OnceRegistration, OnceRunResult, TimerCompletion, TimerSchedule, register_once,
 };
 #[cfg(feature = "watchdog")]
 use ic_timers::{
@@ -253,7 +253,7 @@ fn start_inner() -> bool {
             DeclarationLifetime::Retained,
             |_context| async {
                 CALLBACKS.with(|calls| calls.set(calls.get().saturating_add(1)));
-                TimerRunResult::new(TimerCompletion::no_work(), TimerDirective::Stop)
+                OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
             },
         ) {
             Ok(registration) => registration,
@@ -284,9 +284,9 @@ fn start_inner() -> bool {
             DeclarationLifetime::Retained,
             |_context| async {
                 CALLBACKS.with(|calls| calls.set(calls.get().saturating_add(1)));
-                TimerRunResult::new(
+                AfterCompletionRunResult::new(
                     TimerCompletion::no_work(),
-                    TimerDirective::RecurAfterCompletion,
+                    AfterCompletionDecision::RecurAfterCompletion,
                 )
             },
         ) {

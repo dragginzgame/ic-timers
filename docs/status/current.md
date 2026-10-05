@@ -74,6 +74,18 @@ references and validation belong in [release notes](../changelog/README.md),
   and rejects invalid provisioning destinations before downloading, preserving
   verified file symlinks as read-only input. Updated rejection/preservation
   fixtures remain unexecuted; source/syntax scope belongs in the release guide.
+- The accepted ordinary result cut is implemented in the current worktree:
+  Once and AfterCompletion entry points require separate result/decision types.
+  Shared public results/directives are removed; the private erasure and canonical
+  arbitration remain. Current probes and fixtures use the typed API, and both
+  test/MSRV owners include API doctests. The implementation and pending validation
+  scope belong in the [callback contract](../design/0.5-policy-specific-callback-authority.md#ordinary-callback-results).
+  Cargo identity and both lockfiles remain maintainer-owned; this cut requires
+  coordinated downstream adoption and a minor release, without shims.
+  Borrow-rejection fixtures now cover both ordinary policies/lifetimes, and
+  public recurrence fixtures cover each completion classification. The README
+  describes requested recurrence after normal return; this added evidence
+  remains unexecuted under the same callback contract's validation scope.
 - Public removals or incompatible semantic changes require the next minor line;
   private behavior-preserving simplifications may use a patch. See the
   [ordinary arbitration hard cut](../changelog/0.9.0.md).

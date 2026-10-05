@@ -2,9 +2,10 @@
 
 use candid::CandidType;
 use ic_timers::{
-    AfterCompletionRegistration, DeclarationLifetime, OnceRegistration, TimerCadence,
-    TimerCompletion, TimerDirective, TimerIdentity, TimerRegistrationStatus, TimerRunResult,
-    TimerSchedule, register_after_completion, register_once, timer_snapshot,
+    AfterCompletionDecision, AfterCompletionRegistration, AfterCompletionRunResult,
+    DeclarationLifetime, OnceDecision, OnceRegistration, OnceRunResult, TimerCadence,
+    TimerCompletion, TimerIdentity, TimerRegistrationStatus, TimerSchedule,
+    register_after_completion, register_once, timer_snapshot,
 };
 use std::cell::{Cell, RefCell};
 
@@ -55,13 +56,21 @@ fn start_ordinary(after_completion: bool, transient: bool) {
                     identity(),
                     TimerCadence::from_nanos(super::CADENCE_NS).expect("fixed cadence"),
                     lifetime,
-                    |_| work(true),
+                    |_| async {
+                        AfterCompletionRunResult::new(
+                            work().await,
+                            AfterCompletionDecision::RecurAfterCompletion,
+                        )
+                    },
                 )
                 .expect("register after-completion"),
             )
         } else {
             Registration::Once(
-                register_once(identity(), lifetime, |_| work(false)).expect("register Once"),
+                register_once(identity(), lifetime, |_| async {
+                    OnceRunResult::new(work().await, OnceDecision::Stop)
+                })
+                .expect("register Once"),
             )
         };
         reconcile(&registration, Some(TimerSchedule::At(ic_cdk::api::time())));
@@ -69,7 +78,7 @@ fn start_ordinary(after_completion: bool, transient: bool) {
     });
 }
 
-async fn work(recur: bool) -> TimerRunResult {
+async fn work() -> TimerCompletion {
     GATE_WAITING.with(|waiting| waiting.set(true));
     loop {
         // Every closed-gate reply is followed by another real call await. A bare
@@ -85,10 +94,7 @@ async fn work(recur: bool) -> TimerRunResult {
             Err(error) => {
                 GATE_WAITING.with(|waiting| waiting.set(false));
                 GATE_ERROR.with_borrow_mut(|slot| *slot = Some(error));
-                return TimerRunResult::new(
-                    TimerCompletion::invariant_failure(0),
-                    TimerDirective::Stop,
-                );
+                return TimerCompletion::invariant_failure(0);
             }
         };
         GATE_REPLIES.with(|count| count.set(count.get().saturating_add(1)));
@@ -99,14 +105,7 @@ async fn work(recur: bool) -> TimerRunResult {
     GATE_WAITING.with(|waiting| waiting.set(false));
     COMPLETIONS.with(|count| count.set(count.get() + 1));
     COMPLETED_AT_NS.with(|time| time.set(Some(ic_cdk::api::time())));
-    TimerRunResult::new(
-        TimerCompletion::success(1),
-        if recur {
-            TimerDirective::RecurAfterCompletion
-        } else {
-            TimerDirective::Stop
-        },
-    )
+    TimerCompletion::success(1)
 }
 
 #[ic_cdk::update]

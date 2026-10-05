@@ -18,6 +18,7 @@
 #![forbid(unsafe_code)]
 #![forbid(private_interfaces)]
 #![deny(rustdoc::broken_intra_doc_links)]
+mod callback;
 mod control;
 mod platform;
 mod registry;
@@ -25,6 +26,9 @@ mod runtime;
 mod schedule;
 mod snapshot;
 
+pub use callback::{
+    AfterCompletionDecision, AfterCompletionRunResult, OnceDecision, OnceRunResult,
+};
 pub use registry::{MAX_TIMER_REGISTRATIONS, RegisterError};
 pub use runtime::{
     AfterCompletionContext, AfterCompletionRegistration, OnceContext, OnceRegistration, TimerError,
@@ -33,7 +37,7 @@ pub use runtime::{
     reconcile_watchdog, register_after_completion, register_once, register_watchdog,
     timer_inventory, timer_snapshot,
 };
-pub use schedule::{ScheduleError, TimerCadence, TimerDirective, TimerSchedule};
+pub use schedule::{ScheduleError, TimerCadence, TimerSchedule};
 pub use snapshot::{
     DeclarationLifetime, InactiveReason, MAX_TIMER_IDENTITY_COMPONENT_BYTES, MeasurementSummary,
     MemoryPageExtent, MemoryPageSample, MemoryPageSummary, OrdinaryRuntimeStateSnapshot,
@@ -41,7 +45,6 @@ pub use snapshot::{
     TimerDirectiveSnapshot, TimerEpoch, TimerIdentity, TimerIdentityError, TimerIdentityField,
     TimerInventorySnapshot, TimerLastOutcome, TimerObservabilitySnapshot, TimerOutcomeSnapshot,
     TimerPerformance, TimerPolicy, TimerProcessCondition, TimerRegistrationId,
-    TimerRegistrationStatus, TimerRunResult, TimerRuntimeStateSnapshot, TimerSchedulingMode,
-    TimerSnapshot, WatchdogAttemptStatus, WatchdogDecision, WatchdogRunResult,
-    WatchdogRuntimeStateSnapshot,
+    TimerRegistrationStatus, TimerRuntimeStateSnapshot, TimerSchedulingMode, TimerSnapshot,
+    WatchdogAttemptStatus, WatchdogDecision, WatchdogRunResult, WatchdogRuntimeStateSnapshot,
 };

@@ -48,8 +48,8 @@ pub use model::{
     DeclarationLifetime, InactiveReason, OrdinaryRuntimeStateSnapshot, TimerCompletion,
     TimerCompletionOutcome, TimerControlFailure, TimerDirectiveSnapshot, TimerEpoch,
     TimerLastOutcome, TimerOutcomeSnapshot, TimerPolicy, TimerProcessCondition,
-    TimerRegistrationStatus, TimerRunResult, TimerRuntimeStateSnapshot, TimerSchedulingMode,
-    WatchdogAttemptStatus, WatchdogDecision, WatchdogRunResult, WatchdogRuntimeStateSnapshot,
+    TimerRegistrationStatus, TimerRuntimeStateSnapshot, TimerSchedulingMode, WatchdogAttemptStatus,
+    WatchdogDecision, WatchdogRunResult, WatchdogRuntimeStateSnapshot,
 };
 
 /// Atomic provider-neutral snapshot of one complete canister-local inventory.
