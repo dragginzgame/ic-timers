@@ -177,13 +177,13 @@ impl AfterCompletionRunResult {
 
 /// Erased result consumed only by the canonical ordinary completion owner.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) struct OrdinaryRunResult {
+pub(super) struct OrdinaryRunResult {
     completion: TimerCompletion,
     directive: OrdinaryDirective,
 }
 
 impl OrdinaryRunResult {
-    pub(crate) const fn new(completion: TimerCompletion, directive: OrdinaryDirective) -> Self {
+    pub(super) const fn new(completion: TimerCompletion, directive: OrdinaryDirective) -> Self {
         Self {
             directive: if matches!(
                 completion.outcome(),
@@ -197,11 +197,11 @@ impl OrdinaryRunResult {
         }
     }
 
-    pub(crate) const fn completion(self) -> TimerCompletion {
+    pub(super) const fn completion(self) -> TimerCompletion {
         self.completion
     }
 
-    pub(crate) const fn directive(self) -> OrdinaryDirective {
+    pub(super) const fn directive(self) -> OrdinaryDirective {
         self.directive
     }
 }

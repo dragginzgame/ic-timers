@@ -239,7 +239,7 @@ pub enum RegistryError {
 }
 
 type OrdinaryFuture = Pin<Box<dyn Future<Output = OrdinaryRunResult>>>;
-pub(crate) type OrdinaryCallback = Rc<RefCell<Box<dyn FnMut(CallbackToken) -> OrdinaryFuture>>>;
+pub(super) type OrdinaryCallback = Rc<RefCell<Box<dyn FnMut(CallbackToken) -> OrdinaryFuture>>>;
 pub type WatchdogCallback = Rc<RefCell<Box<dyn FnMut(CallbackToken) -> WatchdogRunResult>>>;
 
 struct OwnedProviderHandle {

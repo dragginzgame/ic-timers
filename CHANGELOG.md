@@ -21,6 +21,9 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Use parent-scoped visibility for the internal ordinary callback, directive and
+  erased result declarations, fixing the reported `redundant_pub_crate` lint
+  without exposing them through the crate's public API.
 - Add positive and compile-fail API doctests covering all four ordinary entry
   points, crossed decisions/results and unavailable Once recurrence. Run doctests
   in the existing test and MSRV targets, and extend recording-Cargo gate fixtures
