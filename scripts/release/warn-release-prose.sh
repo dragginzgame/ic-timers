@@ -4,8 +4,8 @@ set -uo pipefail
 target_version="${1:-}"
 status_file="${2:-docs/status/current.md}"
 
-# This check is deliberately advisory. Structural release truth is enforced
-# elsewhere; free-form prose must never strand a release after version mutation.
+# This check is deliberately advisory. Package identity is enforced elsewhere;
+# free-form prose must never strand a release after version mutation.
 if [[ -z "${target_version}" ]]; then
     echo "warning: release-prose advisory has no target version; continuing" >&2
     exit 0

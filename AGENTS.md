@@ -2,6 +2,25 @@
 
 This file is normative for automated contributors.
 
+## Shared baseline and local overlay
+
+- Apply the [reviewed Shared Tooling baseline](docs/shared-tooling/AGENTS.md)
+  from revision `f4bd8657938836521493d3fda3e8387586d44504`. Its provenance and
+  refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
+  The remainder of this file is the IC Timers local overlay; a moving sibling
+  checkout is not authority.
+- Maintainer-approved validation exception: tests, builds, lint gates and
+  deployment validation are user-owned, including focused tests. Do not run
+  them without an explicit request. Read-only inspection, script syntax, diff,
+  documentation and cheap release-metadata checks remain allowed. This preserves
+  the maintainer's deployment workflow rather than duplicating its validation.
+- All release execution remains user-owned: version bumps, release commands,
+  staging, commits, tags, pushes and publication. An ordinary request to prepare
+  a release authorizes changelog preparation only.
+- The native `platform` substitute is test-only evidence, not simulated IC
+  recovery. Production platform paths and PocketIC evidence retain their own
+  contracts; never use a test configuration to change production guarantees.
+
 ## Session handoff
 
 - Read `docs/status/current.md` first in a new session. Continue from that
@@ -59,28 +78,29 @@ This file is normative for automated contributors.
 
 ## Delivery
 
-- Update `CHANGELOG.md` and the open release-line note for every meaningful
-  change without waiting for a separate changelog request.
+- Update the current `CHANGELOG.md` draft for every meaningful change without
+  waiting for a separate changelog request. Supporting design and evidence
+  belongs with its owner, not in a second release queue or local issue ledger.
 - Distinguish crate-impacting work from repository-only documentation,
   evidence, CI, and release-tooling updates. Repository-only work normally
   remains untagged and is bundled into the next code-bearing release because
   exact-pinned consumers must coordinate every package identity. However, an
   explicit maintainer-owned version-bump or release target is sufficient
-  authority to publish a repository-only patch: warn clearly, run the complete
-  release gate, and continue. Reject a subject with no changes. Do not
+  authority to publish a repository-only patch: warn clearly and retain the
+  complete user-operated release gate. Reject a subject with no changes. Do not
   manufacture crate impact merely to silence the advisory.
-- Once the maintainer names a target release, immediately create and maintain
-  an undated `## [x.y.z]` section directly below `## [Unreleased]`. Put that
-  release's notes there and keep `Unreleased` empty; do not leave named-release
-  notes only under `Unreleased`.
+- Keep one undated `## [Draft]` section at the top until the maintainer selects
+  a version. Do not choose another release line for each focused change.
+  Once a target is named, label that same top section `## [x.y.z]`.
+  Do not add `Unreleased` or a separate notes queue.
 - For a new release request, automated contributors prepare only the next
-  changelog section and release-line note. Keep the section undated and
-  `Unreleased` empty once a target is selected. Do not mutate Cargo versions
+  changelog section. Keep it undated. Do not mutate Cargo versions
   or lockfiles, stage changes, or run version-bump or release targets.
-  The user runs the matching bump target. The version helper must validate the
-  staged section and add its date
-  automatically without running tests. The user runs `release-verify` as part
-  of deployment; it must retain the normal CI,
+  The user runs the matching bump target. The version helper labels the current
+  draft and adds its date automatically without running tests. Changelog layout,
+  empty notes, or a missing chosen version must not block deployment; ambiguous
+  release selection is resolved during preparation. The user runs `release-verify`
+  as part of deployment; it must retain the normal CI,
   MSRV, nested-probe lint, watchdog PocketIC, and policy-cohort gates; it fails
   closed unless `POCKET_IC_BIN` matches the exact audited PocketIC version and
   hash. When no override is supplied, provision that pinned artifact in the
@@ -93,17 +113,9 @@ This file is normative for automated contributors.
   become stale, but it must remain advisory and run before version mutation.
   Never make interpreted prose a post-mutation release blocker.
 - Run full hosted Rust and MSRV validation on pull requests and `main`. A tag
-  push may use a smaller release-truth job only when it also verifies the exact
+  push may use a smaller package/tag job only when it also verifies the exact
   version tag and that the tagged commit is reachable from `main`; do not
   duplicate identical full builds for a same-SHA main-and-tag push.
-- Tests and deployment validation are user-owned. Do not run test suites,
-  build/lint gates, or `release-verify` unless the user explicitly requests
-  them. Cheap release-metadata and locked dependency checks remain part of
-  requested version preparation.
-- All release execution is user-owned: version bumps, `make release-*`,
-  deployment validation, Git staging, commits, tags, pushes and publication.
-  Automated contributors edit changelogs and release notes and leave these
-  commands to the user.
 - Combined release targets always run their requested version bump. Preparing
   a changelog must not advance the workspace version or turn a release target
   into a command that reuses an already prepared version.

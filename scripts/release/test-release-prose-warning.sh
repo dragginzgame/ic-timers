@@ -10,7 +10,7 @@ trap 'rm -f "${status_file}"; rmdir "${fixture_root}"' EXIT
 printf '%s\n' \
     '# Current status' \
     '' \
-    '- Workspace package version: `0.3.7`.' \
+    'Read Cargo for package identity.' \
     '' \
     '## Next action' \
     '' \

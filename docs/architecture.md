@@ -167,13 +167,17 @@ The module hierarchy keeps six responsibilities separate:
    arm kind flows from ordinary control through provider binding, and the
    non-empty set of callbacks to clear is also a closed value rather than
    independent booleans. The entry-local exact-claim predicate is shared by
-   callback acceptance, measurements, provider installation, and handle
-   consumption, so identity reuse cannot transfer handle authority to a stale
-   callback.
+   callback acceptance and fired-handle consumption. Measurements and provider
+   installation retain canonical claim lookup with their own error semantics;
+   identity reuse cannot transfer handle authority to a stale callback.
    Work acceptance checks the exact claim, policy, work role, generation and
    eligible state, then transitions to running state and returns that entry's
    correctly typed callback. Dispatch releases the registry borrow before
    invoking consumer work; there is no separate callback lookup or second borrow.
+   Ordinary and Watchdog work delivery consume the matching fired handle through
+   that selected entry before acceptance, without a separate registry consumption
+   pass. Scheduler delivery consumes its handle and detaches remaining capabilities
+   through one lookup before the Watchdog transition can remove a declaration.
    Duplicate or stale acceptance returns no callback and keeps its existing stale
    accounting. Installation and effect confirmation retain their own required
    role, generation and state checks.

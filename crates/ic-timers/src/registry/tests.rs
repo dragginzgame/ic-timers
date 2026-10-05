@@ -303,6 +303,10 @@ fn fresh_cancellation_preserves_retained_declarations_and_releases_transients() 
 }
 
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "One ownership matrix checks all provider roles, claims and slot generations."
+)]
 fn provider_roles_keep_paired_handles_distinct_and_reject_policy_mismatches() {
     let provider_count_before = crate::platform::timer_count();
     let mut registry = registry();
@@ -331,11 +335,24 @@ fn provider_roles_keep_paired_handles_distinct_and_reject_policy_mismatches() {
     }
 
     for token in &tokens {
-        let stale = CallbackToken {
-            callback_generation: token.callback_generation + 1,
-            ..token.clone()
-        };
-        registry.consume_provider_handle(&stale);
+        for stale in [
+            CallbackToken {
+                callback_generation: token.callback_generation + 1,
+                ..token.clone()
+            },
+            CallbackToken::new(
+                token.identity().clone(),
+                token.claim().claim_generation() + 1,
+                token.callback_generation,
+                token.role,
+            ),
+        ] {
+            registry
+                .entries
+                .get_mut(stale.identity())
+                .unwrap()
+                .consume_provider_handle(&stale);
+        }
         for role in [
             CallbackRole::OrdinaryWork,
             CallbackRole::WatchdogScheduler,
@@ -366,7 +383,11 @@ fn provider_roles_keep_paired_handles_distinct_and_reject_policy_mismatches() {
             assert_eq!(error, expected);
             crate::platform::clear_timer(rejected);
             if error == RegistryError::StaleCallback {
-                registry.consume_provider_handle(&malformed);
+                registry
+                    .entries
+                    .get_mut(malformed.identity())
+                    .unwrap()
+                    .consume_provider_handle(&malformed);
             }
             assert_eq!(registry.has_armed_wakeup(&ordinary), Ok(true));
             assert_eq!(registry.has_armed_wakeup(&watchdog), Ok(true));

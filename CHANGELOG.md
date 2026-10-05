@@ -2,7 +2,37 @@
 
 All notable changes to this project are recorded here.
 
-## [Unreleased]
+## [0.11.5]
+
+### Changed
+
+- Let ordinary and Watchdog work delivery consume the matching fired handle and
+  accept work through the same registry entry lookup. Remove the separate runtime
+  consumption pass while retaining exact claim, role, generation and state checks.
+- Combine Watchdog scheduler handle consumption and detachment in one registry
+  operation before its transition. Retain empty detachment for removed or
+  superseded claims and cleanup before terminal declaration removal.
+
+### Development
+
+- Adopt the reviewed Shared Tooling engineering baseline with an explicit local
+  overlay preserving maintainer ownership of tests and release execution.
+- Keep one versionless changelog draft until a release is selected. Let the
+  bump helper label and date it without requiring a separate versioned note or
+  handoff status marker. Remove changelog presentation from deployment gates,
+  retaining package, lockfile, tag and PocketIC validation.
+- Preserve metadata contents, modes and prior file absence during failed bumps;
+  reject symlinked or non-file outputs before mutation.
+- Stage only the five release metadata outputs, leaving member manifests and
+  unrelated documentation under the maintainer's separate staging ownership.
+  Consolidate repeated contributor testing and release-ownership instructions.
+- Extend provider-role fixtures with mismatched claims as well as generations,
+  and deliver the stale-identity callback through the native mock queue. Check that
+  it records stale delivery without consuming the replacement's handle or work.
+- Check that suspended after-completion work owns no provider wakeup.
+- Record scope and pending verification in the
+  [callback delivery evidence](docs/design/callback-delivery-ownership.md) and
+  [Shared Tooling adoption record](docs/shared-tooling.md).
 
 ## [0.11.4] - 2026-10-04
 

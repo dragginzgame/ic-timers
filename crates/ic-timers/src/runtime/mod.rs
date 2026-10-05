@@ -1030,10 +1030,7 @@ async fn dispatch_wakeup(token: CallbackToken) {
 )]
 async fn dispatch_ordinary(token: CallbackToken) {
     let measurement = CallbackMeasurementStart::capture();
-    let callback = with_registry_mut(|registry| {
-        registry.consume_provider_handle(&token);
-        Ok(registry.begin_ordinary(&token))
-    });
+    let callback = with_registry_mut(|registry| Ok(registry.begin_ordinary(&token)));
     let callback = match callback {
         Ok(Some(callback)) => callback,
         Ok(None) => return,
@@ -1068,15 +1065,9 @@ fn finish_ordinary_callback(token: &CallbackToken, result: TimerRunResult) {
 fn dispatch_watchdog_scheduler(token: &CallbackToken) {
     let measurement = CallbackMeasurementStart::capture();
     let dispatched = with_registry_mut(|registry| {
-        registry.consume_provider_handle(token);
-        let handles = match registry.take_provider_handles_for_claim(token.claim()) {
-            Ok(handles) => handles,
-            // An already removed or superseded claim is a normal stale delivery.
-            Err(RegistryError::UnknownRegistration | RegistryError::StaleRegistration) => {
-                ProviderHandles::default()
-            }
-            Err(error) => return Err(TimerError::from(error)),
-        };
+        let handles = registry
+            .take_watchdog_scheduler_handles(token)
+            .map_err(TimerError::from)?;
         Ok((
             registry.begin_watchdog_scheduler(token, platform::time_ns()),
             handles,
@@ -1093,10 +1084,7 @@ fn dispatch_watchdog_scheduler(token: &CallbackToken) {
 
 fn dispatch_watchdog_work(token: &CallbackToken) {
     let measurement = CallbackMeasurementStart::capture();
-    let callback = with_registry_mut(|registry| {
-        registry.consume_provider_handle(token);
-        Ok(registry.begin_watchdog_work(token))
-    });
+    let callback = with_registry_mut(|registry| Ok(registry.begin_watchdog_work(token)));
     let callback = match callback {
         Ok(Some(callback)) => callback,
         Ok(None) => return,

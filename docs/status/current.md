@@ -2,7 +2,7 @@
 
 # Current status
 
-Last updated: 2026-10-04
+Last updated: 2026-10-05
 
 ## Purpose
 
@@ -12,11 +12,15 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Release state
 
-- Workspace package version: `0.11.4`.
-- Cargo owns this version; the release helper updates the single projection above.
-  Dated changelog sections and release-note statuses own release state. Read those
-  sources to distinguish preparation from a completed release; do not duplicate
-  that distinction or current commit/tag references in handoff prose.
+- Read `[workspace.package].version` in [Cargo.toml](../../Cargo.toml) for
+  package identity. The top [changelog section](../../CHANGELOG.md) records the
+  accepted batch and remains versionless until the maintainer selects a target.
+  The maintainer's bump labels and dates it; a dated section alone does not prove
+  tagging, publication or deployment.
+- Apply the pinned [Shared Tooling baseline and local overlay](../../AGENTS.md).
+  Its [adoption record](../shared-tooling.md) scopes provenance and exceptions.
+  Historical release notes retain evidence; no new versioned note or mutable
+  handoff release marker is required for version preparation.
 - Public removals or incompatible semantic changes require the next minor line;
   private behavior-preserving simplifications may use a patch. See the
   [ordinary arbitration hard cut](../changelog/0.9.0.md).
@@ -66,8 +70,8 @@ references and validation belong in [release notes](../changelog/README.md),
   Provider installation and effect confirmation use the canonical mutable claim
   lookup with callback-specific stale-error translation; see the
   [claim lookup note](../changelog/0.10.21.md).
-  Late measurements and provider-handle consumption share that lookup while
-  retaining no-op behavior for missing or superseded claims; see the
+  Late measurements use that lookup while retaining no-op behavior for missing or
+  superseded claims; see the
   [lookup and detachment note](../changelog/0.10.22.md). Watchdog failure cleanup
   obtains paired handles through the entry's existing detachment owner, with
   provider clearing after the registry borrow is released. Ordinary terminal
@@ -128,6 +132,10 @@ references and validation belong in [release notes](../changelog/README.md),
   the validated entry. Dispatch releases that borrow before consumer work and
   has no second callback lookup. Context and completion authorization remain
   independent; see the [callback acceptance note](../changelog/0.11.2.md).
+  Work delivery consumes the matching fired handle through that same selected
+  entry. Watchdog scheduler consumption and remaining-handle detachment share
+  one lookup before the transition; see the
+  [callback delivery evidence](../design/callback-delivery-ownership.md).
 - Watchdog completion decides lifetime removal once from final inactive state
   and pending unregister, after selecting its successor or terminal transition;
   see the [Watchdog completion removal note](../changelog/0.10.10.md).
@@ -165,7 +173,7 @@ are recorded in the [0.10.12 note](../changelog/0.10.12.md).
 Inspected hosted validation for 0.9.4 is scoped in its
 [delivery note](../changelog/0.9.4.md). Release reports and Git references alone do
 not establish new hosted or PocketIC results. Each change's verification record
-belongs in its release note rather than a repeated handoff claim.
+belongs with its design/evidence owner rather than a repeated handoff claim.
 The native mock does not simulate IC rollback or provider heap allocation;
 maintained PocketIC subjects remain required for those claims. Tests, builds,
 lint gates and deployment validation remain user-owned.
@@ -177,9 +185,10 @@ verification is scoped in the [0.10.21 note](../changelog/0.10.21.md).
 
 ## Next action
 
-Establish release state from Cargo, the changelog and matching release notes,
-then continue the maintainer's requested work within the ownership boundaries
-above. Record each change and its scoped verification in the release notes.
+Establish package identity from Cargo and release state from actual Git and
+publication evidence, then continue the maintainer's requested work within the
+ownership boundaries above. Update the one changelog draft and record scoped
+verification with its owner. Do not select another release version during ordinary continuation.
 Leave Cargo versions, both lockfiles and Git release execution to the maintainer.
 Release commands always perform the requested bump; preparing notes does not
 advance the workspace version.

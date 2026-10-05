@@ -542,20 +542,29 @@ impl Entry {
         }
     }
 
-    fn provider_slot_mut(
-        &mut self,
-        role: CallbackRole,
-    ) -> Option<&mut Option<OwnedProviderHandle>> {
-        match role {
+    // The caller selected this entry by identity. Fired handles are consumed
+    // independently of callback acceptance, but only for the exact claim,
+    // policy role and owned slot generation.
+    fn consume_provider_handle(&mut self, token: &CallbackToken) {
+        if !self.owns_token_claim(token) {
+            return;
+        }
+        let slot = match token.role {
             CallbackRole::OrdinaryWork | CallbackRole::WatchdogScheduler
-                if role == self.kind.wakeup_role() =>
+                if token.role == self.kind.wakeup_role() =>
             {
-                Some(&mut self.wakeup)
+                &mut self.wakeup
             }
             CallbackRole::WatchdogWork if matches!(self.kind, EntryKind::Watchdog { .. }) => {
-                Some(&mut self.work)
+                &mut self.work
             }
-            _ => None,
+            _ => return,
+        };
+        if slot
+            .as_ref()
+            .is_some_and(|owned| owned.callback_generation == token.callback_generation)
+        {
+            *slot = None;
         }
     }
 
@@ -1105,9 +1114,11 @@ impl TimerRegistry {
         }
     }
 
-    /// Accept scheduled ordinary work and return its callback in one transition.
+    /// Consume this delivery's handle, then accept ordinary work and return its
+    /// callback.
     pub(crate) fn begin_ordinary(&mut self, token: &CallbackToken) -> Option<OrdinaryCallback> {
         let entry = self.entries.get_mut(token.identity())?;
+        entry.consume_provider_handle(token);
         if token.role != CallbackRole::OrdinaryWork || !entry.owns_token_claim(token) {
             entry.observability.counters_mut().record_stale_wakeup();
             return None;
@@ -1308,12 +1319,14 @@ impl TimerRegistry {
         })
     }
 
-    /// Accept dispatched Watchdog work and return its callback in one transition.
+    /// Consume this delivery's work handle, then accept Watchdog work and return
+    /// its callback.
     pub(crate) fn begin_watchdog_work(
         &mut self,
         token: &CallbackToken,
     ) -> Option<WatchdogCallback> {
         let entry = self.entries.get_mut(token.identity())?;
+        entry.consume_provider_handle(token);
         if token.role != CallbackRole::WatchdogWork || !entry.owns_token_claim(token) {
             entry.observability.counters_mut().record_stale_work();
             return None;
@@ -1679,19 +1692,22 @@ impl TimerRegistry {
         Ok(entry.take_provider_handles(identity))
     }
 
-    pub(crate) fn consume_provider_handle(&mut self, token: &CallbackToken) {
-        let Ok(entry) = self.entry_mut(token.claim()) else {
-            return;
+    /// Consume the delivered scheduler handle before detaching the remaining
+    /// capabilities. A scheduler transition can remove a transient declaration.
+    pub(crate) fn take_watchdog_scheduler_handles(
+        &mut self,
+        token: &CallbackToken,
+    ) -> Result<ProviderHandles, RegistryError> {
+        let entry = match self.entry_mut(token.claim()) {
+            Ok(entry) => entry,
+            // Removed or superseded claims are normal stale callback delivery.
+            Err(RegistryError::UnknownRegistration | RegistryError::StaleRegistration) => {
+                return Ok(ProviderHandles::default());
+            }
+            Err(error) => return Err(error),
         };
-        let Some(slot) = entry.provider_slot_mut(token.role) else {
-            return;
-        };
-        let matches_token = slot
-            .as_ref()
-            .is_some_and(|owned| owned.callback_generation == token.callback_generation);
-        if matches_token {
-            *slot = None;
-        }
+        entry.consume_provider_handle(token);
+        Ok(entry.take_provider_handles(token.identity()))
     }
 
     /// Confirm that the platform successfully applied one emitted arm effect.

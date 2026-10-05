@@ -128,7 +128,7 @@ shell-check:
 
 release-check:
 	bash scripts/release/test-finalize-changelog.sh
-	bash scripts/release/test-finalize-release-truth.sh
+	bash scripts/release/test-readme-version.sh
 	bash scripts/release/test-release-impact.sh
 	bash scripts/release/test-lockfiles.sh
 	bash scripts/release/test-release-prose-warning.sh
@@ -139,7 +139,7 @@ release-check:
 	bash scripts/ci/test-pocketic-verification.sh
 	bash scripts/ci/test-git-hook.sh
 	bash scripts/ci/test-repository-checks.sh
-	bash scripts/release/check-release-truth.sh
+	bash scripts/release/readme-version.sh --check
 
 provider-check:
 	bash scripts/ci/check-provider-boundary.sh
@@ -231,10 +231,8 @@ release-x:
 	+$(MAKE) --no-print-directory release-push
 
 release-stage:
-	@set -e; version="$$(bash scripts/release/workspace-version.sh)"; \
-		git add Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md \
-			crates/ic-timers/Cargo.toml docs/status/current.md \
-			"docs/changelog/$${version}.md"
+	@set -e; bash scripts/release/workspace-version.sh >/dev/null; \
+		git add Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md
 
 release-commit:
 	@bash scripts/release/commit-release.sh

@@ -3,7 +3,7 @@ set -euo pipefail
 
 version="$(bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh")"
 
-bash scripts/release/check-release-truth.sh
+bash scripts/release/readme-version.sh --check
 bash scripts/release/check-lockfiles.sh
 if ! git diff --quiet || [[ -n "$(git ls-files --others --exclude-standard)" ]]; then
     echo "error: commit or stage all release changes before creating v${version}" >&2

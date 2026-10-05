@@ -178,6 +178,7 @@ fn suspended_after_completion_uses_completion_time_and_exact_reconciliation() {
         registration.ensure_scheduled().unwrap();
         set_time(15);
         assert!(run_next_due());
+        assert!(!registration.has_armed_wakeup().unwrap());
         assert!(!run_next_due());
         assert_eq!(timer_count(), 0);
         if reconcile {
@@ -1087,16 +1088,18 @@ fn stale_reused_identity_callback_cannot_change_handles_or_measurements() {
 
     let before = timer_snapshot(replacement.identity()).unwrap().unwrap();
     let before_performance = before.observability().performance();
-    with_registry_mut(|registry| {
-        registry.consume_provider_handle(&old_token);
-        Ok(())
-    })
-    .expect("stale callback consumption should be harmless");
+    let stale_token = old_token.clone();
+    let _stale_delivery = platform::set_timer(Duration::ZERO, async move {
+        dispatch_wakeup(stale_token).await;
+    });
+    assert!(run_next_due(), "stale callback delivery should be harmless");
     // Exercise the accounting boundary directly; stale dispatch would return
     // before taking a measurement and cannot reach this ownership check.
     record_callback_measurements(&old_token, stale_measurement);
     let after = timer_snapshot(replacement.identity()).unwrap().unwrap();
     assert_eq!(after.observability().performance(), before_performance);
+    assert_eq!(after.observability().counters().stale_wakeups(), 1);
+    assert_eq!(after.observability().counters().work_started(), 0);
     assert!(
         replacement
             .has_armed_wakeup()

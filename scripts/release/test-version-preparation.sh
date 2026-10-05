@@ -6,7 +6,7 @@ temporary_root="$(mktemp -d)"
 trap 'rm -rf -- "${temporary_root}"' EXIT
 git init -q "${temporary_root}"
 mkdir -p "${temporary_root}"/{scripts/release,docs/status,docs/changelog,crates/ic-timers/src,testing/probe/src}
-for script in bump-version finalize-changelog finalize-release-truth check-release-truth \
+for script in bump-version finalize-changelog \
     warn-release-prose check-bump-impact check-lockfiles workspace-version readme-version; do
     cp "${repository_root}/scripts/release/${script}.sh" "${temporary_root}/scripts/release/"
 done
@@ -52,9 +52,7 @@ printf '%s\n' 'pub fn fixture() {}' > "${temporary_root}/testing/probe/src/lib.r
 cat > "${temporary_root}/CHANGELOG.md" <<'EOF'
 # Changelog
 
-## [Unreleased]
-
-## [0.1.1]
+## [Draft]
 
 - Fix terminal cleanup.
 
@@ -65,10 +63,8 @@ EOF
 cat > "${temporary_root}/docs/status/current.md" <<'EOF'
 # Current status
 
-- Workspace package version: `0.1.0`.
+Read Cargo for package identity. This handoff has no release marker.
 EOF
-printf '%s\n' '# 0.1.1' '' 'Status: prepared for 0.1.1; delivery is user-owned.' \
-    > "${temporary_root}/docs/changelog/0.1.1.md"
 printf '%s\n' '# Fixture' '| API line | `0.1` |' 'ic-timers = "=0.1.0"' \
     > "${temporary_root}/README.md"
 printf '%s\n' 'release-verify:' $'\t@touch unexpected-gate' $'\t@exit 1' \
@@ -80,7 +76,7 @@ cargo generate-lockfile --manifest-path testing/Cargo.toml --offline --quiet
 
 # Preflight validates metadata without running deployment tests or changing it.
 metadata_files=(Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md \
-    docs/status/current.md docs/changelog/0.1.1.md unrelated.txt)
+    docs/status/current.md unrelated.txt)
 chmod 0640 CHANGELOG.md
 sha256sum "${metadata_files[@]}" > original.sha256
 stat -c '%a %n' "${metadata_files[@]}" > original-modes
@@ -118,6 +114,18 @@ done
 rm original-manifest.toml rejected-manifest.toml
 bash scripts/release/bump-version.sh --check patch
 sha256sum --check --quiet original.sha256
+
+# Preparation must not replace a consumer-owned metadata symlink.
+mv README.md owned-readme.md
+ln -s owned-readme.md README.md
+if bash scripts/release/bump-version.sh patch >/dev/null 2>&1; then
+    echo 'error: version preparation accepted a symlinked metadata output' >&2
+    exit 1
+fi
+test -L README.md
+sha256sum --check --quiet original.sha256
+rm README.md
+mv owned-readme.md README.md
 
 # Classification must reach the bump boundary, including failure and advisory.
 for impact in none unexpected error; do
@@ -164,17 +172,14 @@ for target in release-patch release-minor release-major release-x; do
         release-major) requested=major; candidate=1.0.0 ;;
         release-x) requested=0.4.2; candidate=0.4.2 ;;
     esac
-    sed "s/0.1.1/${candidate}/g" original-changelog.md > candidate-changelog.md
-    if [[ "${candidate}" != 0.1.1 ]]; then
-        printf '# %s\n\nStatus: prepared for %s; delivery is user-owned.\n' \
-            "${candidate}" "${candidate}" > "docs/changelog/${candidate}.md"
-    fi
+    cp original-changelog.md candidate-changelog.md
     for scenario in empty-notes failed-gate success repeat-success; do
         cp candidate-changelog.md CHANGELOG.md
         case "${scenario}" in
             empty-notes)
                 sed -i 's/^- Fix terminal cleanup\.$//' CHANGELOG.md
-                expected=("preflight --check ${requested}") ;;
+                expected=("preflight --check ${requested}" gate "bump ${requested}"
+                    release-stage release-commit release-push) ;;
             failed-gate) expected=("preflight --check ${requested}" gate) ;;
             *) expected=("preflight --check ${requested}" gate "bump ${requested}"
                 release-stage release-commit release-push) ;;
@@ -182,15 +187,16 @@ for target in release-patch release-minor release-major release-x; do
         fail_gate=0
         if [[ "${scenario}" == failed-gate ]]; then fail_gate=1; fi
         if "${fixture_make[@]}" "${target}" "VERSION=${candidate}" "FAIL_GATE=${fail_gate}" >/dev/null 2>&1; then
-            if [[ "${scenario}" == empty-notes || "${scenario}" == failed-gate ]]; then
+            if [[ "${scenario}" == failed-gate ]]; then
                 echo "error: ${target} accepted ${scenario}" >&2
                 exit 1
             fi
-        elif [[ "${scenario}" == success || "${scenario}" == repeat-success ]]; then
+        elif [[ "${scenario}" != failed-gate ]]; then
             echo "error: ${target} rejected valid preflight" >&2
             exit 1
         fi
-        mapfile -t actual < release-events
+        actual=()
+        while IFS= read -r event; do actual[${#actual[@]}]="${event}"; done < release-events
         if [[ "${actual[*]}" != "${expected[*]}" ]]; then
             echo "error: ${target} ${scenario} ran unexpected phases: ${actual[*]}" >&2
             exit 1
@@ -199,7 +205,6 @@ for target in release-patch release-minor release-major release-x; do
         cp original-changelog.md CHANGELOG.md
         sha256sum --check --quiet original.sha256
     done
-    if [[ "${candidate}" != 0.1.1 ]]; then rm "docs/changelog/${candidate}.md"; fi
 done
 if "${fixture_make[@]}" release-x VERSION= >/dev/null 2>&1; then
     echo 'error: exact release accepted an empty target' >&2
@@ -235,16 +240,16 @@ fi
 exec "${IC_TIMERS_FIXTURE_CARGO}" "$@"
 EOF
 chmod +x bin/cargo
-cp scripts/release/check-release-truth.sh scripts/release/original-release-truth.sh
-cat > scripts/release/check-release-truth.sh <<'EOF'
+cp scripts/release/readme-version.sh scripts/release/original-readme-version.sh
+cat > scripts/release/readme-version.sh <<'EOF'
 #!/usr/bin/env bash
-if [[ "${FIXTURE_FAIL_STAGE:-}" == release-truth ]]; then
-    echo 'injected release-truth failure' >&2
+if [[ "${FIXTURE_FAIL_STAGE:-}" == readme-update && "${1:-}" == --update ]]; then
+    echo 'injected README update failure' >&2
     exit 1
 fi
-bash scripts/release/original-release-truth.sh
+bash scripts/release/original-readme-version.sh "$@"
 EOF
-for stage in root-update testing-update root-metadata testing-metadata release-truth interrupt; do
+for stage in readme-update root-update testing-update root-metadata testing-metadata interrupt; do
     if output="$(PATH="${temporary_root}/bin:${PATH}" FIXTURE_FAIL_STAGE="${stage}" \
         bash scripts/release/bump-version.sh patch 2>&1)"; then
         echo "error: version preparation accepted injected ${stage} failure" >&2
@@ -258,7 +263,18 @@ for stage in root-update testing-update root-metadata testing-metadata release-t
     stat -c '%a %n' "${metadata_files[@]}" > restored-modes
     cmp original-modes restored-modes
 done
-mv scripts/release/original-release-truth.sh scripts/release/check-release-truth.sh
+mv scripts/release/original-readme-version.sh scripts/release/readme-version.sh
+
+# An absent changelog is created during preparation and removed by rollback.
+mv CHANGELOG.md existing-changelog.md
+if PATH="${temporary_root}/bin:${PATH}" FIXTURE_FAIL_STAGE=root-update \
+    bash scripts/release/bump-version.sh patch >/dev/null 2>&1; then
+    echo 'error: version preparation accepted a failed update with no changelog' >&2
+    exit 1
+fi
+test ! -e CHANGELOG.md
+mv existing-changelog.md CHANGELOG.md
+sha256sum --check --quiet original.sha256
 
 # A failed prose advisory still runs before mutation and cannot block the bump.
 mv scripts/release/warn-release-prose.sh scripts/release/original-warn-release-prose.sh
@@ -294,6 +310,7 @@ fi
 
 # Staging selects current release metadata and excludes unrelated adoption work.
 cp "${repository_root}/Makefile" Makefile
+printf '\n[features]\nmaintainer_fixture = []\n' >> crates/ic-timers/Cargo.toml
 mkdir -p docs/adoption
 printf '%s\n' '# Unrelated adoption edits' > docs/adoption/canic.md
 cp Cargo.toml valid-stage-manifest.toml
@@ -307,27 +324,26 @@ for target in version release-stage; do
 done
 mv valid-stage-manifest.toml Cargo.toml
 make --no-print-directory release-stage >/dev/null
-expected_staged=(CHANGELOG.md Cargo.lock Cargo.toml README.md crates/ic-timers/Cargo.toml
-    docs/changelog/0.1.1.md docs/status/current.md testing/Cargo.lock)
-mapfile -t staged < <(git diff --cached --name-only)
+expected_staged=(CHANGELOG.md Cargo.lock Cargo.toml README.md testing/Cargo.lock)
+staged=()
+while IFS= read -r path; do staged[${#staged[@]}]="${path}"; done < <(git diff --cached --name-only)
 if [[ "${staged[*]}" != "${expected_staged[*]}" ]]; then
     echo "error: release staging selected unexpected paths: ${staged[*]}" >&2
     exit 1
 fi
 grep -Fqx '# Unrelated adoption edits' docs/adoption/canic.md
+grep -Fqx 'maintainer_fixture = []' crates/ic-timers/Cargo.toml
 
 # A same-named branch is harmless; only an existing exact release tag blocks.
 git config user.name 'ic-timers release test'
 git config user.email 'release-test@example.invalid'
 git commit -qm fixture
 git branch v0.1.2
-sed -i '/^## \[Unreleased\]$/a\
-\n## [0.1.2]\n\n- Next fixture release.' CHANGELOG.md
-printf '%s\n' '# 0.1.2' '' 'Status: prepared for 0.1.2; delivery is user-owned.' > docs/changelog/0.1.2.md
+perl -0pi -e 's/^(## \[)/## [Draft]\n\n- Next fixture release.\n\n$1/m' CHANGELOG.md
 bash scripts/release/bump-version.sh --check patch >/dev/null
 git tag v0.1.2
-sha256sum Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md \
-    docs/status/current.md docs/changelog/0.1.2.md > tagged.sha256
+sha256sum Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md \
+    docs/status/current.md > tagged.sha256
 if output="$(bash scripts/release/bump-version.sh --check patch 2>&1)"; then
     echo 'error: version preflight accepted an existing release tag' >&2
     exit 1

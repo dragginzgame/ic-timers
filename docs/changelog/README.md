@@ -1,7 +1,10 @@
-# Release-line notes
+# Historical release evidence
 
-Release-line notes track unfinished design and evidence across multiple
-changes. User-visible completed behavior belongs in the root `CHANGELOG.md`.
+These historical notes retain their recorded design and evidence scope. They
+are not a work tracker or a second changelog queue. User-visible changes belong
+in the one current root [changelog draft](../../CHANGELOG.md); a new versioned
+note is not a release prerequisite. Current callback delivery evidence belongs
+with its [design owner](../design/callback-delivery-ownership.md).
 
 - [0.1 line](0.1.md)
 - [0.2 design slice](0.2.md)
