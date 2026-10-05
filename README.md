@@ -1,22 +1,22 @@
-![IC Timers — Internet Computer helper library](docs/assets/ic-timers-readme-header.svg)
+![IC Timers — Internet Computer helper library](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-readme-header.svg)
 
 <!-- helper-navigation:start -->
 <p align="center">
-  <a href="https://github.com/dragginzgame/canic"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/helper-icons/canic.svg" width="18" height="18" alt=""> <strong>canic</strong></a>
+  <a href="https://github.com/dragginzgame/canic"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/icons/canic.svg" width="18" height="18" alt=""> <strong>canic</strong></a>
   &nbsp;&middot;&nbsp;
-  <a href="https://github.com/dragginzgame/icydb"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/helper-icons/icydb.svg" width="18" height="18" alt=""> <strong>icydb</strong></a>
+  <a href="https://github.com/dragginzgame/icydb"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/icons/icydb.svg" width="18" height="18" alt=""> <strong>icydb</strong></a>
   &nbsp;&middot;&nbsp;
-  <a href="https://github.com/dragginzgame/ic-timers"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/helper-icons/ic-timers.svg" width="18" height="18" alt=""> <strong>ic-timers</strong></a>
+  <a href="https://github.com/dragginzgame/ic-timers"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/icons/ic-timers.svg" width="18" height="18" alt=""> <strong>ic-timers</strong></a>
   &nbsp;&middot;&nbsp;
-  <a href="https://github.com/dragginzgame/ic-memory"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/helper-icons/ic-memory.svg" width="18" height="18" alt=""> <strong>ic-memory</strong></a>
+  <a href="https://github.com/dragginzgame/ic-memory"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/icons/ic-memory.svg" width="18" height="18" alt=""> <strong>ic-memory</strong></a>
   &nbsp;&middot;&nbsp;
-  <a href="https://github.com/dragginzgame/ic-query"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/helper-icons/ic-query.svg" width="18" height="18" alt=""> <strong>ic-query</strong></a>
+  <a href="https://github.com/dragginzgame/ic-query"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/icons/ic-query.svg" width="18" height="18" alt=""> <strong>ic-query</strong></a>
   &nbsp;&middot;&nbsp;
-  <a href="https://github.com/dragginzgame/ic-backup"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/helper-icons/ic-backup.svg" width="18" height="18" alt=""> <strong>ic-backup</strong></a>
+  <a href="https://github.com/dragginzgame/ic-backup"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/icons/ic-backup.svg" width="18" height="18" alt=""> <strong>ic-backup</strong></a>
   &nbsp;&middot;&nbsp;
-  <a href="https://github.com/dragginzgame/ic-blob-storage"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/helper-icons/ic-blob-storage.svg" width="18" height="18" alt=""> <strong>ic-blob-storage</strong></a>
+  <a href="https://github.com/dragginzgame/ic-blob-storage"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/icons/ic-blob-storage.svg" width="18" height="18" alt=""> <strong>ic-blob-storage</strong></a>
   &nbsp;&middot;&nbsp;
-  <a href="https://github.com/dragginzgame/ic-testkit"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/helper-icons/ic-testkit.svg" width="18" height="18" alt=""> <strong>ic-testkit</strong></a>
+  <a href="https://github.com/dragginzgame/ic-testkit"><img src="https://raw.githubusercontent.com/dragginzgame/shared-assets/main/icons/ic-testkit.svg" width="18" height="18" alt=""> <strong>ic-testkit</strong></a>
 </p>
 <!-- helper-navigation:end -->
 
@@ -51,7 +51,7 @@ keeps the lasting record of what needs to happen and rebuilds its timers after
 an upgrade. Its Watchdog mode can preserve another attempt when work fails,
 but it does not promise that a task will happen exactly once.
 
-![Application tasks flow through IC Timers to the Internet Computer timer system and one shared status view](docs/assets/ic-timers-how-it-helps.svg)
+![Application tasks flow through IC Timers to the Internet Computer timer system and one shared status view](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-how-it-helps.svg)
 
 ## Technical overview
 
@@ -68,7 +68,7 @@ It supports one-time work, work that repeats after successful completion, and
 Watchdog work that prepares another attempt before it starts. It also reports
 timer status, outcomes, and bounded resource measurements.
 
-![Application needs matched to IC Timers scheduling and observation capabilities](docs/assets/ic-timers-application-needs.svg)
+![Application needs matched to IC Timers scheduling and observation capabilities](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-application-needs.svg)
 
 ## Why wrap `ic-cdk-timers`?
 
@@ -76,7 +76,7 @@ timer status, outcomes, and bounded resource measurements.
 callback. The operational problem changes when a framework, a database, and
 application code all schedule work independently.
 
-![Separate component timers compared with one shared IC Timers registry and status view](docs/assets/ic-timers-shared-registry.svg)
+![Separate component timers compared with one shared IC Timers registry and status view](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-shared-registry.svg)
 
 We thought this wrapper was worthwhile because these are canister-wide
 questions:
@@ -99,7 +99,7 @@ repeats a task after it finishes successfully. `Watchdog` prepares another
 attempt before starting important work. The timeline below shows the
 difference.
 
-![Timelines showing when Once, AfterCompletion, and Watchdog schedule their work and successor](docs/assets/ic-timers-policy-timelines.svg)
+![Timelines showing when Once, AfterCompletion, and Watchdog schedule their work and successor](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-policy-timelines.svg)
 
 `Watchdog` deliberately uses two messages. The small scheduler callback
 validates its generation, arms the next cadence successor, queues immediate
@@ -194,7 +194,7 @@ registration functions.
 
 ## Runtime ownership
 
-![Ownership and control flow from durable application state through the IC Timers runtime to its private platform boundary](docs/assets/ic-timers-runtime-ownership.svg)
+![Ownership and control flow from durable application state through the IC Timers runtime to its private platform boundary](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-runtime-ownership.svg)
 
 The registry is volatile. It stores no stable timer policy, provider handle,
 generation, snapshot, epoch, or application recovery authority. After an
@@ -215,7 +215,7 @@ when durable demand supplies a deadline. See the
 
 ## Truthful observability
 
-![Timer state, outcomes, instruction use, memory growth, and registration identity flowing into one read-only operational snapshot](docs/assets/ic-timers-observability.svg)
+![Timer state, outcomes, instruction use, memory growth, and registration identity flowing into one read-only operational snapshot](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-observability.svg)
 
 `timer_snapshot` and `timer_inventory` return inert values; snapshots never
 become mutation authority. The inventory carries the runtime epoch even when
@@ -305,7 +305,7 @@ observation as a check-then-arm guard.
 
 ## Lifecycle and shared-registry rules
 
-![Upgrade lifecycle from durable application state through timer reconstruction to resumed background work](docs/assets/ic-timers-upgrade-lifecycle.svg)
+![Upgrade lifecycle from durable application state through timer reconstruction to resumed background work](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-upgrade-lifecycle.svg)
 
 1. The canister's existing lifecycle owner calls `initialize_runtime()`.
 2. Frameworks and applications reconcile their retained declarations from

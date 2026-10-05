@@ -1,4 +1,4 @@
-![IC Timers — Internet Computer helper library](../assets/ic-timers-readme-header.svg)
+![IC Timers — Internet Computer helper library](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-readme-header.svg)
 
 # Observability and Canic parity contract
 
@@ -20,7 +20,7 @@ measure the complete Internet Computer message, or identify the exact amount
 of memory still in use. A task that crashes or runs out of instructions cannot
 record a completed measurement after it stops.
 
-![Timer state, outcomes, instruction use, memory growth, and registration identity flowing into one read-only operational snapshot](../assets/ic-timers-observability.svg)
+![Timer state, outcomes, instruction use, memory growth, and registration identity flowing into one read-only operational snapshot](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-observability.svg)
 
 ## Purpose
 

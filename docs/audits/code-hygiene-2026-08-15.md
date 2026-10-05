@@ -1,4 +1,4 @@
-![IC Timers — Internet Computer helper library](../assets/ic-timers-readme-header.svg)
+![IC Timers — Internet Computer helper library](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-readme-header.svg)
 
 # Code-hygiene and module-hierarchy audit — 2026-08-15
 

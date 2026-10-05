@@ -1,4 +1,4 @@
-![IC Timers — Internet Computer helper library](docs/assets/ic-timers-readme-header.svg)
+![IC Timers — Internet Computer helper library](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-readme-header.svg)
 
 # Safety boundary
 
@@ -18,7 +18,7 @@ work. This means another attempt can remain scheduled if that work crashes or
 uses too many instructions. It does not guarantee that work happens exactly
 once, and it cannot recover if its own small scheduling step fails.
 
-![Watchdog prepares another attempt before queueing work, so the prepared attempt remains if that work fails](docs/assets/ic-timers-watchdog-failure.svg)
+![Watchdog prepares another attempt before queueing work, so the prepared attempt remains if that work fails](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-watchdog-failure.svg)
 
 The application is still responsible for:
 
@@ -33,7 +33,7 @@ platform limits. Its own timer and handle limits do not place a fixed limit on
 the underlying provider's memory use or guarantee that every scheduled task
 will be delivered.
 
-![The application, IC Timers, and the platform provider each own a different part of timer safety](docs/assets/ic-timers-safety-responsibilities.svg)
+![The application, IC Timers, and the platform provider each own a different part of timer safety](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-safety-responsibilities.svg)
 
 `ic-timers` is a higher-level wrapper around `ic-cdk-timers`. The CDK remains
 the platform timer provider; this crate owns only the coordination it can

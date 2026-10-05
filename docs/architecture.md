@@ -1,4 +1,4 @@
-![IC Timers — Internet Computer helper library](assets/ic-timers-readme-header.svg)
+![IC Timers — Internet Computer helper library](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-readme-header.svg)
 
 # Architecture
 
@@ -18,7 +18,7 @@ coordinates callbacks and scheduling, while one shared registry holds timer
 names, states, counters, callbacks, and provider handles. Only the private
 platform boundary talks directly to `ic-cdk-timers`.
 
-![Ownership and control flow from durable application state through the IC Timers runtime to its private platform boundary](assets/ic-timers-runtime-ownership.svg)
+![Ownership and control flow from durable application state through the IC Timers runtime to its private platform boundary](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-runtime-ownership.svg)
 
 The sections below describe these boundaries in implementation-level detail.
 
@@ -31,7 +31,7 @@ nor `snapshot` is a consumer import path.
 
 The module hierarchy keeps six responsibilities separate:
 
-![The schedule, snapshot, and control modules connect to the registry; the runtime coordinates callbacks and effects through the private platform boundary](assets/ic-timers-architecture-modules.svg)
+![The schedule, snapshot, and control modules connect to the registry; the runtime coordinates callbacks and effects through the private platform boundary](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-architecture-modules.svg)
 
 1. `schedule` owns validated cadence, requested schedules, post-run
    directives, and checked nanosecond/deadline conversion. Explicit requests
