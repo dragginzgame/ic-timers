@@ -1088,6 +1088,8 @@ fn dispatch_wakeup(token: CallbackToken) -> impl Future<Output = ()> {
             CallbackRole::WatchdogWork => {}
         }
         delivery.completed = true;
+        // Keep the whole guard captured until normal completion.
+        drop(delivery);
     }
 }
 
@@ -1102,22 +1104,19 @@ impl Drop for OrdinaryDelivery {
             return;
         }
         let removed = RUNTIME.with(|runtime| {
-            let mut runtime = match runtime.try_borrow_mut() {
-                Ok(runtime) => runtime,
-                Err(_) => {
-                    // Rejected binding may clear a detached scheduled handle
-                    // while another shared borrow exists. Its transition owns
-                    // cleanup; do not turn that typed failure into a Drop trap.
-                    let runtime = runtime.try_borrow().map_err(|_| TimerError::RuntimeBusy)?;
-                    return if runtime
-                        .as_ref()
-                        .is_some_and(|registry| registry.owns_ordinary_delivery(&self.token))
-                    {
-                        Err(TimerError::RuntimeBusy)
-                    } else {
-                        Ok(None)
-                    };
-                }
+            let Ok(mut runtime) = runtime.try_borrow_mut() else {
+                // Rejected binding may clear a detached scheduled handle
+                // while another shared borrow exists. Its transition owns
+                // cleanup; do not turn that typed failure into a Drop trap.
+                let runtime = runtime.try_borrow().map_err(|_| TimerError::RuntimeBusy)?;
+                return if runtime
+                    .as_ref()
+                    .is_some_and(|registry| registry.owns_ordinary_delivery(&self.token))
+                {
+                    Err(TimerError::RuntimeBusy)
+                } else {
+                    Ok(None)
+                };
             };
             Ok(runtime
                 .as_mut()

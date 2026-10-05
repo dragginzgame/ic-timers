@@ -663,6 +663,8 @@ fn suspended_after_completion_uses_completion_time_and_exact_reconciliation() {
             Some(if reconcile { 50 } else { 35 })
         );
         assert_eq!(timer_count(), 1);
+        registration.unregister().unwrap();
+        assert_eq!(timer_count(), 0);
     }
 }
 
