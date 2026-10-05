@@ -22,8 +22,19 @@ references and validation belong in [release notes](../changelog/README.md),
   Historical release notes retain evidence; no new versioned note or mutable
   handoff release marker is required for version preparation.
   Shared measurement arithmetic is now explicitly integrated from `ic-metrics`;
-  attribution and registration identity remain local. Standard SemVer releases
+  attribution and registration identity remain local. Its exact dependency and
+  both lockfiles now select local ic-metrics 0.1.1 after the maintainer's tag. Both
+  locked offline metadata checks pass; the focused library check reports an
+  unused-assignment warning at `runtime/mod.rs:1090` in delivery-retirement work.
+  This does not establish warning-free or PocketIC qualification. Registry
+  [adoption](https://github.com/dragginzgame/ic-timers/issues/9) remains separate.
+  Standard SemVer releases
   use the snapshot runner and exact-version resume; no release was executed.
+  Standard entry points now preserve and restart preflight/validation attempts
+  that never reached version preparation, rerunning the full gate on current
+  source instead of blocking on stale intent. Prepared attempts still require
+  exact resume. Retry fixtures remain unexecuted; source/syntax scope belongs
+  in the [release guide](../releasing.md).
   The reviewed baseline is now `b8537873ac124ad17b30e32aa23e9006a3e6ec21`, with
   shared rules in `DRAGGINZGAME.md`. Maintainer-owned validation and release
   exceptions remain explicit; the [local host matrix](../releasing.md#host-support)

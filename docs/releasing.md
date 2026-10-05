@@ -244,6 +244,25 @@ minor`, `make major`, or `make bump-x VERSION=...` when ready to update the
 workspace version and both lockfiles, and `make release-stage` to stage release
 metadata.
 
+Standard commands may be rerun after a preflight or validation failure, while
+Cargo still has the previous version. The local entry point preserves the old
+intent record under `.git/release-state/` and starts a fresh attempt through the
+pinned runner, with the current source, date and complete gate. This also handles
+source fixes committed after a failed gate. These records are internal recovery
+state, not a plan the maintainer must prepare. The admission uses the runner's
+release lock and rejects malformed records or evidence of staging. Attempts
+that reached preparation retain exact-version recovery:
+
+```text
+make release-resume VERSION=0.13.0
+```
+
+The pre-preparation retry fixtures use a runner stub and cover all three kinds,
+both eligible phases, retained records, repeated gate failure, invalid records,
+symlinks, concurrent locks and rejection from preparation onward. Source and
+shell syntax were reviewed; fixture execution and native macOS qualification
+remain maintainer-owned and pending.
+
 The user-operated release targets run the complete release gate, update the
 workspace version plus both the root and nested testing lockfiles, commit,
 create an annotated `vX.Y.Z` tag, and push with tags. If the workspace version

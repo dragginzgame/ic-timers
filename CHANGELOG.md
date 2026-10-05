@@ -8,7 +8,8 @@ All notable changes to this project are recorded here.
 
 - Re-export `ic_metrics::MeasurementSummary` as the canonical summary while retaining
   the existing snapshot accessors, callback attribution and registration identity.
-  The dependency is explicit local extraction wiring pending package publication.
+  The exact dependency selects local `ic-metrics 0.1.1` and matches both lockfiles;
+  registry publication remains a separate adoption prerequisite.
 - Standardize the three SemVer release commands on the reviewed Shared Tooling
   runner, including exact-version resume and an atomic push of the selected branch
   and tag. Release preparation uses UTC dates and preserves both locked dependency selections
@@ -28,6 +29,10 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Show the repository name first in VS Code window titles, followed by the active filename.
+- Allow standard release commands to retry attempts stopped before version
+  preparation. Preserve the previous attempt and rerun the complete gate against
+  the current source; prepared releases retain exact-version recovery.
 - Use exact `ic-testkit` 0.17.3 for the host-side real-canister suites, with
   bounded startup and caller-owned servers for fresh IC instances. Update the
   strict PocketIC artifact gate to 16.0.0 on Linux and both macOS architectures;

@@ -15,8 +15,19 @@ The shared runner owns the three standard SemVer entry points, ordering, Git
 operations and exact-version recovery. Consumer adapters retain the five release
 metadata outputs, package identity, README projection, both lockfiles and the
 complete PocketIC release gate. Publishing remains a separate command.
+The local standard entry point archives only preflight/validation attempts
+before dispatching a fresh run through the unchanged pinned runner. Its release
+lock protects retry admission; preparation and later phases keep exact-version
+recovery. The [local procedure](releasing.md) owns this narrower retry behavior.
 The [host matrix](releasing.md#host-support) owns native qualification: Linux
 syntax and command-stub passes do not qualify macOS or live IC execution.
+
+The exact local ic-metrics pin and both lockfiles now select the maintainer-tagged
+0.1.1 package. Locked offline metadata resolves one canonical package in both
+workspaces. The focused library check completes with an unused-assignment warning
+in separate delivery-retirement work (`runtime/mod.rs:1090`); it is not a
+warning-free qualification of that work. The temporary path remains pending
+[registry adoption](https://github.com/dragginzgame/ic-timers/issues/9).
 
 Focused measurement tests passed for role-specific accounting and registration
 identity during extraction. Subsequent unrelated delivery-retirement changes
