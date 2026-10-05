@@ -78,18 +78,48 @@ cargo generate-lockfile --manifest-path testing/Cargo.toml --offline --quiet
 metadata_files=(Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md \
     docs/status/current.md unrelated.txt)
 chmod 0640 CHANGELOG.md
-sha256sum "${metadata_files[@]}" > original.sha256
-stat -c '%a %n' "${metadata_files[@]}" > original-modes
+
+# Keep actual bytes and modes rather than separate checksum and mode manifests.
+capture_metadata() {
+    local snapshot="${1}"
+    local path
+    for path in "${metadata_files[@]}"; do
+        mkdir -p "${snapshot}/$(dirname "${path}")"
+        cp -p "${path}" "${snapshot}/${path}"
+    done
+}
+
+assert_metadata_unchanged() {
+    perl -MFile::Compare=compare -e '
+        my $snapshot = shift @ARGV;
+        for my $path (@ARGV) {
+            my $original = "$snapshot/$path";
+            compare($original, $path) == 0
+                or die "error: fixture file contents changed: $path\n";
+            my @before = stat $original;
+            my @after = stat $path;
+            @before && @after or die "error: cannot read fixture mode: $path\n";
+            ($before[2] & 07777) == ($after[2] & 07777)
+                or die "error: fixture file mode changed: $path\n";
+        }
+    ' "${1}" "${metadata_files[@]}"
+}
+
+capture_metadata original-files
 # Version ownership is table-scoped and rejects ambiguity before mutation.
 cp Cargo.toml original-manifest.toml
 for invalid in missing-table missing-version duplicate-table duplicate-version leading-zero; do
     cp original-manifest.toml Cargo.toml
     case "${invalid}" in
-        missing-table) sed -i 's/\[workspace.package\]/[workspace.metadata]/' Cargo.toml ;;
-        missing-version) sed -i '/^\[workspace.package\]/,$ { /^[[:space:]]*version =/d; }' Cargo.toml ;;
+        missing-table) perl -pi -e 's/\[workspace\.package\]/[workspace.metadata]/' Cargo.toml ;;
+        missing-version)
+            perl -ni -e '$package ||= /^\[workspace\.package\]/;
+                print unless $package && /^\s*version =/' Cargo.toml ;;
         duplicate-table) printf '%s\n' '[workspace.package]' 'version = "0.1.0"' >> Cargo.toml ;;
         duplicate-version) printf '%s\n' 'version = "0.1.0"' >> Cargo.toml ;;
-        leading-zero) sed -i '/^\[workspace.package\]/,$ s/"0.1.0"/"00.1.0"/' Cargo.toml ;;
+        leading-zero)
+            perl -pi -e '$package ||= /^\[workspace\.package\]/;
+                s/"0\.1\.0"/"00.1.0"/ if $package' Cargo.toml ;;
     esac
     cp Cargo.toml rejected-manifest.toml
     for operation in read set; do
@@ -113,7 +143,7 @@ for arguments in '0.1.7 0.1.1' '0.1.0 00.1.1'; do
 done
 rm original-manifest.toml rejected-manifest.toml
 bash scripts/release/bump-version.sh --check patch
-sha256sum --check --quiet original.sha256
+assert_metadata_unchanged original-files
 
 # Preparation must not replace a consumer-owned metadata symlink.
 mv README.md owned-readme.md
@@ -123,7 +153,7 @@ if bash scripts/release/bump-version.sh patch >/dev/null 2>&1; then
     exit 1
 fi
 test -L README.md
-sha256sum --check --quiet original.sha256
+assert_metadata_unchanged original-files
 rm README.md
 mv owned-readme.md README.md
 
@@ -133,7 +163,7 @@ for impact in none unexpected error; do
         echo "error: preflight accepted ${impact} release impact" >&2
         exit 1
     fi
-    sha256sum --check --quiet original.sha256
+    assert_metadata_unchanged original-files
 done
 output="$(FIXTURE_RELEASE_IMPACT=repository bash scripts/release/bump-version.sh --check patch 2>&1)"
 if [[ "${output}" != *'continuing because the maintainer invoked an explicit version bump'* ]]; then
@@ -177,7 +207,7 @@ for target in release-patch release-minor release-major release-x; do
         cp candidate-changelog.md CHANGELOG.md
         case "${scenario}" in
             empty-notes)
-                sed -i 's/^- Fix terminal cleanup\.$//' CHANGELOG.md
+                perl -pi -e 's/^- Fix terminal cleanup\.$//' CHANGELOG.md
                 expected=("preflight --check ${requested}" gate "bump ${requested}"
                     release-stage release-commit release-push) ;;
             failed-gate) expected=("preflight --check ${requested}" gate) ;;
@@ -195,15 +225,15 @@ for target in release-patch release-minor release-major release-x; do
             echo "error: ${target} rejected valid preflight" >&2
             exit 1
         fi
-        actual=()
-        while IFS= read -r event; do actual[${#actual[@]}]="${event}"; done < release-events
-        if [[ "${actual[*]}" != "${expected[*]}" ]]; then
-            echo "error: ${target} ${scenario} ran unexpected phases: ${actual[*]}" >&2
+        printf '%s\n' "${expected[@]}" > expected-release-events
+        if ! cmp -s expected-release-events release-events; then
+            cat release-events >&2
+            echo "error: ${target} ${scenario} ran unexpected phases" >&2
             exit 1
         fi
         rm release-events
         cp original-changelog.md CHANGELOG.md
-        sha256sum --check --quiet original.sha256
+        assert_metadata_unchanged original-files
     done
 done
 if "${fixture_make[@]}" release-x VERSION= >/dev/null 2>&1; then
@@ -259,9 +289,7 @@ for stage in readme-update root-update testing-update root-metadata testing-meta
         echo "error: version preparation did not roll back ${stage}: ${output}" >&2
         exit 1
     fi
-    sha256sum --check --quiet original.sha256
-    stat -c '%a %n' "${metadata_files[@]}" > restored-modes
-    cmp original-modes restored-modes
+    assert_metadata_unchanged original-files
 done
 mv scripts/release/original-readme-version.sh scripts/release/readme-version.sh
 
@@ -274,7 +302,7 @@ if PATH="${temporary_root}/bin:${PATH}" FIXTURE_FAIL_STAGE=root-update \
 fi
 test ! -e CHANGELOG.md
 mv existing-changelog.md CHANGELOG.md
-sha256sum --check --quiet original.sha256
+assert_metadata_unchanged original-files
 
 # A failed prose advisory still runs before mutation and cannot block the bump.
 mv scripts/release/warn-release-prose.sh scripts/release/original-warn-release-prose.sh
@@ -299,11 +327,13 @@ grep -Fqx '| API line | `0.1` |' README.md
 grep -Fqx 'version = "0.1.0"' Cargo.toml
 bash scripts/release/check-lockfiles.sh
 grep -Fqx 'Unrelated work must survive preparation.' unrelated.txt
-if git rev-parse --verify HEAD >/dev/null 2>&1 || [[ -n "$(git tag --list)" ]]; then
+fixture_tags="$(git tag --list)"
+if git rev-parse --verify HEAD >/dev/null 2>&1 || [[ -n "${fixture_tags}" ]]; then
     echo 'error: version preparation committed or tagged fixture changes' >&2
     exit 1
 fi
-if [[ -n "$(git diff --cached --name-only)" ]]; then
+staged_paths="$(git diff --cached --name-only)"
+if [[ -n "${staged_paths}" ]]; then
     echo 'error: version preparation staged unrelated fixture changes' >&2
     exit 1
 fi
@@ -314,21 +344,23 @@ printf '\n[features]\nmaintainer_fixture = []\n' >> crates/ic-timers/Cargo.toml
 mkdir -p docs/adoption
 printf '%s\n' '# Unrelated adoption edits' > docs/adoption/canic.md
 cp Cargo.toml valid-stage-manifest.toml
-sed -i 's/\[workspace.package\]/[workspace.metadata]/' Cargo.toml
+perl -pi -e 's/\[workspace\.package\]/[workspace.metadata]/' Cargo.toml
 for target in version release-stage; do
     if make --no-print-directory "${target}" >/dev/null 2>&1; then
         echo "error: ${target} accepted missing workspace version ownership" >&2
         exit 1
     fi
-    test -z "$(git diff --cached --name-only)"
+    staged_paths="$(git diff --cached --name-only)"
+    test -z "${staged_paths}"
 done
 mv valid-stage-manifest.toml Cargo.toml
 make --no-print-directory release-stage >/dev/null
 expected_staged=(CHANGELOG.md Cargo.lock Cargo.toml README.md testing/Cargo.lock)
-staged=()
-while IFS= read -r path; do staged[${#staged[@]}]="${path}"; done < <(git diff --cached --name-only)
-if [[ "${staged[*]}" != "${expected_staged[*]}" ]]; then
-    echo "error: release staging selected unexpected paths: ${staged[*]}" >&2
+git diff --cached --name-only > staged-paths
+printf '%s\n' "${expected_staged[@]}" > expected-staged-paths
+if ! cmp -s expected-staged-paths staged-paths; then
+    cat staged-paths >&2
+    echo "error: release staging selected unexpected paths" >&2
     exit 1
 fi
 grep -Fqx '# Unrelated adoption edits' docs/adoption/canic.md
@@ -342,8 +374,7 @@ git branch v0.1.2
 perl -0pi -e 's/^(## \[)/## [Draft]\n\n- Next fixture release.\n\n$1/m' CHANGELOG.md
 bash scripts/release/bump-version.sh --check patch >/dev/null
 git tag v0.1.2
-sha256sum Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md \
-    docs/status/current.md > tagged.sha256
+capture_metadata tagged-files
 if output="$(bash scripts/release/bump-version.sh --check patch 2>&1)"; then
     echo 'error: version preflight accepted an existing release tag' >&2
     exit 1
@@ -352,5 +383,5 @@ if [[ "${output}" != *'tag v0.1.2 already exists'* ]]; then
     echo "error: unexpected tag rejection: ${output}" >&2
     exit 1
 fi
-sha256sum --check --quiet tagged.sha256
+assert_metadata_unchanged tagged-files
 echo 'Version preflight, rollback and dirty-worktree preparation checks passed'

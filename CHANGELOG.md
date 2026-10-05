@@ -2,6 +2,28 @@
 
 All notable changes to this project are recorded here.
 
+## [0.11.8]
+
+### Development
+
+- Replace checksum manifests and separate mode tables in preservation fixtures
+  with copies of the actual files. Compare bytes directly and preserve permission
+  assertions for preflight rejection, rollback, interrupted preparation and tag
+  rejection; retain independent Git index preservation checks.
+- Compare preparation phases and staged paths as ordered records, removing joined
+  arrays. Capture Git output directly so command failure cannot become an empty
+  staging or tag result.
+- Replace fixture-only GNU `sed -i` mutations with Perl, removing that host-specific
+  dependency. PocketIC's audited binary hash verification remains unchanged;
+  native macOS qualification is still pending.
+- Stop clean-worktree and release-commit guards when Git queries fail. Distinguish
+  a staged diff from a failed staged-diff query, and reject failed release-subject
+  reads even when they emit a matching subject. Extend rejection fixtures across
+  staged preparation and clean release retries without changing retry identity.
+- Compare PocketIC fixture verification events as exact ordered records for
+  accepted binaries and rejected overrides/downloads. Capture debris searches
+  before asserting cleanup so a failed search cannot appear empty.
+
 ## [0.11.7] - 2026-10-05
 
 ### Development

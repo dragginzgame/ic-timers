@@ -60,8 +60,13 @@ reject_without_execution() {
         echo 'error: unaudited PocketIC binary was accepted' >&2
         exit 1
     fi
-    if grep -Fqx execute "${IC_TIMERS_FIXTURE_LOG}"; then
-        echo "error: unaudited PocketIC binary executed: ${output}" >&2
+    printf '%s\n' hash > "${temporary_root}/expected-events"
+    if [[ "${POCKET_IC_AUTO_INSTALL}" == 1 ]]; then
+        printf '%s\n' hash >> "${temporary_root}/expected-events"
+    fi
+    if ! cmp -s "${temporary_root}/expected-events" "${IC_TIMERS_FIXTURE_LOG}"; then
+        cat "${IC_TIMERS_FIXTURE_LOG}" >&2
+        echo "error: unexpected verification events for rejected PocketIC binary: ${output}" >&2
         exit 1
     fi
     cmp "${temporary_root}/candidate" "${POCKET_IC_BIN}"
@@ -72,14 +77,16 @@ reject_without_execution
 FIXTURE_SHA_FAIL=1 reject_without_execution
 # A rejected automatic download must neither execute nor replace the cache.
 POCKET_IC_AUTO_INSTALL=1 reject_without_execution
-if [[ -n "$(find "${temporary_root}/cache" -name '.pocket-ic-install.*' -print)" ]]; then
+find "${temporary_root}/cache" -name '.pocket-ic-install.*' -print > "${temporary_root}/installation-debris"
+if [[ -s "${temporary_root}/installation-debris" ]]; then
     echo 'error: rejected download left installation debris' >&2
     exit 1
 fi
 
 : > "${IC_TIMERS_FIXTURE_LOG}"
+printf '%s\n' hash execute > "${temporary_root}/expected-events"
 FIXTURE_HASH_OK=1 bash "${checker}"
-test "$(cat "${IC_TIMERS_FIXTURE_LOG}")" == $'hash\nexecute'
+cmp "${temporary_root}/expected-events" "${IC_TIMERS_FIXTURE_LOG}"
 for result in wrong-version failed-command; do
     : > "${IC_TIMERS_FIXTURE_LOG}"
     version_ok=1
@@ -90,7 +97,7 @@ for result in wrong-version failed-command; do
         echo "error: accepted a hash-matching binary with ${result}" >&2
         exit 1
     fi
-    test "$(cat "${IC_TIMERS_FIXTURE_LOG}")" == $'hash\nexecute'
+    cmp "${temporary_root}/expected-events" "${IC_TIMERS_FIXTURE_LOG}"
     if [[ "${result}" == wrong-version && "${output}" != *'actual version:   wrong version'* ]]; then
         echo 'error: rejection did not report the observed version' >&2
         exit 1
@@ -104,14 +111,18 @@ if FIXTURE_HASH_OK=1 FIXTURE_VERSION_OK=0 POCKET_IC_AUTO_INSTALL=1 \
     echo 'error: downloaded a hash-matching binary with the wrong version' >&2
     exit 1
 fi
+printf '%s\n' hash execute hash execute > "${temporary_root}/expected-events"
+cmp "${temporary_root}/expected-events" "${IC_TIMERS_FIXTURE_LOG}"
 cmp "${temporary_root}/candidate" "${POCKET_IC_BIN}"
-if [[ -n "$(find "${temporary_root}/cache" -name '.pocket-ic-install.*' -print)" ]]; then
+find "${temporary_root}/cache" -name '.pocket-ic-install.*' -print > "${temporary_root}/installation-debris"
+if [[ -s "${temporary_root}/installation-debris" ]]; then
     echo 'error: rejected version left installation debris' >&2
     exit 1
 fi
 rm -- "${POCKET_IC_BIN}"
 : > "${IC_TIMERS_FIXTURE_LOG}"
+printf '%s\n' hash execute > "${temporary_root}/expected-events"
 FIXTURE_HASH_OK=1 POCKET_IC_AUTO_INSTALL=1 bash "${checker}"
-test "$(cat "${IC_TIMERS_FIXTURE_LOG}")" == $'hash\nexecute'
+cmp "${temporary_root}/expected-events" "${IC_TIMERS_FIXTURE_LOG}"
 cmp "${temporary_root}/candidate" "${POCKET_IC_BIN}"
 echo 'PocketIC hash-before-execution checks passed'

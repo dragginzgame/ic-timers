@@ -45,6 +45,21 @@ export IC_TIMERS_FIXTURE_GIT
 cat > bin/git <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+if [[ "${FIXTURE_FAIL_UNTRACKED:-0}" == 1 && "${1:-}" == ls-files ]]; then
+    echo 'injected untracked-file query failure' >&2
+    exit 1
+fi
+if [[ "${FIXTURE_FAIL_STAGED:-0}" == 1 && $# == 3 && "${1:-}" == diff \
+    && "${2:-}" == --cached && "${3:-}" == --quiet ]]; then
+    echo 'injected staged-diff query failure' >&2
+    exit 128
+fi
+if [[ "${FIXTURE_FAIL_SUBJECT:-0}" == 1 && "${1:-}" == log ]]; then
+    # Even plausible output must not conceal the failed producer.
+    printf '%s\n' 'Release 0.1.0'
+    echo 'injected release-subject query failure' >&2
+    exit 1
+fi
 if [[ "${FIXTURE_FAIL_TAG:-0}" == 1 && "${1:-}" == tag ]]; then
     echo 'injected tag failure' >&2
     exit 1
@@ -55,14 +70,31 @@ chmod +x bin/git
 # The wrapper is an isolated fixture input, never an untracked release output.
 git add bin/git
 export PATH="${temporary_root}/bin:${PATH}"
+initial_commit="$(git rev-parse HEAD)"
+expect_failure 'injected untracked-file query failure' env FIXTURE_FAIL_UNTRACKED=1 bash scripts/release/commit-release.sh
+expect_failure 'injected staged-diff query failure' env FIXTURE_FAIL_STAGED=1 bash scripts/release/commit-release.sh
+current_commit="$(git rev-parse HEAD)"
+test "${current_commit}" = "${initial_commit}"
 expect_failure 'injected tag failure' env FIXTURE_FAIL_TAG=1 bash scripts/release/commit-release.sh
 release_commit="$(git rev-parse HEAD)"
-test "$(git log -1 --format=%s)" = 'Release 0.1.0'
+release_subject="$(git log -1 --format=%s)"
+test "${release_subject}" = 'Release 0.1.0'
 bash scripts/release/commit-release.sh
-test "$(git rev-parse HEAD)" = "${release_commit}"
+current_commit="$(git rev-parse HEAD)"
+test "${current_commit}" = "${release_commit}"
 bash scripts/release/check-tag-at-head.sh
 bash scripts/release/commit-release.sh
-test "$(git rev-parse HEAD)" = "${release_commit}"
+current_commit="$(git rev-parse HEAD)"
+test "${current_commit}" = "${release_commit}"
+
+# Query failures reject clean worktrees and interrupted-release retries too.
+expect_failure 'injected untracked-file query failure' env FIXTURE_FAIL_UNTRACKED=1 bash scripts/ci/ensure-clean.sh
+expect_failure 'injected untracked-file query failure' env FIXTURE_FAIL_UNTRACKED=1 bash scripts/release/commit-release.sh
+expect_failure 'injected staged-diff query failure' env FIXTURE_FAIL_STAGED=1 bash scripts/release/commit-release.sh
+expect_failure 'injected release-subject query failure' env FIXTURE_FAIL_SUBJECT=1 bash scripts/release/commit-release.sh
+current_commit="$(git rev-parse HEAD)"
+test "${current_commit}" = "${release_commit}"
+bash scripts/release/check-tag-at-head.sh
 
 git tag -d v0.1.0 >/dev/null
 git tag v0.1.0

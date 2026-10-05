@@ -27,6 +27,12 @@ references and validation belong in [release notes](../changelog/README.md),
   records required macOS workflows and their unresolved qualification.
   Repository and release-gate fixtures now compare ordered records directly,
   removing their `mapfile` dependency; scoped verification remains in that matrix.
+  Preservation fixtures retain file copies and compare bytes and permission bits,
+  without checksum manifests, separate mode tables or GNU in-place sed. Preparation
+  phase/staging comparisons use direct records and retain Git failure propagation.
+  Clean-worktree and release-commit guards reject failed Git queries; their new
+  rejection fixtures remain unexecuted. PocketIC fixture events use exact record
+  comparisons, with scoped source/syntax review recorded in the host matrix.
 - Public removals or incompatible semantic changes require the next minor line;
   private behavior-preserving simplifications may use a patch. See the
   [ordinary arbitration hard cut](../changelog/0.9.0.md).

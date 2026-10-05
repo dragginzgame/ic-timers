@@ -104,6 +104,15 @@ and restores the README along with other metadata on failure or interruption.
 Metadata checks reject drift. Only the two structured version fields are
 checked; historical links and free-form release prose are not version selectors.
 
+The clean-worktree and release-commit guards capture untracked-file queries
+before testing their output. The commit helper treats Git's staged-diff status
+of 1 as pending changes, while other failures stop before commit or tagging.
+Interrupted tag retries also require a successful read of the exact release
+subject; matching output from a failed query is insufficient. The Git-phase
+fixture injects failures at these boundaries and checks that the commit identity
+is preserved. Source review, shell syntax and embedded fixture-shell syntax
+checks passed; those new fixture scenarios have not been executed.
+
 Combined release targets run `bump-version.sh --check` before deployment
 validation. This preflight checks the requested version, impact, unambiguous
 draft selection and structured README projections without changing version
@@ -202,8 +211,8 @@ continues to target Wasm on the Internet Computer.
 
 Version preparation uses Bash, Perl, Git and Cargo. It owns regular metadata
 files; symlinked or non-file outputs are rejected before mutation. Applicable
-Make targets use GNU Make; release fixtures additionally rely on GNU utilities
-whose macOS setup must be qualified at their owning workflow boundary.
+Make targets use GNU Make. Native host prerequisites and setup must be qualified
+at their owning workflow boundary.
 
 The repository and release-gate fixtures compare ordered newline records
 directly with `cmp`. They no longer depend on Bash 4's `mapfile` or turn those
@@ -213,6 +222,35 @@ an injected leaf failure. Provisioning checks compare both override path and
 automatic-install selection, including an empty override. Source and shell syntax
 were reviewed; the changed fixtures have not been executed. This removes one
 known Bash 3.2 obstacle without establishing native macOS qualification.
+
+The preparation fixture uses the same direct record comparison for phase order
+and the five staged metadata paths. It captures Git output with an ordinary
+command before comparing, retaining failure propagation without an intermediate
+array or process substitution. Empty-index and no-tag assertions also capture
+Git output before testing it, so producer failures cannot satisfy those assertions.
+
+Preservation fixtures retain actual file copies rather than checksum manifests.
+The formatting-hook fixture compares working bytes and independently compares
+the binary staged diff. The preparation fixture copies its metadata and unrelated
+files with their modes, then compares bytes with `File::Compare` and permission
+bits with Perl `stat`. Preflight rejection, symlink rejection, every injected
+rollback failure, interruption, missing-changelog restoration and tag rejection
+retain their existing subjects. Mode comparison also applies to the preflight
+and tag-rejection checkpoints. Fixture mutations use Perl instead of GNU `sed -i`.
+These changes remove fixture-only `sha256sum`, GNU `stat -c` and GNU in-place sed
+requirements; they do not remove cryptographic verification of external binaries.
+Shell and embedded Perl syntax and source flow were reviewed. The changed
+fixtures have not been executed, and native macOS qualification remains open.
+On 2026-10-05, read-only changelog finalization for the selected 0.11.8 target,
+the current README version projection, both locked offline Cargo metadata checks
+and diff whitespace checks passed. Cargo versions and both lockfiles were unchanged.
+
+The PocketIC verification fixture also compares exact ordered event records,
+including both cache and download checks during rejection. Debris searches run
+as ordinary commands before empty-result assertions. This tightens the fixture's
+producer-failure handling without changing the audited version, digest, binary
+verification or override ownership. Source and shell syntax were reviewed;
+the changed fixture has not been executed.
 
 The current PocketIC verifier accepts only the pinned Linux binary's hash, even
 for an explicit override, and automatic installation is limited to Linux x86_64.

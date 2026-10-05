@@ -41,7 +41,7 @@ bash "${checker}"
 
 for lockfile in Cargo.lock testing/Cargo.lock; do
     cp "${lockfile}" original.lock
-    sed -i 's/^version = "0.1.0"$/version = "0.0.0"/' "${lockfile}"
+    perl -pi -e 's/^version = "0\.1\.0"$/version = "0.0.0"/' "${lockfile}"
     cp "${lockfile}" stale.lock
     if output="$(bash "${checker}" 2>&1)"; then
         echo "error: accepted stale path-package version in ${lockfile}" >&2
@@ -57,7 +57,7 @@ done
 bash "${checker}"
 
 # Coherent locks are insufficient if the resolved crate differs from workspace truth.
-sed -i 's/^version = "0.1.0"$/version = "0.1.1"/' crates/ic-timers/Cargo.toml
+perl -pi -e 's/^version = "0\.1\.0"$/version = "0.1.1"/' crates/ic-timers/Cargo.toml
 cargo generate-lockfile --offline --quiet
 cargo generate-lockfile --manifest-path testing/Cargo.toml --offline --quiet
 if output="$(bash "${checker}" 2>&1)"; then

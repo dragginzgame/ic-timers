@@ -5,13 +5,21 @@ version="$(bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh")"
 
 bash scripts/release/readme-version.sh --check
 bash scripts/release/check-lockfiles.sh
-if ! git diff --quiet || [[ -n "$(git ls-files --others --exclude-standard)" ]]; then
+untracked_paths="$(git ls-files --others --exclude-standard)"
+if ! git diff --quiet || [[ -n "${untracked_paths}" ]]; then
     echo "error: commit or stage all release changes before creating v${version}" >&2
     exit 1
 fi
-if git diff --cached --quiet; then
+staged_status=0
+git diff --cached --quiet || staged_status=$?
+if [[ "${staged_status}" -gt 1 ]]; then
+    echo 'error: cannot inspect staged release changes' >&2
+    exit "${staged_status}"
+fi
+if [[ "${staged_status}" == 0 ]]; then
     # Only a matching release commit may resume an interrupted tag phase.
-    if [[ "$(git log -1 --format=%s)" != "Release ${version}" ]]; then
+    head_subject="$(git log -1 --format=%s)"
+    if [[ "${head_subject}" != "Release ${version}" ]]; then
         echo "error: no staged release changes and HEAD is not Release ${version}" >&2
         exit 1
     fi

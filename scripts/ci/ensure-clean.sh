@@ -6,7 +6,8 @@ if ! git rev-parse --verify HEAD >/dev/null 2>&1; then
     exit 1
 fi
 
-if ! git diff-index --quiet HEAD -- || [[ -n "$(git ls-files --others --exclude-standard)" ]]; then
+untracked_paths="$(git ls-files --others --exclude-standard)"
+if ! git diff-index --quiet HEAD -- || [[ -n "${untracked_paths}" ]]; then
     echo "error: working directory is not clean; commit or stash changes first" >&2
     exit 1
 fi
