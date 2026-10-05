@@ -177,7 +177,7 @@ impl AfterCompletionRunResult {
 
 /// Erased result consumed only by the canonical ordinary completion owner.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) struct OrdinaryRunResult {
+pub struct OrdinaryRunResult {
     completion: TimerCompletion,
     directive: OrdinaryDirective,
 }

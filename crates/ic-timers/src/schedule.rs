@@ -68,7 +68,7 @@ impl TimerSchedule {
 
 /// Private scheduling proposal after erasing a policy-specific callback result.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(super) enum OrdinaryDirective {
+pub enum OrdinaryDirective {
     /// Do not schedule another invocation.
     Stop,
     /// Continue as soon as the runtime can execute another message.
