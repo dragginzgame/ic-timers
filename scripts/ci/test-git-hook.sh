@@ -2,23 +2,42 @@
 set -euo pipefail
 
 repository_root="$(git rev-parse --show-toplevel)"
+source "${repository_root}/tool-versions.env"
+[[ "$(cargo sort --version)" == "cargo-sort ${IC_TIMERS_CARGO_SORT_VERSION}" ]]
 temporary_root="$(mktemp -d)"
 trap 'rm -rf -- "${temporary_root}"' EXIT
+# Reuse committed objects read-only; the fixture never creates a commit.
+source_commit="$(git rev-parse HEAD)"
+source_objects="$(git rev-parse --git-path objects)"
+case "${source_objects}" in /*) ;; *) source_objects="${repository_root}/${source_objects}" ;; esac
 mkdir "${temporary_root}/repo"
 git init -q "${temporary_root}/repo"
 cd "${temporary_root}/repo"
-git config user.name 'ic-timers hook test'
-git config user.email 'hook-test@example.invalid'
-# An isolated formatter stand-in checks only the files copied from the index.
-printf '%s\n' 'fmt-check:' $'\t@cmp -s staged.rs expected.rs' $'\t@cmp -s unrelated.rs original.rs' > Makefile
-printf '%s\n' 'formatted' > expected.rs
-cp expected.rs original.rs
-cp expected.rs staged.rs
-cp expected.rs unrelated.rs
-git add Makefile expected.rs original.rs staged.rs unrelated.rs
-git commit -qm fixture
+mkdir -p .git/objects/info
+printf '%s\n' "${source_objects}" > .git/objects/info/alternates
+git update-ref HEAD "${source_commit}"
+git read-tree HEAD
+git checkout-index --all
+cp "${repository_root}/Makefile" Makefile
+cp "${repository_root}/tool-versions.env" tool-versions.env
+mkdir -p src testing/src
+for workspace in . testing; do
+    cat > "${workspace}/Cargo.toml" <<'EOF'
+[workspace]
+members = []
 
-working_files=(staged.rs unrelated.rs)
+[package]
+name = "hook-fixture"
+version = "0.0.0"
+edition = "2024"
+EOF
+    printf 'pub fn fixture( ){}\n' > "${workspace}/src/lib.rs"
+done
+git add Makefile tool-versions.env Cargo.toml src/lib.rs testing/Cargo.toml testing/src/lib.rs
+printf 'unrelated working edit\n' >> README.md
+cp README.md "${temporary_root}/unrelated-readme"
+
+working_files=(Cargo.toml testing/Cargo.toml src/lib.rs testing/src/lib.rs README.md)
 capture_before_hook() {
     local path
     for path in "${working_files[@]}"; do
@@ -27,7 +46,6 @@ capture_before_hook() {
     done
     git diff --cached --binary > "${temporary_root}/before-index"
 }
-
 assert_unchanged() {
     local path
     for path in "${working_files[@]}"; do
@@ -37,76 +55,35 @@ assert_unchanged() {
     cmp "${temporary_root}/before-index" "${temporary_root}/after-index"
 }
 
-# A partially staged file and unrelated dirty file must remain byte-for-byte
-# unchanged; formatting is validated against their staged versions.
-printf '%s\n' 'formatted staged edit' > expected.rs
-cp expected.rs staged.rs
-git add expected.rs staged.rs
-printf '%s\n' 'unformatted working edit' > staged.rs
-printf '%s\n' 'unrelated dirty edit' > unrelated.rs
-capture_before_hook
-bash "${repository_root}/.githooks/pre-commit"
-assert_unchanged
+# The actual consumer fmt target formats and refreshes both workspace selections,
+# preserving unrelated edits and requiring no dependencies, builds or network.
+CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 bash "${repository_root}/.githooks/pre-commit"
+for path in src/lib.rs testing/src/lib.rs; do
+    formatted="$(git show ":${path}")"
+    test "${formatted}" = 'pub fn fixture() {}'
+done
+cmp "${temporary_root}/unrelated-readme" README.md
+make --no-print-directory fmt-check
 
-# A formatted working copy cannot conceal an unformatted staged version.
-printf '%s\n' 'unformatted staged edit' > staged.rs
-git add staged.rs
-cp expected.rs staged.rs
+# Partial staging must reject before formatting or refreshing the real index.
+printf 'pub fn fixture() {}\n// unstaged edit\n' > testing/src/lib.rs
 capture_before_hook
 if bash "${repository_root}/.githooks/pre-commit" > "${temporary_root}/output" 2>&1; then
-    echo 'error: commit hook accepted unformatted staged content' >&2
+    echo 'error: commit hook accepted partially staged nested Rust' >&2
     exit 1
 fi
 assert_unchanged
+git checkout-index -f -- testing/src/lib.rs
 
-# The production formatting target must also reject an unformatted nested
-# workspace in the index while preserving formatted or dirty working copies.
-mkdir -p "${temporary_root}/workspaces"/{src,testing/src}
-cd "${temporary_root}/workspaces"
-git init -q
-git config user.name 'ic-timers hook test'
-git config user.email 'hook-test@example.invalid'
-cp "${repository_root}/Makefile" Makefile
-cat > Cargo.toml <<'EOF'
-[workspace]
-
-[package]
-name = "hook-root-fixture"
-version = "0.0.0"
-edition = "2024"
-EOF
-cat > testing/Cargo.toml <<'EOF'
-[workspace]
-
-[package]
-name = "hook-nested-fixture"
-version = "0.0.0"
-edition = "2024"
-EOF
-printf '%s\n' 'pub fn fixture() {}' > src/lib.rs
-cp src/lib.rs testing/src/lib.rs
-git add Makefile Cargo.toml src/lib.rs testing/Cargo.toml testing/src/lib.rs
-git -c core.hooksPath=/dev/null commit -qm 'two-workspace fixture'
-
-printf '%s\n' 'pub fn fixture( ){}' > testing/src/lib.rs
+# A failed consumer formatter must not copy or stage even its earlier changes.
+printf 'pub fn fixture( ){}\n' > testing/src/lib.rs
 git add testing/src/lib.rs
-printf '%s\n' 'pub fn fixture() {}' > testing/src/lib.rs
-printf '%s\n' 'pub fn fixture( ) { }' > src/lib.rs
-working_files=(src/lib.rs testing/src/lib.rs)
+printf 'fmt:\n\t@printf "pub fn fixture() {}\\n" > testing/src/lib.rs\n\t@exit 1\n' > Makefile
+git add Makefile
 capture_before_hook
 if bash "${repository_root}/.githooks/pre-commit" > "${temporary_root}/output" 2>&1; then
-    echo 'error: commit hook accepted unformatted staged nested Rust' >&2
-    exit 1
-fi
-if [[ "$(cat "${temporary_root}/output")" != *'testing/src/lib.rs'* ]]; then
-    cat "${temporary_root}/output" >&2
-    echo 'error: commit hook did not reach the nested formatting check' >&2
+    echo 'error: commit hook accepted failed snapshot formatting' >&2
     exit 1
 fi
 assert_unchanged
-
-git add testing/src/lib.rs
-capture_before_hook
-bash "${repository_root}/.githooks/pre-commit"
-assert_unchanged
-echo 'Commit hook snapshot checks passed'
+echo 'Consumer hook auto-formatting, nested selection and failure-isolation checks passed'

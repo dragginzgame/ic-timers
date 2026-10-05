@@ -5,7 +5,7 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `b8537873ac124ad17b30e32aa23e9006a3e6ec21`. Its provenance and
+  from revision `f52c0e2476aee094359ed21de91c468540d3969f`. Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
@@ -40,6 +40,12 @@ This file is normative for automated contributors.
 - Inspection, review, audit, diagnosis, design, and feedback requests for other
   repositories are read-only.
 - Preserve unrelated dirty worktree state.
+- Retain the maintainer-approved independent workspace boundary required by
+  the two-lockfile release workflow: `Cargo.toml` owns library dependencies and
+  `testing/Cargo.toml` owns
+  unpublished host/probe dependencies. This preserves separate lockfiles,
+  Wasm profiles and release qualification without pulling host tooling into
+  the publishable workspace. Members inherit from their respective root.
 
 ## Status
 
@@ -95,10 +101,9 @@ This file is normative for automated contributors.
   authority to publish a repository-only patch: warn clearly and retain the
   complete user-operated release gate. Reject a subject with no changes. Do not
   manufacture crate impact merely to silence the advisory.
-- Keep one undated `## [Draft]` section at the top until the maintainer selects
-  a version. Do not choose another release line for each focused change.
-  Once a target is named, label that same top section `## [x.y.z]`.
-  Do not add `Unreleased` or a separate notes queue.
+- Maintain one numbered, undated pending changelog section under the shared
+  automatic next-version rules. Reuse it for the complete batch, honour a valid
+  maintainer-selected target and keep Cargo version mutation user-owned.
 - For a new release request, automated contributors prepare only the next
   changelog section. Keep it undated. Do not mutate Cargo versions
   or lockfiles, stage changes, or run version-bump or release targets.
@@ -122,9 +127,10 @@ This file is normative for automated contributors.
   push may use a smaller package/tag job only when it also verifies the exact
   version tag and that the tagged commit is reachable from `main`; do not
   duplicate identical full builds for a same-SHA main-and-tag push.
-- Combined release targets always run their requested version bump. Preparing
-  a changelog must not advance the workspace version or turn a release target
-  into a command that reuses an already prepared version.
+- Fresh combined release targets run their requested version bump. Rerunning
+  the same standard target reconciles saved unfinished intent at its exact
+  version before selecting any new increment. Changelog preparation alone
+  neither advances Cargo nor creates runtime release intent.
 - Version-bump helpers must support preparing a release from the current
   worktree without requiring a preparatory commit. Preserve unrelated changes,
   leave test execution to deployment. The user stages release metadata.

@@ -1,5 +1,5 @@
 [workspace]
-members = ["runtime-probe", "size-probe", "pocketic"]
+members = ["pocketic", "runtime-probe", "size-probe"]
 resolver = "2"
 
 [workspace.package]
@@ -12,8 +12,8 @@ license = "MIT"
 [workspace.dependencies]
 candid = "0.10"
 ic-cdk = "=0.20.3"
-ic-timers = { path = "../crates/ic-timers" }
 ic-testkit = "=0.17.3"
+ic-timers = { path = "../crates/ic-timers" }
 serde = "1.0"
 
 [workspace.lints.rust]

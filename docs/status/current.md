@@ -14,8 +14,8 @@ references and validation belong in [release notes](../changelog/README.md),
 
 - Read `[workspace.package].version` in [Cargo.toml](../../Cargo.toml) for
   package identity. The top [changelog section](../../CHANGELOG.md) records the
-  accepted batch and remains versionless until the maintainer selects a target.
-  The maintainer's bump labels and dates it; a dated section alone does not prove
+  accepted batch under its automatically selected, undated next version.
+  The maintainer's bump finalizes and dates it; a dated section alone does not prove
   tagging, publication or deployment.
 - Apply the pinned [Shared Tooling baseline and local overlay](../../AGENTS.md).
   Its [adoption record](../shared-tooling.md) scopes provenance and exceptions.
@@ -28,14 +28,20 @@ references and validation belong in [release notes](../changelog/README.md),
   unused-assignment warning at `runtime/mod.rs:1090` in delivery-retirement work.
   This does not establish warning-free or PocketIC qualification. Registry
   [adoption](https://github.com/dragginzgame/ic-timers/issues/9) remains separate.
-  Standard SemVer releases
-  use the snapshot runner and exact-version resume; no release was executed.
-  Standard entry points now preserve and restart preflight/validation attempts
-  that never reached version preparation, rerunning the full gate on current
-  source instead of blocking on stale intent. Prepared attempts still require
-  exact resume. Retry fixtures remain unexecuted; source/syntax scope belongs
-  in the [release guide](../releasing.md).
-  The reviewed baseline is now `b8537873ac124ad17b30e32aa23e9006a3e6ec21`, with
+  Standard SemVer releases use the refreshed shared runner: preflight/validation
+  failures restart on current source, while the same target automatically
+  reconciles prepared intent at its saved version before a new increment. The
+  local retry wrapper and its duplicate fixtures are removed; no release was
+  executed during adoption. The shared hook formats only fully staged selected
+  files, and the local formatting/gate owners cover both workspaces with pinned
+  cargo-sort 2.1.4. Local hook activation remains separate from snapshot adoption.
+  The pending 0.13.0 remains appropriate for the public Abandoned variant and
+  ordinary delivery-retirement semantic cut; consumers must handle both.
+  Snapshot integrity, shell syntax and metadata-preserving manifest sorting
+  pass; both lockfiles remain byte-identical. The GitHub description matches
+  current scope. New recovery/hook fixture execution remains user-owned; source/snapshot scope
+  belongs in the [release guide](../releasing.md).
+  The reviewed baseline is now `f52c0e2476aee094359ed21de91c468540d3969f`, with
   shared rules in `DRAGGINZGAME.md`. Maintainer-owned validation and release
   exceptions remain explicit; the [local host matrix](../releasing.md#host-support)
   records required macOS workflows and their unresolved qualification.
@@ -120,6 +126,12 @@ references and validation belong in [release notes](../changelog/README.md),
   recipe sequence. The shared runner fixture is included in `release-check`;
   corrected fixture execution remains maintainer-owned, with scope recorded in
   the [release guide](../releasing.md).
+  The maintainer's later gate passed the preceding release fixtures but failed
+  the missing-changelog rollback assertion because its lock-update injector had
+  already been restored. The injector now remains active through that case;
+  the case verifies the injected failure, rollback and metadata preservation.
+  Source/syntax checks pass; corrected fixture execution remains pending. The
+  production bump helper and workspace versions are unchanged by this repair.
 
 ## Canonical runtime
 

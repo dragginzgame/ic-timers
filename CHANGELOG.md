@@ -11,7 +11,7 @@ All notable changes to this project are recorded here.
   The exact dependency selects local `ic-metrics 0.1.1` and matches both lockfiles;
   registry publication remains a separate adoption prerequisite.
 - Standardize the three SemVer release commands on the reviewed Shared Tooling
-  runner, including exact-version resume and an atomic push of the selected branch
+  runner, including automatic recovery when the same target is rerun and an atomic push of the selected branch
   and tag. Release preparation uses UTC dates and preserves both locked dependency selections
   and build artifacts.
 
@@ -30,9 +30,13 @@ All notable changes to this project are recorded here.
 ### Development
 
 - Show the repository name first in VS Code window titles, followed by the active filename.
-- Allow standard release commands to retry attempts stopped before version
-  preparation. Preserve the previous attempt and rerun the complete gate against
-  the current source; prepared releases retain exact-version recovery.
+- Restart failed preflight/validation through the normal release target, and
+  automatically reconcile prepared attempts at their saved version before any
+  new increment. Remove the local retry wrapper in favour of the shared owner.
+- Adopt the shared pre-commit hook to format and refresh only fully staged
+  selected files, preserving unrelated edits and rejecting partial staging.
+  Pin `cargo-sort` 2.1.4 in developer/CI setup and include manifest sorting for
+  both workspaces in formatting and prepared-release checks.
 - Use exact `ic-testkit` 0.17.3 for the host-side real-canister suites, with
   bounded startup and caller-owned servers for fresh IC instances. Update the
   strict PocketIC artifact gate to 16.0.0 on Linux and both macOS architectures;
@@ -40,7 +44,8 @@ All notable changes to this project are recorded here.
   receipts remain historical; the new harness requires renewed qualification.
 - Repair isolated version-preparation checks after shared-runner adoption: include
   the shared version calculator, verify all three increments and current Makefile
-  delegation, and retain local exact-version rollback and staging coverage. Run
+  delegation, and keep failure injection active through missing-changelog rollback.
+  Retain local exact-version rollback and staging coverage. Run
   the shared runner's phase/failure/resume fixtures in the existing release gate.
 - Add native and PocketIC fixtures covering discarded ordinary deliveries,
   traps before and after an await, pending commands, stale authority and capture

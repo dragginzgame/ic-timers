@@ -356,7 +356,10 @@ cat > scripts/release/update-local-lock.sh <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 case "$1" in Cargo.lock) stage=root-update ;; testing/Cargo.lock) stage=testing-update ;; *) exit 2 ;; esac
-if [[ "${FIXTURE_FAIL_STAGE:-}" == "$stage" ]]; then exit 1; fi
+if [[ "${FIXTURE_FAIL_STAGE:-}" == "$stage" ]]; then
+    echo "injected ${stage} failure" >&2
+    exit 1
+fi
 if [[ "${FIXTURE_FAIL_STAGE:-}" == interrupt && "$stage" == testing-update ]]; then
     kill -TERM "$PPID"; exit 1
 fi
@@ -384,18 +387,24 @@ for stage in readme-update root-update testing-update root-metadata testing-meta
     assert_metadata_unchanged original-files
 done
 mv scripts/release/original-readme-version.sh scripts/release/readme-version.sh
-mv scripts/release/original-update-local-lock.sh scripts/release/update-local-lock.sh
 
 # An absent changelog is created during preparation and removed by rollback.
+# Keep the lock-update injector installed until this final rollback scenario.
 mv CHANGELOG.md existing-changelog.md
-if PATH="${temporary_root}/bin:${PATH}" FIXTURE_FAIL_STAGE=root-update \
-    bash scripts/release/bump-version.sh patch >/dev/null 2>&1; then
+if output="$(PATH="${temporary_root}/bin:${PATH}" FIXTURE_FAIL_STAGE=root-update \
+    bash scripts/release/bump-version.sh patch 2>&1)"; then
     echo 'error: version preparation accepted a failed update with no changelog' >&2
+    exit 1
+fi
+if [[ "${output}" != *'injected root-update failure'* ||
+    "${output}" != *'restoring release metadata'* ]]; then
+    echo "error: missing-changelog rollback did not reach the injected update failure: ${output}" >&2
     exit 1
 fi
 test ! -e CHANGELOG.md
 mv existing-changelog.md CHANGELOG.md
 assert_metadata_unchanged original-files
+mv scripts/release/original-update-local-lock.sh scripts/release/update-local-lock.sh
 
 # A failed prose advisory still runs before mutation and cannot block the bump.
 mv scripts/release/warn-release-prose.sh scripts/release/original-warn-release-prose.sh

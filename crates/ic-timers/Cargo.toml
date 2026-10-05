@@ -15,8 +15,8 @@ readme = "../../README.md"
 publish = true
 
 [dependencies]
-ic-metrics.workspace = true
 ic-cdk-timers.workspace = true
+ic-metrics.workspace = true
 ic0.workspace = true
 thiserror.workspace = true
 

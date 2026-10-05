@@ -19,7 +19,7 @@ REPOSITORY_TARGETS := actions-check shell-check release-check provider-check fmt
 help:
 	@echo "Available commands:"
 	@echo ""
-	@echo "  fmt / fmt-check     Format or check Rust in both workspaces"
+	@echo "  fmt / fmt-check     Sort manifests and format or check Rust in both workspaces"
 	@echo "  check / clippy      Compile all targets and lint with warnings denied"
 	@echo "  docs-check          Build public API docs with warnings denied"
 	@echo "  test                Run workspace unit and API documentation tests"
@@ -53,10 +53,14 @@ fetch:
 	cargo fetch --manifest-path testing/Cargo.toml --locked
 
 fmt:
+	cargo sort --workspace
+	cargo sort --workspace testing
 	cargo fmt --all
 	cargo fmt --manifest-path testing/Cargo.toml --all
 
 fmt-check:
+	cargo sort --workspace --check
+	cargo sort --workspace --check testing
 	cargo fmt --all -- --check
 	cargo fmt --manifest-path testing/Cargo.toml --all -- --check
 
@@ -138,7 +142,6 @@ release-check:
 	bash scripts/ci/verify-shared-tooling-snapshot.sh
 	bash scripts/ci/test-release-runner.sh
 	bash scripts/release/test-standard-release.sh
-	bash scripts/release/test-retry-release.sh
 	bash scripts/release/test-finalize-changelog.sh
 	bash scripts/release/test-readme-version.sh
 	bash scripts/release/test-release-impact.sh
@@ -246,7 +249,7 @@ endif
 .PHONY: release-resume release-version release-preflight release-prepare-version release-prepared-check release-files release-commit-check release-committed-check release-tagged-check release-push-check
 
 release-patch release-minor release-major:
-	+@bash scripts/release/run-standard-release.sh "$(@:release-%=%)" "$(RELEASE_REMOTE)" "$(RELEASE_BRANCH)"
+	+@bash scripts/ci/run-release.sh "$(@:release-%=%)" "$(RELEASE_REMOTE)" "$(RELEASE_BRANCH)"
 
 release-resume:
 	+@bash scripts/ci/run-release.sh resume "$(VERSION)" "$(RELEASE_REMOTE)" "$(RELEASE_BRANCH)"

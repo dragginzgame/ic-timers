@@ -394,7 +394,7 @@ operational measurements.
 | Command | Purpose |
 | --- | --- |
 | `make update-dev` | Install the pinned toolchain, components, Wasm target, and formatting hook |
-| `make fmt` / `make fmt-check` | Format or check Rust in the root and `testing/` workspaces |
+| `make fmt` / `make fmt-check` | Sort manifests and format or check Rust in the root and `testing/` workspaces |
 | `make ci` | Run the normal warning-denied checks, native tests, Wasm build, and package checks |
 | `make msrv` | Check the workspace with Rust 1.88.0 |
 | `make testing-check` | Check both workspaces' formatting and lint supported nested probes with Rust 1.88.0 |

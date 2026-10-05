@@ -1,7 +1,7 @@
 # Shared Tooling adoption
 
-IC Timers adopts reviewed revision [`b8537873ac124ad17b30e32aa23e9006a3e6ec21](https://github.com/dragginzgame/shared-tooling/tree/b8537873ac124ad17b30e32aa23e9006a3e6ec21).
-The [snapshot manifest](../.shared-tooling.snapshot) records sixteen exact files,
+IC Timers adopts reviewed revision [`f52c0e2476aee094359ed21de91c468540d3969f`](https://github.com/dragginzgame/shared-tooling/tree/f52c0e2476aee094359ed21de91c468540d3969f).
+The [snapshot manifest](../.shared-tooling.snapshot) records twenty exact files,
 including [the baseline](../DRAGGINZGAME.md), linked governance, release runner and
 verification fixtures. [AGENTS.md](../AGENTS.md) owns the product overlay and the
 maintainer-approved validation and release-authority exceptions.
@@ -15,12 +15,25 @@ The shared runner owns the three standard SemVer entry points, ordering, Git
 operations and exact-version recovery. Consumer adapters retain the five release
 metadata outputs, package identity, README projection, both lockfiles and the
 complete PocketIC release gate. Publishing remains a separate command.
-The local standard entry point archives only preflight/validation attempts
-before dispatching a fresh run through the unchanged pinned runner. Its release
-lock protects retry admission; preparation and later phases keep exact-version
-recovery. The [local procedure](releasing.md) owns this narrower retry behavior.
+The same normal target restarts preflight/validation failures on current source
+and automatically reconciles saved preparation intent before choosing a new
+increment. The local retry wrapper and its duplicate fixtures are removed.
+The shared formatting hook and installer are vendored unchanged. Local formatting
+targets sort both workspace catalogs and format Rust; explicit setup and hosted
+CI use `cargo-sort` 2.1.4 from [tool-versions.env](../tool-versions.env).
+The existing two-workspace release boundary and independently centralized
+dependency catalogs remain explicit in [AGENTS.md](../AGENTS.md).
+The numbered pending changelog follows the new shared version-selection rules;
+package mutation and validation authority remain maintainer-owned.
 The [host matrix](releasing.md#host-support) owns native qualification: Linux
 syntax and command-stub passes do not qualify macOS or live IC execution.
+
+This adoption was prepared as working-tree changes, without release execution or
+upstream mutation. The exported 20-file snapshot verifies, shell and embedded
+fixture syntax parses, and manifest sorting preserves effective workspace
+metadata plus both lockfiles byte-for-byte. The GitHub description was inspected
+and matches the current purpose. New recovery/hook fixtures and hosted setup
+remain unexecuted; hook activation is a separate maintainer setup action.
 
 The exact local ic-metrics pin and both lockfiles now select the maintainer-tagged
 0.1.1 package. Locked offline metadata resolves one canonical package in both

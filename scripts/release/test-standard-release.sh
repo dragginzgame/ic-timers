@@ -24,7 +24,7 @@ for kind in patch minor major; do
             -f "$root/Makefile" "release-$kind" RELEASE_REMOTE=review RELEASE_BRANCH=release-review \
             > "$fixture/output" 2>&1 || status=$?
         if [[ "$fail" == 0 ]]; then [[ "$status" == 0 ]]; else [[ "$status" != 0 ]]; fi
-        printf '%s\n' "scripts/release/run-standard-release.sh $kind review release-review" > "$fixture/expected"
+        printf '%s\n' "scripts/ci/run-release.sh $kind review release-review" > "$fixture/expected"
         cmp "$fixture/expected" "$EVENTS"
     done
 done

@@ -19,6 +19,8 @@ case "${1:-}" in
         ;;
     check)
         [[ "$(bash scripts/release/workspace-version.sh)" == "${RELEASE_VERSION:?}" ]]
+        cargo sort --workspace --check
+        cargo sort --workspace --check testing
         bash scripts/release/readme-version.sh --check
         bash scripts/release/check-lockfiles.sh
         awk -v heading="## [$RELEASE_VERSION] - ${RELEASE_DATE:?}" \

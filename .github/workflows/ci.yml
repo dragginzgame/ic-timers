@@ -36,6 +36,10 @@ jobs:
         run: echo "RUSTUP_TOOLCHAIN=$IC_TIMERS_MSRV" >> "$GITHUB_ENV"
       # Swatinem/rust-cache v2
       - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
+      - name: Install the pinned manifest formatter
+        run: |
+          source tool-versions.env
+          cargo install cargo-sort --version "$IC_TIMERS_CARGO_SORT_VERSION" --locked
       - name: Check MSRV, provider visibility and nested probes
         run: |
           bash scripts/ci/test-repository-checks.sh
@@ -60,6 +64,10 @@ jobs:
         run: echo "RUSTUP_TOOLCHAIN=$IC_TIMERS_INTERNAL_TOOLCHAIN" >> "$GITHUB_ENV"
       # Swatinem/rust-cache v2
       - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
+      - name: Install the pinned manifest formatter
+        run: |
+          source tool-versions.env
+          cargo install cargo-sort --version "$IC_TIMERS_CARGO_SORT_VERSION" --locked
       - name: Run CI gate
         run: make ci
       - name: Lint nested probes with internal toolchain
@@ -110,6 +118,11 @@ jobs:
         run: echo "RUSTUP_TOOLCHAIN=$IC_TIMERS_INTERNAL_TOOLCHAIN" >> "$GITHUB_ENV"
       # Swatinem/rust-cache v2
       - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
+      - name: Install the pinned manifest formatter
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          source tool-versions.env
+          cargo install cargo-sort --version "$IC_TIMERS_CARGO_SORT_VERSION" --locked
       - name: Run the complete native release gate
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: make release-verify
@@ -125,6 +138,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+      # dtolnay/rust-toolchain v1
+      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067
+        with:
+          toolchain: ${{ env.IC_TIMERS_INTERNAL_TOOLCHAIN }}
+          components: rustfmt
       - name: Verify release tag
         shell: bash
         run: |
@@ -140,4 +158,6 @@ jobs:
           make release-tag-check
           make fetch
           bash scripts/release/check-lockfiles.sh
+          source tool-versions.env
+          cargo install cargo-sort --version "$IC_TIMERS_CARGO_SORT_VERSION" --locked
           make release-check

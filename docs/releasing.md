@@ -73,16 +73,18 @@ default. For a `repository` subject, version preparation prints an advisory;
 the user-operated release targets retain the complete release gate. It never invents crate
 impact or silently weakens validation. A `none` subject is still rejected.
 
-Keep completed user-visible changes in one undated section at the top:
+Keep completed user-visible changes in one numbered, undated section at the top:
 
 ```text
-## [Draft]
+## [0.13.0]
 ```
 
-Automated contributors maintain this draft through the accepted coherent batch
-without selecting a new version for each focused change. If the maintainer names
-a target, label that same draft `## [x.y.z]`. Do not add `Unreleased` or a separate
-release-note queue. Historical notes remain evidence of their recorded subjects.
+Automated contributors derive the candidate from the latest finalized release
+and the complete batch under the [shared changelog rules](../rules/changelogs.md).
+Reuse that section for later compatible work; before 1.0, a breaking batch needs
+the next minor line. Honour a valid maintainer-selected target. This selects
+notes only, without changing Cargo, either lockfile or release defaults. Do not
+add `Unreleased`, an unnumbered Draft or a separate release-note queue.
 
 The explicit user-operated bump owns the final version: it labels and dates the
 single undated draft and moves it above history. No separately prepared versioned
@@ -171,6 +173,15 @@ and embedded fixture-shell syntax and source flow were reviewed; the corrected
 fixtures remain unexecuted by the automated contributor and need maintainer
 qualification on the declared hosts.
 
+The maintainer's subsequent release gate reached the missing-changelog rollback
+case and reported `version preparation accepted a failed update with no changelog`.
+The fixture had already restored the real lock updater, disabling its requested
+failure. It now retains that injector until the case finishes, checks that the
+root-update failure and rollback were reached, verifies removal of the newly
+created changelog and compares the remaining metadata bytes and modes. The
+production bump helper is unchanged. Source, shell and embedded fixture-shell
+syntax were reviewed; rerunning the corrected fixture remains maintainer-owned.
+
 The release-commit owner then runs its read-only `--check-before-bump` mode. It
 accepts staged implementation changes and dirty metadata selected by
 `release-stage`: `Cargo.toml`, `Cargo.lock`, `testing/Cargo.lock`, `CHANGELOG.md`
@@ -204,8 +215,9 @@ commit guard, review and stage the remaining intended paths, then run:
 make release-commit && make release-push
 ```
 
-This resumes the prepared version. Running `release-patch` again requests another
-patch bump. A prepared date or version does not prove a release tag or publication;
+These local phase commands resume the prepared version. For the standard shared
+workflow, rerun its original target to reconcile saved intent automatically.
+A prepared date or version does not prove a release tag or publication;
 an intentionally unpushed preparation may be followed by a new maintainer-selected
 batch while preserving the existing metadata and index.
 
@@ -244,30 +256,28 @@ minor`, `make major`, or `make bump-x VERSION=...` when ready to update the
 workspace version and both lockfiles, and `make release-stage` to stage release
 metadata.
 
-Standard commands may be rerun after a preflight or validation failure, while
-Cargo still has the previous version. The local entry point preserves the old
-intent record under `.git/release-state/` and starts a fresh attempt through the
-pinned runner, with the current source, date and complete gate. This also handles
-source fixes committed after a failed gate. These records are internal recovery
-state, not a plan the maintainer must prepare. The admission uses the runner's
-release lock and rejects malformed records or evidence of staging. Attempts
-that reached preparation retain exact-version recovery:
+Standard commands may be rerun after any interrupted attempt. Before preparation,
+the shared runner starts fresh preflight and complete validation on current
+source; older preparation-free records are preserved as evidence. After
+preparation may have begun, the same target selects the saved release before
+computing another increment and reconciles its exact source, version, date and
+destination. Plans are internal recovery records and do not require a different
+command. Actual kind, identity, payload, destination and concurrency conflicts
+still reject. An explicit exact recovery selector remains available:
 
 ```text
 make release-resume VERSION=0.13.0
 ```
 
-The pre-preparation retry fixtures use a runner stub and cover all three kinds,
-both eligible phases, retained records, repeated gate failure, invalid records,
-symlinks, concurrent locks and rejection from preparation onward. Source and
-shell syntax were reviewed; fixture execution and native macOS qualification
-remain maintainer-owned and pending.
+The vendored shared runner fixture owns restart and automatic recovery coverage;
+the local Make fixture verifies direct delegation and selection forwarding.
+The superseded local retry wrapper and its duplicate fixtures are removed.
 
 The user-operated release targets run the complete release gate, update the
 workspace version plus both the root and nested testing lockfiles, commit,
 create an annotated `vX.Y.Z` tag, and push with tags. If the workspace version
-has no release tag yet, the requested bump still runs. `make release-patch`
-always advances the patch version; it never reuses the current version. For
+has no saved unfinished intent, the requested bump runs. A fresh `make release-patch`
+advances the patch version; rerunning an unfinished patch release recovers it. For
 example, with Cargo at 0.8.2 and a current draft, stage and commit the code-bearing
 changes, then run `make release-patch` to validate, bump and release 0.8.3. The bump
 itself also supports a dirty worktree without a preparatory commit. An exact
@@ -275,8 +285,9 @@ itself also supports a dirty worktree without a preparatory commit. An exact
 Release metadata and both lockfiles are checked before the release commit;
 unstaged and untracked work is rejected before committing or tagging.
 
-If a combined release stops after the version bump, finish that version with
-the phase targets instead of rerunning the combined target, which always bumps:
+If a standard release stops after the version bump, rerun the same standard
+target. The local exact-version `release-x` has no shared journal; finish its
+prepared version with the phase targets:
 
 ```text
 make release-stage
@@ -294,12 +305,22 @@ changes for a tagged version are rejected. A push-only failure can be retried
 with `make release-push`. These phase targets do not repeat deployment tests;
 the completed pre-bump gate remains the evidence for the prepared code.
 
-`make fmt` and `make fmt-check` cover both the root and `testing/` workspaces.
-`testing-check` uses that same formatting check before its nested probe lints.
-The formatting hook checks both workspaces in the staged snapshot in a temporary
-directory. It never formats or stages files. Unrelated working edits and partial
-staging are preserved; unformatted staged Rust is rejected even when its working
-copy is formatted. Run formatting and stage the intended content before retrying.
+`make fmt` and `make fmt-check` sort manifests with cargo-sort 2.1.4 before
+formatting/checking Rust in both the root and `testing/` workspaces. The exact
+tool pin lives in `tool-versions.env`; `make update-dev` installs it with
+`--version` and `--locked`, and hosted jobs prepare it before gates. Hooks and
+format checks never install tools. Prepared standard-release metadata is checked
+for manifest ordering before staging, so a commit hook does not repair the
+runner's saved payload. `testing-check` uses the same formatting gate.
+
+The vendored formatting hook exports the index to disposable scratch, formats
+both workspaces, then copies/stages only the fully staged selection. Partial
+staging, formatter failure or concurrent edits reject without discarding working
+changes. Unselected and unrelated edits remain untouched. `make install-hooks`
+is explicit per-clone activation; the installer refuses conflicting hook paths.
+The local consumer fixture covers both workspaces, partial staging and formatter
+failure isolation using the actual formatting targets. Its new scenarios remain
+unexecuted by the automated contributor.
 
 The non-release `make patch`, `make minor`, `make major`, and
 `make bump-x VERSION=...` targets stop after the version-file update for
@@ -615,7 +636,11 @@ The three standard SemVer entry points use the [common release contract](release
 with explicit `RELEASE_REMOTE=origin` and `RELEASE_BRANCH=main`. The complete local
 release gate is unchanged. Consumer adapters retain the five metadata outputs,
 README projection and independently locked workspaces. Publishing stays separate.
-Inspect `.git/release-state/X.Y.Z.plan` and its lock owner before
-`make release-resume VERSION=X.Y.Z`; resume retains the original source, candidate,
-UTC date and destination. No release was executed during adoption. Linux stubs
-and syntax checks do not supply native macOS or live IC qualification.
+The same standard target automatically resumes unfinished preparation intent
+at its saved source, candidate, UTC date and destination. No release was executed
+during adoption. The 20-file snapshot is exported from committed Shared Tooling
+revision `f52c0e2476aee094359ed21de91c468540d3969f`, including the standard hook
+and installer and the new Cargo/hook rules. Snapshot integrity, shell syntax,
+manifest formatting and locked metadata are separate from workflow execution.
+The new recovery and hook fixtures, hosted setup and native macOS qualification
+remain user-owned and pending; source adoption does not qualify those workflows.
