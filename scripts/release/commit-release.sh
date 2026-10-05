@@ -24,14 +24,16 @@ if [[ "${staged_status}" == 0 ]]; then
         exit 1
     fi
 else
-    if git rev-parse --verify --quiet "refs/tags/v${version}" >/dev/null; then
+    release_tags="$(git tag --list "v${version}")"
+    if [[ -n "${release_tags}" ]]; then
         echo "error: tag v${version} already exists; cannot commit more changes for that release" >&2
         exit 1
     fi
     git commit -m "Release ${version}"
 fi
 make --no-print-directory ensure-clean
-if git rev-parse --verify --quiet "refs/tags/v${version}" >/dev/null; then
+release_tags="$(git tag --list "v${version}")"
+if [[ -n "${release_tags}" ]]; then
     bash scripts/release/check-tag-at-head.sh
 else
     git tag -a "v${version}" -m "Release ${version}"

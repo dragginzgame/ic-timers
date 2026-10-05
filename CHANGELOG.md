@@ -23,6 +23,14 @@ All notable changes to this project are recorded here.
 - Compare PocketIC fixture verification events as exact ordered records for
   accepted binaries and rejected overrides/downloads. Capture debris searches
   before asserting cleanup so a failed search cannot appear empty.
+- Capture exact release-tag listings before checking absence during version
+  preparation, release commits and interrupted tag retries. Reject failed queries
+  even with plausible output; retain the prepared commit when its post-commit
+  lookup fails and resume tagging that same commit on retry.
+- Reject failed workflow discovery and provider-source searches even when they
+  produce apparently valid records. Preserve nested workflow paths and temporary
+  file cleanup, and extend the repository fixture across discovery, search and
+  ordering failures with empty or matching output.
 
 ## [0.11.7] - 2026-10-05
 

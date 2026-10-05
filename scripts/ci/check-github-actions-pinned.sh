@@ -3,6 +3,11 @@ set -euo pipefail
 
 failed=0
 
+# Complete discovery before reading records so a failed find cannot look empty.
+workflow_list="$(mktemp "${TMPDIR:-/tmp}/ic-timers-workflows.XXXXXX")"
+trap 'rm -f -- "${workflow_list}"' EXIT
+find .github/workflows -type f \( -name '*.yml' -o -name '*.yaml' \) -print0 > "${workflow_list}"
+
 while IFS= read -r -d '' workflow; do
     line_number=0
     while IFS= read -r line || [[ -n "${line}" ]]; do
@@ -25,6 +30,6 @@ while IFS= read -r -d '' workflow; do
             fi
         fi
     done < "${workflow}"
-done < <(find .github/workflows -type f \( -name '*.yml' -o -name '*.yaml' \) -print0)
+done < "${workflow_list}"
 
 exit "${failed}"

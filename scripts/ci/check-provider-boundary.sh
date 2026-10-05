@@ -5,11 +5,13 @@ repository_root="$(git rev-parse --show-toplevel)"
 cd "${repository_root}"
 
 expected_source="crates/ic-timers/src/platform.rs"
-provider_sources="$(
+if ! provider_sources="$(
     grep -RFl --include='*.rs' -- 'ic_cdk_timers' crates/ic-timers/src \
-        | LC_ALL=C sort \
-        || true
-)"
+        | LC_ALL=C sort
+)"; then
+    echo 'error: cannot inspect direct ic-cdk-timers use' >&2
+    exit 1
+fi
 if [[ "${provider_sources}" != "${expected_source}" ]]; then
     echo "error: direct ic-cdk-timers use must remain solely in ${expected_source}" >&2
     if [[ -n "${provider_sources}" ]]; then

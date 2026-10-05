@@ -142,6 +142,43 @@ for arguments in '0.1.7 0.1.1' '0.1.0 00.1.1'; do
     cmp original-manifest.toml Cargo.toml
 done
 rm original-manifest.toml rejected-manifest.toml
+
+# Tag-query errors must stop both preflight and the bump before any mutation.
+mkdir -p bin
+IC_TIMERS_FIXTURE_GIT="$(command -v git)"
+export IC_TIMERS_FIXTURE_GIT
+cat > bin/git <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1:-}" == tag && "${2:-}" == --list ]]; then
+    printf '%s' "${FIXTURE_TAG_LOOKUP_OUTPUT:-}"
+    echo 'injected release-tag lookup failure' >&2
+    exit 128
+fi
+exec "${IC_TIMERS_FIXTURE_GIT}" "$@"
+EOF
+chmod +x bin/git
+for operation in preflight bump; do
+    arguments=(patch)
+    if [[ "${operation}" == preflight ]]; then arguments=(--check patch); fi
+    for lookup_output in '' v0.1.1; do
+        if output="$(PATH="${temporary_root}/bin:${PATH}" \
+            FIXTURE_TAG_LOOKUP_OUTPUT="${lookup_output}" \
+            bash scripts/release/bump-version.sh "${arguments[@]}" 2>&1)"; then
+            echo "error: ${operation} accepted a failed release-tag lookup" >&2
+            exit 1
+        fi
+        if [[ "${output}" != *'injected release-tag lookup failure'* ]]; then
+            echo "error: unexpected tag-query rejection: ${output}" >&2
+            exit 1
+        fi
+        assert_metadata_unchanged original-files
+        staged_paths="$(git diff --cached --name-only)"
+        test -z "${staged_paths}"
+    done
+done
+rm bin/git
+
 bash scripts/release/bump-version.sh --check patch
 assert_metadata_unchanged original-files
 

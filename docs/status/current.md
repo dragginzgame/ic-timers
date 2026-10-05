@@ -33,6 +33,15 @@ references and validation belong in [release notes](../changelog/README.md),
   Clean-worktree and release-commit guards reject failed Git queries; their new
   rejection fixtures remain unexecuted. PocketIC fixture events use exact record
   comparisons, with scoped source/syntax review recorded in the host matrix.
+  Version preparation and release commits now capture exact tag listings before
+  checking absence, rejecting failed lookups before mutation and after a release
+  commit. Fixtures cover empty/matching failure output and retrying the same
+  untagged commit; source/syntax review is recorded in the release guide, and
+  those scenarios remain unexecuted.
+  Repository checks also reject failed workflow discovery and provider-source
+  searches/orderings before accepting records. The existing repository fixture
+  covers producer failures and discovery cleanup; its pending execution and
+  syntax/source-review scope are recorded in the release guide.
 - Public removals or incompatible semantic changes require the next minor line;
   private behavior-preserving simplifications may use a patch. See the
   [ordinary arbitration hard cut](../changelog/0.9.0.md).

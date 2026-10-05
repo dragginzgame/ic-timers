@@ -113,6 +113,29 @@ fixture injects failures at these boundaries and checks that the commit identity
 is preserved. Source review, shell syntax and embedded fixture-shell syntax
 checks passed; those new fixture scenarios have not been executed.
 
+Version preparation and release commits capture the exact version's tag listing
+before testing whether it is empty. A failed query cannot authorize a bump,
+commit or tag, even when it emits plausible output. The release helper queries
+again after committing and checking the clean worktree; failure there leaves
+the prepared release commit untagged for the existing retry path. Fixtures cover
+empty and matching output from failed lookups, metadata and index preservation
+before preparation, and recovery using the same commit after the post-commit
+lookup fails. Source and shell syntax were reviewed; these scenarios have not
+been executed. The lookup uses Git and Bash without adding a host dependency
+or establishing native macOS qualification.
+
+The repository checks also retain producer failure status during workflow
+discovery and provider-source inspection. Actions validation completes a NUL
+record listing before reading workflows and removes its temporary listing on
+exit; nested paths and spaces retain their existing meaning. Provider validation
+rejects a failed search or sort before comparing the allowed source path. The
+repository fixture independently injects discovery, search and ordering failures
+with empty or matching records, checks discovery cleanup, and retains accepted
+pinned workflows and rejected unpinned workflows. Source, shell and embedded
+fixture-shell syntax were reviewed, and diff whitespace checks passed. These
+fixture scenarios have not been executed. This repository-only work changes no
+runtime contract and supplies no native macOS qualification.
+
 Combined release targets run `bump-version.sh --check` before deployment
 validation. This preflight checks the requested version, impact, unambiguous
 draft selection and structured README projections without changing version

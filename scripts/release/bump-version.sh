@@ -68,7 +68,8 @@ if ! semver_greater_than "${new_version}" "${previous_version}"; then
     echo "error: target version ${new_version} must be greater than ${previous_version}" >&2
     exit 1
 fi
-if git rev-parse --verify --quiet "refs/tags/v${new_version}" >/dev/null; then
+release_tags="$(git tag --list "v${new_version}")"
+if [[ -n "${release_tags}" ]]; then
     echo "error: tag v${new_version} already exists" >&2
     exit 1
 fi

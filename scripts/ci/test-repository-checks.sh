@@ -9,6 +9,7 @@ git init -q "${temporary_root}"
 mkdir -p "${temporary_root}"/{.githooks,scripts/{ci,dev,release},crates/ic-timers/src}
 cp "${repository_root}/Makefile" "${temporary_root}/Makefile"
 cp "${repository_root}/scripts/ci/check-provider-boundary.sh" "${temporary_root}/scripts/ci/"
+cp "${repository_root}/scripts/ci/check-github-actions-pinned.sh" "${temporary_root}/scripts/ci/"
 cd "${temporary_root}"
 
 for script in .githooks/pre-commit scripts/ci/valid.sh scripts/dev/valid.sh scripts/release/valid.sh; do
@@ -36,6 +37,36 @@ for directory in ci dev release; do
     expect_failure "${broken}" make --no-print-directory shell-check
     rm -- "${broken}"
 done
+
+# Workflow discovery retains nested paths, spaces and producer failure status.
+mkdir -p '.github/workflows/nested' scan-bin scan-tmp
+printf '%s\n' 'steps:' \
+    '  - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' \
+    > '.github/workflows/nested/pinned workflow.yml'
+bash scripts/ci/check-github-actions-pinned.sh
+printf '%s\n' 'steps:' '  - uses: actions/checkout@main' \
+    > '.github/workflows/unpinned.yaml'
+expect_failure 'must be pinned to a full commit SHA' bash scripts/ci/check-github-actions-pinned.sh
+rm .github/workflows/unpinned.yaml
+cat > scan-bin/find <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${FIXTURE_PARTIAL_OUTPUT:-0}" == 1 ]]; then
+    printf '%s\0' '.github/workflows/nested/pinned workflow.yml'
+fi
+echo 'injected workflow discovery failure' >&2
+exit 2
+EOF
+chmod +x scan-bin/find
+for partial_output in 0 1; do
+    expect_failure 'injected workflow discovery failure' env \
+        PATH="${temporary_root}/scan-bin:${PATH}" TMPDIR="${temporary_root}/scan-tmp" \
+        FIXTURE_PARTIAL_OUTPUT="${partial_output}" bash scripts/ci/check-github-actions-pinned.sh
+    # The discovery record file is owned by the checker and cleaned on failure.
+    debris="$(find scan-tmp -type f -print)"
+    test -z "${debris}"
+done
+rm scan-bin/find
 
 cat > scripts/release/classify-release-impact.sh <<'EOF'
 #!/usr/bin/env bash
@@ -88,6 +119,43 @@ EOF
 facade_header=('#![forbid(private_interfaces)]' 'mod platform;')
 printf '%s\n' "${facade_header[@]}" > crates/ic-timers/src/lib.rs
 bash scripts/ci/check-provider-boundary.sh >/dev/null
+
+# A failed search/order operation cannot establish provider confinement, even
+# when it emits the one permitted source path before failing.
+cat > scan-bin/grep <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${FIXTURE_PARTIAL_OUTPUT:-0}" == 1 ]]; then
+    printf '%s\n' 'crates/ic-timers/src/platform.rs'
+fi
+echo 'injected source search failure' >&2
+exit 2
+EOF
+chmod +x scan-bin/grep
+for partial_output in 0 1; do
+    expect_failure 'injected source search failure' env \
+        PATH="${temporary_root}/scan-bin:${PATH}" FIXTURE_PARTIAL_OUTPUT="${partial_output}" \
+        bash scripts/ci/check-provider-boundary.sh
+done
+rm scan-bin/grep
+IC_TIMERS_FIXTURE_SORT="$(command -v sort)"
+export IC_TIMERS_FIXTURE_SORT
+cat > scan-bin/sort <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+sources="$("${IC_TIMERS_FIXTURE_SORT}" "$@")"
+if [[ "${FIXTURE_PARTIAL_OUTPUT:-0}" == 1 ]]; then printf '%s\n' "${sources}"; fi
+echo 'injected source ordering failure' >&2
+exit 2
+EOF
+chmod +x scan-bin/sort
+for partial_output in 0 1; do
+    expect_failure 'injected source ordering failure' env \
+        PATH="${temporary_root}/scan-bin:${PATH}" FIXTURE_PARTIAL_OUTPUT="${partial_output}" \
+        bash scripts/ci/check-provider-boundary.sh
+done
+rm scan-bin/sort
+
 printf '%s\n' 'mod platform;' > crates/ic-timers/src/lib.rs
 expect_failure 'public interfaces' bash scripts/ci/check-provider-boundary.sh
 for export in 'pub use ic_cdk_timers::TimerId;' 'pub extern crate ic_cdk_timers;'; do

@@ -39,7 +39,7 @@ expect_failure() {
 expect_failure 'HEAD is not Release' bash scripts/release/commit-release.sh
 printf '%s\n' 'Prepared release.' >> README.md
 git add README.md
-# Fail tagging after the real commit. Retrying must finish this same commit.
+# Fail tag lookup and creation after the real commit. Retries keep that commit.
 IC_TIMERS_FIXTURE_GIT="$(command -v git)"
 export IC_TIMERS_FIXTURE_GIT
 cat > bin/git <<'EOF'
@@ -60,7 +60,19 @@ if [[ "${FIXTURE_FAIL_SUBJECT:-0}" == 1 && "${1:-}" == log ]]; then
     echo 'injected release-subject query failure' >&2
     exit 1
 fi
-if [[ "${FIXTURE_FAIL_TAG:-0}" == 1 && "${1:-}" == tag ]]; then
+if [[ "${1:-}" == tag && "${2:-}" == --list ]]; then
+    fail_lookup="${FIXTURE_FAIL_TAG_LOOKUP:-0}"
+    if [[ "${fail_lookup}" == after-commit ]]; then
+        subject="$("${IC_TIMERS_FIXTURE_GIT}" log -1 --format=%s)"
+        if [[ "${subject}" == 'Release 0.1.0' ]]; then fail_lookup=1; fi
+    fi
+    if [[ "${fail_lookup}" == 1 ]]; then
+        printf '%s' "${FIXTURE_TAG_LOOKUP_OUTPUT:-}"
+        echo 'injected release-tag lookup failure' >&2
+        exit 128
+    fi
+fi
+if [[ "${FIXTURE_FAIL_TAG:-0}" == 1 && "${1:-}" == tag && "${2:-}" == -a ]]; then
     echo 'injected tag failure' >&2
     exit 1
 fi
@@ -73,12 +85,24 @@ export PATH="${temporary_root}/bin:${PATH}"
 initial_commit="$(git rev-parse HEAD)"
 expect_failure 'injected untracked-file query failure' env FIXTURE_FAIL_UNTRACKED=1 bash scripts/release/commit-release.sh
 expect_failure 'injected staged-diff query failure' env FIXTURE_FAIL_STAGED=1 bash scripts/release/commit-release.sh
+for lookup_output in '' v0.1.0; do
+    expect_failure 'injected release-tag lookup failure' env FIXTURE_FAIL_TAG_LOOKUP=1 \
+        FIXTURE_TAG_LOOKUP_OUTPUT="${lookup_output}" bash scripts/release/commit-release.sh
+done
 current_commit="$(git rev-parse HEAD)"
 test "${current_commit}" = "${initial_commit}"
-expect_failure 'injected tag failure' env FIXTURE_FAIL_TAG=1 bash scripts/release/commit-release.sh
+expect_failure 'injected release-tag lookup failure' env FIXTURE_FAIL_TAG_LOOKUP=after-commit \
+    bash scripts/release/commit-release.sh
 release_commit="$(git rev-parse HEAD)"
 release_subject="$(git log -1 --format=%s)"
 test "${release_subject}" = 'Release 0.1.0'
+release_tags="$(git tag --list v0.1.0)"
+test -z "${release_tags}"
+expect_failure 'injected tag failure' env FIXTURE_FAIL_TAG=1 bash scripts/release/commit-release.sh
+current_commit="$(git rev-parse HEAD)"
+test "${current_commit}" = "${release_commit}"
+release_tags="$(git tag --list v0.1.0)"
+test -z "${release_tags}"
 bash scripts/release/commit-release.sh
 current_commit="$(git rev-parse HEAD)"
 test "${current_commit}" = "${release_commit}"
@@ -92,6 +116,10 @@ expect_failure 'injected untracked-file query failure' env FIXTURE_FAIL_UNTRACKE
 expect_failure 'injected untracked-file query failure' env FIXTURE_FAIL_UNTRACKED=1 bash scripts/release/commit-release.sh
 expect_failure 'injected staged-diff query failure' env FIXTURE_FAIL_STAGED=1 bash scripts/release/commit-release.sh
 expect_failure 'injected release-subject query failure' env FIXTURE_FAIL_SUBJECT=1 bash scripts/release/commit-release.sh
+for lookup_output in '' v0.1.0; do
+    expect_failure 'injected release-tag lookup failure' env FIXTURE_FAIL_TAG_LOOKUP=1 \
+        FIXTURE_TAG_LOOKUP_OUTPUT="${lookup_output}" bash scripts/release/commit-release.sh
+done
 current_commit="$(git rev-parse HEAD)"
 test "${current_commit}" = "${release_commit}"
 bash scripts/release/check-tag-at-head.sh
