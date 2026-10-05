@@ -113,6 +113,12 @@ The module hierarchy keeps six responsibilities separate:
    Watchdog completion decides removal once after selecting its final state:
    inactive declarations follow their lifetime and pending unregister command,
    while retained or replaced successors keep their declaration.
+   Ordinary request, Watchdog request and Watchdog scheduler failures decide
+   terminal removal through the entry already selected and authorized by their
+   transition. The shared entry predicate uses that transition's failure and
+   declaration lifetime; no second lookup reconstructs the decision. The registry's
+   existing removal exit applies it after the entry borrow ends. Runtime detaches
+   handles before those transitions and applies provider cleanup afterward.
    Watchdog cancellation selects the handles to clear in one state match. An
    immediate stop uses that selection for state replacement, cancellation
    accounting and provider cleanup; running work keeps its pending command, and
@@ -197,6 +203,29 @@ volume does not obscure production flow.
 
 The copied Canic code was adapted into generic library types; Canic-specific
 domain work, storage, and metrics were intentionally not copied.
+
+### Terminal removal verification
+
+Source review traces all three failure-removal callers to the selected entry and
+the common map-removal exit. The change preserves generation-before-deadline
+failure precedence, request and completion accounting, and provider detachment
+before terminal removal. Public APIs, snapshot shapes, generation sequences and
+dependencies are unchanged; no generated artifact or downstream adapter changes.
+
+The maintained [registry fixtures](../crates/ic-timers/src/registry/tests.rs)
+`ordinary_terminal_failures_respect_declaration_lifetime` and
+`watchdog_terminal_failures_respect_declaration_lifetime` cover terminal requests,
+scheduler dispatch and completion across both lifetimes. The immediate-request
+coalescing fixture now covers both lifetimes, requiring initial, replacement and
+coalesced requests to retain their declarations. The maintained
+[runtime fixture](../crates/ic-timers/src/runtime/tests.rs)
+`terminal_scheduler_failure_clears_queued_work_before_transient_removal` checks
+queued-work cleanup and reuse of a removed identity.
+
+These fixtures have not been executed for this change. Tests, builds, lint gates
+and deployment validation remain maintainer-owned. Native substitutes cannot
+establish IC rollback or provider heap behavior, and no performance result is
+claimed.
 
 ## Canonical runtime
 

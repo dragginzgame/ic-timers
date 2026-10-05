@@ -517,6 +517,13 @@ impl Entry {
         )
     }
 
+    /// Decide terminal removal from the entry already selected and authorized
+    /// by the transition owner. Runtime detaches handles before that transition.
+    const fn remove_on_failure(&self, transition: &RegistryTransition) -> bool {
+        transition.failure().is_some()
+            && matches!(self.lifetime, DeclarationLifetime::RemoveWhenStopped)
+    }
+
     fn take_wakeup_handle(&mut self, identity: &TimerIdentity) -> Option<ProviderHandle> {
         let role = self.kind.wakeup_role();
         self.wakeup
@@ -885,7 +892,13 @@ impl TimerRegistry {
                     clear_wakeup_if(claim.identity(), clear_wakeup),
                     error,
                 );
-                return Ok(self.remove_transient_on_failure(claim.identity(), transition));
+                let remove = entry.remove_on_failure(&transition);
+                return Ok(remove_after(
+                    &mut self.entries,
+                    claim.identity(),
+                    transition,
+                    remove,
+                ));
             }
         };
 
@@ -986,7 +999,13 @@ impl TimerRegistry {
         }
         entry.observability.counters_mut().record_schedule_request();
         entry.latest_requested_delay_ns = requested_delay_ns;
-        Ok(self.remove_transient_on_failure(claim.identity(), transition))
+        let remove = entry.remove_on_failure(&transition);
+        Ok(remove_after(
+            &mut self.entries,
+            claim.identity(),
+            transition,
+            remove,
+        ))
     }
 
     pub(crate) fn cancel(
@@ -1301,7 +1320,8 @@ impl TimerRegistry {
                     },
                     failure,
                 );
-                return self.remove_transient_on_failure(token.identity(), transition);
+                let remove = entry.remove_on_failure(&transition);
+                return remove_after(&mut self.entries, token.identity(), transition, remove);
             }
         };
 
@@ -1475,20 +1495,6 @@ impl TimerRegistry {
             transition,
             remove,
         ))
-    }
-
-    /// Remove a terminal transient whose provider handles the runtime detached
-    /// before invoking the policy transition.
-    fn remove_transient_on_failure(
-        &mut self,
-        identity: &TimerIdentity,
-        transition: RegistryTransition,
-    ) -> RegistryTransition {
-        let remove = transition.failure().is_some()
-            && self.entries.get(identity).is_some_and(|entry| {
-                matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped)
-            });
-        remove_after(&mut self.entries, identity, transition, remove)
     }
 
     pub(crate) fn snapshot(&self, identity: &TimerIdentity) -> Option<TimerSnapshot> {

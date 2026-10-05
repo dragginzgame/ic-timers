@@ -2,6 +2,23 @@
 
 All notable changes to this project are recorded here.
 
+## [0.11.6]
+
+### Changed
+
+- Decide terminal declaration removal from the entry already selected by the
+  ordinary request, Watchdog request or Watchdog scheduler transition. Remove
+  the separate registry lookup while preserving lifetime rules, typed failures,
+  accounting and provider cleanup ordering.
+
+### Development
+
+- Extend the Watchdog immediate-request coalescing fixture across both declaration
+  lifetimes, checking that successful initial, replacement and duplicate requests
+  retain transient declarations.
+- Record terminal-removal ownership and pending verification in the
+  [architecture reference](docs/architecture.md#terminal-removal-verification).
+
 ## [0.11.5] - 2026-10-05
 
 ### Changed

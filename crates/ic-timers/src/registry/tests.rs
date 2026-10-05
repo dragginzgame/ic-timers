@@ -1526,100 +1526,97 @@ fn watchdog_requests_preserve_dispatch_authority_until_completion_replaces_the_p
 
 #[test]
 fn watchdog_immediate_initial_and_replacement_requests_coalesce_without_duplicates() {
-    let mut registry = registry();
-    let immediate_timer = identity("watchdog-immediate-initial");
-    let immediate_claim = registry
-        .register_watchdog(
-            immediate_timer.clone(),
-            cadence(5),
-            DeclarationLifetime::Retained,
-        )
-        .expect("claim should succeed");
-    let initial = registry
-        .ensure_watchdog_immediately(&immediate_claim, 10)
-        .expect("immediate initial ensure should succeed");
-    assert!(matches!(
-        initial.effect(),
-        RegistryEffect::ArmWakeup {
-            delay_ns: 0,
-            arm: WakeupArm::Initial,
-            ..
-        }
-    ));
-    confirm(&mut registry, &initial);
-    let duplicate = registry
-        .ensure_watchdog_immediately(&immediate_claim, 10)
-        .expect("equivalent immediate ensure should coalesce");
-    assert_eq!(duplicate.effect(), &RegistryEffect::None);
-    let snapshot = registry
-        .snapshot(&immediate_timer)
-        .expect("snapshot should exist");
-    assert_eq!(snapshot.next_deadline_ns(), Some(10));
-    assert_eq!(
-        snapshot.scheduling_mode(),
-        TimerSchedulingMode::Continuation
-    );
-    assert_eq!(snapshot.latest_requested_delay_ns(), Some(0));
-    assert_eq!(snapshot.latest_armed_delay_ns(), Some(0));
-    assert_eq!(snapshot.observability().counters().schedule_requests(), 2);
-    assert_eq!(snapshot.observability().counters().wakeups_armed(), 1);
-    assert_eq!(snapshot.observability().counters().coalesced(), 1);
+    for lifetime in [
+        DeclarationLifetime::Retained,
+        DeclarationLifetime::RemoveWhenStopped,
+    ] {
+        let mut registry = registry();
+        let immediate_timer = identity("watchdog-immediate-initial");
+        let immediate_claim = registry
+            .register_watchdog(immediate_timer.clone(), cadence(5), lifetime)
+            .expect("claim should succeed");
+        let initial = registry
+            .ensure_watchdog_immediately(&immediate_claim, 10)
+            .expect("immediate initial ensure should succeed");
+        assert!(matches!(
+            initial.effect(),
+            RegistryEffect::ArmWakeup {
+                delay_ns: 0,
+                arm: WakeupArm::Initial,
+                ..
+            }
+        ));
+        confirm(&mut registry, &initial);
+        let duplicate = registry
+            .ensure_watchdog_immediately(&immediate_claim, 10)
+            .expect("equivalent immediate ensure should coalesce");
+        assert_eq!(duplicate.effect(), &RegistryEffect::None);
+        let snapshot = registry
+            .snapshot(&immediate_timer)
+            .expect("snapshot should exist");
+        assert_eq!(snapshot.next_deadline_ns(), Some(10));
+        assert_eq!(
+            snapshot.scheduling_mode(),
+            TimerSchedulingMode::Continuation
+        );
+        assert_eq!(snapshot.latest_requested_delay_ns(), Some(0));
+        assert_eq!(snapshot.latest_armed_delay_ns(), Some(0));
+        assert_eq!(snapshot.observability().counters().schedule_requests(), 2);
+        assert_eq!(snapshot.observability().counters().wakeups_armed(), 1);
+        assert_eq!(snapshot.observability().counters().coalesced(), 1);
 
-    let replacement_timer = identity("watchdog-immediate-replacement");
-    let replacement_claim = registry
-        .register_watchdog(
-            replacement_timer.clone(),
-            cadence(5),
-            DeclarationLifetime::Retained,
-        )
-        .expect("replacement claim should succeed");
-    let cadence_arm = registry
-        .ensure_recurring(&replacement_claim, 10)
-        .expect("cadence ensure should succeed");
-    confirm(&mut registry, &cadence_arm);
-    let (stale_scheduler, _) = arm(cadence_arm);
-    let replacement = registry
-        .ensure_watchdog_immediately(&replacement_claim, 12)
-        .expect("later cadence deadline should move to now");
-    assert!(matches!(
-        replacement.effect(),
-        RegistryEffect::ArmWakeup {
-            delay_ns: 0,
-            arm: WakeupArm::Replacement,
-            ..
-        }
-    ));
-    confirm(&mut registry, &replacement);
-    let (immediate_scheduler, _) = arm(replacement);
-    assert_eq!(
-        registry
-            .begin_watchdog_scheduler(&stale_scheduler, 15)
-            .effect(),
-        &RegistryEffect::None
-    );
-    let duplicate = registry
-        .ensure_watchdog_immediately(&replacement_claim, 12)
-        .expect("repeated replacement should coalesce");
-    assert_eq!(duplicate.effect(), &RegistryEffect::None);
-    let overdue_duplicate = registry
-        .ensure_watchdog_immediately(&replacement_claim, 13)
-        .expect("an already earlier deadline should satisfy immediate demand");
-    assert_eq!(overdue_duplicate.effect(), &RegistryEffect::None);
-    let snapshot = registry
-        .snapshot(&replacement_timer)
-        .expect("replacement snapshot should exist");
-    assert_eq!(snapshot.next_deadline_ns(), Some(12));
-    assert_eq!(
-        snapshot.generation(),
-        Some(immediate_scheduler.callback_generation())
-    );
-    assert_eq!(snapshot.latest_requested_delay_ns(), Some(0));
-    assert_eq!(snapshot.latest_armed_delay_ns(), Some(0));
-    let counters = snapshot.observability().counters();
-    assert_eq!(counters.schedule_requests(), 4);
-    assert_eq!(counters.wakeups_armed(), 2);
-    assert_eq!(counters.coalesced(), 2);
-    assert_eq!(counters.stale_wakeups(), 1);
+        let replacement_timer = identity("watchdog-immediate-replacement");
+        let replacement_claim = registry
+            .register_watchdog(replacement_timer.clone(), cadence(5), lifetime)
+            .expect("replacement claim should succeed");
+        let cadence_arm = registry
+            .ensure_recurring(&replacement_claim, 10)
+            .expect("cadence ensure should succeed");
+        confirm(&mut registry, &cadence_arm);
+        let (stale_scheduler, _) = arm(cadence_arm);
+        let replacement = registry
+            .ensure_watchdog_immediately(&replacement_claim, 12)
+            .expect("later cadence deadline should move to now");
+        assert!(matches!(
+            replacement.effect(),
+            RegistryEffect::ArmWakeup {
+                delay_ns: 0,
+                arm: WakeupArm::Replacement,
+                ..
+            }
+        ));
+        confirm(&mut registry, &replacement);
+        let (immediate_scheduler, _) = arm(replacement);
+        assert_eq!(
+            registry
+                .begin_watchdog_scheduler(&stale_scheduler, 15)
+                .effect(),
+            &RegistryEffect::None
+        );
+        let duplicate = registry
+            .ensure_watchdog_immediately(&replacement_claim, 12)
+            .expect("repeated replacement should coalesce");
+        assert_eq!(duplicate.effect(), &RegistryEffect::None);
+        let overdue_duplicate = registry
+            .ensure_watchdog_immediately(&replacement_claim, 13)
+            .expect("an already earlier deadline should satisfy immediate demand");
+        assert_eq!(overdue_duplicate.effect(), &RegistryEffect::None);
+        let snapshot = registry
+            .snapshot(&replacement_timer)
+            .expect("replacement snapshot should exist");
+        assert_eq!(snapshot.next_deadline_ns(), Some(12));
+        assert_eq!(
+            snapshot.generation(),
+            Some(immediate_scheduler.callback_generation())
+        );
+        assert_eq!(snapshot.latest_requested_delay_ns(), Some(0));
+        assert_eq!(snapshot.latest_armed_delay_ns(), Some(0));
+        let counters = snapshot.observability().counters();
+        assert_eq!(counters.schedule_requests(), 4);
+        assert_eq!(counters.wakeups_armed(), 2);
+        assert_eq!(counters.coalesced(), 2);
+        assert_eq!(counters.stale_wakeups(), 1);
+    }
 }
 
 #[test]
