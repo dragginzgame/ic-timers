@@ -8,7 +8,7 @@ license.workspace = true
 
 [dependencies]
 candid.workspace = true
-pocket-ic.workspace = true
+ic-testkit.workspace = true
 serde = { workspace = true, features = ["derive"] }
 
 [lints]

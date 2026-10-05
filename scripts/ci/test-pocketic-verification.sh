@@ -15,7 +15,7 @@ cat > "${temporary_root}/candidate" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' execute >> "${IC_TIMERS_FIXTURE_LOG}"
 if [[ "${FIXTURE_VERSION_OK:-1}" == 1 ]]; then
-    echo 'pocket-ic-server 15.0.0'
+    echo "${FIXTURE_OBSERVED_VERSION:-pocket-ic-server 16.0.0}"
 else
     echo 'wrong version'
 fi
@@ -119,18 +119,18 @@ for host in x86_64-linux x86_64-darwin arm64-darwin; do
     case "${host}" in
         x86_64-linux)
             IC_TIMERS_FIXTURE_OS=Linux; IC_TIMERS_FIXTURE_ARCH=x86_64
-            IC_TIMERS_FIXTURE_ARCHIVE_SHA=972d592975bdd0f046b05b5414ed6f9a044c676ef912b8ac81d359dd4982b038
-            IC_TIMERS_FIXTURE_BINARY_SHA=29472ea4433b30a280676c4e22e369d79d5ba6ee1b4d48bab32ebe7d0ad2b4bb ;;
+            IC_TIMERS_FIXTURE_ARCHIVE_SHA=268ba79ec7fe9a563a575adf4983c69627093cce2711d142e476cdc7ad04249e
+            IC_TIMERS_FIXTURE_BINARY_SHA=69e324bdb68d32d878b7a9504b1379f08f8d1921272bacb065b0fabb3d0f3792 ;;
         x86_64-darwin)
             IC_TIMERS_FIXTURE_OS=Darwin; IC_TIMERS_FIXTURE_ARCH=x86_64
-            IC_TIMERS_FIXTURE_ARCHIVE_SHA=1d133a07c08c8e8ce25a2d08e6e7a590c27a5621735a0ab95c19f111d73f9f72
-            IC_TIMERS_FIXTURE_BINARY_SHA=e0a93fdd0b11345096797807002fcccecf7004c9ebfcdb1c0a3f4bcab2344964 ;;
+            IC_TIMERS_FIXTURE_ARCHIVE_SHA=9710b9c4ac4eaa7eb10bddaa2aba80560a59362610f1bcd8c6e23be82a39c327
+            IC_TIMERS_FIXTURE_BINARY_SHA=b8233ebee53452db7465b43e7b2ff80f2e1445dc148eb2b4b237493d8d15ec66 ;;
         arm64-darwin)
             IC_TIMERS_FIXTURE_OS=Darwin; IC_TIMERS_FIXTURE_ARCH=arm64
-            IC_TIMERS_FIXTURE_ARCHIVE_SHA=e6a96df4559949091411877f562512e132b75916bb704c03494bc7877fcfea0e
-            IC_TIMERS_FIXTURE_BINARY_SHA=3635e41075cded4c0fcfe4bb80b55d03324f8fa85a1a99a0f9eed2a097c50eb0 ;;
+            IC_TIMERS_FIXTURE_ARCHIVE_SHA=41cf77e24effc381e21f5e07e908ed078783646e6de05ed52fd6973221f07e64
+            IC_TIMERS_FIXTURE_BINARY_SHA=781f643d4b16105e7544ca810a972f99c0ef1919016c680faa93f10909a14496 ;;
     esac
-    IC_TIMERS_FIXTURE_URL="https://github.com/dfinity/pocketic/releases/download/15.0.0/pocket-ic-${host}.gz"
+    IC_TIMERS_FIXTURE_URL="https://github.com/dfinity/pocketic/releases/download/16.0.0/pocket-ic-${host}.gz"
     export IC_TIMERS_FIXTURE_OS IC_TIMERS_FIXTURE_ARCH IC_TIMERS_FIXTURE_ARCHIVE_SHA
     export IC_TIMERS_FIXTURE_BINARY_SHA IC_TIMERS_FIXTURE_URL
     cp -p "${temporary_root}/cached-candidate" "${POCKET_IC_BIN}"
@@ -165,18 +165,27 @@ for host in x86_64-linux x86_64-darwin arm64-darwin; do
     : > "${IC_TIMERS_FIXTURE_LOG}"
     FIXTURE_BINARY_HASH_OK=1 bash "${checker}"
     expect_events binary-hash execute
-    for result in wrong-version failed-command; do
+    for result in wrong-version old-server-version failed-command; do
         : > "${IC_TIMERS_FIXTURE_LOG}"
-        version_ok=1; version_status=0
-        if [[ "${result}" == wrong-version ]]; then version_ok=0; else version_status=1; fi
+        version_ok=1; version_status=0; observed_version='pocket-ic-server 16.0.0'
+        case "${result}" in
+            wrong-version) version_ok=0 ;;
+            old-server-version) observed_version='pocket-ic-server 15.0.0' ;;
+            failed-command) version_status=1 ;;
+        esac
         if output="$(FIXTURE_BINARY_HASH_OK=1 FIXTURE_VERSION_OK="${version_ok}" \
-            FIXTURE_VERSION_STATUS="${version_status}" bash "${checker}" 2>&1)"; then
+            FIXTURE_VERSION_STATUS="${version_status}" FIXTURE_OBSERVED_VERSION="${observed_version}" \
+            bash "${checker}" 2>&1)"; then
             echo "error: accepted a hash-matching binary with ${result}" >&2
             exit 1
         fi
         expect_events binary-hash execute
         if [[ "${result}" == wrong-version && "${output}" != *'actual version:   wrong version'* ]]; then
             echo 'error: rejection did not report the observed version' >&2
+            exit 1
+        fi
+        if [[ "${result}" == old-server-version && "${output}" != *'actual version:   pocket-ic-server 15.0.0'* ]]; then
+            echo 'error: rejection did not report the old server version' >&2
             exit 1
         fi
     done

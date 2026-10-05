@@ -139,8 +139,9 @@ bash scripts/release/finalize-changelog.sh "${new_version}" "${release_date}"
 
 bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh" set "${previous_version}" "${new_version}"
 bash scripts/release/readme-version.sh --update
-cargo update --offline -p ic-timers
-cargo update --manifest-path testing/Cargo.toml --offline -p ic-timers
+# Preserve both tested dependency selections; update only this local package.
+bash scripts/release/update-local-lock.sh Cargo.lock "$previous_version" "$new_version"
+bash scripts/release/update-local-lock.sh testing/Cargo.lock "$previous_version" "$new_version"
 
 # Version mutation must leave both independently locked workspaces coherent.
 # Behavioral evidence belongs to the user-operated deployment release gate.

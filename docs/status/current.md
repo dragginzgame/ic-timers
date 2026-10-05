@@ -21,7 +21,10 @@ references and validation belong in [release notes](../changelog/README.md),
   Its [adoption record](../shared-tooling.md) scopes provenance and exceptions.
   Historical release notes retain evidence; no new versioned note or mutable
   handoff release marker is required for version preparation.
-  The reviewed baseline is now `ca319ba05c5a8016f3cdbf5af073fca2e6279268`, with
+  Shared measurement arithmetic is now explicitly integrated from `ic-metrics`;
+  attribution and registration identity remain local. Standard SemVer releases
+  use the snapshot runner and exact-version resume; no release was executed.
+  The reviewed baseline is now `b8537873ac124ad17b30e32aa23e9006a3e6ec21`, with
   shared rules in `DRAGGINZGAME.md`. Maintainer-owned validation and release
   exceptions remain explicit; the [local host matrix](../releasing.md#host-support)
   records required macOS workflows and their unresolved qualification.
@@ -95,6 +98,17 @@ references and validation belong in [release notes](../changelog/README.md),
   requested changes and prepare changelogs/notes without executing those gates.
 - Direct provider: exact `ic-cdk-timers` 1.0.0; exact `ic0` 1.2.0. Probe canisters
   use exact `ic-cdk` 0.20.3. MSRV is Rust 1.88.0; development/hosted CI uses 1.99.0.
+- The host-only test harness now uses published exact `ic-testkit` 0.17.3 and
+  one resolved PocketIC 16.0.0 client, with caller-owned servers and bounded
+  startup from the verified binary. The nested dependency lock is updated.
+  Official Linux/macOS archive hashes and executable headers were inspected
+  without executing binaries; compilation, lint, host recovery and cohort
+  qualification remain pending in the [release guide](../releasing.md#testkit-harness-qualification).
+- The isolated version-preparation fixture now includes the shared increment
+  helper and tests current Makefile delegation instead of the removed standard
+  recipe sequence. The shared runner fixture is included in `release-check`;
+  corrected fixture execution remains maintainer-owned, with scope recorded in
+  the [release guide](../releasing.md).
 
 ## Canonical runtime
 

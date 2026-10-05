@@ -227,9 +227,11 @@ See the [0.11.0 verification scope](docs/changelog/0.11.0.md).
   passing before the ordinary-await correction, but supplied no page measurements
   in that report. This wrapper has no provider-heap compaction authority and
   supplies no global memory cap. See the [pinned provider cancellation source](https://docs.rs/ic-cdk-timers/1.0.0/src/ic_cdk_timers/lib.rs.html#197).
-- The current evidence uses the pinned PocketIC 15.0.0 binary and
-  `ic-cdk-timers` 1.0.0 provider. A provider or evidence-binary change requires
-  a renewed source and recovery audit.
+- Recorded recovery evidence uses PocketIC 15.0.0 and `ic-cdk-timers` 1.0.0.
+  The current host harness uses `ic-testkit` 0.17.3 with pinned PocketIC 16.0.0;
+  new compilation, lint, native-host recovery and cohort qualification remain
+  pending. A provider or evidence-binary change requires a renewed source and
+  recovery audit; older receipts do not qualify the new harness.
 - The recorded IcyDB and Canic adoption subjects independently supply exact-0.5.0
   shared-registry evidence, recorded separately from this library's
   owner-local proof. Canic's schema-3 adapter exports timer, instruction, and
@@ -292,7 +294,7 @@ reset from a genuine lifetime zero.
 ## Evidence maintenance
 
 The recovery suite is deliberately outside the fast default CI gate. Run
-`make pocketic-watchdog` with the audited PocketIC 15.0.0 binary after changes
+`make pocketic-watchdog` with the pinned PocketIC 16.0.0 binary after changes
 to provider binding, registry transitions, lifecycle reconstruction, or
 watchdog dispatch. Run `make pocketic-cohorts` after changes that can affect
 linked Wasm, instruction cost, or provider-call count. Native mocks remain

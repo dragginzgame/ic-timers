@@ -146,7 +146,7 @@ cat > scripts/ci/check-pocketic.sh <<'EOF'
 printf '%s\n%s\n' "${POCKET_IC_BIN}" "${POCKET_IC_AUTO_INSTALL}" > provisioning
 if [[ -z "${POCKET_IC_BIN}" ]]; then exit 2; fi
 EOF
-default_binary="${temporary_root}/target/tools/pocket-ic/15.0.0/pocket-ic"
+default_binary="${temporary_root}/target/tools/pocket-ic/16.0.0/pocket-ic"
 for source in default environment command-line same-as-default empty; do
     case "${source}" in
         default)

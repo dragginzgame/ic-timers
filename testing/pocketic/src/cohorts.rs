@@ -1,5 +1,6 @@
+use super::harness::fresh_pocket_ic;
 use candid::{CandidType, Decode, Encode, Principal};
-use pocket_ic::PocketIc;
+use ic_testkit::pic::PocketIc;
 use serde::Deserialize;
 use std::{env, fs, path::PathBuf, time::Duration};
 
@@ -51,7 +52,7 @@ fn comparable_policy_cohorts_report_size_and_instruction_subjects() {
 }
 
 fn run_cohort(cohort: &str) {
-    let pic = PocketIc::new();
+    let (_server, pic) = fresh_pocket_ic();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(
@@ -168,7 +169,7 @@ fn run_cohort(cohort: &str) {
 }
 
 fn run_watchdog_calibration(profile: &str, representative_work: bool) -> u64 {
-    let pic = PocketIc::new();
+    let (_server, pic) = fresh_pocket_ic();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(

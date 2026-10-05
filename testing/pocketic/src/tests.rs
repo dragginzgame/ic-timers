@@ -1,5 +1,6 @@
+use super::harness::fresh_pocket_ic;
 use candid::{CandidType, Decode, Encode, Principal};
-use pocket_ic::PocketIc;
+use ic_testkit::pic::{PocketIc, PocketIcManagedServer};
 use serde::Deserialize;
 use std::{env, fs, path::PathBuf, time::Duration};
 
@@ -48,7 +49,7 @@ struct ProbeSnapshot {
 
 #[test]
 fn immediate_initial_watchdog_runs_without_advancing_cadence_time() {
-    let pic = PocketIc::new();
+    let (_server, pic) = fresh_pocket_ic();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(
@@ -78,7 +79,7 @@ fn immediate_initial_watchdog_runs_without_advancing_cadence_time() {
 
 #[test]
 fn successful_immediate_continuation_runs_again_without_waiting_for_cadence() {
-    let pic = PocketIc::new();
+    let (_server, pic) = fresh_pocket_ic();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(
@@ -140,7 +141,7 @@ fn successful_immediate_continuation_runs_again_without_waiting_for_cadence() {
 #[test]
 #[allow(clippy::too_many_lines)] // One real-canister trap, isolation, upgrade, and measurement flow.
 fn trapped_work_keeps_committed_successor_and_executor_is_private() {
-    let pic = PocketIc::new();
+    let (_server, pic) = fresh_pocket_ic();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(
@@ -281,7 +282,7 @@ fn assert_memory_summary_is_coherent(summary: &ProbeMemorySummary) {
 
 #[test]
 fn instruction_exhaustion_leaves_successor_for_later_progress() {
-    let pic = PocketIc::new();
+    let (_server, pic) = fresh_pocket_ic();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(
@@ -334,7 +335,7 @@ fn instruction_exhaustion_leaves_successor_for_later_progress() {
 
 #[test]
 fn commit_window_ensure_stop_resume_and_large_overdue_time_remain_bounded() {
-    let pic = PocketIc::new();
+    let (_server, pic) = fresh_pocket_ic();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(
@@ -391,7 +392,7 @@ fn commit_window_ensure_stop_resume_and_large_overdue_time_remain_bounded() {
 
 #[test]
 fn insufficient_cycles_defer_due_work_until_top_up() {
-    let pic = PocketIc::new();
+    let (_server, pic) = fresh_pocket_ic();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(
@@ -419,7 +420,7 @@ fn insufficient_cycles_defer_due_work_until_top_up() {
 
 #[test]
 fn full_inventory_is_bounded_deterministic_and_measured() {
-    let pic = PocketIc::new();
+    let (_server, pic) = fresh_pocket_ic();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(
@@ -442,7 +443,7 @@ fn full_inventory_is_bounded_deterministic_and_measured() {
 
 #[test]
 fn cancellation_between_scheduler_and_work_makes_late_provider_delivery_harmless() {
-    let pic = PocketIc::new();
+    let (_server, pic) = fresh_pocket_ic();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(
@@ -564,7 +565,7 @@ fn snapshot(pic: &PocketIc, canister_id: Principal) -> ProbeSnapshot {
 
 #[test]
 fn exact_deadline_sleeps_and_registration_replacement_marks_counter_regrowth() {
-    let pic = PocketIc::new();
+    let (_server, pic) = fresh_pocket_ic();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(
@@ -673,7 +674,7 @@ fn ordinary_await_allows_ingress_and_other_timers_before_completion() {
             if command == "recur" && !after_completion {
                 continue;
             }
-            let pic = PocketIc::new();
+            let (_server, pic) = fresh_pocket_ic();
             let canister_id = pic.create_canister();
             pic.add_cycles(canister_id, INIT_CYCLES);
             pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
@@ -756,8 +757,8 @@ fn trapping_ordinary_probe(
     after_completion: bool,
     transient: bool,
     before_await: bool,
-) -> (PocketIc, Principal) {
-    let pic = PocketIc::new();
+) -> (PocketIcManagedServer, PocketIc, Principal) {
+    let (server, pic) = fresh_pocket_ic();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
@@ -779,7 +780,7 @@ fn trapping_ordinary_probe(
         )
         .unwrap();
     Decode!(&result, ()).unwrap();
-    (pic, canister_id)
+    (server, pic, canister_id)
 }
 
 fn assert_ordinary_abandonment(observed: &OrdinaryObservation, removed: bool) {
@@ -803,7 +804,8 @@ fn assert_ordinary_abandonment(observed: &OrdinaryObservation, removed: bool) {
 fn ordinary_trap_before_await_retires_the_rolled_back_scheduled_delivery() {
     for after_completion in [false, true] {
         for transient in [false, true] {
-            let (pic, canister_id) = trapping_ordinary_probe(after_completion, transient, true);
+            let (_server, pic, canister_id) =
+                trapping_ordinary_probe(after_completion, transient, true);
             drive_rounds(&pic, 32);
             let observed = ordinary_observation(&pic, canister_id);
             assert_ordinary_abandonment(&observed, transient);
@@ -825,7 +827,7 @@ fn ordinary_continuation_trap_retires_running_work_and_releases_expired_authorit
     for after_completion in [false, true] {
         for transient in [false, true] {
             for command in ["none", "cancel", "reconcile", "unregister"] {
-                let (pic, canister_id) =
+                let (_server, pic, canister_id) =
                     trapping_ordinary_probe(after_completion, transient, false);
                 let mut suspended = ordinary_observation(&pic, canister_id);
                 for _ in 0..32 {
@@ -916,7 +918,7 @@ fn churn_observation(pic: &PocketIc, canister_id: Principal) -> ChurnObservation
 
 #[test]
 fn provider_replacement_churn_preserves_cancellation_and_reports_memory() {
-    let pic = PocketIc::new();
+    let (_server, pic) = fresh_pocket_ic();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);

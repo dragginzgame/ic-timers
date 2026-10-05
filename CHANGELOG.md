@@ -4,6 +4,16 @@ All notable changes to this project are recorded here.
 
 ## [0.13.0]
 
+### Changed
+
+- Re-export `ic_metrics::MeasurementSummary` as the canonical summary while retaining
+  the existing snapshot accessors, callback attribution and registration identity.
+  The dependency is explicit local extraction wiring pending package publication.
+- Standardize the three SemVer release commands on the reviewed Shared Tooling
+  runner, including exact-version resume and an atomic push of the selected branch
+  and tag. Release preparation uses UTC dates and preserves both locked dependency selections
+  and build artifacts.
+
 ### Breaking
 
 - Retire confirmed ordinary deliveries dropped without normal completion instead
@@ -18,6 +28,15 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Use exact `ic-testkit` 0.17.3 for the host-side real-canister suites, with
+  bounded startup and caller-owned servers for fresh IC instances. Update the
+  strict PocketIC artifact gate to 16.0.0 on Linux and both macOS architectures;
+  preserve override rejection and all timer assertions. Existing PocketIC 15
+  receipts remain historical; the new harness requires renewed qualification.
+- Repair isolated version-preparation checks after shared-runner adoption: include
+  the shared version calculator, verify all three increments and current Makefile
+  delegation, and retain local exact-version rollback and staging coverage. Run
+  the shared runner's phase/failure/resume fixtures in the existing release gate.
 - Add native and PocketIC fixtures covering discarded ordinary deliveries,
   traps before and after an await, pending commands, stale authority and capture
   release for both ordinary policies and lifetimes. Qualification remains pending;

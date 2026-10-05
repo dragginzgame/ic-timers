@@ -406,15 +406,21 @@ operational measurements.
 Normal development and hosted CI use Rust 1.99.0. Hosted CI also lints every
 supported nested probe configuration with both Rust 1.99.0 and Rust 1.88.0.
 To run the development-toolchain probe checks locally, use
-`make testing-check MSRV=1.99.0`. The real-canister suites use the audited
-PocketIC 15.0.0 Linux x86_64 binary. The first run downloads it into the
-ignored `target/tools` cache; later runs verify its version and SHA-256. Set
-`POCKET_IC_BIN=/path/to/pocket-ic` only for an explicitly managed binary.
+`make testing-check MSRV=1.99.0`. The host-side real-canister suites use exact
+`ic-testkit` 0.17.3 and the pinned PocketIC 16.0.0 server on Linux x86_64 or
+macOS Intel/Apple Silicon. The first run downloads it into the ignored
+`target/tools` cache; later runs verify its version and SHA-256. Set
+`POCKET_IC_BIN=/path/to/pocket-ic` only for an explicitly managed binary. Testkit
+starts a caller-owned server and fresh IC instance for each fixture, with a
+30-second deadline for each startup phase. The instance is dropped before its
+server; upstream instance deletion itself remains unbounded.
 
-The evidence covers real work traps, 40-billion-instruction exhaustion,
-insufficient cycles followed by top-up, upgrade reconstruction, stop/resume,
+Recorded PocketIC 15 evidence covers real work traps, 40-billion-instruction
+exhaustion, insufficient cycles followed by top-up, upgrade reconstruction, stop/resume,
 overdue coalescing, cancellation gaps, duplicate demand, simultaneous timers,
-trap isolation, and rejection of external executor ingress.
+trap isolation, and rejection of external executor ingress. The testkit/PocketIC
+16 harness requires renewed execution of the full recovery and cohort gates;
+source review and verified artifact hashes do not qualify those behaviors.
 
 ## Documentation map
 

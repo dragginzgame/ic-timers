@@ -7,7 +7,7 @@
 
 MSRV ?= 1.88.0
 VERSION ?=
-POCKET_IC_VERSION := 15.0.0
+POCKET_IC_VERSION := 16.0.0
 POCKET_IC_BIN_ORIGIN := $(origin POCKET_IC_BIN)
 POCKET_IC_BIN ?= $(CURDIR)/target/tools/pocket-ic/$(POCKET_IC_VERSION)/pocket-ic
 POCKET_IC_AUTO_INSTALL := $(if $(filter undefined,$(POCKET_IC_BIN_ORIGIN)),1,0)
@@ -135,6 +135,9 @@ shell-check:
 	done
 
 release-check:
+	bash scripts/ci/verify-shared-tooling-snapshot.sh
+	bash scripts/ci/test-release-runner.sh
+	bash scripts/release/test-standard-release.sh
 	bash scripts/release/test-finalize-changelog.sh
 	bash scripts/release/test-readme-version.sh
 	bash scripts/release/test-release-impact.sh
@@ -226,7 +229,9 @@ release-tag-check:
 	@bash scripts/release/check-tag-at-head.sh
 
 release-push: ensure-clean release-tag-check
-	git push --no-follow-tags --atomic "$(RELEASE_REMOTE)" "HEAD:refs/heads/$(RELEASE_BRANCH)" "refs/tags/v$$(bash scripts/release/workspace-version.sh):refs/tags/v$$(bash scripts/release/workspace-version.sh)"
+	@set -e; version="$$(bash scripts/release/workspace-version.sh)"; \
+		git push --no-follow-tags --atomic "$(RELEASE_REMOTE)" \
+		"HEAD:refs/heads/$(RELEASE_BRANCH)" "refs/tags/v$$version:refs/tags/v$$version"
 
 publish: ensure-clean release-tag-check package
 	cargo publish --locked --registry crates-io -p ic-timers

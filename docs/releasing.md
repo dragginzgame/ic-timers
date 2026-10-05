@@ -158,6 +158,19 @@ The bump helper accepts exactly one `patch`, `minor`, `major` or canonical
 including a misplaced or repeated check flag, fail with usage status 2 before
 reading release metadata. The preparation fixture checks these rejections against
 unchanged metadata bytes and permission bits.
+
+The version-preparation fixture copies the shared `next-release-version.sh` used
+by the bump helper into its isolated repository. It checks all three increment
+preflights without metadata mutation, then checks standard Makefile delegation,
+selected remote/branch forwarding, resume selection and runner failure propagation
+using a recording stub. The local exact-version recipe retains real preflight,
+rollback and explicit staging coverage. Shared phase ordering and interruption
+recovery belong to `test-release-runner.sh`, now included in `release-check`.
+The maintainer reported the missing-helper failure before these changes. Shell
+and embedded fixture-shell syntax and source flow were reviewed; the corrected
+fixtures remain unexecuted by the automated contributor and need maintainer
+qualification on the declared hosts.
+
 The release-commit owner then runs its read-only `--check-before-bump` mode. It
 accepts staged implementation changes and dirty metadata selected by
 `release-stage`: `Cargo.toml`, `Cargo.lock`, `testing/Cargo.lock`, `CHANGELOG.md`
@@ -276,13 +289,13 @@ review without running build, lint or test suites.
 ### Host support
 
 macOS host workflows are required by the
-[adopted engineering baseline](shared-tooling/DRAGGINZGAME.md#host-support).
+[adopted engineering baseline](../DRAGGINZGAME.md#host-support).
 The requirement is separate from executed qualification; canister execution
 continues to target Wasm on the Internet Computer.
 
 | Host | Current workflow configuration and evidence scope |
 | --- | --- |
-| Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The release gate pins the audited PocketIC 15.0.0 Linux x86_64 artifact. Recorded results remain scoped to their original subjects. |
+| Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The release gate pins the audited PocketIC 16.0.0 Linux x86_64 artifact. Recorded results remain scoped to their original subjects. |
 | macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. Native execution and qualification for this change remain pending. |
 | macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. Native execution and qualification for this change remain pending. |
 
@@ -360,29 +373,28 @@ the changed fixture has not been executed.
 
 ### PocketIC artifact pins
 
-The verifier selects PocketIC 15.0.0 pins for Linux x86_64, Darwin x86_64 and
+The verifier selects PocketIC 16.0.0 pins for Linux x86_64, Darwin x86_64 and
 Darwin arm64 using independent OS and architecture queries. Unknown hosts or a
 failed query reject before cache inspection. Explicit overrides use the same
-host-specific binary hash and exact `pocket-ic-server 15.0.0` version check;
+host-specific binary hash and exact `pocket-ic-server 16.0.0` version check;
 they are never automatically replaced. No caller-supplied digest or version can
 relax these checks.
 
 The pins below were inspected on 2026-10-05 against the official
-[PocketIC 15.0.0 release](https://github.com/dfinity/pocketic/releases/tag/15.0.0)
-and its [release asset metadata](https://api.github.com/repos/dfinity/pocketic/releases/tags/15.0.0).
+[PocketIC 16.0.0 release](https://github.com/dfinity/pocketic/releases/tag/16.0.0)
+and its [release asset metadata](https://api.github.com/repos/dfinity/pocketic/releases/tags/16.0.0).
 Each downloaded gzip archive matched its published asset SHA-256 before
-decompression. The Linux binary retained the existing audited digest; the macOS
-binary digests were computed from those verified archives, with Mach-O x86_64
-and arm64 formats inspected. None of these binaries was executed during this
-inspection. Exact version checks and maintained PocketIC subjects remain required
+decompression. Binary digests were computed from those verified archives, with
+ELF x86_64 and Mach-O x86_64/arm64 headers inspected. None of these binaries was
+executed during this inspection. Exact version checks and maintained PocketIC subjects remain required
 on each native host; artifact integrity does not establish recovery evidence or
 native macOS qualification.
 
 | Release asset | Archive SHA-256 | Binary SHA-256 |
 | --- | --- | --- |
-| `pocket-ic-x86_64-linux.gz` | `972d592975bdd0f046b05b5414ed6f9a044c676ef912b8ac81d359dd4982b038` | `29472ea4433b30a280676c4e22e369d79d5ba6ee1b4d48bab32ebe7d0ad2b4bb` |
-| `pocket-ic-x86_64-darwin.gz` | `1d133a07c08c8e8ce25a2d08e6e7a590c27a5621735a0ab95c19f111d73f9f72` | `e0a93fdd0b11345096797807002fcccecf7004c9ebfcdb1c0a3f4bcab2344964` |
-| `pocket-ic-arm64-darwin.gz` | `e6a96df4559949091411877f562512e132b75916bb704c03494bc7877fcfea0e` | `3635e41075cded4c0fcfe4bb80b55d03324f8fa85a1a99a0f9eed2a097c50eb0` |
+| `pocket-ic-x86_64-linux.gz` | `268ba79ec7fe9a563a575adf4983c69627093cce2711d142e476cdc7ad04249e` | `69e324bdb68d32d878b7a9504b1379f08f8d1921272bacb065b0fabb3d0f3792` |
+| `pocket-ic-x86_64-darwin.gz` | `9710b9c4ac4eaa7eb10bddaa2aba80560a59362610f1bcd8c6e23be82a39c327` | `b8233ebee53452db7465b43e7b2ff80f2e1445dc148eb2b4b237493d8d15ec66` |
+| `pocket-ic-arm64-darwin.gz` | `41cf77e24effc381e21f5e07e908ed078783646e6de05ed52fd6973221f07e64` | `781f643d4b16105e7544ca810a972f99c0ef1919016c680faa93f10909a14496` |
 
 Automatic provisioning downloads over HTTPS into an adjacent temporary directory,
 checks the archive digest before `gzip`, checks the decompressed binary digest
@@ -411,6 +423,41 @@ They check failure before download, link-target preservation and empty rejected
 directories. Source, shell and embedded fixture-shell syntax, read-only 0.11.10
 changelog preparation and diff whitespace checks passed; these scenarios remain
 unexecuted and do not supply native host qualification.
+
+### Testkit harness qualification
+
+The host-only `testing/pocketic` package uses published exact `ic-testkit` 0.17.3,
+whose complete upstream PocketIC types remain available through the shared crate.
+There is no direct `pocket-ic` dependency in this workspace. Locked dependency
+metadata resolves one `ic-testkit` and one PocketIC 16.0.0 package; no declared
+dependency MSRV exceeds Rust 1.88. This is metadata evidence, not successful
+compilation on that toolchain.
+
+The private harness requires the gate-selected `POCKET_IC_BIN`. It uses testkit
+to start a caller-owned server and construct a fresh application-subnet instance,
+with a 30-second deadline for each startup phase. Fixtures retain both bindings,
+dropping the instance before the server. No baseline pool, implicit download,
+test serialization lock or shared IC state is introduced. Upstream synchronous
+instance deletion remains unbounded; the startup deadline does not cover it.
+
+Both recovery and cohort fixtures keep their existing canister assertions.
+The artifact verifier and its independent fixtures use the new host-specific
+archive/binary pins, including explicit rejection of a 15.0.0 server. Old 15
+receipts and sampling measurements remain historical and do not qualify 16.
+The timer crate, provider and canister source are unchanged by this harness
+migration; no Wasm savings or instruction improvement is claimed.
+
+Preparation inspected the published crate archive against the registry checksum,
+the official PocketIC release metadata and all three verified archive headers.
+Dependency fetching, locked offline metadata, Rust formatting/parsing, shell and
+embedded fixture-shell syntax, source flow and diff whitespace checks passed.
+No PocketIC server binaries, builds, lint gates, native tests or PocketIC
+fixtures were executed.
+Before release, the maintainer runs the complete `release-verify` gate, including
+MSRV, nested lint, watchdog/ordinary recovery and policy cohorts. Record fresh
+Wasm/instruction subjects and native Linux/macOS qualification rather than
+reusing receipts from the previous simulator. Package version and Git release
+execution remain maintainer-owned.
 
 ### Deployment validation
 
@@ -460,7 +507,7 @@ That gate includes `make ci`, the Rust 1.88 MSRV check, warning-denied linting
 of every supported nested probe configuration, the maintained watchdog/recovery,
 ordinary-await and provider-churn PocketIC subjects, and the four policy cohorts.
 If `POCKET_IC_BIN` is unset, the
-gate installs the pinned PocketIC 15.0.0 artifact for the current supported host
+gate installs the pinned PocketIC 16.0.0 artifact for the current supported host
 into the ignored `target/tools` cache. It verifies the archive SHA-256 before
 decompression and the audited binary SHA-256 before executing any
 downloaded, cached or overridden binary, then checks its version. Diagnostic
@@ -542,3 +589,14 @@ syntax and diff whitespace checks passed. Cargo versions, both lockfiles and
 the maintainer's existing staging were unchanged. Tests, builds, hosted execution
 and Git release effects remain maintainer-owned; this repository-only patch
 retains the complete release gate despite having no runtime changes.
+
+## Standard release runner
+
+The three standard SemVer entry points use the [common release contract](releases.md)
+with explicit `RELEASE_REMOTE=origin` and `RELEASE_BRANCH=main`. The complete local
+release gate is unchanged. Consumer adapters retain the five metadata outputs,
+README projection and independently locked workspaces. Publishing stays separate.
+Inspect `.git/release-state/X.Y.Z.plan` and its lock owner before
+`make release-resume VERSION=X.Y.Z`; resume retains the original source, candidate,
+UTC date and destination. No release was executed during adoption. Linux stubs
+and syntax checks do not supply native macOS or live IC qualification.

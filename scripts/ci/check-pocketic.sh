@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-expected_version="pocket-ic-server 15.0.0"
+expected_version="pocket-ic-server 16.0.0"
 pocket_ic_bin="${POCKET_IC_BIN:-}"
 auto_install="${POCKET_IC_AUTO_INSTALL:-0}"
 
@@ -18,25 +18,25 @@ host_arch="$(uname -m)"
 case "${host_os}/${host_arch}" in
     Linux/x86_64)
         asset="pocket-ic-x86_64-linux.gz"
-        expected_archive_sha256="972d592975bdd0f046b05b5414ed6f9a044c676ef912b8ac81d359dd4982b038"
-        expected_sha256="29472ea4433b30a280676c4e22e369d79d5ba6ee1b4d48bab32ebe7d0ad2b4bb"
+        expected_archive_sha256="268ba79ec7fe9a563a575adf4983c69627093cce2711d142e476cdc7ad04249e"
+        expected_sha256="69e324bdb68d32d878b7a9504b1379f08f8d1921272bacb065b0fabb3d0f3792"
         ;;
     Darwin/x86_64)
         asset="pocket-ic-x86_64-darwin.gz"
-        expected_archive_sha256="1d133a07c08c8e8ce25a2d08e6e7a590c27a5621735a0ab95c19f111d73f9f72"
-        expected_sha256="e0a93fdd0b11345096797807002fcccecf7004c9ebfcdb1c0a3f4bcab2344964"
+        expected_archive_sha256="9710b9c4ac4eaa7eb10bddaa2aba80560a59362610f1bcd8c6e23be82a39c327"
+        expected_sha256="b8233ebee53452db7465b43e7b2ff80f2e1445dc148eb2b4b237493d8d15ec66"
         ;;
     Darwin/arm64)
         asset="pocket-ic-arm64-darwin.gz"
-        expected_archive_sha256="e6a96df4559949091411877f562512e132b75916bb704c03494bc7877fcfea0e"
-        expected_sha256="3635e41075cded4c0fcfe4bb80b55d03324f8fa85a1a99a0f9eed2a097c50eb0"
+        expected_archive_sha256="41cf77e24effc381e21f5e07e908ed078783646e6de05ed52fd6973221f07e64"
+        expected_sha256="781f643d4b16105e7544ca810a972f99c0ef1919016c680faa93f10909a14496"
         ;;
     *)
         echo "error: no audited PocketIC artifact for ${host_os}/${host_arch}" >&2
         exit 1
         ;;
 esac
-expected_url="https://github.com/dfinity/pocketic/releases/download/15.0.0/${asset}"
+expected_url="https://github.com/dfinity/pocketic/releases/download/16.0.0/${asset}"
 
 sha256() {
     # Core Perl Digest::SHA avoids a GNU sha256sum dependency on macOS.
@@ -106,7 +106,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "Installing audited PocketIC 15.0.0 into ${pocket_ic_bin}"
+echo "Installing audited PocketIC 16.0.0 into ${pocket_ic_bin}"
 curl --fail --location --silent --show-error --output "${archive}" "${expected_url}"
 actual_archive_sha256="$(sha256 "${archive}")"
 if [[ "${actual_archive_sha256}" != "${expected_archive_sha256}" ]]; then

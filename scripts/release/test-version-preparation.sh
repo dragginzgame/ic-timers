@@ -5,11 +5,12 @@ repository_root="$(git rev-parse --show-toplevel)"
 temporary_root="$(mktemp -d)"
 trap 'rm -rf -- "${temporary_root}"' EXIT
 git init -q "${temporary_root}"
-mkdir -p "${temporary_root}"/{scripts/release,docs/status,docs/changelog,crates/ic-timers/src,testing/probe/src}
+mkdir -p "${temporary_root}"/{scripts/release,scripts/ci,docs/status,docs/changelog,crates/ic-timers/src,testing/probe/src}
 for script in bump-version finalize-changelog \
-    warn-release-prose check-bump-impact check-lockfiles workspace-version readme-version; do
+    warn-release-prose check-bump-impact check-lockfiles workspace-version readme-version update-local-lock; do
     cp "${repository_root}/scripts/release/${script}.sh" "${temporary_root}/scripts/release/"
 done
+cp "${repository_root}/scripts/ci/next-release-version.sh" "${temporary_root}/scripts/ci/"
 # Classification is an isolated fixture input; preparation must not run tests.
 cat > "${temporary_root}/scripts/release/classify-release-impact.sh" <<'EOF'
 #!/usr/bin/env bash
@@ -202,8 +203,19 @@ for operation in preflight bump; do
 done
 rm bin/git
 
-bash scripts/release/bump-version.sh --check patch
-assert_metadata_unchanged original-files
+for kind in patch minor major; do
+    case "${kind}" in
+        patch) candidate=0.1.1 ;;
+        minor) candidate=0.2.0 ;;
+        major) candidate=1.0.0 ;;
+    esac
+    output="$(bash scripts/release/bump-version.sh --check "${kind}" 2>&1)"
+    if [[ "${output}" != *"Release preflight passed: 0.1.0 -> ${candidate}"* ]]; then
+        echo "error: ${kind} preflight selected an unexpected version: ${output}" >&2
+        exit 1
+    fi
+    assert_metadata_unchanged original-files
+done
 
 # Preparation must not replace a consumer-owned metadata symlink.
 mv README.md owned-readme.md
@@ -231,9 +243,9 @@ if [[ "${output}" != *'continuing because the maintainer invoked an explicit ver
     exit 1
 fi
 
-# Exercise every real release recipe with real version preflight. Worktree
-# admission and remaining phases record calls; this fixture cannot commit, push
-# or run suites. test-commit-release exercises the actual worktree admission.
+# Standard Make delegation and shared phase ordering belong to the separate
+# test-standard-release and test-release-runner fixtures in release-check.
+# test-commit-release exercises the actual local worktree admission.
 cp Makefile preparation-only.mk
 cp "${repository_root}/Makefile" Makefile
 mv scripts/release/bump-version.sh scripts/release/preparation-bump-version.sh
@@ -262,12 +274,11 @@ ensure-clean release-tag-check:
 EOF
 fixture_make=(make --no-print-directory -f Makefile -f overrides.mk
     'MAKE=make --no-print-directory -f Makefile -f overrides.mk')
+# The local exact-version recipe still owns this sequence. Exercise its real
+# preflight with recording leaf phases, without commits, pushes or test execution.
 cp CHANGELOG.md original-changelog.md
-for target in release-patch release-minor release-major release-x; do
+for target in release-x; do
     case "${target}" in
-        release-patch) requested=patch; candidate=0.1.1 ;;
-        release-minor) requested=minor; candidate=0.2.0 ;;
-        release-major) requested=major; candidate=1.0.0 ;;
         release-x) requested=0.4.2; candidate=0.4.2 ;;
     esac
     cp original-changelog.md candidate-changelog.md
@@ -325,8 +336,6 @@ cat > bin/cargo <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 case "$*" in
-    'update --offline -p ic-timers') stage=root-update ;;
-    'update --manifest-path testing/Cargo.toml --offline -p ic-timers') stage=testing-update ;;
     'metadata --manifest-path Cargo.toml --locked --offline --format-version 1') stage=root-metadata ;;
     'metadata --manifest-path testing/Cargo.toml --locked --offline --format-version 1') stage=testing-metadata ;;
     *) stage=other ;;
@@ -342,6 +351,17 @@ fi
 exec "${IC_TIMERS_FIXTURE_CARGO}" "$@"
 EOF
 chmod +x bin/cargo
+cp scripts/release/update-local-lock.sh scripts/release/original-update-local-lock.sh
+cat > scripts/release/update-local-lock.sh <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+case "$1" in Cargo.lock) stage=root-update ;; testing/Cargo.lock) stage=testing-update ;; *) exit 2 ;; esac
+if [[ "${FIXTURE_FAIL_STAGE:-}" == "$stage" ]]; then exit 1; fi
+if [[ "${FIXTURE_FAIL_STAGE:-}" == interrupt && "$stage" == testing-update ]]; then
+    kill -TERM "$PPID"; exit 1
+fi
+bash scripts/release/original-update-local-lock.sh "$@"
+EOF
 cp scripts/release/readme-version.sh scripts/release/original-readme-version.sh
 cat > scripts/release/readme-version.sh <<'EOF'
 #!/usr/bin/env bash
@@ -364,6 +384,7 @@ for stage in readme-update root-update testing-update root-metadata testing-meta
     assert_metadata_unchanged original-files
 done
 mv scripts/release/original-readme-version.sh scripts/release/readme-version.sh
+mv scripts/release/original-update-local-lock.sh scripts/release/update-local-lock.sh
 
 # An absent changelog is created during preparation and removed by rollback.
 mv CHANGELOG.md existing-changelog.md
