@@ -150,11 +150,34 @@ Configured recurrence can follow success, no work or a returned retryable
 failure. A trap or instruction exhaustion prevents ordinary completion from
 scheduling it; recovery-critical work needs Watchdog.
 
+When the provider or CDK drops a confirmed ordinary delivery without normal
+completion, its guard retires the exact generation. A retained declaration becomes
+inactive with `InactiveReason::Abandoned`, Failed condition and an Unacknowledged
+observation. Its owner can explicitly rearm it. Transient declarations and pending
+unregistrations are removed; other pending schedules are discarded. No completion,
+work count or performance sample is fabricated. A future that remains alive and
+pending still owns Running state; cancellation does not interrupt it.
+
+This abandonment path is implemented with native drop and real-await PocketIC
+fixtures, but their execution and cleanup qualification remain pending. It does
+not recover application effects committed before an await or automatically retry
+work. Capture destructors must remain bounded, nontrapping and safe in CDK cleanup.
+
+Completion classification records what happened; the supplied decision selects
+what to schedule. A retryable failure paired with `Stop` does not automatically
+retry, and success paired with `Stop` does not recur. The result constructors
+preserve the decision for success, no work and retryable failure, and force
+`Stop` for invariant failure.
+
+Result construction does not check relative delays. After authoritative commands
+have been applied, the runtime checks any selected delay's nanosecond encoding
+and successor deadline. An invalid selected delay stops the timer with a typed
+control failure, observable in a retained declaration's snapshot. A winning
+exact reconciliation can discard an invalid callback delay before that check.
+
 ## Minimal `Once` example
 
-The callback examples in this checkout use the prepared 0.12 API hard cut.
-Package identity below follows the current Cargo version until the maintainer
-runs the minor bump; the typed API requires the coordinated 0.12 release.
+The examples below use the policy-specific callback results introduced in 0.12.
 
 Add one exact package version when this crate participates in a shared
 framework/application registry:

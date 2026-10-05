@@ -59,13 +59,7 @@ previous_version="$(bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh
 if [[ "${requested}" =~ ^[0-9] ]]; then
     new_version="${requested}"
 else
-    IFS=. read -r major minor patch <<< "${previous_version}"
-    case "${requested}" in
-        patch) patch=$((patch + 1)) ;;
-        minor) minor=$((minor + 1)); patch=0 ;;
-        major) major=$((major + 1)); minor=0; patch=0 ;;
-    esac
-    new_version="${major}.${minor}.${patch}"
+    new_version="$(bash scripts/ci/next-release-version.sh "$previous_version" "$requested")"
 fi
 
 if ! semver_greater_than "${new_version}" "${previous_version}"; then
@@ -83,7 +77,7 @@ release_impact="$(
 )"
 bash scripts/release/check-bump-impact.sh "${release_impact}" "${previous_version}"
 
-release_date="$(date +%F)"
+release_date="${IC_TIMERS_RELEASE_DATE:-$(date -u +%F)}"
 bash scripts/release/finalize-changelog.sh --check "${new_version}" "${release_date}"
 bash scripts/release/readme-version.sh --check
 if ! bash scripts/release/warn-release-prose.sh "${new_version}"; then

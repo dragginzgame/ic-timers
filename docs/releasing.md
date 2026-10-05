@@ -414,15 +414,16 @@ unexecuted and do not supply native host qualification.
 
 ### Deployment validation
 
-The prepared 0.12 callback result cut is crate-impacting and requires the minor
-release boundary. `make test` runs workspace targets followed by API doctests;
+The 0.12 callback result cut used the minor release boundary for its incompatible
+public signatures. `make test` runs workspace targets followed by API doctests;
 `make msrv` compiles all targets and runs those doctests on Rust 1.88.0. Thus the
 positive and compile-fail policy boundaries participate in PR/main validation
 and the existing complete release gate on each declared host. The recording-Cargo
 fixture checks order and failure propagation for both targets; it is not compiler
-evidence. Source, formatting/parsing, shell syntax and read-only metadata review
-are the preparation scope; execution and new native host/PocketIC/cohort
-qualification remain pending. Cargo versions, locks and release execution stay
+evidence. Automated preparation covered source, formatting/parsing, shell syntax
+and read-only metadata review. Maintainer validation owns execution and new
+native host/PocketIC/cohort qualification; preparation checks alone do not supply
+that evidence. Cargo versions, locks and release execution stay
 maintainer-owned; see the [cut's contract](design/0.5-policy-specific-callback-authority.md#ordinary-callback-results).
 
 Deployment validation belongs to the user. The combined `release-*` targets

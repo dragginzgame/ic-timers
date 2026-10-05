@@ -86,8 +86,8 @@ pub fn initialize_runtime() -> Result<TimerEpoch, TimerError> {
 
 /// Delegated control capability scoped to one exact `Once` work attempt.
 ///
-/// Identity remains inspectable after work returns, but mutation methods then
-/// return [`TimerError::RegistrationExpired`]. Retain the
+/// Identity remains inspectable after work returns or is abandoned, but mutation
+/// methods then return [`TimerError::RegistrationExpired`]. Retain the
 /// [`OnceRegistration`] for longer-lived ownership.
 pub struct OnceContext {
     token: CallbackToken,
@@ -106,8 +106,8 @@ impl OnceContext {
 
     /// Schedule a `Once` declaration while this exact work attempt is active.
     ///
-    /// A context retained after its callback completes is expired and returns
-    /// [`TimerError::RegistrationExpired`].
+    /// A context retained after completion or delivery abandonment is expired
+    /// and returns [`TimerError::RegistrationExpired`].
     pub fn ensure_scheduled(&self, schedule: TimerSchedule) -> Result<(), TimerError> {
         ensure_once_claim(self.token.claim(), Some(&self.token), schedule)
     }
@@ -140,8 +140,9 @@ impl OnceContext {
 /// Delegated control capability scoped to one exact after-completion work
 /// attempt.
 ///
-/// Mutation authority expires when the callback completes. Retain the
-/// [`AfterCompletionRegistration`] for longer-lived ownership.
+/// Mutation authority expires when the callback completes or its delivery is
+/// abandoned. Retain the [`AfterCompletionRegistration`] for longer-lived
+/// ownership.
 pub struct AfterCompletionContext {
     token: CallbackToken,
 }
@@ -281,8 +282,8 @@ impl OnceRegistration {
     /// scheduling proposal before validation; explicit invariant failure stops.
     ///
     /// `None` leaves a retained declaration inactive after any running work
-    /// completes. A remove-on-stop declaration is removed and this claim
-    /// expires when the transition finalizes.
+    /// completes or is abandoned. A remove-on-stop declaration is removed and
+    /// this claim expires when the transition finalizes.
     pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
         reconcile_ordinary_claim(&self.claim, None, schedule)
     }
@@ -300,7 +301,7 @@ impl OnceRegistration {
     /// Consume the claim and unregister its callback authority.
     ///
     /// When called from running work, removal is deferred until that invocation
-    /// completes normally.
+    /// completes normally or its confirmed delivery is abandoned.
     pub fn unregister(self) -> Result<(), TimerError> {
         unregister_claim(&self.claim)
     }
@@ -456,8 +457,9 @@ impl AfterCompletionRegistration {
 
     /// Reconcile to one exact desired schedule without changing the configured
     /// after-completion cadence. `None` makes a retained declaration inactive
-    /// after any running work completes; it removes a remove-on-stop
-    /// declaration and expires this claim when the transition finalizes.
+    /// after any running work completes or is abandoned; it removes a
+    /// remove-on-stop declaration and expires this claim when the transition
+    /// finalizes.
     ///
     /// During running work, a winning exact schedule replaces the callback
     /// scheduling proposal before validation; explicit invariant failure stops.
@@ -478,7 +480,7 @@ impl AfterCompletionRegistration {
     /// Consume the claim and unregister its callback authority.
     ///
     /// When called from running work, removal is deferred until that invocation
-    /// completes normally.
+    /// completes normally or its confirmed delivery is abandoned.
     pub fn unregister(self) -> Result<(), TimerError> {
         unregister_claim(&self.claim)
     }
@@ -909,10 +911,10 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
                 }
             }
             restore_provider_handles(handles)?;
-            let task_token = token.clone();
-            let handle = platform::set_timer(Duration::from_nanos(*delay_ns), async move {
-                dispatch_wakeup(task_token).await;
-            });
+            let handle = platform::set_timer(
+                Duration::from_nanos(*delay_ns),
+                dispatch_wakeup(token.clone()),
+            );
             bind_provider_handle(token, handle)?;
             if let Err(error) = confirm_effect(effect) {
                 let handle = with_registry_mut(|registry| {
@@ -1072,11 +1074,58 @@ fn clear_entry_provider_handles(identity: &TimerIdentity) -> Result<(), TimerErr
     clippy::future_not_send,
     reason = "IC callbacks and canister-local state are single-threaded."
 )]
-async fn dispatch_wakeup(token: CallbackToken) {
-    match token.role() {
-        CallbackRole::OrdinaryWork => dispatch_ordinary(token).await,
-        CallbackRole::WatchdogScheduler => dispatch_watchdog_scheduler(&token),
-        CallbackRole::WatchdogWork => {}
+fn dispatch_wakeup(token: CallbackToken) -> impl Future<Output = ()> {
+    // Construct outside the async body: a provider rejection can discard the
+    // future before its first poll, after rolling registry acceptance back.
+    let mut delivery = OrdinaryDelivery {
+        token,
+        completed: false,
+    };
+    async move {
+        match delivery.token.role() {
+            CallbackRole::OrdinaryWork => dispatch_ordinary(&delivery.token).await,
+            CallbackRole::WatchdogScheduler => dispatch_watchdog_scheduler(&delivery.token),
+            CallbackRole::WatchdogWork => {}
+        }
+        delivery.completed = true;
+    }
+}
+
+struct OrdinaryDelivery {
+    token: CallbackToken,
+    completed: bool,
+}
+
+impl Drop for OrdinaryDelivery {
+    fn drop(&mut self) {
+        if self.completed || self.token.role() != CallbackRole::OrdinaryWork {
+            return;
+        }
+        let removed = RUNTIME.with(|runtime| {
+            let mut runtime = match runtime.try_borrow_mut() {
+                Ok(runtime) => runtime,
+                Err(_) => {
+                    // Rejected binding may clear a detached scheduled handle
+                    // while another shared borrow exists. Its transition owns
+                    // cleanup; do not turn that typed failure into a Drop trap.
+                    let runtime = runtime.try_borrow().map_err(|_| TimerError::RuntimeBusy)?;
+                    return if runtime
+                        .as_ref()
+                        .is_some_and(|registry| registry.owns_ordinary_delivery(&self.token))
+                    {
+                        Err(TimerError::RuntimeBusy)
+                    } else {
+                        Ok(None)
+                    };
+                }
+            };
+            Ok(runtime
+                .as_mut()
+                .and_then(|registry| registry.abandon_ordinary(&self.token, platform::time_ns())))
+        });
+        let removed = removed
+            .unwrap_or_else(|error| trap_callback_failure("ordinary delivery abandonment", &error));
+        drop(removed);
     }
 }
 
@@ -1084,9 +1133,9 @@ async fn dispatch_wakeup(token: CallbackToken) {
     clippy::future_not_send,
     reason = "IC callbacks and canister-local state are single-threaded."
 )]
-async fn dispatch_ordinary(token: CallbackToken) {
+async fn dispatch_ordinary(token: &CallbackToken) {
     let measurement = CallbackMeasurementStart::capture();
-    let callback = with_registry_mut(|registry| Ok(registry.begin_ordinary(&token)));
+    let callback = with_registry_mut(|registry| Ok(registry.begin_ordinary(token)));
     let callback = match callback {
         Ok(Some(callback)) => callback,
         Ok(None) => return,
@@ -1095,7 +1144,7 @@ async fn dispatch_ordinary(token: CallbackToken) {
     let future = {
         let Ok(mut callback) = callback.try_borrow_mut() else {
             finish_ordinary_callback(
-                &token,
+                token,
                 OrdinaryRunResult::new(
                     TimerCompletion::invariant_failure(0),
                     OrdinaryDirective::Stop,
@@ -1106,8 +1155,8 @@ async fn dispatch_ordinary(token: CallbackToken) {
         callback(token.clone())
     };
     let result = future.await;
-    finish_ordinary_callback(&token, result);
-    record_callback_measurements(&token, measurement.finish());
+    finish_ordinary_callback(token, result);
+    record_callback_measurements(token, measurement.finish());
 }
 
 fn finish_ordinary_callback(token: &CallbackToken, result: OrdinaryRunResult) {

@@ -1,17 +1,41 @@
-//! Real await/ingress interleaving evidence; no timer recovery claim.
+//! Real await/ingress interleaving and ordinary abandonment qualification.
 
 use candid::CandidType;
 use ic_timers::{
-    AfterCompletionDecision, AfterCompletionRegistration, AfterCompletionRunResult,
-    DeclarationLifetime, OnceDecision, OnceRegistration, OnceRunResult, TimerCadence,
-    TimerCompletion, TimerIdentity, TimerRegistrationStatus, TimerSchedule,
-    register_after_completion, register_once, timer_snapshot,
+    AfterCompletionContext, AfterCompletionDecision, AfterCompletionRegistration,
+    AfterCompletionRunResult, DeclarationLifetime, InactiveReason, OnceContext, OnceDecision,
+    OnceRegistration, OnceRunResult, TimerCadence, TimerCompletion, TimerError, TimerIdentity,
+    TimerRegistrationStatus, TimerRuntimeStateSnapshot, TimerSchedule, register_after_completion,
+    register_once, timer_inventory, timer_snapshot,
 };
-use std::cell::{Cell, RefCell};
+use std::{
+    cell::{Cell, RefCell},
+    rc::Rc,
+};
 
 enum Registration {
     Once(OnceRegistration),
     AfterCompletion(AfterCompletionRegistration),
+}
+
+enum WorkContext {
+    Once(OnceContext),
+    AfterCompletion(AfterCompletionContext),
+}
+
+#[derive(Clone, Copy, Eq, PartialEq)]
+enum TrapPoint {
+    None,
+    BeforeAwait,
+    AfterAwait,
+}
+
+struct CapturedState;
+
+impl Drop for CapturedState {
+    fn drop(&mut self) {
+        CAPTURES_DROPPED.with(|count| count.set(count.get().saturating_add(1)));
+    }
 }
 
 thread_local! {
@@ -22,6 +46,9 @@ thread_local! {
     static GATE_ERROR: RefCell<Option<String>> = const { RefCell::new(None) };
     static COMPLETIONS: Cell<u64> = const { Cell::new(0) };
     static COMPLETED_AT_NS: Cell<Option<u64>> = const { Cell::new(None) };
+    static TRAP_POINT: Cell<TrapPoint> = const { Cell::new(TrapPoint::None) };
+    static WORK_CONTEXT: RefCell<Option<WorkContext>> = const { RefCell::new(None) };
+    static CAPTURES_DROPPED: Cell<u64> = const { Cell::new(0) };
 }
 
 #[derive(CandidType)]
@@ -35,6 +62,12 @@ struct Observation {
     completed_at_ns: Option<u64>,
     next_deadline_ns: Option<u64>,
     work_completed: u64,
+    abandoned: bool,
+    armed: bool,
+    unacknowledged: u64,
+    instruction_samples: u64,
+    captures_dropped: u64,
+    inventory_len: u64,
 }
 
 fn identity() -> TimerIdentity {
@@ -50,25 +83,40 @@ fn start_ordinary(after_completion: bool, transient: bool) {
     };
     REGISTRATION.with_borrow_mut(|slot| {
         assert!(slot.is_none(), "one probe registration");
+        let captured = Rc::new(CapturedState);
         let registration = if after_completion {
             Registration::AfterCompletion(
                 register_after_completion(
                     identity(),
                     TimerCadence::from_nanos(super::CADENCE_NS).expect("fixed cadence"),
                     lifetime,
-                    |_| async {
-                        AfterCompletionRunResult::new(
-                            work().await,
-                            AfterCompletionDecision::RecurAfterCompletion,
-                        )
+                    move |context| {
+                        WORK_CONTEXT.with_borrow_mut(|slot| {
+                            *slot = Some(WorkContext::AfterCompletion(context))
+                        });
+                        let captured = Rc::clone(&captured);
+                        async move {
+                            let completion = work().await;
+                            std::hint::black_box(captured);
+                            AfterCompletionRunResult::new(
+                                completion,
+                                AfterCompletionDecision::RecurAfterCompletion,
+                            )
+                        }
                     },
                 )
                 .expect("register after-completion"),
             )
         } else {
             Registration::Once(
-                register_once(identity(), lifetime, |_| async {
-                    OnceRunResult::new(work().await, OnceDecision::Stop)
+                register_once(identity(), lifetime, move |context| {
+                    WORK_CONTEXT.with_borrow_mut(|slot| *slot = Some(WorkContext::Once(context)));
+                    let captured = Rc::clone(&captured);
+                    async move {
+                        let completion = work().await;
+                        std::hint::black_box(captured);
+                        OnceRunResult::new(completion, OnceDecision::Stop)
+                    }
                 })
                 .expect("register Once"),
             )
@@ -79,6 +127,9 @@ fn start_ordinary(after_completion: bool, transient: bool) {
 }
 
 async fn work() -> TimerCompletion {
+    if TRAP_POINT.with(Cell::get) == TrapPoint::BeforeAwait {
+        ic_cdk::trap("ordinary probe trap before await");
+    }
     GATE_WAITING.with(|waiting| waiting.set(true));
     loop {
         // Every closed-gate reply is followed by another real call await. A bare
@@ -102,6 +153,9 @@ async fn work() -> TimerCompletion {
             break;
         }
     }
+    if TRAP_POINT.with(Cell::get) == TrapPoint::AfterAwait {
+        ic_cdk::trap("ordinary probe trap after await");
+    }
     GATE_WAITING.with(|waiting| waiting.set(false));
     COMPLETIONS.with(|count| count.set(count.get() + 1));
     COMPLETED_AT_NS.with(|time| time.set(Some(ic_cdk::api::time())));
@@ -121,6 +175,45 @@ fn ordinary_gate() -> bool {
 #[ic_cdk::update]
 fn release_ordinary_work() {
     GATE_OPEN.with(|open| open.set(true));
+}
+
+#[ic_cdk::update]
+fn trap_ordinary_work(before_await: bool) {
+    TRAP_POINT.with(|point| {
+        point.set(if before_await {
+            TrapPoint::BeforeAwait
+        } else {
+            TrapPoint::AfterAwait
+        })
+    });
+}
+
+#[ic_cdk::update]
+fn clear_ordinary_trap() {
+    TRAP_POINT.with(|point| point.set(TrapPoint::None));
+}
+
+#[ic_cdk::update]
+fn expired_ordinary_context_rejected() -> bool {
+    WORK_CONTEXT.with_borrow(|slot| {
+        let result = match slot.as_ref().expect("committed work context") {
+            WorkContext::Once(context) => context.cancel(),
+            WorkContext::AfterCompletion(context) => context.cancel(),
+        };
+        matches!(result, Err(TimerError::RegistrationExpired))
+    })
+}
+
+#[ic_cdk::update]
+fn discard_expired_ordinary_claim() {
+    REGISTRATION.with_borrow_mut(|slot| {
+        let result = match slot.as_ref().expect("expired registration") {
+            Registration::Once(timer) => timer.has_armed_wakeup(),
+            Registration::AfterCompletion(timer) => timer.has_armed_wakeup(),
+        };
+        assert!(matches!(result, Err(TimerError::RegistrationExpired)));
+        *slot = None;
+    });
 }
 
 fn reconcile(registration: &Registration, desired: Option<TimerSchedule>) {
@@ -161,6 +254,18 @@ fn unregister_ordinary() {
 #[ic_cdk::query]
 fn ordinary_observation() -> Observation {
     let snapshot = timer_snapshot(&identity()).expect("ordinary snapshot");
+    let armed = REGISTRATION.with_borrow(|slot| {
+        let result = match slot.as_ref() {
+            Some(Registration::Once(timer)) => timer.has_armed_wakeup(),
+            Some(Registration::AfterCompletion(timer)) => timer.has_armed_wakeup(),
+            None => return false,
+        };
+        match result {
+            Ok(armed) => armed,
+            Err(TimerError::RegistrationExpired) => false,
+            Err(error) => panic!("ordinary ownership observation failed: {error}"),
+        }
+    });
     Observation {
         declared: snapshot.is_some(),
         running: snapshot
@@ -175,5 +280,27 @@ fn ordinary_observation() -> Observation {
         work_completed: snapshot
             .as_ref()
             .map_or(0, |value| value.observability().counters().work_completed()),
+        abandoned: snapshot.as_ref().is_some_and(|value| {
+            value.state()
+                == TimerRuntimeStateSnapshot::Inactive {
+                    reason: InactiveReason::Abandoned,
+                }
+        }),
+        armed,
+        unacknowledged: snapshot
+            .as_ref()
+            .map_or(0, |value| value.observability().counters().unacknowledged()),
+        instruction_samples: snapshot.as_ref().map_or(0, |value| {
+            value
+                .observability()
+                .performance()
+                .work_instructions()
+                .samples()
+        }),
+        captures_dropped: CAPTURES_DROPPED.with(Cell::get),
+        inventory_len: timer_inventory()
+            .expect("ordinary inventory")
+            .timers()
+            .len() as u64,
     }
 }

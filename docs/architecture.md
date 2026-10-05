@@ -119,6 +119,15 @@ The remaining module hierarchy keeps six responsibilities separate:
    arm retains its declaration. Cancellation derives immediate removal once
    from final inactive state and lifetime for both ordinary and Watchdog
    declarations; running work retains pending authority.
+   A private ordinary delivery guard exists before the first provider poll and
+   owns the queued token without another identity clone. Normal return disarms it.
+   A dropped confirmed delivery retires only its exact scheduled/running generation,
+   records Unacknowledged and leaves retained state Abandoned. Transient lifetime
+   or pending unregister removes the entry. The guard performs no provider calls
+   and releases removed callbacks outside the registry borrow. Explicit cancellation,
+   replacement and unconfirmed installation failure remain distinct from abandonment.
+   The native drop and PocketIC trap fixtures are unexecuted qualification for this
+   semantic cut, not an extension of the existing Watchdog recovery evidence.
    Watchdog completion decides removal once after selecting its final state:
    inactive declarations follow their lifetime and pending unregister command,
    while retained or replaced successors keep their declaration.

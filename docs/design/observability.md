@@ -155,7 +155,7 @@ performed against `ic-cdk-timers` and from callbacks that actually execute.
 | `stale_wakeups` | Ordinary or scheduler callbacks rejected because their generation no longer owns execution. |
 | `stale_work` | Watchdog work callbacks rejected because their generation no longer owns execution. |
 | `coalesced` | Scheduling demand merged into existing scheduled or pending work rather than producing another logical run. |
-| `unacknowledged` | An older committed watchdog dispatch retired by its successor without a committed completion. |
+| `unacknowledged` | A confirmed ordinary delivery dropped without completion, or an older committed Watchdog dispatch retired by its successor without completion. |
 
 On the 0.10 line, explicit invariant failure takes precedence over pending
 cancellation for both ordinary and Watchdog stop classification. A retained
@@ -218,9 +218,12 @@ For each role, memory and instruction sample counts advance together on the
 same normal-completion record.
 
 Both measurement kinds update only when the measured callback path returns
-with a valid end measurement. A missing work completion remains visible through
-committed dispatch and later `unacknowledged` observation; the runtime does not
-synthesize zero instructions or a memory sample for trapped or exhausted work.
+with a valid end measurement. A missing work completion can become visible through
+ordinary delivery abandonment or an older committed Watchdog dispatch's later
+`unacknowledged` observation. Abandonment before an ordinary callback's first await
+can follow rollback of its work-start counter; no counter relationship should be
+inferred. The runtime does not synthesize zero instructions or a memory sample
+for trapped or exhausted work.
 If a terminal `RemoveWhenStopped` callback removes its declaration during
 normal completion, the post-transition measurement has no remaining timer on
 which to commit and is discarded. This is intentionally different from
@@ -295,8 +298,10 @@ provide feedback as the pre-1.0 API evolves:
   `consecutive_expected_failures`; a retryable failure increments it and an
   interruption preserves it. This matches current Canic recovery-state
   transitions.
-- An unacknowledged attempt is counted in the epoch and scheduler message that
-  retires its committed dispatch. It has no arithmetic invariant with
+- An unacknowledged ordinary delivery is counted when its confirmed future is
+  dropped; a Watchdog attempt is counted in the scheduler message that retires
+  its committed dispatch. Neither observation fabricates a completion, work count
+  or measurement. They have no arithmetic invariant with
   `work_started`, because a trapping work-message start mutation rolls back.
 - Counts, work, instructions, page extents, and nanosecond values use `u64`.
   Hot-path counters, streaks, sample counts, and instruction totals saturate;

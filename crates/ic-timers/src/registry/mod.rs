@@ -1089,9 +1089,10 @@ impl TimerRegistry {
 
     /// Remove the declaration owned by one exact logical claim.
     ///
-    /// Removal requested by running work is finalized by that work's normal
-    /// completion. A trapping work message rolls the request back with the
-    /// rest of its heap mutations.
+    /// Removal requested by running work is finalized by normal completion or,
+    /// for ordinary work, confirmed delivery abandonment. A request made in a
+    /// trapping message rolls back with that message's heap mutations; an
+    /// already committed pending request remains eligible for finalization.
     pub(crate) fn unregister(
         &mut self,
         claim: &RegistrationClaim,
@@ -1256,6 +1257,63 @@ impl TimerRegistry {
             transition,
             remove,
         ))
+    }
+
+    /// Whether a confirmed ordinary delivery still owns scheduled or running work.
+    /// Detached scheduled handles belong to their synchronous transition owner.
+    pub(crate) fn owns_ordinary_delivery(&self, token: &CallbackToken) -> bool {
+        let Some(entry) = self.entries.get(token.identity()) else {
+            return false;
+        };
+        let EntryKind::Ordinary { control, .. } = &entry.kind else {
+            return false;
+        };
+        token.role == CallbackRole::OrdinaryWork
+            && entry.owns_token_claim(token)
+            && control.generation() == token.callback_generation
+            && entry.confirmed_wakeup_generation == Some(token.callback_generation)
+            && match control.registration {
+                TimerRegistration::Running { .. } => true,
+                TimerRegistration::Scheduled { .. } => entry
+                    .wakeup
+                    .as_ref()
+                    .is_some_and(|owned| owned.callback_generation == token.callback_generation),
+                TimerRegistration::Inactive { .. } => false,
+            }
+    }
+
+    /// Retire a dropped delivery without provider calls or fabricated completion.
+    /// Return removed callback ownership so capture destructors run after the
+    /// runtime releases its registry borrow, including during CDK cleanup.
+    pub(crate) fn abandon_ordinary(
+        &mut self,
+        token: &CallbackToken,
+        now_ns: u64,
+    ) -> Option<OrdinaryCallback> {
+        if !self.owns_ordinary_delivery(token) {
+            return None;
+        }
+        let entry = self.entries.get_mut(token.identity())?;
+        let EntryKind::Ordinary { control, .. } = &mut entry.kind else {
+            return None;
+        };
+        let remove = matches!(control.pending(), Some(OrdinaryPending::Unregister))
+            || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
+        control.terminate(InactiveReason::Abandoned);
+        // The provider/executor is already dropping this future. Forget the
+        // consumed handle; calling clear_timer here could reborrow its task map.
+        entry.wakeup = None;
+        entry.observability.record_unacknowledged(now_ns);
+        if !remove {
+            return None;
+        }
+        self.entries.remove(token.identity()).and_then(|entry| {
+            if let EntryKind::Ordinary { callback, .. } = entry.kind {
+                Some(callback)
+            } else {
+                None
+            }
+        })
     }
 
     pub(crate) fn begin_watchdog_scheduler(

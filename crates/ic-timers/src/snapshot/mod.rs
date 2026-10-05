@@ -37,11 +37,13 @@ impl TimerRegistrationId {
     }
 }
 
+/// Shared, inert measurement arithmetic; registration identity remains timer-owned.
+pub use ic_metrics::MeasurementSummary;
 pub use identity::{
     MAX_TIMER_IDENTITY_COMPONENT_BYTES, TimerIdentity, TimerIdentityError, TimerIdentityField,
 };
 pub use metrics::{
-    MeasurementSummary, MemoryPageExtent, MemoryPageSample, MemoryPageSummary, TimerCounters,
+    MemoryPageExtent, MemoryPageSample, MemoryPageSummary, TimerCounters,
     TimerObservabilitySnapshot, TimerPerformance,
 };
 pub use model::{
@@ -232,7 +234,10 @@ impl TimerSnapshot {
                 reason: InactiveReason::Cancelled,
             } => TimerProcessCondition::Disabled,
             TimerRuntimeStateSnapshot::Inactive {
-                reason: InactiveReason::InvariantFailure | InactiveReason::ControlFailure(_),
+                reason:
+                    InactiveReason::Abandoned
+                    | InactiveReason::InvariantFailure
+                    | InactiveReason::ControlFailure(_),
             } => TimerProcessCondition::Failed,
             TimerRuntimeStateSnapshot::Inactive {
                 reason: InactiveReason::Stopped,

@@ -4,8 +4,8 @@ This file is normative for automated contributors.
 
 ## Shared baseline and local overlay
 
-- Apply the [reviewed Shared Tooling baseline](docs/shared-tooling/DRAGGINZGAME.md)
-  from revision `ca319ba05c5a8016f3cdbf5af073fca2e6279268`. Its provenance and
+- Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
+  from revision `b8537873ac124ad17b30e32aa23e9006a3e6ec21`. Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.

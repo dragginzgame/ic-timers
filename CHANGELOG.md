@@ -2,6 +2,38 @@
 
 All notable changes to this project are recorded here.
 
+## [0.13.0]
+
+### Breaking
+
+- Retire confirmed ordinary deliveries dropped without normal completion instead
+  of retaining false Scheduled or Running authority. Add `InactiveReason::Abandoned`
+  and project it as Failed; record Unacknowledged without fabricating a completion
+  or measurement. Retained claims can explicitly rearm; transient declarations
+  and pending unregistrations release their entries. Live futures still complete
+  normally before pending control is applied; no retry or interruption is added.
+  Consumers must handle the new `InactiveReason` variant and treat ordinary
+  Unacknowledged observations as abandoned deliveries, without inferring
+  Watchdog recovery or application rollback.
+
+### Development
+
+- Add native and PocketIC fixtures covering discarded ordinary deliveries,
+  traps before and after an await, pending commands, stale authority and capture
+  release for both ordinary policies and lifetimes. Qualification remains pending;
+  see the [callback contract](docs/design/0.5-policy-specific-callback-authority.md#ordinary-delivery-abandonment).
+- Reconcile current README, safety, callback-contract, release and handoff
+  documentation with the completed 0.12 minor bump. Remove pending-bump
+  instructions and describe the policy-specific return API as current, keeping
+  automated preparation evidence separate from maintainer validation. This is
+  repository-only documentation work; no crate behavior or package identity
+  changes.
+- Clarify in the public result rustdoc and README that success, no work and
+  retryable failure preserve the supplied scheduling decision rather than
+  choosing recurrence or retry automatically. Explain invariant-failure Stop
+  normalization and checked relative-delay validation after authoritative
+  command arbitration. Runtime behavior is unchanged.
+
 ## [0.12.0] - 2026-10-05
 
 ### Changed

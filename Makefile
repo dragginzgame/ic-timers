@@ -205,33 +205,6 @@ bump-x:
 	@if [ -z "$(VERSION)" ]; then echo "error: VERSION=x.y.z is required" >&2; exit 2; fi
 	bash scripts/release/bump-version.sh "$(VERSION)"
 
-release-patch:
-	bash scripts/release/bump-version.sh --check patch
-	bash scripts/release/commit-release.sh --check-before-bump
-	+$(MAKE) --no-print-directory release-verify
-	+$(MAKE) --no-print-directory patch
-	+$(MAKE) --no-print-directory release-stage
-	+$(MAKE) --no-print-directory release-commit
-	+$(MAKE) --no-print-directory release-push
-
-release-minor:
-	bash scripts/release/bump-version.sh --check minor
-	bash scripts/release/commit-release.sh --check-before-bump
-	+$(MAKE) --no-print-directory release-verify
-	+$(MAKE) --no-print-directory minor
-	+$(MAKE) --no-print-directory release-stage
-	+$(MAKE) --no-print-directory release-commit
-	+$(MAKE) --no-print-directory release-push
-
-release-major:
-	bash scripts/release/bump-version.sh --check major
-	bash scripts/release/commit-release.sh --check-before-bump
-	+$(MAKE) --no-print-directory release-verify
-	+$(MAKE) --no-print-directory major
-	+$(MAKE) --no-print-directory release-stage
-	+$(MAKE) --no-print-directory release-commit
-	+$(MAKE) --no-print-directory release-push
-
 release-x:
 	@if [ -z "$(VERSION)" ]; then echo "error: VERSION=x.y.z is required" >&2; exit 2; fi
 	bash scripts/release/bump-version.sh --check "$(VERSION)"
@@ -253,7 +226,35 @@ release-tag-check:
 	@bash scripts/release/check-tag-at-head.sh
 
 release-push: ensure-clean release-tag-check
-	git push --follow-tags
+	git push --no-follow-tags --atomic "$(RELEASE_REMOTE)" "HEAD:refs/heads/$(RELEASE_BRANCH)" "refs/tags/v$$(bash scripts/release/workspace-version.sh):refs/tags/v$$(bash scripts/release/workspace-version.sh)"
 
 publish: ensure-clean release-tag-check package
 	cargo publish --locked --registry crates-io -p ic-timers
+
+# Shared Tooling owns the standard release order and Git effects.
+RELEASE_REMOTE ?= origin
+RELEASE_BRANCH ?= main
+ifneq ($(word 2,$(filter release-patch release-minor release-major release-resume,$(MAKECMDGOALS))),)
+$(error Select exactly one release target)
+endif
+.PHONY: release-resume release-version release-preflight release-prepare-version release-prepared-check release-files release-commit-check release-committed-check release-tagged-check release-push-check
+
+release-patch release-minor release-major:
+	+@bash scripts/ci/run-release.sh "$(@:release-%=%)" "$(RELEASE_REMOTE)" "$(RELEASE_BRANCH)"
+
+release-resume:
+	+@bash scripts/ci/run-release.sh resume "$(VERSION)" "$(RELEASE_REMOTE)" "$(RELEASE_BRANCH)"
+
+release-version:
+	@bash scripts/release/workspace-version.sh
+release-preflight:
+	@bash scripts/release/adapter.sh preflight
+release-prepare-version:
+	@IC_TIMERS_RELEASE_DATE="$(RELEASE_DATE)" bash scripts/release/bump-version.sh "$(RELEASE_VERSION)"
+release-prepared-check release-commit-check release-committed-check:
+	@bash scripts/release/adapter.sh check
+release-files:
+	@printf '%s\0' Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md
+release-tagged-check release-push-check:
+	@bash scripts/release/adapter.sh check
+	@bash scripts/release/check-tag-at-head.sh

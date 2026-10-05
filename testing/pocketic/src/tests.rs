@@ -646,6 +646,12 @@ struct OrdinaryObservation {
     completed_at_ns: Option<u64>,
     next_deadline_ns: Option<u64>,
     work_completed: u64,
+    abandoned: bool,
+    armed: bool,
+    unacknowledged: u64,
+    instruction_samples: u64,
+    captures_dropped: u64,
+    inventory_len: u64,
 }
 
 fn ordinary_observation(pic: &PocketIc, canister_id: Principal) -> OrdinaryObservation {
@@ -741,6 +747,148 @@ fn ordinary_await_allows_ingress_and_other_timers_before_completion() {
                     completed.completed_at_ns.unwrap() + 1_000_000_000
                 };
                 assert_eq!(completed.next_deadline_ns, Some(expected));
+            }
+        }
+    }
+}
+
+fn trapping_ordinary_probe(
+    after_completion: bool,
+    transient: bool,
+    before_await: bool,
+) -> (PocketIc, Principal) {
+    let pic = PocketIc::new();
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, INIT_CYCLES);
+    pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
+    let result = pic
+        .update_call(
+            canister_id,
+            Principal::anonymous(),
+            "trap_ordinary_work",
+            Encode!(&before_await).unwrap(),
+        )
+        .unwrap();
+    Decode!(&result, ()).unwrap();
+    let result = pic
+        .update_call(
+            canister_id,
+            Principal::anonymous(),
+            "start_ordinary",
+            Encode!(&after_completion, &transient).unwrap(),
+        )
+        .unwrap();
+    Decode!(&result, ()).unwrap();
+    (pic, canister_id)
+}
+
+fn assert_ordinary_abandonment(observed: &OrdinaryObservation, removed: bool) {
+    assert!(
+        !observed.running,
+        "discarded futures must release execution authority: {observed:?}"
+    );
+    assert!(!observed.armed);
+    assert_eq!(observed.declared, !removed);
+    assert_eq!(observed.abandoned, !removed);
+    assert_eq!(observed.next_deadline_ns, None);
+    assert_eq!(observed.completed, 0);
+    assert_eq!(observed.work_completed, 0);
+    assert_eq!(observed.instruction_samples, 0);
+    assert_eq!(observed.unacknowledged, u64::from(!removed));
+    assert_eq!(observed.captures_dropped, u64::from(removed));
+    assert_eq!(observed.inventory_len, u64::from(!removed));
+}
+
+#[test]
+fn ordinary_trap_before_await_retires_the_rolled_back_scheduled_delivery() {
+    for after_completion in [false, true] {
+        for transient in [false, true] {
+            let (pic, canister_id) = trapping_ordinary_probe(after_completion, transient, true);
+            drive_rounds(&pic, 32);
+            let observed = ordinary_observation(&pic, canister_id);
+            assert_ordinary_abandonment(&observed, transient);
+            assert_eq!(observed.gate_replies, 0);
+            assert!(update_bool(&pic, canister_id, "start"));
+            pic.advance_time(Duration::from_secs(2));
+            drive_rounds(&pic, 16);
+            assert_eq!(snapshot(&pic, canister_id).completed_work, 1);
+            if !transient {
+                update_unit(&pic, canister_id, "unregister_ordinary");
+                assert_eq!(ordinary_observation(&pic, canister_id).captures_dropped, 1);
+            }
+        }
+    }
+}
+
+#[test]
+fn ordinary_continuation_trap_retires_running_work_and_releases_expired_authority() {
+    for after_completion in [false, true] {
+        for transient in [false, true] {
+            for command in ["none", "cancel", "reconcile", "unregister"] {
+                let (pic, canister_id) =
+                    trapping_ordinary_probe(after_completion, transient, false);
+                let mut suspended = ordinary_observation(&pic, canister_id);
+                for _ in 0..32 {
+                    pic.tick();
+                    suspended = ordinary_observation(&pic, canister_id);
+                    if suspended.running && suspended.waiting && suspended.gate_replies > 0 {
+                        break;
+                    }
+                }
+                assert!(suspended.running && suspended.waiting && suspended.gate_replies > 0);
+                match command {
+                    "none" => {}
+                    "cancel" => update_unit(&pic, canister_id, "cancel_ordinary"),
+                    "reconcile" => {
+                        update_deadline(&pic, canister_id, "reconcile_ordinary_at", u64::MAX)
+                    }
+                    "unregister" => update_unit(&pic, canister_id, "unregister_ordinary"),
+                    _ => unreachable!("fixed command matrix"),
+                }
+                update_unit(&pic, canister_id, "release_ordinary_work");
+                drive_rounds(&pic, 32);
+                let observed = ordinary_observation(&pic, canister_id);
+                let removed = transient || command == "unregister";
+                assert_ordinary_abandonment(&observed, removed);
+                assert_eq!(observed.gate_error, None);
+                assert!(update_bool(
+                    &pic,
+                    canister_id,
+                    "expired_ordinary_context_rejected"
+                ));
+                update_unit(&pic, canister_id, "clear_ordinary_trap");
+                if removed {
+                    if command != "unregister" {
+                        update_unit(&pic, canister_id, "discard_expired_ordinary_claim");
+                    }
+                    let result = pic
+                        .update_call(
+                            canister_id,
+                            Principal::anonymous(),
+                            "start_ordinary",
+                            Encode!(&after_completion, &false).unwrap(),
+                        )
+                        .unwrap();
+                    Decode!(&result, ()).unwrap();
+                } else {
+                    // The original retained capability can rearm explicitly.
+                    update_deadline(&pic, canister_id, "reconcile_ordinary_at", 0);
+                }
+                drive_rounds(&pic, 16);
+                let completed = ordinary_observation(&pic, canister_id);
+                assert_eq!(completed.completed, 1);
+                assert_eq!(completed.work_completed, 1);
+                assert_eq!(completed.instruction_samples, 1);
+                assert_eq!(completed.unacknowledged, u64::from(!removed));
+                update_unit(&pic, canister_id, "unregister_ordinary");
+                assert_eq!(
+                    ordinary_observation(&pic, canister_id).captures_dropped,
+                    if removed { 2 } else { 1 }
+                );
+                assert!(update_bool(&pic, canister_id, "start"));
+                pic.advance_time(Duration::from_secs(2));
+                drive_rounds(&pic, 16);
+                assert_eq!(snapshot(&pic, canister_id).completed_work, 1);
             }
         }
     }

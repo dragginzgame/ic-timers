@@ -141,9 +141,9 @@ path. `has_armed_wakeup` has the same observational boundary: it is neither
 durable authority nor a delivery guarantee, and consumers must still invoke
 the idempotent ensure operation whenever their authority requires a wake-up.
 
-The prepared 0.11.0 contract allocates generations only for new callback
-deliveries. Each Watchdog dispatch gives its successor and work one fresh
-generation with distinct roles and provider slots. Requests while dispatched or
+Callback generations are allocated only for new deliveries. Each Watchdog
+dispatch gives its successor and work one fresh generation with distinct roles
+and provider slots. Requests while dispatched or
 running cannot replace that pair before completion; a recovery scheduler expires
 the interrupted attempt before allocating a new pair. Cancellation selects
 inactive state or queues a running-work stop without advancing a counter.
@@ -169,6 +169,20 @@ See the [0.11.0 verification scope](docs/changelog/0.11.0.md).
 - `Once` and `AfterCompletion` do not pre-arm a successor. A trap or
   instruction exhaustion before their callback returns can leave no future
   wake-up. Recovery-critical work must use `Watchdog`.
+- Ordinary delivery abandonment now has a private guard constructed before the
+  provider's first poll. If a confirmed current delivery is dropped, it retires
+  scheduled/running authority without provider calls, records Unacknowledged and
+  selects `InactiveReason::Abandoned` for retained declarations. Transients and
+  pending unregister are removed; pending schedules do not become retries. No
+  completion or performance sample is synthesized. Normal cancellation and
+  replacement retire authority before dropping old provider futures, so those
+  drops and unconfirmed binding failures do not count as abandonment.
+  Native drop fixtures and PocketIC pre-await/continuation trap subjects are
+  maintained but unexecuted for this change. Successful CDK/provider destruction
+  and available canonical registry ownership remain assumptions; capture Drop
+  code must be bounded, nontrapping and safe in cleanup context, and must not
+  schedule provider work there. Ordinary cleanup does not repair application
+  effects across awaits or terminate a future that remains alive and pending.
 - Watchdog work is synchronous and must remain one bounded unit. The runtime
   does not permit it to cross an `await`.
 - Watchdog recovery covers traps and instruction exhaustion in the later
@@ -238,14 +252,14 @@ combinations.
 
 ## Failure and measurement semantics
 
-The prepared ordinary callback return contract is policy-specific: Once uses
+The ordinary callback return contract is policy-specific: Once uses
 `OnceRunResult` / `OnceDecision`, and AfterCompletion uses
 `AfterCompletionRunResult` / `AfterCompletionDecision`. Only the latter permits
 configured recurrence. Explicit rescheduling remains legal for Once, and
 invariant failures force Stop. The private erased completion boundary still
-checks inconsistent policy data; snapshots remain observations. Compile-fail,
-native and PocketIC validation for this cut is pending the maintainer's gate;
-see the [callback contract and evidence scope](docs/design/0.5-policy-specific-callback-authority.md#ordinary-callback-results).
+checks inconsistent policy data; snapshots remain observations. Automated
+preparation and maintainer-owned compile-fail, native and PocketIC validation
+are scoped in the [callback contract](docs/design/0.5-policy-specific-callback-authority.md#ordinary-callback-results).
 
 Callback starts and completions are deliberately separate. A trap or
 instruction exhaustion can prevent all post-run code, so the runtime must not

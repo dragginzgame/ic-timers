@@ -74,18 +74,19 @@ references and validation belong in [release notes](../changelog/README.md),
   and rejects invalid provisioning destinations before downloading, preserving
   verified file symlinks as read-only input. Updated rejection/preservation
   fixtures remain unexecuted; source/syntax scope belongs in the release guide.
-- The accepted ordinary result cut is implemented in the current worktree:
-  Once and AfterCompletion entry points require separate result/decision types.
+- The current ordinary callback API is policy-specific: Once and
+  AfterCompletion entry points require separate result/decision types.
   Shared public results/directives are removed; the private erasure and canonical
   arbitration remain. Current probes and fixtures use the typed API, and both
-  test/MSRV owners include API doctests. The implementation and pending validation
+  test/MSRV owners include API doctests. The implementation and validation
   scope belong in the [callback contract](../design/0.5-policy-specific-callback-authority.md#ordinary-callback-results).
-  Cargo identity and both lockfiles remain maintainer-owned; this cut requires
-  coordinated downstream adoption and a minor release, without shims.
+  Cargo identity and both lockfiles remain maintainer-owned. The return-type cut
+  uses a minor release with coordinated downstream adoption, without shims.
   Borrow-rejection fixtures now cover both ordinary policies/lifetimes, and
   public recurrence fixtures cover each completion classification. The README
-  describes requested recurrence after normal return; this added evidence
-  remains unexecuted under the same callback contract's validation scope.
+  describes requested recurrence after normal return. Automated review did not
+  execute these fixtures; their evidence scope belongs to the same callback
+  contract.
 - Public removals or incompatible semantic changes require the next minor line;
   private behavior-preserving simplifications may use a patch. See the
   [ordinary arbitration hard cut](../changelog/0.9.0.md).
@@ -96,6 +97,17 @@ references and validation belong in [release notes](../changelog/README.md),
   use exact `ic-cdk` 0.20.3. MSRV is Rust 1.88.0; development/hosted CI uses 1.99.0.
 
 ## Canonical runtime
+
+- The current draft implements retirement of confirmed ordinary deliveries dropped
+  before normal completion. A queued-token guard is created before the first poll;
+  exact ownership checks exclude stale, cancelled, replaced and unconfirmed work.
+  Retained state becomes Abandoned/Failed with Unacknowledged accounting; transients
+  and pending unregister are removed, without provider calls or fabricated completion.
+  Normal live-await control and Watchdog prearming remain separate. Native drop and
+  PocketIC pre-await/continuation trap fixtures are unexecuted; cleanup qualification
+  and cost deltas remain pending with the [callback contract](../design/0.5-policy-specific-callback-authority.md#ordinary-delivery-abandonment).
+  The single top changelog section records the selected minor release target;
+  package versions and lockfiles remain maintainer-owned.
 
 - One volatile canister-local registry owns at most 64 structured identities,
   declaration claims, callback generations, policy states, pending commands,
@@ -173,7 +185,9 @@ references and validation belong in [release notes](../changelog/README.md),
   selects inactive state and clears the existing handles; stale delivery is rejected
   by state, claim and role. Rearming and dispatch still require fresh non-wrapping
   generations.
-  Running cancellation remains a pending command applied on normal completion.
+  Running cancellation remains a pending command applied on normal completion;
+  confirmed ordinary abandonment retires the delivery and discards that command
+  under the current draft contract above.
   The 0.11.0 semantic hard cut and its verification scope are recorded in the
   [release note](../changelog/0.11.0.md).
 - Ordinary directive resolution returns canonical control failures directly.

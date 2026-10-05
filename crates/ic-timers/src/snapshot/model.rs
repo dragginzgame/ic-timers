@@ -181,6 +181,9 @@ pub enum InactiveReason {
     Stopped,
     /// Explicit cancellation won request arbitration.
     Cancelled,
+    /// A confirmed ordinary delivery was dropped without normal completion.
+    /// This records abandonment, not the cause or recovery of application work.
+    Abandoned,
     /// Consumer work reported an invariant or terminal failure.
     InvariantFailure,
     /// Checked pure control reached a terminal failure.
@@ -375,7 +378,8 @@ impl TimerCompletionOutcome {
 pub enum TimerLastOutcome {
     /// One callback returned with a classified completion.
     Completed(TimerCompletionOutcome),
-    /// A committed watchdog dispatch was retired without committed completion.
+    /// A confirmed ordinary delivery was dropped, or a committed Watchdog
+    /// dispatch was retired by its successor, without a completion.
     Unacknowledged,
 }
 
@@ -576,7 +580,8 @@ impl TimerOutcomeSnapshot {
         self.last_failure_at_ns
     }
 
-    /// Return when a dispatched watchdog attempt was most recently retired.
+    /// Return when an ordinary delivery or dispatched Watchdog attempt was
+    /// most recently retired without completion.
     #[must_use]
     pub const fn last_unacknowledged_at_ns(self) -> Option<u64> {
         self.last_unacknowledged_at_ns

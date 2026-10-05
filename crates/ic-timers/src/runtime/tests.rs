@@ -51,6 +51,345 @@ impl SuspendedWork {
     }
 }
 
+fn suspended_ordinary_registration(
+    after_completion: bool,
+    timer: TimerIdentity,
+    lifetime: DeclarationLifetime,
+    gate: SuspendedWork,
+    context: Rc<RefCell<Option<CallbackToken>>>,
+    captured: Rc<()>,
+) -> RegistrationClaim {
+    if after_completion {
+        register_after_completion(
+            timer,
+            TimerCadence::from_nanos(5).unwrap(),
+            lifetime,
+            move |work| {
+                *context.borrow_mut() = Some(work.token);
+                let gate = gate.clone();
+                let captured = Rc::clone(&captured);
+                async move {
+                    gate.wait().await;
+                    std::hint::black_box(captured);
+                    AfterCompletionRunResult::new(
+                        TimerCompletion::success(1),
+                        AfterCompletionDecision::Stop,
+                    )
+                }
+            },
+        )
+        .unwrap()
+        .claim
+    } else {
+        register_once(timer, lifetime, move |work| {
+            *context.borrow_mut() = Some(work.token);
+            let gate = gate.clone();
+            let captured = Rc::clone(&captured);
+            async move {
+                gate.wait().await;
+                std::hint::black_box(captured);
+                OnceRunResult::new(TimerCompletion::success(1), OnceDecision::Stop)
+            }
+        })
+        .unwrap()
+        .claim
+    }
+}
+
+#[test]
+fn dropped_ordinary_deliveries_retire_confirmed_scheduled_and_running_work() {
+    for after_completion in [false, true] {
+        for lifetime in [
+            DeclarationLifetime::Retained,
+            DeclarationLifetime::RemoveWhenStopped,
+        ] {
+            for started in [false, true] {
+                setup();
+                let timer = identity("dropped-ordinary");
+                let gate = SuspendedWork::default();
+                let context = Rc::new(RefCell::new(None));
+                let captured = Rc::new(());
+                let weak = Rc::downgrade(&captured);
+                let claim = suspended_ordinary_registration(
+                    after_completion,
+                    timer.clone(),
+                    lifetime,
+                    gate.clone(),
+                    Rc::clone(&context),
+                    captured,
+                );
+                reconcile_ordinary_claim(&claim, None, Some(TimerSchedule::At(10))).unwrap();
+                set_time(10);
+                if started {
+                    assert!(run_next_due());
+                    assert_eq!(gate.polls.get(), 1);
+                    gate.resume();
+                }
+                set_time(20);
+                // Drop only; the native fake neither traps nor rolls messages back.
+                assert!(discard_next_due());
+                assert_eq!(timer_count(), 0);
+                if let Some(token) = context.borrow().as_ref() {
+                    assert!(matches!(
+                        cancel_claim(token.claim(), Some(token)),
+                        Err(TimerError::RegistrationExpired)
+                    ));
+                }
+                if lifetime == DeclarationLifetime::Retained {
+                    let snapshot = timer_snapshot(&timer).unwrap().unwrap();
+                    assert_eq!(
+                        snapshot.state(),
+                        TimerRuntimeStateSnapshot::Inactive {
+                            reason: InactiveReason::Abandoned,
+                        }
+                    );
+                    assert_eq!(snapshot.process_condition(), TimerProcessCondition::Failed);
+                    assert_eq!(snapshot.next_deadline_ns(), None);
+                    assert!(!has_armed_wakeup_claim(&claim).unwrap());
+                    let observations = snapshot.observability();
+                    assert_eq!(observations.counters().unacknowledged(), 1);
+                    assert_eq!(observations.counters().work_started(), u64::from(started));
+                    assert_eq!(observations.counters().work_completed(), 0);
+                    assert_eq!(observations.performance().work_instructions().samples(), 0);
+                    assert_eq!(
+                        observations.outcomes().last_outcome(),
+                        Some(TimerLastOutcome::Unacknowledged)
+                    );
+                    assert_eq!(
+                        observations.outcomes().last_unacknowledged_at_ns(),
+                        Some(20)
+                    );
+                    assert!(weak.upgrade().is_some());
+                    if !started {
+                        gate.ready.set(true);
+                    }
+                    reconcile_ordinary_claim(&claim, None, Some(TimerSchedule::At(30))).unwrap();
+                    set_time(30);
+                    assert!(run_next_due());
+                    let completed = timer_snapshot(&timer).unwrap().unwrap();
+                    assert_eq!(completed.observability().counters().work_completed(), 1);
+                    assert_eq!(completed.observability().counters().unacknowledged(), 1);
+                    unregister_claim(&claim).unwrap();
+                } else {
+                    assert!(timer_snapshot(&timer).unwrap().is_none());
+                    assert!(matches!(
+                        has_armed_wakeup_claim(&claim),
+                        Err(TimerError::RegistrationExpired)
+                    ));
+                }
+                assert!(
+                    weak.upgrade().is_none(),
+                    "removed callbacks must release captures"
+                );
+                assert!(timer_inventory().unwrap().timers().is_empty());
+            }
+        }
+    }
+}
+
+#[test]
+fn abandoned_running_work_discards_scheduling_commands_and_finishes_unregistration() {
+    for after_completion in [false, true] {
+        for lifetime in [
+            DeclarationLifetime::Retained,
+            DeclarationLifetime::RemoveWhenStopped,
+        ] {
+            for command in ["cancel", "reconcile", "ensure", "unregister"] {
+                setup();
+                let timer = identity("abandoned-command");
+                let gate = SuspendedWork::default();
+                let context = Rc::new(RefCell::new(None));
+                let claim = suspended_ordinary_registration(
+                    after_completion,
+                    timer.clone(),
+                    lifetime,
+                    gate.clone(),
+                    Rc::clone(&context),
+                    Rc::new(()),
+                );
+                reconcile_ordinary_claim(&claim, None, Some(TimerSchedule::At(10))).unwrap();
+                set_time(10);
+                assert!(run_next_due());
+                match command {
+                    "cancel" => cancel_claim(&claim, None).unwrap(),
+                    "reconcile" => {
+                        reconcile_ordinary_claim(&claim, None, Some(TimerSchedule::At(40))).unwrap()
+                    }
+                    "ensure" if after_completion => ensure_recurring_claim(&claim, None).unwrap(),
+                    "ensure" => ensure_once_claim(&claim, None, TimerSchedule::At(40)).unwrap(),
+                    "unregister" => unregister_claim(&claim).unwrap(),
+                    _ => unreachable!("fixed command matrix"),
+                }
+                gate.resume();
+                set_time(20);
+                assert!(discard_next_due());
+                if command == "unregister" || lifetime == DeclarationLifetime::RemoveWhenStopped {
+                    assert!(timer_snapshot(&timer).unwrap().is_none());
+                } else {
+                    let snapshot = timer_snapshot(&timer).unwrap().unwrap();
+                    assert_eq!(
+                        snapshot.state(),
+                        TimerRuntimeStateSnapshot::Inactive {
+                            reason: InactiveReason::Abandoned
+                        }
+                    );
+                    assert_eq!(snapshot.next_deadline_ns(), None);
+                    assert_eq!(snapshot.observability().counters().work_completed(), 0);
+                    unregister_claim(&claim).unwrap();
+                }
+                let token = context.borrow();
+                let token = token.as_ref().unwrap();
+                assert!(matches!(
+                    cancel_claim(token.claim(), Some(token)),
+                    Err(TimerError::RegistrationExpired)
+                ));
+                assert_eq!(timer_count(), 0);
+            }
+        }
+    }
+}
+
+#[test]
+fn stale_delivery_drop_cannot_retire_rearmed_or_reused_identity() {
+    setup();
+    let timer = identity("stale-delivery-drop");
+    let registration = register_once(timer.clone(), DeclarationLifetime::Retained, |_| async {
+        OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
+    })
+    .unwrap();
+    registration
+        .reconcile_schedule(Some(TimerSchedule::At(20)))
+        .unwrap();
+    let detached = with_registry_mut(|registry| Ok(registry.take_wakeup_handle(&timer)))
+        .unwrap()
+        .unwrap();
+    let (token, handle) = detached.into_parts();
+    bind_provider_handle(&token, handle).unwrap();
+    let old_delivery = dispatch_wakeup(token.clone());
+    registration
+        .reconcile_schedule(Some(TimerSchedule::At(30)))
+        .unwrap();
+    let before = timer_inventory().unwrap();
+    drop(old_delivery);
+    assert_eq!(timer_inventory().unwrap(), before);
+    registration.unregister().unwrap();
+    let replacement = register_once(timer.clone(), DeclarationLifetime::Retained, |_| async {
+        OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
+    })
+    .unwrap();
+    replacement
+        .reconcile_schedule(Some(TimerSchedule::At(40)))
+        .unwrap();
+    let before = timer_inventory().unwrap();
+    drop(dispatch_wakeup(token));
+    assert_eq!(timer_inventory().unwrap(), before);
+    assert!(replacement.has_armed_wakeup().unwrap());
+    replacement.unregister().unwrap();
+}
+
+#[test]
+fn abandoned_transient_releases_capacity_and_drops_captures_outside_registry_borrow() {
+    struct CaptureDropCheck {
+        timer: TimerIdentity,
+        dropped: Rc<Cell<bool>>,
+    }
+    impl Drop for CaptureDropCheck {
+        fn drop(&mut self) {
+            assert!(timer_snapshot(&self.timer).unwrap().is_none());
+            self.dropped.set(true);
+        }
+    }
+
+    setup();
+    let timer = identity("abandoned-capacity");
+    let dropped = Rc::new(Cell::new(false));
+    let captured = Rc::new(CaptureDropCheck {
+        timer: timer.clone(),
+        dropped: Rc::clone(&dropped),
+    });
+    let registration = register_once(
+        timer.clone(),
+        DeclarationLifetime::RemoveWhenStopped,
+        move |_| {
+            let captured = Rc::clone(&captured);
+            async move {
+                std::hint::black_box(captured);
+                OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
+            }
+        },
+    )
+    .unwrap();
+    registration
+        .ensure_scheduled(TimerSchedule::After(Duration::ZERO))
+        .unwrap();
+    let mut remaining = Vec::new();
+    for index in 1..crate::MAX_TIMER_REGISTRATIONS {
+        remaining.push(
+            register_once(
+                identity(&format!("capacity-{index}")),
+                DeclarationLifetime::Retained,
+                |_| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
+            )
+            .unwrap(),
+        );
+    }
+    assert_eq!(
+        timer_inventory().unwrap().timers().len(),
+        crate::MAX_TIMER_REGISTRATIONS
+    );
+    assert!(discard_next_due());
+    assert!(dropped.get());
+    let replacement = register_once(timer, DeclarationLifetime::Retained, |_| async {
+        OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
+    })
+    .unwrap();
+    assert!(matches!(
+        registration.has_armed_wakeup(),
+        Err(TimerError::RegistrationExpired)
+    ));
+    replacement.unregister().unwrap();
+    for registration in remaining {
+        registration.unregister().unwrap();
+    }
+}
+
+#[test]
+fn unconfirmed_ordinary_delivery_drop_preserves_binding_failure_accounting() {
+    for after_completion in [false, true] {
+        for confirmation_failure in [false, true] {
+            setup();
+            let timer = identity("unconfirmed-delivery-drop");
+            let claim = suspended_ordinary_registration(
+                after_completion,
+                timer.clone(),
+                DeclarationLifetime::Retained,
+                SuspendedWork::default(),
+                Rc::new(RefCell::new(None)),
+                Rc::new(()),
+            );
+            if confirmation_failure {
+                inject_provider_confirmation_fault();
+            } else {
+                inject_provider_install_fault();
+            }
+            assert!(reconcile_ordinary_claim(&claim, None, Some(TimerSchedule::At(10))).is_err());
+            let snapshot = timer_snapshot(&timer).unwrap().unwrap();
+            assert_eq!(
+                snapshot.state(),
+                TimerRuntimeStateSnapshot::Inactive {
+                    reason: InactiveReason::ControlFailure(
+                        TimerControlFailure::ProviderBindingFailed
+                    ),
+                }
+            );
+            assert_eq!(snapshot.observability().counters().unacknowledged(), 0);
+            assert_eq!(snapshot.observability().outcomes().last_outcome(), None);
+            assert_eq!(timer_count(), 0);
+            unregister_claim(&claim).unwrap();
+        }
+    }
+}
+
 #[test]
 fn suspended_once_work_allows_other_timers_and_arbitrates_external_commands() {
     for command in ["cancel", "reconcile", "ensure", "unregister"] {

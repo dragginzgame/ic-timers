@@ -48,6 +48,16 @@ pub enum AfterCompletionDecision {
 ///
 /// Winning exact reconciliation and terminal pending commands discard the
 /// proposal before validation. An explicit invariant failure always stops.
+/// Other completion classifications preserve the supplied decision: a
+/// retryable failure does not automatically retry, and success does not
+/// automatically continue.
+///
+/// Construction does not validate relative delays. If the proposal survives
+/// command arbitration, the runtime checks duration encoding and deadline
+/// arithmetic. An invalid selected delay stops the declaration with a
+/// [`crate::TimerControlFailure`]; a retained declaration exposes that failure
+/// in its snapshot.
+///
 /// Registration and lifecycle reconstruction use the same typed results:
 ///
 /// ```no_run
@@ -132,6 +142,13 @@ impl OnceRunResult {
 /// Recurrence uses only the registration's configured cadence. Winning exact
 /// reconciliation and terminal pending commands discard the proposal before
 /// validation. An explicit invariant failure always stops.
+/// Success, no work and retryable failure preserve the supplied decision;
+/// recurrence requires [`AfterCompletionDecision::RecurAfterCompletion`].
+/// A retryable failure with Stop remains Stop.
+///
+/// As with [`OnceRunResult`], construction does not validate relative delays;
+/// the runtime checks a selected proposal after command arbitration. Configured
+/// recurrence also checks the successor deadline against the completion time.
 ///
 /// ```compile_fail,E0308
 /// use ic_timers::{AfterCompletionRunResult, OnceDecision, TimerCompletion};

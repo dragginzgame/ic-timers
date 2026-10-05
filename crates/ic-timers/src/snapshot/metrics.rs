@@ -1,6 +1,7 @@
 //! Saturating registration-local counters and bounded callback measurements.
 
 use super::{TimerCompletion, TimerCompletionOutcome, TimerEpoch, TimerOutcomeSnapshot};
+use ic_metrics::MeasurementSummary;
 
 /// Registration-local timer event counters.
 ///
@@ -191,72 +192,11 @@ impl TimerCounters {
         self.coalesced
     }
 
-    /// Return committed watchdog dispatches retired without completion.
+    /// Return confirmed ordinary deliveries dropped without completion and
+    /// committed Watchdog dispatches retired by their successor without completion.
     #[must_use]
     pub const fn unacknowledged(self) -> u64 {
         self.unacknowledged
-    }
-}
-
-/// Saturating aggregate for one instruction measurement role.
-///
-/// Sample count and total saturate independently at `u64::MAX`. Treat that
-/// value as unavailable for exact interval arithmetic, including when it was
-/// reached exactly. Latest and maximum remain observations, not cumulative
-/// counters. Aggregates reset when the registration identity changes.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct MeasurementSummary {
-    samples: u64,
-    total: u64,
-    latest: u64,
-    maximum: u64,
-}
-
-impl MeasurementSummary {
-    const EMPTY: Self = Self {
-        samples: 0,
-        total: 0,
-        latest: 0,
-        maximum: 0,
-    };
-
-    pub(crate) const fn record(&mut self, value: u64) {
-        self.samples = self.samples.saturating_add(1);
-        self.total = self.total.saturating_add(value);
-        self.latest = value;
-        self.maximum = max_u64(self.maximum, value);
-    }
-
-    /// Return the number of completed samples.
-    #[must_use]
-    pub const fn samples(self) -> u64 {
-        self.samples
-    }
-
-    /// Return the saturating sum of all samples.
-    #[must_use]
-    pub const fn total(self) -> u64 {
-        self.total
-    }
-
-    /// Return the latest sample, if one exists.
-    #[must_use]
-    pub const fn latest(self) -> Option<u64> {
-        if self.samples == 0 {
-            None
-        } else {
-            Some(self.latest)
-        }
-    }
-
-    /// Return the largest sample, if one exists.
-    #[must_use]
-    pub const fn maximum(self) -> Option<u64> {
-        if self.samples == 0 {
-            None
-        } else {
-            Some(self.maximum)
-        }
     }
 }
 
@@ -640,34 +580,6 @@ mod tests {
         assert_eq!(counters.no_work(), 1);
         assert_eq!(counters.retryable_failure(), 1);
         assert_eq!(counters.invariant_failure(), 1);
-    }
-
-    #[test]
-    fn instruction_measurements_preserve_empty_zero_and_saturated_observations() {
-        let mut summary = MeasurementSummary::EMPTY;
-        assert_eq!(summary.samples(), 0);
-        assert_eq!(summary.total(), 0);
-        assert_eq!(summary.latest(), None);
-        assert_eq!(summary.maximum(), None);
-
-        summary.record(0);
-        assert_eq!(summary.samples(), 1);
-        assert_eq!(summary.latest(), Some(0));
-        assert_eq!(summary.maximum(), Some(0));
-
-        summary.record(u64::MAX);
-        summary.record(1);
-        assert_eq!(summary.samples(), 3);
-        assert_eq!(summary.total(), u64::MAX);
-        assert_eq!(summary.latest(), Some(1));
-        assert_eq!(summary.maximum(), Some(u64::MAX));
-
-        summary.samples = u64::MAX;
-        summary.record(2);
-        assert_eq!(summary.samples(), u64::MAX);
-        assert_eq!(summary.total(), u64::MAX);
-        assert_eq!(summary.latest(), Some(2));
-        assert_eq!(summary.maximum(), Some(u64::MAX));
     }
 
     #[test]
