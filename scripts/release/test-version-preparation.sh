@@ -106,6 +106,29 @@ assert_metadata_unchanged() {
 }
 
 capture_metadata original-files
+# Reject malformed invocation before metadata reads, gates or mutation. A
+# misplaced --check must never be silently ignored by a real bump.
+for invocation in no-arguments missing-version extra-argument extra-version misplaced-check duplicate-check; do
+    case "${invocation}" in
+        no-arguments) set -- ;;
+        missing-version) set -- --check ;;
+        extra-argument) set -- --check patch extra ;;
+        extra-version) set -- 0.1.1 extra ;;
+        misplaced-check) set -- patch --check ;;
+        duplicate-check) set -- --check --check patch ;;
+    esac
+    if output="$(bash scripts/release/bump-version.sh "$@" 2>&1)"; then
+        echo "error: version preparation accepted ${invocation}" >&2
+        exit 1
+    else
+        rejection_status=$?
+    fi
+    if [[ "${rejection_status}" != 2 || "${output}" != Usage:* ]]; then
+        echo "error: invalid ${invocation} reached preparation: ${output}" >&2
+        exit 1
+    fi
+    assert_metadata_unchanged original-files
+done
 # Version ownership is table-scoped and rejects ambiguity before mutation.
 cp Cargo.toml original-manifest.toml
 for invalid in missing-table missing-version duplicate-table duplicate-version leading-zero; do
@@ -123,9 +146,9 @@ for invalid in missing-table missing-version duplicate-table duplicate-version l
     esac
     cp Cargo.toml rejected-manifest.toml
     for operation in read set; do
-        arguments=()
-        if [[ "${operation}" == set ]]; then arguments=(set 0.1.0 0.1.1); fi
-        if bash scripts/release/workspace-version.sh "${arguments[@]}" >/dev/null 2>&1; then
+        set --
+        if [[ "${operation}" == set ]]; then set -- set 0.1.0 0.1.1; fi
+        if bash scripts/release/workspace-version.sh "$@" >/dev/null 2>&1; then
             echo "error: workspace version ${operation} accepted ${invalid}" >&2
             exit 1
         fi
@@ -208,8 +231,9 @@ if [[ "${output}" != *'continuing because the maintainer invoked an explicit ver
     exit 1
 fi
 
-# Exercise every real release recipe. Only the preflight is real: the remaining
-# phase targets record calls, so the fixture cannot commit, push or run suites.
+# Exercise every real release recipe with real version preflight. Worktree
+# admission and remaining phases record calls; this fixture cannot commit, push
+# or run suites. test-commit-release exercises the actual worktree admission.
 cp Makefile preparation-only.mk
 cp "${repository_root}/Makefile" Makefile
 mv scripts/release/bump-version.sh scripts/release/preparation-bump-version.sh
@@ -217,6 +241,13 @@ cat > scripts/release/bump-version.sh <<'EOF'
 #!/usr/bin/env bash
 printf 'preflight %s\n' "$*" >> release-events
 bash scripts/release/preparation-bump-version.sh "$@"
+EOF
+cat > scripts/release/commit-release.sh <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+[[ "$#:$*" == '1:--check-before-bump' ]]
+printf '%s\n' worktree >> release-events
+if [[ "${FIXTURE_FAIL_WORKTREE:-0}" == 1 ]]; then exit 1; fi
 EOF
 cat > overrides.mk <<'EOF'
 release-verify:
@@ -240,25 +271,29 @@ for target in release-patch release-minor release-major release-x; do
         release-x) requested=0.4.2; candidate=0.4.2 ;;
     esac
     cp original-changelog.md candidate-changelog.md
-    for scenario in empty-notes failed-gate success repeat-success; do
+    for scenario in empty-notes failed-worktree failed-gate success repeat-success; do
         cp candidate-changelog.md CHANGELOG.md
         case "${scenario}" in
             empty-notes)
                 perl -pi -e 's/^- Fix terminal cleanup\.$//' CHANGELOG.md
-                expected=("preflight --check ${requested}" gate "bump ${requested}"
+                expected=("preflight --check ${requested}" worktree gate "bump ${requested}"
                     release-stage release-commit release-push) ;;
-            failed-gate) expected=("preflight --check ${requested}" gate) ;;
-            *) expected=("preflight --check ${requested}" gate "bump ${requested}"
+            failed-worktree) expected=("preflight --check ${requested}" worktree) ;;
+            failed-gate) expected=("preflight --check ${requested}" worktree gate) ;;
+            *) expected=("preflight --check ${requested}" worktree gate "bump ${requested}"
                 release-stage release-commit release-push) ;;
         esac
         fail_gate=0
         if [[ "${scenario}" == failed-gate ]]; then fail_gate=1; fi
-        if "${fixture_make[@]}" "${target}" "VERSION=${candidate}" "FAIL_GATE=${fail_gate}" >/dev/null 2>&1; then
-            if [[ "${scenario}" == failed-gate ]]; then
+        fail_worktree=0
+        if [[ "${scenario}" == failed-worktree ]]; then fail_worktree=1; fi
+        if FIXTURE_FAIL_WORKTREE="${fail_worktree}" "${fixture_make[@]}" "${target}" \
+            "VERSION=${candidate}" "FAIL_GATE=${fail_gate}" >/dev/null 2>&1; then
+            if [[ "${scenario}" == failed-gate || "${scenario}" == failed-worktree ]]; then
                 echo "error: ${target} accepted ${scenario}" >&2
                 exit 1
             fi
-        elif [[ "${scenario}" != failed-gate ]]; then
+        elif [[ "${scenario}" != failed-gate && "${scenario}" != failed-worktree ]]; then
             echo "error: ${target} rejected valid preflight" >&2
             exit 1
         fi

@@ -43,10 +43,12 @@ working tree. Keep [root AGENTS.md](../AGENTS.md) local. The former copied
   heap behavior. Those claims require the maintained PocketIC evidence.
 - macOS support is required by the refreshed baseline. The
   [local host matrix](releasing.md#host-support) distinguishes that requirement
-  from qualification evidence and records known workflow gaps. Current hosted
-  validation uses Linux x86_64; this refresh supplies no native macOS evidence,
-  support exception or host-tooling change. The shared host matrix describes
-  Shared Tooling's scripts, not IC Timers qualification.
+  from qualification evidence and records known workflow gaps. The refresh itself
+  supplied no native macOS evidence, support exception or host-tooling change.
+  Subsequent consumer-owned tooling declares macOS 15 Intel and Apple Silicon
+  targets, host-specific PocketIC pins and native CI jobs; their executed
+  qualification remains pending in the host matrix. The shared host matrix
+  describes Shared Tooling's scripts, not IC Timers qualification.
 
 ## Verification scope
 

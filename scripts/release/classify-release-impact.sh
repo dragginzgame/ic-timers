@@ -21,15 +21,16 @@ if ! git rev-parse --verify --quiet "${base_ref}^{commit}" >/dev/null; then
     exit 1
 fi
 
-# Command substitution propagates producer failures; process substitution would
-# turn a failed Git command into an empty, apparently unchanged release subject.
-tracked_paths="$(git diff --no-renames --name-only --diff-filter=ACDMRTUXB "${base_ref}" --)"
-untracked_paths="$(git ls-files --others --exclude-standard)"
-changed_paths="$(printf '%s\n' "${tracked_paths}" "${untracked_paths}" | sort -u)"
+# Complete both Git queries before reading their NUL-delimited paths. Display
+# quoting and line breaks must not hide crate changes, nor may producer failures
+# appear to be an unchanged subject. Duplicate paths do not affect classification.
+changed_paths="$(mktemp "${TMPDIR:-/tmp}/ic-timers-impact.XXXXXX")"
+trap 'rm -f -- "${changed_paths}"' EXIT
+git diff --no-renames --name-only --diff-filter=ACDMRTUXB -z "${base_ref}" -- > "${changed_paths}"
+git ls-files --others --exclude-standard -z >> "${changed_paths}"
 
 impact="none"
-while IFS= read -r path; do
-    [[ -z "${path}" ]] && continue
+while IFS= read -r -d '' path; do
     impact="repository"
     case "${path}" in
         Cargo.toml | crates/ic-timers/Cargo.toml | crates/ic-timers/build.rs | crates/ic-timers/src/*)
@@ -37,6 +38,6 @@ while IFS= read -r path; do
             break
             ;;
     esac
-done <<< "${changed_paths}"
+done < "${changed_paths}"
 
 printf '%s\n' "${impact}"

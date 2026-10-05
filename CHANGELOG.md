@@ -2,7 +2,28 @@
 
 All notable changes to this project are recorded here.
 
-## [Draft]
+## [0.11.10]
+
+### Development
+
+- Check unstaged implementation and untracked paths before combined release
+  commands run validation or bump the version. Reuse the release-commit guard
+  with NUL-delimited Git records, reject failed queries even after partial
+  metadata-only output, and report Bash-escaped paths. Allow the five metadata
+  outputs owned by the bump and release staging; preserve dirty-worktree support
+  for standalone version preparation and the complete user-operated release gate.
+  Extend worktree-admission and orchestration fixtures without staging files
+  automatically.
+- Reject nonregular PocketIC candidates and invalid automatic-install cache
+  destinations before downloading. Preserve directories, FIFOs and rejected
+  symlinks; continue accepting verified executable file symlinks without replacing
+  them. Extend cache-type and link-preservation fixtures while retaining exact
+  host-specific artifact pins.
+- Require exactly one version argument after the bump helper's optional leading
+  `--check`. Reject extra arguments and misplaced or repeated check flags before
+  reading or changing release metadata; extend metadata-preservation fixtures.
+
+## [0.11.9] - 2026-10-05
 
 ### Development
 
@@ -10,6 +31,21 @@ All notable changes to this project are recorded here.
   after confirming the exact annotated tag and main reachability. Prepare the
   selected dependency caches before offline metadata checks; retain fixture
   validation without repeating the full Rust and MSRV builds owned by PR/main.
+- Classify release impact from NUL-delimited Git paths so filenames containing
+  tabs, line breaks, quotes or non-ASCII bytes cannot hide crate-source changes.
+  Remove display-path joining and sorting; require both Git queries to succeed
+  before classifying their records. Extend the existing fixture across untracked
+  and staged paths, partial query failures and temporary-record cleanup.
+- Verify the pinned PocketIC archive digest before decompression, then retain
+  hash-before-execution and exact version checks for downloaded, cached and
+  overridden binaries. Pin separate PocketIC 15.0.0 artifacts for Linux x86_64,
+  macOS Intel and Apple Silicon; use core Perl SHA-256 support on both hosts.
+  Extend failure-order, host-selection and cache-preservation fixtures.
+- Declare macOS 15 Intel and Apple Silicon host targets and add native PR/main
+  jobs that run the complete release gate under Apple's Bash 3.2 with both
+  pinned Rust toolchains. Replace empty-array fixture argument expansion with
+  positional arguments for Bash 3.2. Native qualification remains pending these
+  jobs; tag pushes continue to avoid duplicate full validation.
 
 ## [0.11.8] - 2026-10-05
 

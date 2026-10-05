@@ -205,6 +205,7 @@ bump-x:
 
 release-patch:
 	bash scripts/release/bump-version.sh --check patch
+	bash scripts/release/commit-release.sh --check-before-bump
 	+$(MAKE) --no-print-directory release-verify
 	+$(MAKE) --no-print-directory patch
 	+$(MAKE) --no-print-directory release-stage
@@ -213,6 +214,7 @@ release-patch:
 
 release-minor:
 	bash scripts/release/bump-version.sh --check minor
+	bash scripts/release/commit-release.sh --check-before-bump
 	+$(MAKE) --no-print-directory release-verify
 	+$(MAKE) --no-print-directory minor
 	+$(MAKE) --no-print-directory release-stage
@@ -221,6 +223,7 @@ release-minor:
 
 release-major:
 	bash scripts/release/bump-version.sh --check major
+	bash scripts/release/commit-release.sh --check-before-bump
 	+$(MAKE) --no-print-directory release-verify
 	+$(MAKE) --no-print-directory major
 	+$(MAKE) --no-print-directory release-stage
@@ -230,6 +233,7 @@ release-major:
 release-x:
 	@if [ -z "$(VERSION)" ]; then echo "error: VERSION=x.y.z is required" >&2; exit 2; fi
 	bash scripts/release/bump-version.sh --check "$(VERSION)"
+	bash scripts/release/commit-release.sh --check-before-bump
 	+$(MAKE) --no-print-directory release-verify
 	+$(MAKE) --no-print-directory bump-x VERSION="$(VERSION)"
 	+$(MAKE) --no-print-directory release-stage

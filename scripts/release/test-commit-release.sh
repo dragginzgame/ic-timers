@@ -36,6 +36,53 @@ expect_failure() {
     fi
 }
 
+# The early check admits only the metadata selected by release-stage. It does
+# not need a release commit, coherent lockfiles, or a preparatory source commit.
+initial_commit="$(git rev-parse HEAD)"
+bash scripts/release/commit-release.sh --check-before-bump
+expect_failure 'Usage:' bash scripts/release/commit-release.sh --check-before-bump extra
+mkdir -p testing
+for path in Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md; do
+    tracked=false
+    case "${path}" in Cargo.toml | CHANGELOG.md | README.md) tracked=true ;; esac
+    printf '%s\n' '# Dirty metadata fixture.' >> "${path}"
+    bash scripts/release/commit-release.sh --check-before-bump
+    expect_failure 'stage all release changes' bash scripts/release/commit-release.sh
+    grep -Fqx '# Dirty metadata fixture.' "${path}"
+    if [[ "${tracked}" == true ]]; then git restore -- "${path}"; else rm -- "${path}"; fi
+done
+
+printf '%s\n' '# Unstaged implementation fixture.' >> scripts/ci/ensure-clean.sh
+expect_failure 'scripts/ci/ensure-clean.sh' bash scripts/release/commit-release.sh --check-before-bump
+grep -Fqx '# Unstaged implementation fixture.' scripts/ci/ensure-clean.sh
+git add scripts/ci/ensure-clean.sh
+bash scripts/release/commit-release.sh --check-before-bump
+git show :scripts/ci/ensure-clean.sh > .git/expected-staged-source
+printf '%s\n' '# Later unstaged implementation fixture.' >> scripts/ci/ensure-clean.sh
+expect_failure 'scripts/ci/ensure-clean.sh' bash scripts/release/commit-release.sh --check-before-bump
+git show :scripts/ci/ensure-clean.sh > .git/actual-staged-source
+cmp .git/expected-staged-source .git/actual-staged-source
+grep -Fqx '# Later unstaged implementation fixture.' scripts/ci/ensure-clean.sh
+git restore --staged --worktree -- scripts/ci/ensure-clean.sh
+rm -- scripts/ci/ensure-clean.sh
+expect_failure 'scripts/ci/ensure-clean.sh' bash scripts/release/commit-release.sh --check-before-bump
+git restore -- scripts/ci/ensure-clean.sh
+for path in 'unstaged name.txt' $'unstaged\tname.txt' $'unstaged\nname.txt' 'unstaged"name.txt' $'caf\303\251.txt'; do
+    printf '%s\n' 'Untracked implementation fixture.' > "${path}"
+    escaped_path="$(printf '%q' "${path}")"
+    expect_failure "${escaped_path}" bash scripts/release/commit-release.sh --check-before-bump
+    grep -Fqx 'Untracked implementation fixture.' "${path}"
+    git add -- "${path}"
+    bash scripts/release/commit-release.sh --check-before-bump
+    git restore --staged -- "${path}"
+    rm -- "${path}"
+done
+current_commit="$(git rev-parse HEAD)"
+test "${current_commit}" = "${initial_commit}"
+release_tags="$(git tag --list v0.1.0)"
+test -z "${release_tags}"
+staged_paths="$(git diff --cached --name-only)"
+test -z "${staged_paths}"
 expect_failure 'HEAD is not Release' bash scripts/release/commit-release.sh
 printf '%s\n' 'Prepared release.' >> README.md
 git add README.md
@@ -46,8 +93,14 @@ cat > bin/git <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 if [[ "${FIXTURE_FAIL_UNTRACKED:-0}" == 1 && "${1:-}" == ls-files ]]; then
+    if [[ "${FIXTURE_PARTIAL_OUTPUT:-0}" == 1 ]]; then printf '%s\0' Cargo.lock; fi
     echo 'injected untracked-file query failure' >&2
     exit 1
+fi
+if [[ "${FIXTURE_FAIL_UNSTAGED:-0}" == 1 && "${1:-}" == diff && "${2:-}" == --no-renames ]]; then
+    if [[ "${FIXTURE_PARTIAL_OUTPUT:-0}" == 1 ]]; then printf '%s\0' Cargo.toml; fi
+    echo 'injected unstaged-file query failure' >&2
+    exit 128
 fi
 if [[ "${FIXTURE_FAIL_STAGED:-0}" == 1 && $# == 3 && "${1:-}" == diff \
     && "${2:-}" == --cached && "${3:-}" == --quiet ]]; then
@@ -83,7 +136,16 @@ chmod +x bin/git
 git add bin/git
 export PATH="${temporary_root}/bin:${PATH}"
 initial_commit="$(git rev-parse HEAD)"
-expect_failure 'injected untracked-file query failure' env FIXTURE_FAIL_UNTRACKED=1 bash scripts/release/commit-release.sh
+for mode in commit before-bump; do
+    set --
+    if [[ "${mode}" == before-bump ]]; then set -- --check-before-bump; fi
+    for partial_output in 0 1; do
+        expect_failure 'injected untracked-file query failure' env FIXTURE_FAIL_UNTRACKED=1 \
+            FIXTURE_PARTIAL_OUTPUT="${partial_output}" bash scripts/release/commit-release.sh "$@"
+        expect_failure 'injected unstaged-file query failure' env FIXTURE_FAIL_UNSTAGED=1 \
+            FIXTURE_PARTIAL_OUTPUT="${partial_output}" bash scripts/release/commit-release.sh "$@"
+    done
+done
 expect_failure 'injected staged-diff query failure' env FIXTURE_FAIL_STAGED=1 bash scripts/release/commit-release.sh
 for lookup_output in '' v0.1.0; do
     expect_failure 'injected release-tag lookup failure' env FIXTURE_FAIL_TAG_LOOKUP=1 \

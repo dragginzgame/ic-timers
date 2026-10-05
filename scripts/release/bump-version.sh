@@ -39,6 +39,10 @@ if [[ "${1:-}" == --check ]]; then
     check_only=true
     shift
 fi
+if [[ "$#" != 1 ]]; then
+    usage
+    exit 2
+fi
 requested="${1:-}"
 case "${requested}" in
     patch | minor | major) ;;

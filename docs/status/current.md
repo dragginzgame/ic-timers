@@ -49,9 +49,31 @@ references and validation belong in [release notes](../changelog/README.md),
   scope and the failed attempt are recorded in the release guide.
   Hosted tag CI now validates the tagged checkout's actual root/testing lockfiles
   using those existing fetch and metadata owners after tag/main checks and before
-  fixtures. This repository-only continuation is in the one versionless draft;
-  workflow syntax/source-review scope and pending hosted execution are recorded
+  fixtures. This repository-only continuation is in the current changelog section.
+  Workflow syntax/source-review scope and pending hosted execution are recorded
   in the release guide.
+  Release-impact classification now reads NUL-delimited Git paths after both
+  queries succeed, preserving crate classification for display-quoted filenames
+  without joining or sorting. Filename, partial-failure and cleanup fixtures
+  remain unexecuted; their source/syntax scope is recorded in the release guide.
+  PocketIC provisioning now verifies pinned archives before decompression and
+  retains exact host-specific binary/version checks for Linux x86_64 and macOS
+  Intel/Apple Silicon. macOS 15 PR/main jobs run the complete release gate under
+  Apple's Bash 3.2 with both pinned Rust toolchains. Artifact-pin provenance and
+  the declared host matrix belong in the release guide; fixtures and native
+  qualification remain unexecuted. Empty-argument fixtures use positional
+  arguments to avoid Bash 3.2 nounset behavior. No runtime API, Cargo version,
+  lockfile or release execution changed.
+  Combined release commands now reuse the commit guard's read-only worktree
+  admission before validation and bumping. Only the five bump-owned metadata
+  outputs may remain unstaged; other paths are reported without auto-staging.
+  Standalone version preparation keeps its dirty-worktree contract. Source and
+  syntax scope and pending fixture execution belong in the release guide.
+  The bump helper now rejects missing or extra arguments and misplaced check
+  flags before reading metadata. PocketIC requires regular executable candidates
+  and rejects invalid provisioning destinations before downloading, preserving
+  verified file symlinks as read-only input. Updated rejection/preservation
+  fixtures remain unexecuted; source/syntax scope belongs in the release guide.
 - Public removals or incompatible semantic changes require the next minor line;
   private behavior-preserving simplifications may use a patch. See the
   [ordinary arbitration hard cut](../changelog/0.9.0.md).

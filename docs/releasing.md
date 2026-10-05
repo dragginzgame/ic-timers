@@ -47,6 +47,19 @@ The workspace may already have an untagged version, so its matching tag is not
 required. An explicit base passed to the classifier must still resolve to a
 commit. Missing release history, malformed tags and Git failures remain errors.
 
+Tracked and untracked changes are read as NUL-delimited Git paths after both
+queries complete successfully. Git's display quoting, whitespace and non-ASCII
+filenames cannot change a path's classification. Duplicate records do not change
+the strongest impact, so no joining, decoding or sorting is needed. A temporary
+record file preserves NUL bytes and is removed on exit; a failed Git query cannot
+produce an apparently unchanged subject even after emitting plausible records.
+The existing impact fixture covers untracked and staged crate paths with spaces,
+tabs, line breaks, quotes and UTF-8 bytes under `core.quotePath=true`, plus partial
+query failures and cleanup. Fixture comparisons capture successful output before
+checking its value. Shell and embedded fixture-shell syntax and source flow were
+reviewed; diff whitespace checks passed. These fixture scenarios have not been
+executed, and this change supplies no native macOS qualification.
+
 This is a conservative mechanical boundary, not an API compatibility oracle.
 For `crate`, review the public API and semantic contract and choose patch or
 minor according to the rule above. Repository-only work normally stays
@@ -140,8 +153,48 @@ Combined release targets run `bump-version.sh --check` before deployment
 validation. This preflight checks the requested version, impact, unambiguous
 draft selection and structured README projections without changing version
 metadata or running tests. An empty exact `VERSION` is rejected before the gate.
-The real bump repeats these cheap
-checks afterward and always advances the requested version.
+The bump helper accepts exactly one `patch`, `minor`, `major` or canonical
+`x.y.z` argument after an optional leading `--check`. Missing or extra arguments,
+including a misplaced or repeated check flag, fail with usage status 2 before
+reading release metadata. The preparation fixture checks these rejections against
+unchanged metadata bytes and permission bits.
+The release-commit owner then runs its read-only `--check-before-bump` mode. It
+accepts staged implementation changes and dirty metadata selected by
+`release-stage`: `Cargo.toml`, `Cargo.lock`, `testing/Cargo.lock`, `CHANGELOG.md`
+and `README.md`. Other unstaged or untracked paths are listed with Bash escaping
+and rejected before dependency fetching, validation or version mutation. Stage
+the intended implementation changes yourself; the helper does not expand the
+metadata staging scope or require a preparatory source commit. Plain `patch`,
+`minor`, `major` and `bump-x` remain available for dirty-worktree version
+preparation without this combined-release admission check.
+
+The same owner requires every path to be staged in its normal commit/tag mode.
+Both modes complete NUL-delimited Git discovery before reading records; an empty
+or plausible partial result from a failed query cannot establish admission.
+The normal commit mode retains README/lockfile validation, exact tag identity,
+clean-worktree checks and interrupted-tag retries. The real bump repeats the
+version preflight checks afterward and always advances the requested version.
+
+The worktree fixture covers clean admission without a release commit, each dirty
+metadata output, staged/partially staged/deleted source, untracked whitespace/quoted/UTF-8
+paths, invalid arguments, and empty/metadata-only failed Git output. Recipe
+fixtures cover every combined target rejecting the worktree before the gate and
+bump. Shell and embedded fixture syntax, source flow, read-only 0.11.10 changelog
+preparation and diff whitespace checks passed; these new fixture scenarios have
+not been executed. This is repository-only tooling and supplies no new runtime
+or native host qualification.
+
+If a combined release already bumped and staged metadata but stopped at the
+commit guard, review and stage the remaining intended paths, then run:
+
+```text
+make release-commit && make release-push
+```
+
+This resumes the prepared version. Running `release-patch` again requests another
+patch bump. A prepared date or version does not prove a release tag or publication;
+an intentionally unpushed preparation may be followed by a new maintainer-selected
+batch while preserving the existing metadata and index.
 
 Cargo owns package identity. The handoff reads it directly instead of storing a
 second version projection. Release and deployment checks do not read changelog
@@ -230,12 +283,42 @@ continues to target Wasm on the Internet Computer.
 | Host | Current workflow configuration and evidence scope |
 | --- | --- |
 | Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The release gate pins the audited PocketIC 15.0.0 Linux x86_64 artifact. Recorded results remain scoped to their original subjects. |
-| macOS | Required; supported versions and architectures still need a declared and natively qualified matrix. No macOS CI job or native qualification is recorded here. |
+| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. Native execution and qualification for this change remain pending. |
+| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. Native execution and qualification for this change remain pending. |
 
 Version preparation uses Bash, Perl, Git and Cargo. It owns regular metadata
 files; symlinked or non-file outputs are rejected before mutation. Applicable
-Make targets use GNU Make. Native host prerequisites and setup must be qualified
+Make targets use GNU Make. macOS 15 supplies Bash 3.2, GNU Make 3.81 and the
+standard BSD/Unix tools used here. Required host tools are Git, Perl with core
+`JSON::PP`, `File::Compare` and `Digest::SHA`, `curl`, `gzip`, and Rustup/Cargo.
+The SHA-256 boundary uses `Digest::SHA`, without requiring GNU `sha256sum` or a
+Homebrew tool installation. Native host prerequisites and setup must be qualified
 at their owning workflow boundary.
+
+For local macOS setup, install Rustup, then run `make update-dev` to install the
+development toolchain declared in `rust-toolchain.toml`, its components and the
+Wasm target. The full release gate also needs the pinned MSRV toolchain:
+
+```text
+rustup toolchain install 1.88.0 --profile minimal --component clippy --component rustfmt --target wasm32-unknown-unknown
+make release-verify
+```
+
+These are maintainer-operated setup and validation commands, not publication.
+The macOS CI jobs install both toolchains and the Wasm target, verify the OS and
+architecture against this matrix, and prepend `/bin` to `PATH` so nested
+`env bash` wrappers exercise Apple's Bash 3.2. The two jobs run only for PR/main;
+their complete gate includes dependency preparation, native CI, MSRV, nested
+probe linting, the maintained PocketIC subjects and policy cohorts. Existing
+Linux jobs and the smaller tag job remain separate. The jobs use explicit
+[GitHub runner labels](https://docs.github.com/en/actions/reference/runners/github-hosted-runners#standard-github-hosted-runners-for-public-repositories).
+CI configuration supplies a qualification path; only passing native execution
+for the matching revision supplies evidence. Adding these jobs does not claim
+that they have passed or qualify other macOS versions.
+
+The version-preparation and impact fixtures use positional arguments when a
+command may take no arguments, avoiding empty-array expansion under Bash 3.2's
+`set -u`. Their changed scenarios have not been executed.
 
 The repository and release-gate fixtures compare ordered newline records
 directly with `cmp`. They no longer depend on Bash 4's `mapfile` or turn those
@@ -268,21 +351,66 @@ On 2026-10-05, read-only changelog finalization for the selected 0.11.8 target,
 the current README version projection, both locked offline Cargo metadata checks
 and diff whitespace checks passed. Cargo versions and both lockfiles were unchanged.
 
-The PocketIC verification fixture also compares exact ordered event records,
+For 0.11.8, the PocketIC verification fixture compared exact ordered event records,
 including both cache and download checks during rejection. Debris searches run
 as ordinary commands before empty-result assertions. This tightens the fixture's
 producer-failure handling without changing the audited version, digest, binary
 verification or override ownership. Source and shell syntax were reviewed;
 the changed fixture has not been executed.
 
-The current PocketIC verifier accepts only the pinned Linux binary's hash, even
-for an explicit override, and automatic installation is limited to Linux x86_64.
-A macOS release gate needs a separately audited host artifact and its own pinned
-digest while retaining exact version/hash validation and strict override
-ownership. An available upstream download or a Linux pass does not qualify that
-gate. This baseline refresh changes no executable or validation boundary and
-does not establish macOS support evidence. The
-[adoption record](shared-tooling.md) scopes the refresh and local exceptions.
+### PocketIC artifact pins
+
+The verifier selects PocketIC 15.0.0 pins for Linux x86_64, Darwin x86_64 and
+Darwin arm64 using independent OS and architecture queries. Unknown hosts or a
+failed query reject before cache inspection. Explicit overrides use the same
+host-specific binary hash and exact `pocket-ic-server 15.0.0` version check;
+they are never automatically replaced. No caller-supplied digest or version can
+relax these checks.
+
+The pins below were inspected on 2026-10-05 against the official
+[PocketIC 15.0.0 release](https://github.com/dfinity/pocketic/releases/tag/15.0.0)
+and its [release asset metadata](https://api.github.com/repos/dfinity/pocketic/releases/tags/15.0.0).
+Each downloaded gzip archive matched its published asset SHA-256 before
+decompression. The Linux binary retained the existing audited digest; the macOS
+binary digests were computed from those verified archives, with Mach-O x86_64
+and arm64 formats inspected. None of these binaries was executed during this
+inspection. Exact version checks and maintained PocketIC subjects remain required
+on each native host; artifact integrity does not establish recovery evidence or
+native macOS qualification.
+
+| Release asset | Archive SHA-256 | Binary SHA-256 |
+| --- | --- | --- |
+| `pocket-ic-x86_64-linux.gz` | `972d592975bdd0f046b05b5414ed6f9a044c676ef912b8ac81d359dd4982b038` | `29472ea4433b30a280676c4e22e369d79d5ba6ee1b4d48bab32ebe7d0ad2b4bb` |
+| `pocket-ic-x86_64-darwin.gz` | `1d133a07c08c8e8ce25a2d08e6e7a590c27a5621735a0ab95c19f111d73f9f72` | `e0a93fdd0b11345096797807002fcccecf7004c9ebfcdb1c0a3f4bcab2344964` |
+| `pocket-ic-arm64-darwin.gz` | `e6a96df4559949091411877f562512e132b75916bb704c03494bc7877fcfea0e` | `3635e41075cded4c0fcfe4bb80b55d03324f8fa85a1a99a0f9eed2a097c50eb0` |
+
+Automatic provisioning downloads over HTTPS into an adjacent temporary directory,
+checks the archive digest before `gzip`, checks the decompressed binary digest
+before execution, then checks its exact version before replacing the cache.
+Failures preserve the existing cache and clean the temporary installation.
+Candidates must resolve to regular executable files before hashing. A symlink to
+a verified executable remains valid input and is retained. If verification fails,
+automatic provisioning requires an absent cache path or a regular file without a
+symlink at that path; directories, FIFOs and links are rejected before download.
+This prevents `mv` from silently installing inside a directory while reporting
+the selected cache path as installed. Explicit overrides retain their existing
+read-only contract.
+The maintained fixture covers each supported host's pins and URL, strict and
+missing overrides, partial checksum failure output, download/decompression
+failure, version rejection, unsupported hosts, failed host queries and cleanup.
+It compares retained cache bytes and permission bits against a distinct cached
+copy, so replacing it with the fixture's download cannot pass preservation checks.
+These new scenarios and native CI jobs remain unexecuted. Workflow YAML, shell
+and embedded fixture shell/Perl syntax, source flow, read-only 0.11.9 changelog
+preparation and diff whitespace checks passed. No tests, builds, lint gates,
+release commands or version changes were run.
+
+The 0.11.10 cache-type scenarios cover directories, FIFOs, rejected file/directory/
+dangling symlinks and accepted verified file symlinks with both installation modes.
+They check failure before download, link-target preservation and empty rejected
+directories. Source, shell and embedded fixture-shell syntax, read-only 0.11.10
+changelog preparation and diff whitespace checks passed; these scenarios remain
+unexecuted and do not supply native host qualification.
 
 ### Deployment validation
 
@@ -320,8 +448,9 @@ That gate includes `make ci`, the Rust 1.88 MSRV check, warning-denied linting
 of every supported nested probe configuration, the maintained watchdog/recovery,
 ordinary-await and provider-churn PocketIC subjects, and the four policy cohorts.
 If `POCKET_IC_BIN` is unset, the
-gate installs the pinned PocketIC 15.0.0 Linux x86_64 artifact into the ignored
-`target/tools` cache. It verifies the audited SHA-256 before executing any
+gate installs the pinned PocketIC 15.0.0 artifact for the current supported host
+into the ignored `target/tools` cache. It verifies the archive SHA-256 before
+decompression and the audited binary SHA-256 before executing any
 downloaded, cached or overridden binary, then checks its version. Diagnostic
 paths also leave hash-mismatched binaries unexecuted. An explicitly supplied `POCKET_IC_BIN` remains
 a strict override: a missing or mismatched override fails and is never
@@ -341,8 +470,9 @@ commands and rejection at either download boundary, and checks that preparation
 runs first and stops the gate on failure. The lockfile fixture covers empty and
 matching JSON from failed metadata commands for each manifest while preserving
 both locks. Shell and embedded fixture-shell syntax, recipe inspection and diff
-whitespace checks passed; these fixtures and real downloads have not been run by
-an automated contributor. The maintainer's reported 0.11.8 preparation attempt
+whitespace checks passed; these fetch/metadata fixtures and real Cargo fetch
+commands have not been run by an automated contributor during their preparation.
+The maintainer's reported 0.11.8 preparation attempt
 failed on uncached `js-sys 0.3.104`, then reported metadata rollback. Read-only
 inspection found that archive and eight other selected testing archives absent
 from the local default cache; it does not establish results in another cache or
@@ -393,3 +523,10 @@ the Cargo version. This uses the existing fetch and metadata owners and does
 not add compilation to their checks. The changed workflow shell was checked
 for syntax and its sequence reviewed; diff whitespace checks passed. Hosted
 execution and fixture execution remain unverified for this change.
+
+For the maintainer-selected 0.11.9 target, the named undated changelog preflight,
+current README projection, both locked offline metadata checks, workflow shell
+syntax and diff whitespace checks passed. Cargo versions, both lockfiles and
+the maintainer's existing staging were unchanged. Tests, builds, hosted execution
+and Git release effects remain maintainer-owned; this repository-only patch
+retains the complete release gate despite having no runtime changes.

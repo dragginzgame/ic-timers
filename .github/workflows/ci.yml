@@ -65,6 +65,55 @@ jobs:
       - name: Lint nested probes with internal toolchain
         run: make testing-check MSRV="$IC_TIMERS_INTERNAL_TOOLCHAIN"
 
+  macos:
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15-intel
+            architecture: x86_64
+          - runner: macos-15
+            architecture: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      # actions/checkout v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Select native Bash and verify the declared host
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        env:
+          EXPECTED_ARCHITECTURE: ${{ matrix.architecture }}
+        run: |
+          host_os="$(uname -s)"
+          host_arch="$(uname -m)"
+          host_version="$(sw_vers -productVersion)"
+          [[ "$host_os" == Darwin ]]
+          [[ "$host_arch" == "$EXPECTED_ARCHITECTURE" ]]
+          [[ "$host_version" == 15.* ]]
+          [[ "${BASH_VERSINFO[0]}.${BASH_VERSINFO[1]}" == 3.2 ]]
+          # Every env-bash wrapper and Make recipe exercises Apple's Bash 3.2.
+          echo /bin >> "$GITHUB_PATH"
+      # dtolnay/rust-toolchain v1
+      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067
+        with:
+          toolchain: ${{ env.IC_TIMERS_MSRV }}
+          components: clippy, rustfmt
+          targets: wasm32-unknown-unknown
+      # dtolnay/rust-toolchain v1
+      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067
+        with:
+          toolchain: ${{ env.IC_TIMERS_INTERNAL_TOOLCHAIN }}
+          components: clippy, rustfmt
+          targets: wasm32-unknown-unknown
+      - name: Pin cargo and rustc to internal toolchain
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: echo "RUSTUP_TOOLCHAIN=$IC_TIMERS_INTERNAL_TOOLCHAIN" >> "$GITHUB_ENV"
+      # Swatinem/rust-cache v2
+      - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
+      - name: Run the complete native release gate
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: make release-verify
+
   # PR/main owns full validation. A tag at the same main commit only rechecks
   # package metadata and tag identity, avoiding duplicate Rust builds while still
   # rejecting an independently pushed tag from an unmerged commit.
