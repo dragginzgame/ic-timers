@@ -104,7 +104,7 @@ fn dropped_ordinary_deliveries_retire_confirmed_scheduled_and_running_work() {
             DeclarationLifetime::RemoveWhenStopped,
         ] {
             for started in [false, true] {
-                setup();
+                let _fixture = setup();
                 let timer = identity("dropped-ordinary");
                 let gate = SuspendedWork::default();
                 let context = Rc::new(RefCell::new(None));
@@ -195,7 +195,7 @@ fn abandoned_running_work_discards_scheduling_commands_and_finishes_unregistrati
             DeclarationLifetime::RemoveWhenStopped,
         ] {
             for command in ["cancel", "reconcile", "ensure", "unregister"] {
-                setup();
+                let _fixture = setup();
                 let timer = identity("abandoned-command");
                 let gate = SuspendedWork::default();
                 let context = Rc::new(RefCell::new(None));
@@ -252,7 +252,7 @@ fn abandoned_running_work_discards_scheduling_commands_and_finishes_unregistrati
 
 #[test]
 fn stale_delivery_drop_cannot_retire_rearmed_or_reused_identity() {
-    setup();
+    let _fixture = setup();
     let timer = identity("stale-delivery-drop");
     let registration = register_once(timer.clone(), DeclarationLifetime::Retained, |_| async {
         OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
@@ -301,7 +301,7 @@ fn abandoned_transient_releases_capacity_and_drops_captures_outside_registry_bor
         }
     }
 
-    setup();
+    let _fixture = setup();
     let timer = identity("abandoned-capacity");
     let dropped = Rc::new(Cell::new(false));
     let captured = Rc::new(CaptureDropCheck {
@@ -358,7 +358,7 @@ fn abandoned_transient_releases_capacity_and_drops_captures_outside_registry_bor
 fn unconfirmed_ordinary_delivery_drop_preserves_binding_failure_accounting() {
     for after_completion in [false, true] {
         for confirmation_failure in [false, true] {
-            setup();
+            let _fixture = setup();
             let timer = identity("unconfirmed-delivery-drop");
             let claim = suspended_ordinary_registration(
                 after_completion,
@@ -398,7 +398,7 @@ fn suspended_once_work_allows_other_timers_and_arbitrates_external_commands() {
             DeclarationLifetime::Retained,
             DeclarationLifetime::RemoveWhenStopped,
         ] {
-            setup();
+            let _fixture = setup();
             let timer = identity("suspended-once");
             let gate = SuspendedWork::default();
             let callback_gate = gate.clone();
@@ -504,7 +504,7 @@ fn policy_specific_results_schedule_through_live_runtime() {
                 continue;
             }
             for reconcile in [false, true] {
-                setup();
+                let _fixture = setup();
                 let timer = identity("typed-results");
                 let completion = if case == 7 {
                     TimerCompletion::invariant_failure(2)
@@ -625,7 +625,7 @@ fn policy_specific_results_schedule_through_live_runtime() {
 #[test]
 fn suspended_after_completion_uses_completion_time_and_exact_reconciliation() {
     for reconcile in [false, true] {
-        setup();
+        let _fixture = setup();
         let timer = identity("suspended-after-completion");
         let gate = SuspendedWork::default();
         let callback_gate = gate.clone();
@@ -673,9 +673,77 @@ fn identity(name: &str) -> TimerIdentity {
     TimerIdentity::try_new("test", "runtime", name).expect("fixture identity should be valid")
 }
 
-fn setup() -> TimerEpoch {
+#[must_use = "retain the fixture until the test scope ends"]
+struct RuntimeFixture {
+    epoch: TimerEpoch,
+}
+
+impl Drop for RuntimeFixture {
+    fn drop(&mut self) {
+        // The production delivery guard must run while runtime TLS is available.
+        // Native thread teardown is not an IC lifecycle or rollback event.
+        platform::clear_tasks();
+    }
+}
+
+fn setup() -> RuntimeFixture {
     reset_for_test(10, 7);
-    initialize_runtime().expect("runtime initialization should succeed")
+    RuntimeFixture {
+        epoch: initialize_runtime().expect("runtime initialization should succeed"),
+    }
+}
+
+#[test]
+fn fixture_cleanup_drops_queued_and_suspended_work_before_tls_teardown() {
+    struct CaptureDropCheck(Rc<Cell<bool>>);
+
+    impl Drop for CaptureDropCheck {
+        fn drop(&mut self) {
+            assert_eq!(timer_count(), 0, "cleanup must release the task-map borrow");
+            assert!(
+                timer_inventory().is_ok(),
+                "runtime TLS must remain available"
+            );
+            self.0.set(true);
+        }
+    }
+
+    for started in [false, true] {
+        let dropped = Rc::new(Cell::new(false));
+        {
+            let _fixture = setup();
+            let gate = SuspendedWork::default();
+            let captured = Rc::new(CaptureDropCheck(Rc::clone(&dropped)));
+            let registration = register_once(
+                identity("fixture-cleanup"),
+                DeclarationLifetime::RemoveWhenStopped,
+                move |_| {
+                    let gate = gate.clone();
+                    let captured = Rc::clone(&captured);
+                    async move {
+                        gate.wait().await;
+                        std::hint::black_box(captured);
+                        OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
+                    }
+                },
+            )
+            .unwrap();
+            registration
+                .ensure_scheduled(TimerSchedule::At(10))
+                .unwrap();
+            if started {
+                assert!(run_next_due());
+            }
+            assert!(!dropped.get());
+        }
+        assert!(
+            dropped.get(),
+            "fixture cleanup must release callback captures"
+        );
+        assert_eq!(timer_count(), 0);
+        assert_eq!(timer_inventory().unwrap().timers(), []);
+        assert!(!run_next_due());
+    }
 }
 
 #[test]
@@ -684,7 +752,7 @@ fn rejected_watchdog_cadence_preserves_the_complete_snapshot() {
         DeclarationLifetime::Retained,
         DeclarationLifetime::RemoveWhenStopped,
     ] {
-        setup();
+        let _fixture = setup();
         let timer = identity("rejected-watchdog-cadence");
         let registration = register_watchdog(
             timer.clone(),
@@ -776,7 +844,7 @@ fn initialization_is_required_and_idempotent() {
 
 #[test]
 fn fresh_inactive_reconciliation_reserves_complete_retained_inventory() {
-    setup();
+    let _fixture = setup();
     let once_identity = identity("built-in-once");
     let after_identity = identity("built-in-after");
     let watchdog_identity = identity("built-in-watchdog");
@@ -845,7 +913,7 @@ fn fresh_inactive_reconciliation_reserves_complete_retained_inventory() {
 
 #[test]
 fn fresh_transient_cancellation_expires_every_registration_policy() {
-    setup();
+    let _fixture = setup();
     let once_identity = identity("fresh-transient-once");
     let after_identity = identity("fresh-transient-after");
     let watchdog_identity = identity("fresh-transient-watchdog");
@@ -907,7 +975,7 @@ fn fresh_transient_cancellation_expires_every_registration_policy() {
 
 #[test]
 fn registration_claims_report_exact_provider_wakeup_ownership() {
-    setup();
+    let _fixture = setup();
     let once = register_once(
         identity("liveness-once"),
         DeclarationLifetime::Retained,
@@ -974,7 +1042,7 @@ fn registration_claims_report_exact_provider_wakeup_ownership() {
 
 #[test]
 fn watchdog_claim_observes_the_prearmed_successor_not_queued_work() {
-    setup();
+    let _fixture = setup();
     let watchdog = register_watchdog(
         identity("liveness-watchdog-successor"),
         TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
@@ -1008,7 +1076,7 @@ fn watchdog_claim_observes_the_prearmed_successor_not_queued_work() {
 
 #[test]
 fn immediate_watchdog_reconciliation_arms_one_zero_delay_scheduler() {
-    setup();
+    let _fixture = setup();
     let timer = identity("watchdog-immediate-reconcile");
     let calls = Rc::new(Cell::new(0_u64));
     let callback_calls = Rc::clone(&calls);
@@ -1054,7 +1122,7 @@ fn immediate_watchdog_reconciliation_arms_one_zero_delay_scheduler() {
 
 #[test]
 fn immediate_watchdog_ensure_moves_cadence_earlier_and_repeats_idempotently() {
-    setup();
+    let _fixture = setup();
     let timer = identity("watchdog-immediate-ensure");
     let registration = register_watchdog(
         timer.clone(),
@@ -1098,7 +1166,7 @@ fn immediate_watchdog_ensure_moves_cadence_earlier_and_repeats_idempotently() {
 
 #[test]
 fn immediate_watchdog_ensure_coalesces_an_overdue_cadence_wakeup() {
-    setup();
+    let _fixture = setup();
     let timer = identity("watchdog-immediate-overdue-cadence");
     let registration = register_watchdog(
         timer.clone(),
@@ -1137,7 +1205,7 @@ fn immediate_watchdog_ensure_coalesces_an_overdue_cadence_wakeup() {
 
 #[test]
 fn removed_transient_claim_cannot_report_wakeup_liveness() {
-    setup();
+    let _fixture = setup();
     let timer_identity = identity("liveness-transient");
     let timer = register_once(
         timer_identity.clone(),
@@ -1179,7 +1247,7 @@ fn removed_transient_claim_cannot_report_wakeup_liveness() {
 
 #[test]
 fn once_owns_one_provider_handle_and_executes_without_registry_borrow() {
-    setup();
+    let _fixture = setup();
     let timer = identity("once");
     let calls = Rc::new(Cell::new(0_u64));
     let callback_calls = Rc::clone(&calls);
@@ -1254,7 +1322,7 @@ fn ordinary_callback_borrow_failure_stops_without_invoking_or_measuring_work() {
         (true, DeclarationLifetime::Retained),
         (true, DeclarationLifetime::RemoveWhenStopped),
     ] {
-        setup();
+        let _fixture = setup();
         let timer = identity("ordinary-borrow-failure");
         let calls = Rc::new(Cell::new(0));
         let callback_calls = Rc::clone(&calls);
@@ -1347,7 +1415,7 @@ fn after_completion_recurrence_follows_returned_completion_classification() {
         TimerCompletion::retryable_failure(2),
         TimerCompletion::invariant_failure(4),
     ] {
-        setup();
+        let _fixture = setup();
         let timer = identity("classified-recurrence");
         let registration = register_after_completion(
             timer.clone(),
@@ -1396,7 +1464,7 @@ fn after_completion_recurrence_follows_returned_completion_classification() {
 
 #[test]
 fn after_completion_rearms_from_actual_completion_time() {
-    setup();
+    let _fixture = setup();
     let timer = identity("after-completion");
     let calls = Rc::new(Cell::new(0_u64));
     let callback_calls = Rc::clone(&calls);
@@ -1441,7 +1509,7 @@ fn after_completion_rearms_from_actual_completion_time() {
 
 #[test]
 fn after_completion_context_can_restore_recurrence_after_nested_cancel() {
-    setup();
+    let _fixture = setup();
     let timer = identity("after-context");
     let calls = Rc::new(Cell::new(0_u64));
     let callback_calls = Rc::clone(&calls);
@@ -1492,7 +1560,7 @@ fn after_completion_context_can_restore_recurrence_after_nested_cancel() {
 
 #[test]
 fn once_context_can_restore_scheduling_after_nested_cancel() {
-    setup();
+    let _fixture = setup();
     let timer = identity("nested");
     let calls = Rc::new(Cell::new(0_u64));
     let callback_calls = Rc::clone(&calls);
@@ -1537,7 +1605,7 @@ fn once_context_can_restore_scheduling_after_nested_cancel() {
 
 #[test]
 fn retained_once_context_expires_after_its_work_attempt() {
-    setup();
+    let _fixture = setup();
     let timer = identity("ordinary-context-expiry");
     let calls = Rc::new(Cell::new(0_u64));
     let callback_calls = Rc::clone(&calls);
@@ -1606,7 +1674,7 @@ fn retained_once_context_expires_after_its_work_attempt() {
 
 #[test]
 fn stale_reused_identity_callback_cannot_change_handles_or_measurements() {
-    setup();
+    let _fixture = setup();
     let timer_identity = identity("stale-consume-reuse");
     let old = register_once(
         timer_identity.clone(),
@@ -1705,7 +1773,7 @@ fn stale_reused_identity_callback_cannot_change_handles_or_measurements() {
 
 #[test]
 fn replacement_and_cancellation_clear_actual_owned_handles() {
-    setup();
+    let _fixture = setup();
     let timer = identity("replace-cancel");
     let calls = Rc::new(Cell::new(0_u64));
     let callback_calls = Rc::clone(&calls);
@@ -1766,7 +1834,7 @@ fn replacement_and_cancellation_clear_actual_owned_handles() {
 
 #[test]
 fn duplicate_registration_and_reconstruction_preserve_live_work_and_release_capacity() {
-    setup();
+    let _fixture = setup();
     let timer = identity("duplicate");
     let first_calls = Rc::new(Cell::new(0_u64));
     let callback_calls = Rc::clone(&first_calls);
@@ -1832,7 +1900,7 @@ fn duplicate_registration_and_reconstruction_preserve_live_work_and_release_capa
 
 #[test]
 fn watchdog_scheduler_prearms_successor_before_synchronous_work() {
-    setup();
+    let _fixture = setup();
     let timer = identity("watchdog-prearm");
     let calls = Rc::new(Cell::new(0_u64));
     let callback_calls = Rc::clone(&calls);
@@ -1887,7 +1955,7 @@ fn watchdog_scheduler_prearms_successor_before_synchronous_work() {
 
 #[test]
 fn watchdog_immediate_decision_replaces_successor_without_synchronous_recursion() {
-    setup();
+    let _fixture = setup();
     let timer = identity("watchdog-immediate-decision");
     let calls = Rc::new(Cell::new(0_u64));
     let callback_calls = Rc::clone(&calls);
@@ -1954,7 +2022,7 @@ fn watchdog_immediate_decision_replaces_successor_without_synchronous_recursion(
 
 #[test]
 fn watchdog_running_immediate_context_targets_that_attempts_successor() {
-    setup();
+    let _fixture = setup();
     let timer = identity("watchdog-context-immediate");
     let registration = register_watchdog(
         timer.clone(),
@@ -1997,7 +2065,7 @@ fn watchdog_running_immediate_context_targets_that_attempts_successor() {
 
 #[test]
 fn watchdog_cancellation_clears_successor_and_queued_work() {
-    setup();
+    let _fixture = setup();
     let timer = identity("watchdog-cancel");
     let calls = Rc::new(Cell::new(0_u64));
     let callback_calls = Rc::clone(&calls);
@@ -2055,7 +2123,7 @@ fn watchdog_invariant_failure_overrides_nested_cancellation_and_clears_handles()
         DeclarationLifetime::Retained,
         DeclarationLifetime::RemoveWhenStopped,
     ] {
-        setup();
+        let _fixture = setup();
         let timer = identity("watchdog-cancel-invariant");
         let registration = register_watchdog(
             timer.clone(),
@@ -2110,7 +2178,7 @@ fn watchdog_invariant_failure_overrides_nested_cancellation_and_clears_handles()
 
 #[test]
 fn watchdog_nested_cancel_then_ensure_retains_committed_successor() {
-    setup();
+    let _fixture = setup();
     let timer = identity("watchdog-nested");
     let calls = Rc::new(Cell::new(0_u64));
     let callback_calls = Rc::clone(&calls);
@@ -2151,7 +2219,7 @@ fn watchdog_nested_cancel_then_ensure_retains_committed_successor() {
 
 #[test]
 fn retained_watchdog_context_expires_without_clearing_successor() {
-    setup();
+    let _fixture = setup();
     let timer = identity("watchdog-context-expiry");
     let calls = Rc::new(Cell::new(0_u64));
     let callback_calls = Rc::clone(&calls);
@@ -2222,7 +2290,7 @@ fn retained_watchdog_context_expires_without_clearing_successor() {
 
 #[test]
 fn watchdog_successor_retires_an_unacknowledged_dispatched_attempt() {
-    setup();
+    let _fixture = setup();
     let timer = identity("watchdog-unacknowledged");
     let registration = register_watchdog(
         timer.clone(),
@@ -2275,7 +2343,7 @@ fn watchdog_successor_retires_an_unacknowledged_dispatched_attempt() {
 
 #[test]
 fn immediate_watchdog_completion_fault_traps_and_leaves_cadence_successor_armed() {
-    setup();
+    let _fixture = setup();
     let timer = identity("watchdog-completion-fault");
     let registration = register_watchdog(
         timer.clone(),
@@ -2319,7 +2387,7 @@ fn immediate_watchdog_completion_fault_traps_and_leaves_cadence_successor_armed(
 
 #[test]
 fn immediate_watchdog_provider_replacement_failure_traps_for_message_rollback() {
-    setup();
+    let _fixture = setup();
     let timer = identity("watchdog-immediate-provider-fault");
     let registration = register_watchdog(
         timer,
@@ -2352,7 +2420,7 @@ fn immediate_watchdog_provider_replacement_failure_traps_for_message_rollback() 
 
 #[test]
 fn public_immediate_watchdog_replacement_failure_retires_false_scheduled_state() {
-    setup();
+    let _fixture = setup();
     let timer = identity("watchdog-public-immediate-provider-fault");
     let registration = register_watchdog(
         timer.clone(),
@@ -2376,7 +2444,7 @@ fn public_immediate_watchdog_replacement_failure_retires_false_scheduled_state()
 
 #[test]
 fn provider_cleanup_borrow_failure_is_returned_instead_of_discarded() {
-    setup();
+    let _fixture = setup();
     let timer = identity("provider-cleanup-fault");
     let registration = register_watchdog(
         timer.clone(),
@@ -2407,7 +2475,7 @@ fn provider_cleanup_borrow_failure_is_returned_instead_of_discarded() {
 
 #[test]
 fn rejected_provider_binding_clears_handles_for_unavailable_or_expired_authority() {
-    setup();
+    let _fixture = setup();
     let timer = identity("provider-binding-authority");
     let registration = register_once(
         timer.clone(),
@@ -2451,7 +2519,7 @@ fn rejected_provider_binding_clears_handles_for_unavailable_or_expired_authority
 
 #[test]
 fn provider_restoration_drains_all_detached_handles_after_first_failure() {
-    setup();
+    let _fixture = setup();
     let timer = identity("provider-restore-drain");
     let registration = register_watchdog(
         timer.clone(),
@@ -2496,7 +2564,7 @@ fn provider_restoration_drains_all_detached_handles_after_first_failure() {
 
 #[test]
 fn detached_provider_selection_does_not_reborrow_the_registry() {
-    setup();
+    let _fixture = setup();
     let timer = identity("detached-selection");
     let registration = register_once(
         timer.clone(),
@@ -2529,7 +2597,7 @@ fn terminal_scheduler_failure_clears_queued_work_before_transient_removal() {
         DeclarationLifetime::Retained,
         DeclarationLifetime::RemoveWhenStopped,
     ] {
-        setup();
+        let _fixture = setup();
         let timer = identity("terminal-scheduler-cleanup");
         let work = Rc::new(Cell::new(0));
         let observed_work = Rc::clone(&work);
@@ -2588,7 +2656,7 @@ fn terminal_scheduler_failure_clears_queued_work_before_transient_removal() {
 
 #[test]
 fn transition_error_restores_handles_or_retires_the_claim() {
-    setup();
+    let _fixture = setup();
     let timer = identity("transition-error-restore");
     let registration = register_once(
         timer.clone(),
@@ -2648,7 +2716,7 @@ fn transition_error_restores_handles_or_retires_the_claim() {
 
 #[test]
 fn public_provider_install_failure_retires_false_scheduled_state() {
-    setup();
+    let _fixture = setup();
     let timer = identity("provider-install-fault");
     let calls = Rc::new(Cell::new(0_u64));
     let callback_calls = Rc::clone(&calls);
@@ -2690,7 +2758,7 @@ fn public_provider_install_failure_retires_false_scheduled_state() {
 
 #[test]
 fn initial_once_provider_install_failure_retires_false_scheduled_state() {
-    setup();
+    let _fixture = setup();
     let timer = identity("provider-initial-once-fault");
     let registration = register_once(
         timer.clone(),
@@ -2710,7 +2778,7 @@ fn initial_once_provider_install_failure_retires_false_scheduled_state() {
 
 #[test]
 fn after_completion_provider_install_failure_retires_false_scheduled_state() {
-    setup();
+    let _fixture = setup();
     let timer = identity("provider-after-completion-fault");
     let registration = register_after_completion(
         timer.clone(),
@@ -2738,7 +2806,7 @@ fn watchdog_failed_dispatch_clears_handles_without_confirming_work() {
         DeclarationLifetime::RemoveWhenStopped,
     ] {
         for failure_stage in ["successor-binding", "work-binding", "confirmation"] {
-            setup();
+            let _fixture = setup();
             let timer = identity("provider-watchdog-dispatch-fault");
             let calls = Rc::new(Cell::new(0));
             let callback_calls = Rc::clone(&calls);
@@ -2810,7 +2878,7 @@ fn watchdog_failed_dispatch_clears_handles_without_confirming_work() {
 
 #[test]
 fn provider_confirmation_failure_clears_the_installed_handle() {
-    setup();
+    let _fixture = setup();
     let timer = identity("provider-confirmation-fault");
     let registration = register_once(
         timer.clone(),
@@ -2830,7 +2898,7 @@ fn provider_confirmation_failure_clears_the_installed_handle() {
 
 #[test]
 fn watchdog_dispatch_rejects_cross_claim_tokens_before_provider_arms() {
-    setup();
+    let _fixture = setup();
     let first = register_watchdog(
         identity("cross-claim-first"),
         TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
@@ -2925,7 +2993,7 @@ fn watchdog_dispatch_rejects_cross_claim_tokens_before_provider_arms() {
 
 #[test]
 fn watchdog_dispatch_rejects_mixed_generations_before_provider_arms() {
-    setup();
+    let _fixture = setup();
     let registration = register_watchdog(
         identity("mixed-dispatch-generations"),
         TimerCadence::from_nanos(5).unwrap(),
@@ -2998,7 +3066,7 @@ fn watchdog_dispatch_rejects_mixed_generations_before_provider_arms() {
 
 #[test]
 fn remove_on_stop_provider_failure_removes_the_expired_claim() {
-    setup();
+    let _fixture = setup();
     let timer = identity("provider-remove-on-stop-fault");
     let registration = register_once(
         timer.clone(),
@@ -3027,7 +3095,7 @@ fn remove_on_stop_provider_failure_removes_the_expired_claim() {
 
 #[test]
 fn overdue_watchdog_coalesces_to_one_dispatch_and_schedules_from_now() {
-    setup();
+    let _fixture = setup();
     let timer = identity("watchdog-overdue");
     let registration = register_watchdog(
         timer.clone(),
@@ -3056,7 +3124,7 @@ fn overdue_watchdog_coalesces_to_one_dispatch_and_schedules_from_now() {
 
 #[test]
 fn remove_on_stop_watchdog_clears_successor_before_dropping_entry() {
-    setup();
+    let _fixture = setup();
     let timer = identity("watchdog-remove");
     let registration = register_watchdog(
         timer.clone(),
@@ -3162,7 +3230,7 @@ fn icydb_shaped_readiness_selects_work_outcomes_and_watchdog_decisions() {
     reason = "One ordered IcyDB-shaped reconstruction and commit-guard sequence."
 )]
 fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idempotent() {
-    setup();
+    let _fixture = setup();
     let timer = identity("icydb-startup-watchdog");
     let cadence = TimerCadence::from_nanos(5).expect("fixture cadence should be valid");
     let readiness = Rc::new(Cell::new(StartupReadiness::Recovering));
@@ -3332,7 +3400,7 @@ fn assert_icydb_lifecycle_measurements(snapshot: &TimerSnapshot) {
 
 #[test]
 fn once_reconciliation_rejects_identity_mismatch_without_disturbing_live_work() {
-    setup();
+    let _fixture = setup();
     let timer = identity("reconcile-once-identity");
     let other = identity("reconcile-once-other");
     let calls = Rc::new(Cell::new(0_u64));
@@ -3373,7 +3441,7 @@ fn once_reconciliation_rejects_identity_mismatch_without_disturbing_live_work() 
 
 #[test]
 fn after_completion_reconciliation_rejects_transient_lifetime_without_cancelling_work() {
-    setup();
+    let _fixture = setup();
     let timer = identity("reconcile-after-lifetime");
     let cadence = TimerCadence::from_nanos(5).unwrap();
     let calls = Rc::new(Cell::new(0_u64));
@@ -3430,7 +3498,7 @@ fn after_completion_reconciliation_rejects_transient_lifetime_without_cancelling
 
 #[test]
 fn after_completion_reconciliation_rejects_cadence_mismatch_without_disturbing_live_work() {
-    setup();
+    let _fixture = setup();
     let timer = identity("reconcile-after-cadence");
     let cadence = TimerCadence::from_nanos(5).unwrap();
     let other_cadence = TimerCadence::from_nanos(6).unwrap();
@@ -3490,7 +3558,7 @@ fn after_completion_reconciliation_rejects_cadence_mismatch_without_disturbing_l
 
 #[test]
 fn watchdog_reconciliation_rejects_reused_identity_claim_without_clearing_replacement() {
-    setup();
+    let _fixture = setup();
     let timer = identity("reconcile-watchdog-expired");
     let cadence = TimerCadence::from_nanos(5).unwrap();
     let calls = Rc::new(Cell::new(0_u64));
@@ -3560,7 +3628,7 @@ fn watchdog_reconciliation_rejects_reused_identity_claim_without_clearing_replac
 
 #[test]
 fn after_completion_reconstruction_reuses_its_exact_claim() {
-    setup();
+    let _fixture = setup();
     let timer = identity("after-reconstruct");
     let cadence = TimerCadence::from_nanos(5).expect("fixture cadence should be valid");
     let calls = Rc::new(Cell::new(0_u64));
@@ -3608,7 +3676,7 @@ fn after_completion_reconstruction_reuses_its_exact_claim() {
 
 #[test]
 fn once_reconciliation_owns_one_exact_deadline_and_retains_its_callback() {
-    setup();
+    let _fixture = setup();
     let timer = identity("once-reconstruct");
     let calls = Rc::new(Cell::new(0_u64));
     let callback_calls = Rc::clone(&calls);
@@ -3663,7 +3731,8 @@ fn once_reconciliation_owns_one_exact_deadline_and_retains_its_callback() {
 
 #[test]
 fn registration_identity_survives_control_but_changes_on_replacement_and_restart() {
-    let epoch = setup();
+    let fixture = setup();
+    let epoch = fixture.epoch;
     let timer = identity("continuity");
     let create = || {
         register_once(timer.clone(), DeclarationLifetime::Retained, |_| async {
@@ -3707,7 +3776,7 @@ fn registration_identity_survives_control_but_changes_on_replacement_and_restart
 
 #[test]
 fn watchdog_exact_deadline_reconstruction_moves_both_directions_and_sleeps() {
-    setup();
+    let _fixture = setup();
     let timer = identity("deadline");
     let mut registration = None;
     reconcile_watchdog(
@@ -3757,7 +3826,7 @@ fn watchdog_exact_deadline_reconstruction_moves_both_directions_and_sleeps() {
 
 #[test]
 fn watchdog_deadline_decision_replaces_only_the_prearmed_successor() {
-    setup();
+    let _fixture = setup();
     let timer = identity("deadline-result");
     let calls = Rc::new(Cell::new(0));
     let callback_calls = Rc::clone(&calls);
@@ -3799,7 +3868,7 @@ fn watchdog_deadline_decision_replaces_only_the_prearmed_successor() {
 
 #[test]
 fn watchdog_dispatched_reconciliation_preserves_recovery_until_completion() {
-    setup();
+    let _fixture = setup();
     let timer = identity("dispatched-deadline");
     let registration = register_watchdog(
         timer.clone(),
@@ -3830,7 +3899,7 @@ fn watchdog_dispatched_reconciliation_preserves_recovery_until_completion() {
 
 #[test]
 fn watchdog_deadline_context_arbitrates_and_expires() {
-    setup();
+    let _fixture = setup();
     let timer = identity("deadline-context");
     let saved = Rc::new(RefCell::new(None));
     let callback_saved = Rc::clone(&saved);
@@ -3873,7 +3942,7 @@ fn watchdog_deadline_context_arbitrates_and_expires() {
 
 #[test]
 fn invalid_watchdog_deadline_request_preserves_the_live_schedule() {
-    setup();
+    let _fixture = setup();
     let timer = identity("invalid-deadline");
     let registration = register_watchdog(
         timer.clone(),
@@ -3900,7 +3969,7 @@ fn invalid_watchdog_deadline_request_preserves_the_live_schedule() {
 #[test]
 fn transient_watchdog_deadline_cancellation_clears_both_owned_handles() {
     for dispatched in [false, true] {
-        setup();
+        let _fixture = setup();
         let timer = identity("transient-deadline");
         let registration = register_watchdog(
             timer.clone(),
@@ -3928,7 +3997,7 @@ fn transient_watchdog_deadline_cancellation_clears_both_owned_handles() {
 
 #[test]
 fn recovery_retires_an_interrupted_attempts_exact_deadline_proposal() {
-    setup();
+    let _fixture = setup();
     let timer = identity("retired-deadline");
     let registration = register_watchdog(
         timer.clone(),

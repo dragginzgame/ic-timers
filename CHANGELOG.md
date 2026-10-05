@@ -18,8 +18,9 @@ All notable changes to this project are recorded here.
 ### Fixed
 
 - Keep the ordinary delivery guard captured until callback completion, preserving
-  discard retirement and normal completion handling. Explicitly unregister the
-  recurring completion fixture before native thread-local teardown.
+  discard retirement and normal completion handling. Drop queued and suspended
+  native fixture work before thread-local teardown, with the runtime still
+  available and the task-map borrow released, preventing teardown aborts.
 
 ### Breaking
 

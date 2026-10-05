@@ -76,9 +76,9 @@ pub(crate) fn trap(message: &str) -> ! {
 
 #[cfg(test)]
 pub(crate) use fake::{
-    TimerHandle, advance_instructions, canister_version, clear_timer, discard_next_due,
-    grow_memory_pages, instruction_counter, memory_pages, reset, run_next_due, set_time, set_timer,
-    time_ns, timer_count, trap,
+    TimerHandle, advance_instructions, canister_version, clear_tasks, clear_timer,
+    discard_next_due, grow_memory_pages, instruction_counter, memory_pages, reset, run_next_due,
+    set_time, set_timer, time_ns, timer_count, trap,
 };
 
 #[cfg(test)]
@@ -210,7 +210,13 @@ mod fake {
         INSTRUCTIONS.with(|instructions| instructions.set(0));
         WASM_MEMORY_PAGES.with(|pages| pages.set(1));
         STABLE_MEMORY_PAGES.with(|pages| pages.set(0));
-        TASKS.with(|tasks| tasks.borrow_mut().clear());
+        clear_tasks();
+    }
+
+    /// Drop queued futures before native TLS teardown, with no task-map borrow.
+    pub(crate) fn clear_tasks() {
+        let tasks = TASKS.with(|tasks| std::mem::take(&mut *tasks.borrow_mut()));
+        drop(tasks);
     }
 
     pub(crate) fn set_time(now_ns: u64) {

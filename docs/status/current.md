@@ -42,6 +42,13 @@ references and validation belong in [release notes](../changelog/README.md),
   missing unit-expression semicolon and redundant identity clone in delivery
   fixtures. Those are corrected without changing fixture semantics; source
   formatting and diff checks pass, while the lint rerun remains user-owned.
+  The subsequent broad native run aborted at TLS destruction in a liveness
+  fixture with its replacement timer still armed. All runtime setup fixtures now
+  retain scoped cleanup for queued and suspended fake tasks before TLS teardown,
+  dropping outside the task-map borrow while runtime TLS remains available.
+  A focused cleanup fixture is added; production behavior is unchanged. Native
+  execution remains user-owned and pending, with scope recorded in the
+  [callback contract](../design/0.5-policy-specific-callback-authority.md#ordinary-delivery-abandonment).
   Standard SemVer releases use the refreshed shared runner: preflight/validation
   failures restart on current source, while the same target automatically
   reconciles prepared intent at its saved version before a new increment. The
