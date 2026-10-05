@@ -77,7 +77,7 @@ fi
 
 # Default classification must work after a version advance without its tag.
 git -C "${temporary_root}" restore Cargo.toml
-sed -i 's/^version = "0.3.8"$/version = "0.3.9"/' "${temporary_root}/Cargo.toml"
+perl -pi -e 's/^version = "0\.3\.8"$/version = "0.3.9"/' "${temporary_root}/Cargo.toml"
 if [[ "$(cd "${temporary_root}" && bash "${classifier}")" != crate ]]; then
     echo 'error: untagged workspace version did not use reachable release history' >&2
     exit 1

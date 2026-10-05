@@ -80,7 +80,6 @@ bash scripts/release/check-bump-impact.sh "${release_impact}" "${previous_versio
 
 release_date="$(date +%F)"
 bash scripts/release/finalize-changelog.sh --check "${new_version}" "${release_date}"
-bash scripts/release/finalize-release-truth.sh --check "${previous_version}" "${new_version}"
 bash scripts/release/readme-version.sh --check
 if ! bash scripts/release/warn-release-prose.sh "${new_version}"; then
     echo "warning: advisory release-prose check could not run; continuing" >&2
@@ -94,8 +93,7 @@ fi
 # Capture only files this bump mutates, including any existing user edits.
 # Failed updates/checks and catchable interruptions restore that exact state.
 backup_directory="$(mktemp -d "${TMPDIR:-/tmp}/ic-timers-bump.XXXXXX")"
-metadata_files=(Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md \
-    docs/status/current.md "docs/changelog/${new_version}.md")
+metadata_files=(Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md)
 mutation_started=false
 bump_completed=false
 cleanup() {
@@ -106,7 +104,11 @@ cleanup() {
     if [[ "${mutation_started}" == true && "${bump_completed}" != true ]]; then
         echo 'error: version preparation failed; restoring release metadata' >&2
         for path in "${metadata_files[@]}"; do
-            if ! cp -p -- "${backup_directory}/${path}" "${path}"; then
+            if [[ -f "${backup_directory}/${path}" ]]; then
+                if ! cp -p -- "${backup_directory}/${path}" "${path}"; then
+                    rollback_failed=true
+                fi
+            elif ! rm -f -- "${path}"; then
                 rollback_failed=true
             fi
         done
@@ -123,13 +125,18 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' TERM
 for path in "${metadata_files[@]}"; do
+    if [[ -L "${path}" ]] || [[ -e "${path}" && ! -f "${path}" ]]; then
+        echo "error: release metadata must be a regular file: ${path}" >&2
+        exit 1
+    fi
     mkdir -p -- "${backup_directory}/$(dirname -- "${path}")"
-    cp -p -- "${path}" "${backup_directory}/${path}"
+    if [[ -e "${path}" ]]; then
+        cp -p -- "${path}" "${backup_directory}/${path}"
+    fi
 done
 mutation_started=true
 
 bash scripts/release/finalize-changelog.sh "${new_version}" "${release_date}"
-bash scripts/release/finalize-release-truth.sh "${previous_version}" "${new_version}"
 
 bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh" set "${previous_version}" "${new_version}"
 bash scripts/release/readme-version.sh --update
@@ -139,7 +146,7 @@ cargo update --manifest-path testing/Cargo.toml --offline -p ic-timers
 # Version mutation must leave both independently locked workspaces coherent.
 # Behavioral evidence belongs to the user-operated deployment release gate.
 bash scripts/release/check-lockfiles.sh
-bash scripts/release/check-release-truth.sh
+bash scripts/release/readme-version.sh --check
 bump_completed=true
 
 echo "Bumped: ${previous_version} -> ${new_version}"

@@ -6,8 +6,8 @@ This guide is for maintainers preparing and publishing a new IC Timers
 release. Library users do not need to follow this process.
 
 The workspace follows semantic versioning. Before releasing, maintainers
-classify the change, choose the appropriate version, prepare the matching
-changelog and release note, run the required validation, and then publish the
+classify the change, choose the appropriate version, run the required validation,
+let the bump label the current changelog draft, and then publish the
 release through the repository's release commands.
 
 ## Pre-1.0 compatibility
@@ -60,25 +60,29 @@ default. For a `repository` subject, version preparation prints an advisory;
 the user-operated release targets retain the complete release gate. It never invents crate
 impact or silently weakens validation. A `none` subject is still rejected.
 
-As soon as a target version is known, keep completed user-visible changes in
-an explicit undated section directly below the empty `Unreleased` heading:
+Keep completed user-visible changes in one undated section at the top:
 
 ```text
-## [Unreleased]
-
-## [0.3.0]
+## [Draft]
 ```
 
-Automated contributors create and maintain that section as part of the work;
-the maintainer should not need a separate changelog-heading edit. The release
-bump validates that the staged section is populated and automatically adds the
-release date. For work without a named target, populated `Unreleased` notes
-remain supported and are promoted automatically when a version is selected.
+Automated contributors maintain this draft through the accepted coherent batch
+without selecting a new version for each focused change. If the maintainer names
+a target, label that same draft `## [x.y.z]`. Do not add `Unreleased` or a separate
+release-note queue. Historical notes remain evidence of their recorded subjects.
 
-The helper refuses to continue if the changelog shape is ambiguous, the target
-notes are empty, the target is already dated, the requested version is not a
-strict canonical-SemVer increase, the exact release tag already exists, no
-changes exist since the release-impact base. Version preparation accepts the
+The explicit user-operated bump owns the final version: it labels and dates the
+single undated draft and moves it above history. No separately prepared versioned
+note or handoff status marker is required. Empty or absent drafts are presentation
+gaps and do not reject a changed release subject; a missing changelog is created.
+The maintainer should not need to fix a heading manually before deployment.
+
+During preparation the helper refuses competing undated release candidates,
+a named draft that conflicts with the requested bump, or an already dated target.
+It cannot silently select among batches, override a chosen minor boundary or
+relabel published history. It also rejects a requested version that is not a strict
+canonical-SemVer increase, an existing exact release tag, or a subject with no
+changes since the release-impact base. Version preparation accepts the
 current worktree and does not require a preparatory commit. A
 repository-only subject emits an advisory but may proceed when the maintainer
 has explicitly invoked the bump or release target.
@@ -97,31 +101,38 @@ are rejected.
 the README API line and exact shared-registry dependency example. Bump preflight
 checks those two fields before mutation; the bump updates them after the manifest
 and restores the README along with other metadata on failure or interruption.
-Release-truth checks reject drift. Only the two structured version fields are
+Metadata checks reject drift. Only the two structured version fields are
 checked; historical links and free-form release prose are not version selectors.
 
+The clean-worktree and release-commit guards capture untracked-file queries
+before testing their output. The commit helper treats Git's staged-diff status
+of 1 as pending changes, while other failures stop before commit or tagging.
+Interrupted tag retries also require a successful read of the exact release
+subject; matching output from a failed query is insufficient. The Git-phase
+fixture injects failures at these boundaries and checks that the commit identity
+is preserved. Source review, shell syntax and embedded fixture-shell syntax
+checks passed; those new fixture scenarios have not been executed.
+
 Combined release targets run `bump-version.sh --check` before deployment
-validation. This preflight checks the requested version, impact, changelog and
-release markers without changing version metadata or running tests. An empty
-exact `VERSION` is rejected before the gate. The real bump repeats these cheap
+validation. This preflight checks the requested version, impact, unambiguous
+draft selection and structured README projections without changing version
+metadata or running tests. An empty exact `VERSION` is rejected before the gate.
+The real bump repeats these cheap
 checks afterward and always advances the requested version.
 
-The requested bump and changelog determine the target. The handoff does not
-need a second target-release marker, and release-note status prose does not
-need particular words such as `targeted` or `unreleased`. Preflight still
-requires a note headed with the requested version and one nonempty `Status:`
-line, rejects an already-finalized note, and checks the handoff's single workspace
-version marker. The bump writes that projection and the canonical released status
-itself. Cargo owns the version; the handoff does not store a separate latest-release
-value. Keep preparation evidence explicitly historical and link delivery records
-instead of repeating mutable release instructions in prose.
+Cargo owns package identity. The handoff reads it directly instead of storing a
+second version projection. Release and deployment checks do not read changelog
+layout, release-note headings or `Status:` prose. A dated changelog records version
+preparation; it does not establish tagging, publication or deployment. Keep
+supporting evidence with its owner and preserve historical records, without
+turning them into release prerequisites or a parallel issue tracker.
 
 Before version mutation, the helper also scans
 the compact status for target-version wording likely to become stale, such as
 `candidate`, `unreleased`, or a next action to publish after release. This is
 advisory: it prints a warning and always continues. Free-form prose is never a
-post-mutation release blocker; exact Cargo, changelog, release-note, status
-marker, and tag structure remain the enforced truth.
+post-mutation release blocker. Canonical Cargo identity, structured README pins,
+resolved lockfiles and exact annotated tags remain enforced facts.
 
 Use one of the standard release families:
 
@@ -139,7 +150,7 @@ make release-x VERSION=0.3.0
 
 All release execution is user-owned: version bumps, tests, staging, commits,
 tags, pushes and publication. Automated contributors prepare only the next
-changelog section and release-line note. The user runs `make patch`, `make
+changelog draft and directly relevant evidence. The user runs `make patch`, `make
 minor`, `make major`, or `make bump-x VERSION=...` when ready to update the
 workspace version and both lockfiles, and `make release-stage` to stage release
 metadata.
@@ -149,9 +160,10 @@ workspace version plus both the root and nested testing lockfiles, commit,
 create an annotated `vX.Y.Z` tag, and push with tags. If the workspace version
 has no release tag yet, the requested bump still runs. `make release-patch`
 always advances the patch version; it never reuses the current version. For
-example, with Cargo at 0.8.2 and an undated 0.8.3 changelog, stage and commit
-the prepared changes, then run `make release-patch` to validate, bump and
-release 0.8.3. An exact `release-x` target must be a strict version increase.
+example, with Cargo at 0.8.2 and a current draft, stage and commit the code-bearing
+changes, then run `make release-patch` to validate, bump and release 0.8.3. The bump
+itself also supports a dirty worktree without a preparatory commit. An exact
+`release-x` target must be a strict version increase.
 Release metadata and both lockfiles are checked before the release commit;
 unstaged and untracked work is rejected before committing or tagging.
 
@@ -185,6 +197,72 @@ The non-release `make patch`, `make minor`, `make major`, and
 `make bump-x VERSION=...` targets stop after the version-file update for
 review without running build, lint or test suites.
 
+### Host support
+
+macOS host workflows are required by the
+[adopted engineering baseline](shared-tooling/DRAGGINZGAME.md#host-support).
+The requirement is separate from executed qualification; canister execution
+continues to target Wasm on the Internet Computer.
+
+| Host | Current workflow configuration and evidence scope |
+| --- | --- |
+| Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The release gate pins the audited PocketIC 15.0.0 Linux x86_64 artifact. Recorded results remain scoped to their original subjects. |
+| macOS | Required; supported versions and architectures still need a declared and natively qualified matrix. No macOS CI job or native qualification is recorded here. |
+
+Version preparation uses Bash, Perl, Git and Cargo. It owns regular metadata
+files; symlinked or non-file outputs are rejected before mutation. Applicable
+Make targets use GNU Make. Native host prerequisites and setup must be qualified
+at their owning workflow boundary.
+
+The repository and release-gate fixtures compare ordered newline records
+directly with `cmp`. They no longer depend on Bash 4's `mapfile` or turn those
+records into joined arrays. Expected gate order remains independent of Makefile
+variables, including repeated PocketIC prerequisites and the exact prefix before
+an injected leaf failure. Provisioning checks compare both override path and
+automatic-install selection, including an empty override. Source and shell syntax
+were reviewed; the changed fixtures have not been executed. This removes one
+known Bash 3.2 obstacle without establishing native macOS qualification.
+
+The preparation fixture uses the same direct record comparison for phase order
+and the five staged metadata paths. It captures Git output with an ordinary
+command before comparing, retaining failure propagation without an intermediate
+array or process substitution. Empty-index and no-tag assertions also capture
+Git output before testing it, so producer failures cannot satisfy those assertions.
+
+Preservation fixtures retain actual file copies rather than checksum manifests.
+The formatting-hook fixture compares working bytes and independently compares
+the binary staged diff. The preparation fixture copies its metadata and unrelated
+files with their modes, then compares bytes with `File::Compare` and permission
+bits with Perl `stat`. Preflight rejection, symlink rejection, every injected
+rollback failure, interruption, missing-changelog restoration and tag rejection
+retain their existing subjects. Mode comparison also applies to the preflight
+and tag-rejection checkpoints. Fixture mutations use Perl instead of GNU `sed -i`.
+These changes remove fixture-only `sha256sum`, GNU `stat -c` and GNU in-place sed
+requirements; they do not remove cryptographic verification of external binaries.
+Shell and embedded Perl syntax and source flow were reviewed. The changed
+fixtures have not been executed, and native macOS qualification remains open.
+On 2026-10-05, read-only changelog finalization for the selected 0.11.8 target,
+the current README version projection, both locked offline Cargo metadata checks
+and diff whitespace checks passed. Cargo versions and both lockfiles were unchanged.
+
+The PocketIC verification fixture also compares exact ordered event records,
+including both cache and download checks during rejection. Debris searches run
+as ordinary commands before empty-result assertions. This tightens the fixture's
+producer-failure handling without changing the audited version, digest, binary
+verification or override ownership. Source and shell syntax were reviewed;
+the changed fixture has not been executed.
+
+The current PocketIC verifier accepts only the pinned Linux binary's hash, even
+for an explicit override, and automatic installation is limited to Linux x86_64.
+A macOS release gate needs a separately audited host artifact and its own pinned
+digest while retaining exact version/hash validation and strict override
+ownership. An available upstream download or a Linux pass does not qualify that
+gate. This baseline refresh changes no executable or validation boundary and
+does not establish macOS support evidence. The
+[adoption record](shared-tooling.md) scopes the refresh and local exceptions.
+
+### Deployment validation
+
 Deployment validation belongs to the user. The combined `release-*` targets
 run the complete release gate before bumping the version. The
 gate can also be run directly before committing, tagging and pushing:
@@ -211,12 +289,22 @@ stale path-package versions without building either workspace or repeating
 the evidence suite. `--no-deps` is not sufficient because it skips lockfile
 validation. `release-stage` stages both lockfiles automatically.
 
-Before mutation, the helper backs up only its seven output files: the workspace
-manifest, both lockfiles, changelog, README, status and target release note. Failed
+`release-stage` selects only the five outputs the bump owns. Workspace members
+inherit their versions, so their manifests are not version-bump outputs and
+remain under the maintainer's separate code-staging ownership. Stage and commit
+the intended implementation and supporting evidence before the combined release;
+the release commit still rejects unrelated unstaged or untracked work.
+
+Before mutation, the helper captures only its five output files: the workspace
+manifest, both lockfiles, changelog and README. Failed
 commands and handled `INT`/`TERM` interruptions restore their pre-bump contents
-and modes, including existing user edits. If restoration fails, the backup is
+and modes, including existing user edits; a previously absent file is removed
+on rollback. If restoration fails, the backup is
 retained and its path is reported. These shell traps do not cover a forced kill
-or machine failure. Unrelated files and Git staging are untouched by the bump.
+or machine failure. Unrelated files, handoff/evidence documents and Git staging
+are untouched by the bump. Builds and evidence artifacts remain intact on success,
+failure and retry; release and publication targets do not append `cargo clean`.
+Explicit cleanup is a separate maintainer action.
 
 After the release tag is pushed, publish the crate with:
 
@@ -231,7 +319,7 @@ The publish target requires a clean worktree with an annotated tag in the exact
 Hosted full CI and MSRV validation run on pull requests and `main`. A tag push
 at the same commit does not repeat those Rust builds. Its small tag-only job
 instead verifies that the event tag exactly matches the Cargo version, the
-tagged commit is reachable from `main`, release truth is coherent, and the
+tagged commit is reachable from `main`, package metadata is coherent, and the
 annotated version tag points to `HEAD`. This preserves protection against an
 independently pushed tag from an unmerged commit without running identical
 validation twice at one SHA.

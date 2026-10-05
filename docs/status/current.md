@@ -2,7 +2,7 @@
 
 # Current status
 
-Last updated: 2026-10-04
+Last updated: 2026-10-05
 
 ## Purpose
 
@@ -12,11 +12,27 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Release state
 
-- Workspace package version: `0.11.2`.
-- Cargo owns this version; the release helper updates the single projection above.
-  Dated changelog sections and release-note statuses own release state. Read those
-  sources to distinguish preparation from a completed release; do not duplicate
-  that distinction or current commit/tag references in handoff prose.
+- Read `[workspace.package].version` in [Cargo.toml](../../Cargo.toml) for
+  package identity. The top [changelog section](../../CHANGELOG.md) records the
+  accepted batch and remains versionless until the maintainer selects a target.
+  The maintainer's bump labels and dates it; a dated section alone does not prove
+  tagging, publication or deployment.
+- Apply the pinned [Shared Tooling baseline and local overlay](../../AGENTS.md).
+  Its [adoption record](../shared-tooling.md) scopes provenance and exceptions.
+  Historical release notes retain evidence; no new versioned note or mutable
+  handoff release marker is required for version preparation.
+  The reviewed baseline is now `ca319ba05c5a8016f3cdbf5af073fca2e6279268`, with
+  shared rules in `DRAGGINZGAME.md`. Maintainer-owned validation and release
+  exceptions remain explicit; the [local host matrix](../releasing.md#host-support)
+  records required macOS workflows and their unresolved qualification.
+  Repository and release-gate fixtures now compare ordered records directly,
+  removing their `mapfile` dependency; scoped verification remains in that matrix.
+  Preservation fixtures retain file copies and compare bytes and permission bits,
+  without checksum manifests, separate mode tables or GNU in-place sed. Preparation
+  phase/staging comparisons use direct records and retain Git failure propagation.
+  Clean-worktree and release-commit guards reject failed Git queries; their new
+  rejection fixtures remain unexecuted. PocketIC fixture events use exact record
+  comparisons, with scoped source/syntax review recorded in the host matrix.
 - Public removals or incompatible semantic changes require the next minor line;
   private behavior-preserving simplifications may use a patch. See the
   [ordinary arbitration hard cut](../changelog/0.9.0.md).
@@ -43,6 +59,9 @@ references and validation belong in [release notes](../changelog/README.md),
   exact work token; retained claims own longer-lived control. Claims and generations
   do not wrap. Consumer durable authority reconstructs volatile retained declarations
   synchronously before downstream hooks; shared-registry adoption is atomic.
+  Policy-specific contexts store their token directly and use the shared
+  claim-transition validation boundary before provider-handle detachment; see the
+  [control simplification note](../changelog/0.11.3.md).
 - Ordinary inactive state owns its reason; running state owns its pending command.
   Watchdog inactive state owns its reason; awaiting-work state owns its pending
   command through dispatch and execution. Leaving either running or awaiting-work
@@ -63,8 +82,8 @@ references and validation belong in [release notes](../changelog/README.md),
   Provider installation and effect confirmation use the canonical mutable claim
   lookup with callback-specific stale-error translation; see the
   [claim lookup note](../changelog/0.10.21.md).
-  Late measurements and provider-handle consumption share that lookup while
-  retaining no-op behavior for missing or superseded claims; see the
+  Late measurements use that lookup while retaining no-op behavior for missing or
+  superseded claims; see the
   [lookup and detachment note](../changelog/0.10.22.md). Watchdog failure cleanup
   obtains paired handles through the entry's existing detachment owner, with
   provider clearing after the registry borrow is released. Ordinary terminal
@@ -106,8 +125,18 @@ references and validation belong in [release notes](../changelog/README.md),
   [release note](../changelog/0.11.0.md).
 - Ordinary directive resolution returns canonical control failures directly.
   Explicit scheduling requests retain schedule errors at their input boundary;
-  the registry owns terminal state and completion accounting. See the
-  [directive failure ownership note](../changelog/0.10.13.md).
+  the registry owns terminal state and completion accounting. Directive and
+  generation failures share one completion finalization branch and removal exit,
+  preserving validation before allocation. See the
+  [completion failure ownership note](../changelog/0.11.3.md).
+- Watchdog initial and replacement requests share one scheduling-mode update after
+  successful arming. Coalesced, pending and failed requests preserve it; requested
+  delays still record accepted demand, and cadence deadlines are checked only for
+  inactive control. See the [request observation note](../changelog/0.11.3.md).
+  Coalescing is recorded once for a no-effect transition without failure. Ordinary
+  request mode updates have one owner for successful arms or exact reconciliation;
+  coalesced ensures preserve the existing mode. See the
+  [request accounting note](../changelog/0.11.4.md).
 - Ordinary dispatch shares completion finalization for callback results and
   callback-borrow failures. Work measurements are recorded only after executed
   work; see the [ordinary callback finalization note](../changelog/0.10.9.md).
@@ -115,9 +144,16 @@ references and validation belong in [release notes](../changelog/README.md),
   the validated entry. Dispatch releases that borrow before consumer work and
   has no second callback lookup. Context and completion authorization remain
   independent; see the [callback acceptance note](../changelog/0.11.2.md).
+  Work delivery consumes the matching fired handle through that same selected
+  entry. Watchdog scheduler consumption and remaining-handle detachment share
+  one lookup before the transition; see the
+  [callback delivery evidence](../design/callback-delivery-ownership.md).
 - Watchdog completion decides lifetime removal once from final inactive state
   and pending unregister, after selecting its successor or terminal transition;
   see the [Watchdog completion removal note](../changelog/0.10.10.md).
+  Terminal request and scheduler failures decide lifetime removal from their
+  already selected entry, without another lookup; see the
+  [ownership and verification scope](../architecture.md#terminal-removal-verification).
 - Registry and owned-handle bounds do not bound the provider heap. Cancelled future
   deadline records remain queued. Page extents do not establish allocator bounds.
 - Public control failures retire false scheduled state. One detached-claim finalizer
@@ -152,7 +188,7 @@ are recorded in the [0.10.12 note](../changelog/0.10.12.md).
 Inspected hosted validation for 0.9.4 is scoped in its
 [delivery note](../changelog/0.9.4.md). Release reports and Git references alone do
 not establish new hosted or PocketIC results. Each change's verification record
-belongs in its release note rather than a repeated handoff claim.
+belongs with its design/evidence owner rather than a repeated handoff claim.
 The native mock does not simulate IC rollback or provider heap allocation;
 maintained PocketIC subjects remain required for those claims. Tests, builds,
 lint gates and deployment validation remain user-owned.
@@ -164,9 +200,10 @@ verification is scoped in the [0.10.21 note](../changelog/0.10.21.md).
 
 ## Next action
 
-Establish release state from Cargo, the changelog and matching release notes,
-then continue the maintainer's requested work within the ownership boundaries
-above. Record each change and its scoped verification in the release notes.
+Establish package identity from Cargo and release state from actual Git and
+publication evidence, then continue the maintainer's requested work within the
+ownership boundaries above. Update the one changelog draft and record scoped
+verification with its owner. Do not select another release version during ordinary continuation.
 Leave Cargo versions, both lockfiles and Git release execution to the maintainer.
 Release commands always perform the requested bump; preparing notes does not
 advance the workspace version.

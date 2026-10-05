@@ -55,7 +55,11 @@ but it does not promise that a task will happen exactly once.
 
 ## Technical overview
 
-The current API line is `0.11`. It is written in Rust 2024 and supports Rust
+| Field | Value |
+| --- | --- |
+| API line | `0.11` |
+
+IC Timers is written in Rust 2024 and supports Rust
 1.88.0 and newer. It uses `ic-cdk-timers` 1.0.0 as its private, underlying
 timer service.
 
@@ -141,7 +145,7 @@ framework/application registry:
 
 ```toml
 [dependencies]
-ic-timers = "=0.11.2"
+ic-timers = "=0.11.7"
 ```
 
 Every framework and application crate linked into the same canister must use

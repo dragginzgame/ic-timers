@@ -749,7 +749,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers"
-version = "0.11.2"
+version = "0.11.7"
 dependencies = [
  "ic-cdk-timers",
  "ic0",

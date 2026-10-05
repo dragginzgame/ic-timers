@@ -517,6 +517,13 @@ impl Entry {
         )
     }
 
+    /// Decide terminal removal from the entry already selected and authorized
+    /// by the transition owner. Runtime detaches handles before that transition.
+    const fn remove_on_failure(&self, transition: &RegistryTransition) -> bool {
+        transition.failure().is_some()
+            && matches!(self.lifetime, DeclarationLifetime::RemoveWhenStopped)
+    }
+
     fn take_wakeup_handle(&mut self, identity: &TimerIdentity) -> Option<ProviderHandle> {
         let role = self.kind.wakeup_role();
         self.wakeup
@@ -542,20 +549,29 @@ impl Entry {
         }
     }
 
-    fn provider_slot_mut(
-        &mut self,
-        role: CallbackRole,
-    ) -> Option<&mut Option<OwnedProviderHandle>> {
-        match role {
+    // The caller selected this entry by identity. Fired handles are consumed
+    // independently of callback acceptance, but only for the exact claim,
+    // policy role and owned slot generation.
+    fn consume_provider_handle(&mut self, token: &CallbackToken) {
+        if !self.owns_token_claim(token) {
+            return;
+        }
+        let slot = match token.role {
             CallbackRole::OrdinaryWork | CallbackRole::WatchdogScheduler
-                if role == self.kind.wakeup_role() =>
+                if token.role == self.kind.wakeup_role() =>
             {
-                Some(&mut self.wakeup)
+                &mut self.wakeup
             }
             CallbackRole::WatchdogWork if matches!(self.kind, EntryKind::Watchdog { .. }) => {
-                Some(&mut self.work)
+                &mut self.work
             }
-            _ => None,
+            _ => return,
+        };
+        if slot
+            .as_ref()
+            .is_some_and(|owned| owned.callback_generation == token.callback_generation)
+        {
+            *slot = None;
         }
     }
 
@@ -876,14 +892,20 @@ impl TimerRegistry {
                     clear_wakeup_if(claim.identity(), clear_wakeup),
                     error,
                 );
-                return Ok(self.remove_transient_on_failure(claim.identity(), transition));
+                let remove = entry.remove_on_failure(&transition);
+                return Ok(remove_after(
+                    &mut self.entries,
+                    claim.identity(),
+                    transition,
+                    remove,
+                ));
             }
         };
 
         if let TimerRegistration::Running { pending } = &mut control.registration {
             *pending = Some(select_pending_ordinary(*pending, request, requested));
         }
-        if matches!(request, OrdinaryRequest::Reconcile) {
+        if arm.is_some() || matches!(request, OrdinaryRequest::Reconcile) {
             entry.scheduling_mode = requested.mode;
         }
 
@@ -891,7 +913,6 @@ impl TimerRegistry {
             entry.observability.counters_mut().record_coalesced();
             return Ok(RegistryTransition::normal(RegistryEffect::None));
         };
-        entry.scheduling_mode = requested.mode;
         Ok(RegistryTransition::normal(RegistryEffect::ArmWakeup {
             token: token_for(claim, control.generation(), CallbackRole::OrdinaryWork),
             delay_ns: requested.deadline_ns.saturating_sub(now_ns),
@@ -914,10 +935,14 @@ impl TimerRegistry {
             return Err(RegistryError::PolicyMismatch { actual });
         };
         let cadence = *cadence;
-        let requested_delay_ns = match request {
-            WatchdogScheduleRequest::Cadence => Some(cadence.as_nanos()),
-            WatchdogScheduleRequest::Immediate => Some(0),
-            WatchdogScheduleRequest::Reconcile(requested) => requested.requested_delay_ns,
+        let (mode, requested_delay_ns) = match request {
+            WatchdogScheduleRequest::Cadence => {
+                (TimerSchedulingMode::Watchdog, Some(cadence.as_nanos()))
+            }
+            WatchdogScheduleRequest::Immediate => (TimerSchedulingMode::Continuation, Some(0)),
+            WatchdogScheduleRequest::Reconcile(requested) => {
+                (requested.mode, requested.requested_delay_ns)
+            }
         };
         let transition = match &mut control.state {
             WatchdogState::Inactive { .. } => {
@@ -926,16 +951,7 @@ impl TimerRegistry {
                     WatchdogScheduleRequest::Immediate => now_ns,
                     WatchdogScheduleRequest::Reconcile(requested) => requested.deadline_ns,
                 };
-                let transition =
-                    control.arm_scheduler(claim, now_ns, deadline_ns, WakeupArm::Initial);
-                if transition.failure().is_none() {
-                    entry.scheduling_mode = match request {
-                        WatchdogScheduleRequest::Cadence => TimerSchedulingMode::Watchdog,
-                        WatchdogScheduleRequest::Immediate => TimerSchedulingMode::Continuation,
-                        WatchdogScheduleRequest::Reconcile(requested) => requested.mode,
-                    };
-                }
-                transition
+                control.arm_scheduler(claim, now_ns, deadline_ns, WakeupArm::Initial)
             }
             WatchdogState::Scheduled { deadline_ns }
                 if match request {
@@ -946,25 +962,13 @@ impl TimerRegistry {
                     WatchdogScheduleRequest::Cadence => false,
                 } =>
             {
-                let (deadline_ns, mode) = match request {
-                    WatchdogScheduleRequest::Reconcile(requested) => {
-                        (requested.deadline_ns, requested.mode)
-                    }
-                    WatchdogScheduleRequest::Immediate | WatchdogScheduleRequest::Cadence => {
-                        (now_ns, TimerSchedulingMode::Continuation)
-                    }
+                let deadline_ns = match request {
+                    WatchdogScheduleRequest::Reconcile(requested) => requested.deadline_ns,
+                    WatchdogScheduleRequest::Immediate | WatchdogScheduleRequest::Cadence => now_ns,
                 };
-                let transition =
-                    control.arm_scheduler(claim, now_ns, deadline_ns, WakeupArm::Replacement);
-                if transition.failure().is_none() {
-                    entry.scheduling_mode = mode;
-                }
-                transition
+                control.arm_scheduler(claim, now_ns, deadline_ns, WakeupArm::Replacement)
             }
-            WatchdogState::Scheduled { .. } => {
-                entry.observability.counters_mut().record_coalesced();
-                RegistryTransition::normal(RegistryEffect::None)
-            }
+            WatchdogState::Scheduled { .. } => RegistryTransition::normal(RegistryEffect::None),
             WatchdogState::AwaitingWork {
                 attempt_status: WatchdogAttemptStatus::Dispatched,
                 pending,
@@ -973,7 +977,6 @@ impl TimerRegistry {
                 if let WatchdogScheduleRequest::Reconcile(requested) = request {
                     *pending = Some(WatchdogPending::Reconcile(requested));
                 }
-                entry.observability.counters_mut().record_coalesced();
                 RegistryTransition::normal(RegistryEffect::None)
             }
             WatchdogState::AwaitingWork {
@@ -982,13 +985,27 @@ impl TimerRegistry {
                 ..
             } => {
                 *pending = Some(select_pending_watchdog(*pending, request, now_ns));
-                entry.observability.counters_mut().record_coalesced();
                 RegistryTransition::normal(RegistryEffect::None)
             }
         };
+        if matches!(transition.effect(), RegistryEffect::ArmWakeup { .. }) {
+            entry.scheduling_mode = mode;
+        }
+        if matches!(
+            (transition.effect(), transition.failure()),
+            (RegistryEffect::None, None)
+        ) {
+            entry.observability.counters_mut().record_coalesced();
+        }
         entry.observability.counters_mut().record_schedule_request();
         entry.latest_requested_delay_ns = requested_delay_ns;
-        Ok(self.remove_transient_on_failure(claim.identity(), transition))
+        let remove = entry.remove_on_failure(&transition);
+        Ok(remove_after(
+            &mut self.entries,
+            claim.identity(),
+            transition,
+            remove,
+        ))
     }
 
     pub(crate) fn cancel(
@@ -1116,9 +1133,11 @@ impl TimerRegistry {
         }
     }
 
-    /// Accept scheduled ordinary work and return its callback in one transition.
+    /// Consume this delivery's handle, then accept ordinary work and return its
+    /// callback.
     pub(crate) fn begin_ordinary(&mut self, token: &CallbackToken) -> Option<OrdinaryCallback> {
         let entry = self.entries.get_mut(token.identity())?;
+        entry.consume_provider_handle(token);
         if token.role != CallbackRole::OrdinaryWork || !entry.owns_token_claim(token) {
             entry.observability.counters_mut().record_stale_wakeup();
             return None;
@@ -1176,61 +1195,55 @@ impl TimerRegistry {
                 let transition = stop_ordinary_completion(entry, completion, now_ns, None);
                 (transition, remove_on_stop)
             } else {
-                let resolved = match effective_directive.resolve(now_ns, cadence) {
-                    Ok(value) => value,
-                    Err(failure) => {
-                        let transition =
-                            stop_ordinary_completion(entry, completion, now_ns, Some(failure));
-                        return Ok(remove_after(
-                            &mut self.entries,
-                            identity,
-                            transition,
-                            remove_on_stop,
-                        ));
+                let prepared = match effective_directive.resolve(now_ns, cadence) {
+                    Ok(resolved) => {
+                        let directive_snapshot =
+                            TimerDirectiveSnapshot::try_from(effective_directive)
+                                .map_err(RegistryError::Schedule)?;
+                        let selected = select_completion_schedule(pending_command, resolved);
+                        selected
+                            .map_or(Ok(()), |selected| {
+                                control.arm_deadline(selected.deadline_ns)
+                            })
+                            .map(|()| (selected, directive_snapshot))
                     }
+                    Err(failure) => Err(failure),
                 };
-                let directive_snapshot = TimerDirectiveSnapshot::try_from(effective_directive)
-                    .map_err(RegistryError::Schedule)?;
-                let selected_schedule = select_completion_schedule(pending_command, resolved);
-                if let Some(failure) = selected_schedule
-                    .and_then(|selected| control.arm_deadline(selected.deadline_ns).err())
-                {
-                    let transition =
-                        stop_ordinary_completion(entry, completion, now_ns, Some(failure));
-                    return Ok(remove_after(
-                        &mut self.entries,
-                        identity,
-                        transition,
+                match prepared {
+                    Err(failure) => (
+                        stop_ordinary_completion(entry, completion, now_ns, Some(failure)),
                         remove_on_stop,
-                    ));
-                }
-                entry.latest_directive = Some(directive_snapshot);
-                entry.observability.record_completion(completion, now_ns);
+                    ),
+                    Ok((selected_schedule, directive_snapshot)) => {
+                        entry.latest_directive = Some(directive_snapshot);
+                        entry.observability.record_completion(completion, now_ns);
 
-                let remove = selected_schedule.is_none() && remove_on_stop;
-                let transition = if let Some(selected) = selected_schedule {
-                    entry.scheduling_mode = selected.mode;
-                    entry.latest_requested_delay_ns = selected.requested_delay_ns;
-                    RegistryTransition::normal(RegistryEffect::ArmWakeup {
-                        token: token_for(
-                            token.claim(),
-                            control.generation(),
-                            CallbackRole::OrdinaryWork,
-                        ),
-                        delay_ns: selected.deadline_ns.saturating_sub(now_ns),
-                        arm: WakeupArm::Initial,
-                    })
-                } else {
-                    let reason = if terminal_pending {
-                        entry.observability.counters_mut().record_cancellation();
-                        InactiveReason::Cancelled
-                    } else {
-                        InactiveReason::Stopped
-                    };
-                    control.terminate(reason);
-                    RegistryTransition::normal(RegistryEffect::None)
-                };
-                (transition, remove)
+                        let remove = selected_schedule.is_none() && remove_on_stop;
+                        let transition = if let Some(selected) = selected_schedule {
+                            entry.scheduling_mode = selected.mode;
+                            entry.latest_requested_delay_ns = selected.requested_delay_ns;
+                            RegistryTransition::normal(RegistryEffect::ArmWakeup {
+                                token: token_for(
+                                    token.claim(),
+                                    control.generation(),
+                                    CallbackRole::OrdinaryWork,
+                                ),
+                                delay_ns: selected.deadline_ns.saturating_sub(now_ns),
+                                arm: WakeupArm::Initial,
+                            })
+                        } else {
+                            let reason = if terminal_pending {
+                                entry.observability.counters_mut().record_cancellation();
+                                InactiveReason::Cancelled
+                            } else {
+                                InactiveReason::Stopped
+                            };
+                            control.terminate(reason);
+                            RegistryTransition::normal(RegistryEffect::None)
+                        };
+                        (transition, remove)
+                    }
+                }
             }
         };
 
@@ -1307,7 +1320,8 @@ impl TimerRegistry {
                     },
                     failure,
                 );
-                return self.remove_transient_on_failure(token.identity(), transition);
+                let remove = entry.remove_on_failure(&transition);
+                return remove_after(&mut self.entries, token.identity(), transition, remove);
             }
         };
 
@@ -1325,12 +1339,14 @@ impl TimerRegistry {
         })
     }
 
-    /// Accept dispatched Watchdog work and return its callback in one transition.
+    /// Consume this delivery's work handle, then accept Watchdog work and return
+    /// its callback.
     pub(crate) fn begin_watchdog_work(
         &mut self,
         token: &CallbackToken,
     ) -> Option<WatchdogCallback> {
         let entry = self.entries.get_mut(token.identity())?;
+        entry.consume_provider_handle(token);
         if token.role != CallbackRole::WatchdogWork || !entry.owns_token_claim(token) {
             entry.observability.counters_mut().record_stale_work();
             return None;
@@ -1479,20 +1495,6 @@ impl TimerRegistry {
             transition,
             remove,
         ))
-    }
-
-    /// Remove a terminal transient whose provider handles the runtime detached
-    /// before invoking the policy transition.
-    fn remove_transient_on_failure(
-        &mut self,
-        identity: &TimerIdentity,
-        transition: RegistryTransition,
-    ) -> RegistryTransition {
-        let remove = transition.failure().is_some()
-            && self.entries.get(identity).is_some_and(|entry| {
-                matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped)
-            });
-        remove_after(&mut self.entries, identity, transition, remove)
     }
 
     pub(crate) fn snapshot(&self, identity: &TimerIdentity) -> Option<TimerSnapshot> {
@@ -1696,19 +1698,22 @@ impl TimerRegistry {
         Ok(entry.take_provider_handles(identity))
     }
 
-    pub(crate) fn consume_provider_handle(&mut self, token: &CallbackToken) {
-        let Ok(entry) = self.entry_mut(token.claim()) else {
-            return;
+    /// Consume the delivered scheduler handle before detaching the remaining
+    /// capabilities. A scheduler transition can remove a transient declaration.
+    pub(crate) fn take_watchdog_scheduler_handles(
+        &mut self,
+        token: &CallbackToken,
+    ) -> Result<ProviderHandles, RegistryError> {
+        let entry = match self.entry_mut(token.claim()) {
+            Ok(entry) => entry,
+            // Removed or superseded claims are normal stale callback delivery.
+            Err(RegistryError::UnknownRegistration | RegistryError::StaleRegistration) => {
+                return Ok(ProviderHandles::default());
+            }
+            Err(error) => return Err(error),
         };
-        let Some(slot) = entry.provider_slot_mut(token.role) else {
-            return;
-        };
-        let matches_token = slot
-            .as_ref()
-            .is_some_and(|owned| owned.callback_generation == token.callback_generation);
-        if matches_token {
-            *slot = None;
-        }
+        entry.consume_provider_handle(token);
+        Ok(entry.take_provider_handles(token.identity()))
     }
 
     /// Confirm that the platform successfully applied one emitted arm effect.

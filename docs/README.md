@@ -64,6 +64,9 @@ constraints for the release in which they were written.
 ## Maintainer documentation
 
 - [Releasing](releasing.md): version selection, validation, and publication.
-- [Changelog lines](changelog/README.md): release-line working notes.
+- [Historical release evidence](changelog/README.md): recorded release subjects.
+- [Shared Tooling adoption](shared-tooling.md): pinned baseline and local overlay.
+- [Host support](releasing.md#host-support): required macOS workflows and current
+  qualification gaps.
 - [Current status](status/current.md): compact handoff for the next maintainer
   session.

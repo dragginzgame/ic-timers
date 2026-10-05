@@ -15,16 +15,15 @@ version="${1:-}"
 release_date="${2:-$(date +%F)}"
 changelog="${3:-CHANGELOG.md}"
 
-if [[ ! "${version}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] ||
+if [[ ! "${version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] ||
     [[ ! "${release_date}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
     usage
     exit 2
 fi
-if [[ ! -f "${changelog}" ]]; then
-    echo "error: changelog not found: ${changelog}" >&2
+if [[ -L "${changelog}" ]] || [[ -e "${changelog}" && ! -f "${changelog}" ]]; then
+    echo "error: changelog must be a regular file: ${changelog}" >&2
     exit 1
 fi
-
 temporary="$(mktemp "${changelog}.tmp.XXXXXX")"
 cleanup() {
     rm -f -- "${temporary}"
@@ -37,47 +36,64 @@ perl -0 -e '
     use strict;
     use warnings;
 
-    my $text = <>;
+    my $path = shift @ARGV;
+    my $text = "# Changelog\n\n";
+    if (-e $path) {
+        open my $input, "<", $path or die "$path: $!\n";
+        local $/;
+        $text = <$input>;
+        close $input or die "$path: $!\n";
+    }
     my $version = $ENV{IC_TIMERS_RELEASE_VERSION};
     my $date = $ENV{IC_TIMERS_RELEASE_DATE};
-    my $unreleased_count = () = $text =~ /^## \[Unreleased\]$/mg;
-
-    die "error: changelog needs exactly one ## [Unreleased] heading\n"
-        if $unreleased_count != 1;
-    die "error: could not read the Unreleased changelog section\n"
-        if $text !~ /^## \[Unreleased\]\n(.*?)(?=^## \[|\z)/ms;
-
-    my $notes = $1;
-    my $target_count = () =
-        $text =~ /^## \[\Q$version\E\](?:\s+-\s+\d{4}-\d{2}-\d{2})?$/mg;
-    die "error: changelog contains multiple ## [$version] headings\n"
-        if $target_count > 1;
+    # The explicit bump owns the version. Select one current draft, whether
+    # versionless or already named; history is never used as pending notes.
     die "error: changelog already finalized ## [$version]\n"
-        if $text =~ /^## \[\Q$version\E\]\s+-\s+\d{4}-\d{2}-\d{2}$/m;
-
-    if ($text =~ /^## \[\Q$version\E\]\n(.*?)(?=^## \[|\z)/ms) {
-        my $staged_notes = $1;
-        die "error: Unreleased must be empty while ## [$version] is staged\n"
-            if $notes =~ /\S/;
-        die "error: the staged ## [$version] section is empty\n"
-            if $staged_notes !~ /\S/;
-
-        $text =~ s/^## \[\Q$version\E\]$/## [$version] - $date/m;
-    } else {
-        die "error: the Unreleased changelog section is empty\n"
-            if $notes !~ /\S/;
-
-        my $replacement = "## [Unreleased]\n\n## [$version] - $date\n" . $notes;
-        $text =~ s/^## \[Unreleased\]\n.*?(?=^## \[|\z)/$replacement/ms;
+        if $text =~ /^## \[\Q$version\E\][ \t]+-[ \t]+\d{4}-\d{2}-\d{2}[ \t]*$/m;
+    my $number = qr/(?:0|[1-9][0-9]*)/;
+    my @drafts;
+    while ($text =~ /^## \[(Draft|$number\.$number\.$number)\][ \t]*(?:\n|\z)(.*?)(?=^## |\z)/msg) {
+        push @drafts, [$-[0], $+[0] - $-[0], $1, $2];
     }
-    print $text;
+    die "error: changelog has multiple undated release candidates; choose one\n"
+        if @drafts > 1;
+    my $notes = "";
+    if (@drafts) {
+        my ($start, $length, $label, $body) = @{$drafts[0]};
+        die "error: named draft $label conflicts with requested release $version\n"
+            if $label ne "Draft" && $label ne $version;
+        $notes = $body;
+        substr($text, $start, $length, "");
+    }
+    # Empty/missing drafts are presentation gaps, not evidence of no changes.
+    # The release-impact classifier owns rejection of an unchanged subject.
+    $notes =~ s/\A\s+|\s+\z//g;
+    warn "warning: no release notes selected; preparing an empty $version section\n"
+        unless length $notes;
+    my $release = "## [$version] - $date\n\n";
+    $release .= "$notes\n\n" if length $notes;
+    my $position = $text =~ /^## /mg ? $-[0] : length $text;
+    if ($position > 0 && substr($text, 0, $position) !~ /\n\n\z/) {
+        my $separator = substr($text, 0, $position) =~ /\n\z/ ? "\n" : "\n\n";
+        substr($text, $position, 0, $separator);
+        $position += length $separator;
+    }
+    substr($text, $position, 0, $release);
+    print $text or die "error: cannot write prepared changelog: $!\n";
+    close STDOUT or die "error: cannot flush prepared changelog: $!\n";
 ' "${changelog}" > "${temporary}"
 
 if [[ "${check_only}" == true ]]; then
     exit 0
 fi
 
-chmod --reference="${changelog}" "${temporary}"
+if [[ -e "${changelog}" ]]; then
+    perl -e 'my @s = stat $ARGV[0]; @s or die "$ARGV[0]: $!\n";
+        chmod($s[2] & 07777, $ARGV[1]) or die "$ARGV[1]: $!\n";' \
+        "${changelog}" "${temporary}"
+else
+    chmod 0644 "${temporary}"
+fi
 mv -- "${temporary}" "${changelog}"
 trap - EXIT
 

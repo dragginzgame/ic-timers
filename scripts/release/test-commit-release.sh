@@ -4,8 +4,8 @@ set -euo pipefail
 repository_root="$(git rev-parse --show-toplevel)"
 temporary_root="$(mktemp -d)"
 trap 'rm -rf -- "${temporary_root}"' EXIT
-mkdir -p "${temporary_root}"/{scripts/{ci,release},docs/{status,changelog},bin}
-for script in commit-release check-release-truth check-tag-at-head workspace-version readme-version; do
+mkdir -p "${temporary_root}"/{scripts/{ci,release},bin}
+for script in commit-release check-tag-at-head workspace-version readme-version; do
     cp "${repository_root}/scripts/release/${script}.sh" "${temporary_root}/scripts/release/"
 done
 cp "${repository_root}/scripts/ci/ensure-clean.sh" "${temporary_root}/scripts/ci/"
@@ -18,9 +18,7 @@ git config user.email 'release-test@example.invalid'
 printf '%s\n' 'ensure-clean:' $'\t@bash scripts/ci/ensure-clean.sh' > Makefile
 printf '%s\n' '[workspace.dependencies.fixture]' 'version = "0.2.0"' \
     '[workspace.package]' 'version = "0.1.0"' > Cargo.toml
-printf '%s\n' '# Changelog' '' '## [Unreleased]' '' '## [0.1.0] - 2026-10-03' '' '- Fixture release.' > CHANGELOG.md
-printf '%s\n' '# 0.1.0' '' 'Status: released 0.1.0.' > docs/changelog/0.1.0.md
-printf '%s\n' '- Workspace package version: `0.1.0`.' > docs/status/current.md
+printf '%s\n' '# Changelog' '' '## [0.1.0] - 2026-10-03' '' '- Fixture release.' > CHANGELOG.md
 printf '%s\n' '# Fixture' '| API line | `0.1` |' 'ic-timers = "=0.1.0"' > README.md
 git add .
 git commit -qm fixture
@@ -47,6 +45,21 @@ export IC_TIMERS_FIXTURE_GIT
 cat > bin/git <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
+if [[ "${FIXTURE_FAIL_UNTRACKED:-0}" == 1 && "${1:-}" == ls-files ]]; then
+    echo 'injected untracked-file query failure' >&2
+    exit 1
+fi
+if [[ "${FIXTURE_FAIL_STAGED:-0}" == 1 && $# == 3 && "${1:-}" == diff \
+    && "${2:-}" == --cached && "${3:-}" == --quiet ]]; then
+    echo 'injected staged-diff query failure' >&2
+    exit 128
+fi
+if [[ "${FIXTURE_FAIL_SUBJECT:-0}" == 1 && "${1:-}" == log ]]; then
+    # Even plausible output must not conceal the failed producer.
+    printf '%s\n' 'Release 0.1.0'
+    echo 'injected release-subject query failure' >&2
+    exit 1
+fi
 if [[ "${FIXTURE_FAIL_TAG:-0}" == 1 && "${1:-}" == tag ]]; then
     echo 'injected tag failure' >&2
     exit 1
@@ -57,14 +70,31 @@ chmod +x bin/git
 # The wrapper is an isolated fixture input, never an untracked release output.
 git add bin/git
 export PATH="${temporary_root}/bin:${PATH}"
+initial_commit="$(git rev-parse HEAD)"
+expect_failure 'injected untracked-file query failure' env FIXTURE_FAIL_UNTRACKED=1 bash scripts/release/commit-release.sh
+expect_failure 'injected staged-diff query failure' env FIXTURE_FAIL_STAGED=1 bash scripts/release/commit-release.sh
+current_commit="$(git rev-parse HEAD)"
+test "${current_commit}" = "${initial_commit}"
 expect_failure 'injected tag failure' env FIXTURE_FAIL_TAG=1 bash scripts/release/commit-release.sh
 release_commit="$(git rev-parse HEAD)"
-test "$(git log -1 --format=%s)" = 'Release 0.1.0'
+release_subject="$(git log -1 --format=%s)"
+test "${release_subject}" = 'Release 0.1.0'
 bash scripts/release/commit-release.sh
-test "$(git rev-parse HEAD)" = "${release_commit}"
+current_commit="$(git rev-parse HEAD)"
+test "${current_commit}" = "${release_commit}"
 bash scripts/release/check-tag-at-head.sh
 bash scripts/release/commit-release.sh
-test "$(git rev-parse HEAD)" = "${release_commit}"
+current_commit="$(git rev-parse HEAD)"
+test "${current_commit}" = "${release_commit}"
+
+# Query failures reject clean worktrees and interrupted-release retries too.
+expect_failure 'injected untracked-file query failure' env FIXTURE_FAIL_UNTRACKED=1 bash scripts/ci/ensure-clean.sh
+expect_failure 'injected untracked-file query failure' env FIXTURE_FAIL_UNTRACKED=1 bash scripts/release/commit-release.sh
+expect_failure 'injected staged-diff query failure' env FIXTURE_FAIL_STAGED=1 bash scripts/release/commit-release.sh
+expect_failure 'injected release-subject query failure' env FIXTURE_FAIL_SUBJECT=1 bash scripts/release/commit-release.sh
+current_commit="$(git rev-parse HEAD)"
+test "${current_commit}" = "${release_commit}"
+bash scripts/release/check-tag-at-head.sh
 
 git tag -d v0.1.0 >/dev/null
 git tag v0.1.0

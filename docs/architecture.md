@@ -64,6 +64,10 @@ The module hierarchy keeps six responsibilities separate:
    explicit scheduling requests retain `ScheduleError` at their input boundary.
    The schedule owner classifies invalid successor proposals, while the registry
    owns terminal state and completion accounting.
+   Ordinary completion resolves the effective directive and validates its inert
+   projection before checking successor allocation. Resolution and allocation
+   failures share one terminal finalization branch and the common declaration
+   removal exit; explicit consumer invariant failure still stops directly.
    Cancellation in the registry stops scheduled state without allocating a
    generation and queues a command for running work. Stopping with a reason
    discards the running command through state replacement.
@@ -109,6 +113,12 @@ The module hierarchy keeps six responsibilities separate:
    Watchdog completion decides removal once after selecting its final state:
    inactive declarations follow their lifetime and pending unregister command,
    while retained or replaced successors keep their declaration.
+   Ordinary request, Watchdog request and Watchdog scheduler failures decide
+   terminal removal through the entry already selected and authorized by their
+   transition. The shared entry predicate uses that transition's failure and
+   declaration lifetime; no second lookup reconstructs the decision. The registry's
+   existing removal exit applies it after the entry borrow ends. Runtime detaches
+   handles before those transitions and applies provider cleanup afterward.
    Watchdog cancellation selects the handles to clear in one state match. An
    immediate stop uses that selection for state replacement, cancellation
    accounting and provider cleanup; running work keeps its pending command, and
@@ -116,6 +126,13 @@ The module hierarchy keeps six responsibilities separate:
    Ordinary schedule requests share counter, request-metadata and coalescing
    updates. Recurring ensure submits an existing scheduled deadline unchanged;
    it calculates a cadence deadline only for inactive or running declarations.
+   The request owner commits mode once for successful arms or exact reconciliation;
+   coalesced ensures retain it, while equal exact requests update it.
+   Watchdog requests commit scheduling mode once after a successful initial or
+   replacement arm; coalesced, pending and failed arms preserve it while recording
+   requested delay. A cadence deadline is calculated only for an inactive Watchdog.
+   The common Watchdog request exit records coalescing for a no-effect transition
+   without failure, keeping exhausted initial arms distinct from coalesced demand.
    Owned provider roles follow entry policy and handle slot rather than a copied
    field. Installation and consumption reject policy/role mismatches before using
    a slot; detached handles retain complete tokens for restoration and cleanup.
@@ -127,8 +144,9 @@ The module hierarchy keeps six responsibilities separate:
    callbacks for registry storage, exposes registration claims, applies
    provider effects, and drives live `Once`/`AfterCompletion` dispatch and the
    two-role watchdog protocol. Its three policy-specific delegated work
-   contexts wrap one private mechanism and are valid only for the exact
-   running callback token.
+   contexts store their exact private callback token directly. Their control
+   methods use the shared claim-transition boundary, which validates running-work
+   authority before handle detachment and the registry operation.
    Each private token contains its registration claim, callback generation and
    role. Context control and callback cleanup borrow that claim instead of
    reconstructing it. Owned delivery tokens remain cloneable; registration
@@ -155,13 +173,17 @@ The module hierarchy keeps six responsibilities separate:
    arm kind flows from ordinary control through provider binding, and the
    non-empty set of callbacks to clear is also a closed value rather than
    independent booleans. The entry-local exact-claim predicate is shared by
-   callback acceptance, measurements, provider installation, and handle
-   consumption, so identity reuse cannot transfer handle authority to a stale
-   callback.
+   callback acceptance and fired-handle consumption. Measurements and provider
+   installation retain canonical claim lookup with their own error semantics;
+   identity reuse cannot transfer handle authority to a stale callback.
    Work acceptance checks the exact claim, policy, work role, generation and
    eligible state, then transitions to running state and returns that entry's
    correctly typed callback. Dispatch releases the registry borrow before
    invoking consumer work; there is no separate callback lookup or second borrow.
+   Ordinary and Watchdog work delivery consume the matching fired handle through
+   that selected entry before acceptance, without a separate registry consumption
+   pass. Scheduler delivery consumes its handle and detaches remaining capabilities
+   through one lookup before the Watchdog transition can remove a declaration.
    Duplicate or stale acceptance returns no callback and keeps its existing stale
    accounting. Installation and effect confirmation retain their own required
    role, generation and state checks.
@@ -181,6 +203,29 @@ volume does not obscure production flow.
 
 The copied Canic code was adapted into generic library types; Canic-specific
 domain work, storage, and metrics were intentionally not copied.
+
+### Terminal removal verification
+
+Source review traces all three failure-removal callers to the selected entry and
+the common map-removal exit. The change preserves generation-before-deadline
+failure precedence, request and completion accounting, and provider detachment
+before terminal removal. Public APIs, snapshot shapes, generation sequences and
+dependencies are unchanged; no generated artifact or downstream adapter changes.
+
+The maintained [registry fixtures](../crates/ic-timers/src/registry/tests.rs)
+`ordinary_terminal_failures_respect_declaration_lifetime` and
+`watchdog_terminal_failures_respect_declaration_lifetime` cover terminal requests,
+scheduler dispatch and completion across both lifetimes. The immediate-request
+coalescing fixture now covers both lifetimes, requiring initial, replacement and
+coalesced requests to retain their declarations. The maintained
+[runtime fixture](../crates/ic-timers/src/runtime/tests.rs)
+`terminal_scheduler_failure_clears_queued_work_before_transient_removal` checks
+queued-work cleanup and reuse of a removed identity.
+
+These fixtures have not been executed for this change. Tests, builds, lint gates
+and deployment validation remain maintainer-owned. Native substitutes cannot
+establish IC rollback or provider heap behavior, and no performance result is
+claimed.
 
 ## Canonical runtime
 

@@ -66,7 +66,7 @@ jobs:
         run: make testing-check MSRV="$IC_TIMERS_INTERNAL_TOOLCHAIN"
 
   # PR/main owns full validation. A tag at the same main commit only rechecks
-  # release truth and tag identity, avoiding duplicate Rust builds while still
+  # package metadata and tag identity, avoiding duplicate Rust builds while still
   # rejecting an independently pushed tag from an unmerged commit.
   tag-truth:
     if: startsWith(github.ref, 'refs/tags/')

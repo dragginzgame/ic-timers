@@ -105,9 +105,10 @@ for source in default environment command-line same-as-default empty; do
             fi
             expected_path=''; expected_install=0 ;;
     esac
-    mapfile -t actual < provisioning
-    if [[ "${actual[0]}" != "${expected_path}" || "${actual[1]}" != "${expected_install}" ]]; then
-        echo "error: ${source} PocketIC selection was incorrect: ${actual[*]}" >&2
+    printf '%s\n%s\n' "${expected_path}" "${expected_install}" > expected-provisioning
+    if ! cmp -s expected-provisioning provisioning; then
+        cat provisioning >&2
+        echo "error: ${source} PocketIC selection was incorrect" >&2
         exit 1
     fi
 done
@@ -129,9 +130,10 @@ for gate in ci release-verify pocketic-watchdog pocketic-cohorts; do
         *) expected=(pocketic-check "${gate}") ;;
     esac
     "${fixture_make[@]}" "${gate}" >/dev/null 2>&1
-    mapfile -t actual < checks-ran
-    if [[ "${actual[*]}" != "${expected[*]}" ]]; then
-        echo "error: ${gate} ran unexpected checks: ${actual[*]}" >&2
+    printf '%s\n' "${expected[@]}" > expected-checks
+    if ! cmp -s expected-checks checks-ran; then
+        cat checks-ran >&2
+        echo "error: ${gate} ran unexpected checks" >&2
         exit 1
     fi
     rm checks-ran
@@ -140,13 +142,13 @@ for gate in ci release-verify pocketic-watchdog pocketic-cohorts; do
             echo "error: ${gate} ignored failed ${target}" >&2
             exit 1
         fi
-        mapfile -t actual < checks-ran
-        prefix=()
+        : > expected-checks
         for check in "${expected[@]}"; do
-            prefix+=("${check}")
+            printf '%s\n' "${check}" >> expected-checks
             if [[ "${check}" == "${target}" ]]; then break; fi
         done
-        if [[ "${actual[*]}" != "${prefix[*]}" ]]; then
+        if ! cmp -s expected-checks checks-ran; then
+            cat checks-ran >&2
             echo "error: ${gate} skipped checks or continued after failed ${target}" >&2
             exit 1
         fi

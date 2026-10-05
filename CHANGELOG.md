@@ -2,7 +2,144 @@
 
 All notable changes to this project are recorded here.
 
-## [Unreleased]
+## [0.11.8]
+
+### Development
+
+- Replace checksum manifests and separate mode tables in preservation fixtures
+  with copies of the actual files. Compare bytes directly and preserve permission
+  assertions for preflight rejection, rollback, interrupted preparation and tag
+  rejection; retain independent Git index preservation checks.
+- Compare preparation phases and staged paths as ordered records, removing joined
+  arrays. Capture Git output directly so command failure cannot become an empty
+  staging or tag result.
+- Replace fixture-only GNU `sed -i` mutations with Perl, removing that host-specific
+  dependency. PocketIC's audited binary hash verification remains unchanged;
+  native macOS qualification is still pending.
+- Stop clean-worktree and release-commit guards when Git queries fail. Distinguish
+  a staged diff from a failed staged-diff query, and reject failed release-subject
+  reads even when they emit a matching subject. Extend rejection fixtures across
+  staged preparation and clean release retries without changing retry identity.
+- Compare PocketIC fixture verification events as exact ordered records for
+  accepted binaries and rejected overrides/downloads. Capture debris searches
+  before asserting cleanup so a failed search cannot appear empty.
+
+## [0.11.7] - 2026-10-05
+
+### Development
+
+- Compare gate-fixture records directly instead of converting them through Bash
+  4's `mapfile` and joined arrays. Preserve exact check order, duplicate PocketIC
+  prerequisites, empty overrides and failure-stop verification without that
+  newer-shell dependency. Check the full repository-gate prefix on failure rather
+  than only its last recorded check.
+- Refresh the reviewed Shared Tooling documentation baseline to `ca319ba`, using
+  committed source bytes and `DRAGGINZGAME.md` as the shared entry point. Retain
+  local contributor instructions and explicit maintainer ownership of validation
+  and release execution.
+- Adopt exact-symbol cleanup reporting and record required macOS host workflows
+  and qualification gaps without changing the pinned PocketIC release gate.
+- Keep successful changelog-finalization fixtures quiet while showing child
+  diagnostics on unexpected failure. Preserve empty-note warnings during actual
+  release preparation.
+
+## [0.11.6] - 2026-10-05
+
+### Changed
+
+- Decide terminal declaration removal from the entry already selected by the
+  ordinary request, Watchdog request or Watchdog scheduler transition. Remove
+  the separate registry lookup while preserving lifetime rules, typed failures,
+  accounting and provider cleanup ordering.
+
+### Development
+
+- Extend the Watchdog immediate-request coalescing fixture across both declaration
+  lifetimes, checking that successful initial, replacement and duplicate requests
+  retain transient declarations.
+- Record terminal-removal ownership and pending verification in the
+  [architecture reference](docs/architecture.md#terminal-removal-verification).
+
+## [0.11.5] - 2026-10-05
+
+### Changed
+
+- Let ordinary and Watchdog work delivery consume the matching fired handle and
+  accept work through the same registry entry lookup. Remove the separate runtime
+  consumption pass while retaining exact claim, role, generation and state checks.
+- Combine Watchdog scheduler handle consumption and detachment in one registry
+  operation before its transition. Retain empty detachment for removed or
+  superseded claims and cleanup before terminal declaration removal.
+
+### Development
+
+- Adopt the reviewed Shared Tooling engineering baseline with an explicit local
+  overlay preserving maintainer ownership of tests and release execution.
+- Keep one versionless changelog draft until a release is selected. Let the
+  bump helper label and date it without requiring a separate versioned note or
+  handoff status marker. Remove changelog presentation from deployment gates,
+  retaining package, lockfile, tag and PocketIC validation.
+- Preserve metadata contents, modes and prior file absence during failed bumps;
+  reject symlinked or non-file outputs before mutation.
+- Stage only the five release metadata outputs, leaving member manifests and
+  unrelated documentation under the maintainer's separate staging ownership.
+  Consolidate repeated contributor testing and release-ownership instructions.
+- Extend provider-role fixtures with mismatched claims as well as generations,
+  and deliver the stale-identity callback through the native mock queue. Check that
+  it records stale delivery without consuming the replacement's handle or work.
+- Check that suspended after-completion work owns no provider wakeup.
+- Record scope and pending verification in the
+  [callback delivery evidence](docs/design/callback-delivery-ownership.md) and
+  [Shared Tooling adoption record](docs/shared-tooling.md).
+
+## [0.11.4] - 2026-10-04
+
+### Changed
+
+- Record Watchdog request coalescing once after the selected transition, removing
+  duplicate scheduled, dispatched and running updates. Terminal failures remain
+  distinct from successful requests satisfied without another arm.
+- Commit ordinary request scheduling mode once for successful arms or exact
+  reconciliation, preserving mode changes when an exact deadline coalesces and
+  mode retention for coalesced ensures.
+
+### Development
+
+- Extend existing fixtures to check dispatched and running request counts,
+  non-coalesced terminal failures and exact ordinary mode observations at an
+  unchanged deadline.
+- Record scope and pending verification in the
+  [0.11.4 release note](docs/changelog/0.11.4.md).
+
+### Documentation
+
+- Restore the README's single structured API-line projection after the overview
+  rewrite, allowing version-bump and release-truth checks to maintain it.
+
+## [0.11.3] - 2026-10-04
+
+### Changed
+
+- Consolidate ordinary completion's directive and generation failures into one
+  terminal finalization branch and one declaration-removal exit. Preserve command
+  precedence, validation order, typed failures and completion accounting.
+- Give Watchdog initial and replacement requests one scheduling-mode update after
+  successful arming. Preserve observations for coalesced, pending and failed
+  requests, and calculate cadence deadlines only when required.
+- Remove the private callback-context forwarding wrapper. Policy-specific public
+  contexts carry their exact work token directly and use the existing shared
+  authorization and provider-transition path.
+
+### Development
+
+- Extend the ordinary terminal-failure matrix across both policies and lifetimes
+  to cover oversized retry delays and deadline overflow at exhausted generations.
+  Check that retained failures record a stopped directive and invariant completion.
+- Extend existing Watchdog fixtures to check mode retention for equal deadlines,
+  pending commands and exhausted replacements, including cadence coalescing at
+  maximum time without unnecessary deadline calculation.
+- Record scope and pending verification in the
+  [0.11.3 release note](docs/changelog/0.11.3.md).
 
 ### Documentation
 

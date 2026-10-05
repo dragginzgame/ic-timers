@@ -54,16 +54,21 @@ fixture_make=(make --no-print-directory -f Makefile -f overrides.mk
     'MAKE=make --no-print-directory -f Makefile -f overrides.mk')
 
 "${fixture_make[@]}" repository-check > /dev/null 2>&1
-mapfile -t targets < checks-ran
-if [[ "${targets[*]}" != 'actions-check shell-check release-check provider-check fmt-check' ]]; then
+targets=(actions-check shell-check release-check provider-check fmt-check)
+printf '%s\n' "${targets[@]}" > expected-checks
+if ! cmp -s expected-checks checks-ran; then
+    cat checks-ran >&2
     echo "error: repository-check skipped a required check" >&2
     exit 1
 fi
+: > expected-checks
 for target in "${targets[@]}"; do
+    printf '%s\n' "${target}" >> expected-checks
     rm -- checks-ran
     expect_failure "failed ${target}" "${fixture_make[@]}" repository-check "FAIL_TARGET=${target}"
-    if [[ "$(tail -n 1 checks-ran)" != "${target}" ]]; then
-        echo "error: repository-check continued after ${target} failed" >&2
+    if ! cmp -s expected-checks checks-ran; then
+        cat checks-ran >&2
+        echo "error: repository-check skipped checks or continued after ${target} failed" >&2
         exit 1
     fi
 done

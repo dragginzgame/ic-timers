@@ -84,64 +84,24 @@ pub fn initialize_runtime() -> Result<TimerEpoch, TimerError> {
     })
 }
 
-struct CallbackContext {
-    token: CallbackToken,
-}
-
-impl CallbackContext {
-    const fn new(token: CallbackToken) -> Self {
-        Self { token }
-    }
-
-    const fn identity(&self) -> &TimerIdentity {
-        self.token.identity()
-    }
-
-    fn cancel(&self) -> Result<(), TimerError> {
-        cancel_claim(self.token.claim(), Some(&self.token))
-    }
-
-    fn schedule_once(&self, schedule: TimerSchedule) -> Result<(), TimerError> {
-        ensure_once_claim(self.token.claim(), Some(&self.token), schedule)
-    }
-
-    fn schedule_recurring(&self) -> Result<(), TimerError> {
-        ensure_recurring_claim(self.token.claim(), Some(&self.token))
-    }
-
-    fn schedule_watchdog_immediately(&self) -> Result<(), TimerError> {
-        ensure_watchdog_immediately_claim(self.token.claim(), Some(&self.token))
-    }
-
-    fn reconcile_watchdog(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
-        reconcile_watchdog_claim(self.token.claim(), Some(&self.token), schedule)
-    }
-
-    fn reconcile_ordinary(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
-        reconcile_ordinary_claim(self.token.claim(), Some(&self.token), schedule)
-    }
-}
-
 /// Delegated control capability scoped to one exact `Once` work attempt.
 ///
 /// Identity remains inspectable after work returns, but mutation methods then
 /// return [`TimerError::RegistrationExpired`]. Retain the
 /// [`OnceRegistration`] for longer-lived ownership.
 pub struct OnceContext {
-    inner: CallbackContext,
+    token: CallbackToken,
 }
 
 impl OnceContext {
     const fn new(token: CallbackToken) -> Self {
-        Self {
-            inner: CallbackContext::new(token),
-        }
+        Self { token }
     }
 
     /// Return the logical timer identity executing this work.
     #[must_use]
     pub const fn identity(&self) -> &TimerIdentity {
-        self.inner.identity()
+        self.token.identity()
     }
 
     /// Schedule a `Once` declaration while this exact work attempt is active.
@@ -149,7 +109,7 @@ impl OnceContext {
     /// A context retained after its callback completes is expired and returns
     /// [`TimerError::RegistrationExpired`].
     pub fn ensure_scheduled(&self, schedule: TimerSchedule) -> Result<(), TimerError> {
-        self.inner.schedule_once(schedule)
+        ensure_once_claim(self.token.claim(), Some(&self.token), schedule)
     }
 
     /// Reconcile the executing declaration to one exact schedule.
@@ -162,7 +122,7 @@ impl OnceContext {
     /// cancellation wins arbitration. A stored context cannot mutate the
     /// registration after its exact work attempt ends.
     pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
-        self.inner.reconcile_ordinary(schedule)
+        reconcile_ordinary_claim(self.token.claim(), Some(&self.token), schedule)
     }
 
     /// Request cancellation while this exact work attempt is active.
@@ -173,7 +133,7 @@ impl OnceContext {
     /// A retained declaration becomes inactive. A remove-on-stop declaration
     /// is removed when cancellation wins arbitration.
     pub fn cancel(&self) -> Result<(), TimerError> {
-        self.inner.cancel()
+        cancel_claim(self.token.claim(), Some(&self.token))
     }
 }
 
@@ -183,25 +143,23 @@ impl OnceContext {
 /// Mutation authority expires when the callback completes. Retain the
 /// [`AfterCompletionRegistration`] for longer-lived ownership.
 pub struct AfterCompletionContext {
-    inner: CallbackContext,
+    token: CallbackToken,
 }
 
 impl AfterCompletionContext {
     const fn new(token: CallbackToken) -> Self {
-        Self {
-            inner: CallbackContext::new(token),
-        }
+        Self { token }
     }
 
     /// Return the logical timer identity executing this work.
     #[must_use]
     pub const fn identity(&self) -> &TimerIdentity {
-        self.inner.identity()
+        self.token.identity()
     }
 
     /// Request configured recurrence after this exact work attempt.
     pub fn ensure_scheduled(&self) -> Result<(), TimerError> {
-        self.inner.schedule_recurring()
+        ensure_recurring_claim(self.token.claim(), Some(&self.token))
     }
 
     /// Reconcile the executing declaration to one exact schedule without
@@ -215,7 +173,7 @@ impl AfterCompletionContext {
     /// is removed when cancellation wins arbitration. A stored context cannot
     /// mutate the registration after its exact work attempt ends.
     pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
-        self.inner.reconcile_ordinary(schedule)
+        reconcile_ordinary_claim(self.token.claim(), Some(&self.token), schedule)
     }
 
     /// Request cancellation while this exact work attempt is active.
@@ -226,7 +184,7 @@ impl AfterCompletionContext {
     /// retained declaration becomes inactive; a remove-on-stop declaration is
     /// removed when cancellation wins arbitration.
     pub fn cancel(&self) -> Result<(), TimerError> {
-        self.inner.cancel()
+        cancel_claim(self.token.claim(), Some(&self.token))
     }
 }
 
@@ -235,20 +193,18 @@ impl AfterCompletionContext {
 /// Mutation authority expires when the callback completes. Retain the
 /// [`WatchdogRegistration`] for longer-lived ownership.
 pub struct WatchdogContext {
-    inner: CallbackContext,
+    token: CallbackToken,
 }
 
 impl WatchdogContext {
     const fn new(token: CallbackToken) -> Self {
-        Self {
-            inner: CallbackContext::new(token),
-        }
+        Self { token }
     }
 
     /// Return the logical timer identity executing this work.
     #[must_use]
     pub const fn identity(&self) -> &TimerIdentity {
-        self.inner.identity()
+        self.token.identity()
     }
 
     /// Request that the pre-armed cadence successor remain scheduled.
@@ -257,7 +213,7 @@ impl WatchdogContext {
     /// It never arms an additional Watchdog successor and cannot move a
     /// pending immediate successor later.
     pub fn ensure_scheduled(&self) -> Result<(), TimerError> {
-        self.inner.schedule_recurring()
+        ensure_recurring_claim(self.token.claim(), Some(&self.token))
     }
 
     /// Request that this work attempt's pre-armed successor run immediately.
@@ -267,7 +223,7 @@ impl WatchdogContext {
     /// cadence successor with a zero-delay scheduler callback. Consumer work
     /// still runs only in the scheduler's separately queued later message.
     pub fn ensure_scheduled_immediately(&self) -> Result<(), TimerError> {
-        self.inner.schedule_watchdog_immediately()
+        ensure_watchdog_immediately_claim(self.token.claim(), Some(&self.token))
     }
 
     /// Replace this attempt's successor with an exact schedule, or cancel it.
@@ -276,7 +232,7 @@ impl WatchdogContext {
     /// successor. The latest reconciliation wins over prior scheduling demand,
     /// but unregistration and invariant failure remain terminal.
     pub fn reconcile_schedule(&self, schedule: Option<TimerSchedule>) -> Result<(), TimerError> {
-        self.inner.reconcile_watchdog(schedule)
+        reconcile_watchdog_claim(self.token.claim(), Some(&self.token), schedule)
     }
 
     /// Request cancellation while this exact work attempt is active.
@@ -287,7 +243,7 @@ impl WatchdogContext {
     /// A retained declaration becomes inactive; a remove-on-stop declaration
     /// is removed.
     pub fn cancel(&self) -> Result<(), TimerError> {
-        self.inner.cancel()
+        cancel_claim(self.token.claim(), Some(&self.token))
     }
 }
 
@@ -1074,10 +1030,7 @@ async fn dispatch_wakeup(token: CallbackToken) {
 )]
 async fn dispatch_ordinary(token: CallbackToken) {
     let measurement = CallbackMeasurementStart::capture();
-    let callback = with_registry_mut(|registry| {
-        registry.consume_provider_handle(&token);
-        Ok(registry.begin_ordinary(&token))
-    });
+    let callback = with_registry_mut(|registry| Ok(registry.begin_ordinary(&token)));
     let callback = match callback {
         Ok(Some(callback)) => callback,
         Ok(None) => return,
@@ -1112,15 +1065,9 @@ fn finish_ordinary_callback(token: &CallbackToken, result: TimerRunResult) {
 fn dispatch_watchdog_scheduler(token: &CallbackToken) {
     let measurement = CallbackMeasurementStart::capture();
     let dispatched = with_registry_mut(|registry| {
-        registry.consume_provider_handle(token);
-        let handles = match registry.take_provider_handles_for_claim(token.claim()) {
-            Ok(handles) => handles,
-            // An already removed or superseded claim is a normal stale delivery.
-            Err(RegistryError::UnknownRegistration | RegistryError::StaleRegistration) => {
-                ProviderHandles::default()
-            }
-            Err(error) => return Err(TimerError::from(error)),
-        };
+        let handles = registry
+            .take_watchdog_scheduler_handles(token)
+            .map_err(TimerError::from)?;
         Ok((
             registry.begin_watchdog_scheduler(token, platform::time_ns()),
             handles,
@@ -1137,10 +1084,7 @@ fn dispatch_watchdog_scheduler(token: &CallbackToken) {
 
 fn dispatch_watchdog_work(token: &CallbackToken) {
     let measurement = CallbackMeasurementStart::capture();
-    let callback = with_registry_mut(|registry| {
-        registry.consume_provider_handle(token);
-        Ok(registry.begin_watchdog_work(token))
-    });
+    let callback = with_registry_mut(|registry| Ok(registry.begin_watchdog_work(token)));
     let callback = match callback {
         Ok(Some(callback)) => callback,
         Ok(None) => return,
