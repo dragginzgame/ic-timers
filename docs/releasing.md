@@ -382,3 +382,14 @@ tagged commit is reachable from `main`, package metadata is coherent, and the
 annotated version tag points to `HEAD`. This preserves protection against an
 independently pushed tag from an unmerged commit without running identical
 validation twice at one SHA.
+
+The tag job verifies its event version, main reachability and annotated tag
+before fetching dependencies. It then prepares both locked caches and invokes
+`check-lockfiles.sh` against the tagged checkout itself, before running the
+release fixtures. Fixture success alone does not establish coherence of the
+checkout's actual locks. Failed downloads, locked resolution or resolved
+`ic-timers` identity stop the job; both workspaces must resolve one package at
+the Cargo version. This uses the existing fetch and metadata owners and does
+not add compilation to their checks. The changed workflow shell was checked
+for syntax and its sequence reviewed; diff whitespace checks passed. Hosted
+execution and fixture execution remain unverified for this change.

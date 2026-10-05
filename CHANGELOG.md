@@ -2,6 +2,15 @@
 
 All notable changes to this project are recorded here.
 
+## [Draft]
+
+### Development
+
+- Validate the tagged checkout's root and testing lockfiles in hosted tag CI
+  after confirming the exact annotated tag and main reachability. Prepare the
+  selected dependency caches before offline metadata checks; retain fixture
+  validation without repeating the full Rust and MSRV builds owned by PR/main.
+
 ## [0.11.8] - 2026-10-05
 
 ### Development

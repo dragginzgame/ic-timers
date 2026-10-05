@@ -88,4 +88,7 @@ jobs:
             echo "error: release tag commit is not reachable from main" >&2
             exit 1
           fi
-          make release-check release-tag-check
+          make release-tag-check
+          make fetch
+          bash scripts/release/check-lockfiles.sh
+          make release-check

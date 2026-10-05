@@ -47,6 +47,11 @@ references and validation belong in [release notes](../changelog/README.md),
   version preparation. Metadata parsing preserves Cargo's original failure.
   Fetch-order and metadata-failure fixtures remain unexecuted; source/syntax
   scope and the failed attempt are recorded in the release guide.
+  Hosted tag CI now validates the tagged checkout's actual root/testing lockfiles
+  using those existing fetch and metadata owners after tag/main checks and before
+  fixtures. This repository-only continuation is in the one versionless draft;
+  workflow syntax/source-review scope and pending hosted execution are recorded
+  in the release guide.
 - Public removals or incompatible semantic changes require the next minor line;
   private behavior-preserving simplifications may use a patch. See the
   [ordinary arbitration hard cut](../changelog/0.9.0.md).
