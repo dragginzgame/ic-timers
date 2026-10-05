@@ -21,13 +21,27 @@ references and validation belong in [release notes](../changelog/README.md),
   Its [adoption record](../shared-tooling.md) scopes provenance and exceptions.
   Historical release notes retain evidence; no new versioned note or mutable
   handoff release marker is required for version preparation.
-  Shared measurement arithmetic is now explicitly integrated from `ic-metrics`;
-  attribution and registration identity remain local. Its exact dependency and
-  both lockfiles now select local ic-metrics 0.1.1 after the maintainer's tag. Both
-  locked offline metadata checks pass; the focused library check reports an
-  unused-assignment warning at `runtime/mod.rs:1090` in delivery-retirement work.
-  This does not establish warning-free or PocketIC qualification. Registry
-  [adoption](https://github.com/dragginzgame/ic-timers/issues/9) remains separate.
+  Shared measurement arithmetic uses published registry `ic-metrics 0.1.3`;
+  attribution and registration identity remain local. The root dependency and
+  both lockfiles select one registry package; every other lock record and all
+  consumer package versions are preserved. Locked offline metadata and manifest
+  sorting pass for both workspaces. Warning-denied library Clippy, four measurement
+  tests and focused registration/reset identity, stale delivery, discarded delivery,
+  binding-failure and normal-completion checks pass on Linux. The initial Clippy
+  gate reported three guard diagnostics; the complete guard is now captured until
+  normal completion, and fallible borrowing uses `let ... else`. A completion
+  fixture initially aborted at native thread-local teardown with a timer left
+  armed; explicit unregistration corrects fixture cleanup. Two earlier filters
+  matched no tests; exact names supplied the recorded evidence. This is focused
+  native-substitute evidence, with no broad suite or PocketIC qualification.
+  [Registry adoption](https://github.com/dragginzgame/ic-timers/issues/9) remains
+  committed by the maintainer at `685b4ff` during these checks, with the compatible
+  `0.1.3` requirement and both locks still selecting the verified package. The
+  documentation edits remain uncommitted; native release/CI qualification is separate.
+  The maintainer's subsequent test-target lint reported an empty-slice assertion,
+  missing unit-expression semicolon and redundant identity clone in delivery
+  fixtures. Those are corrected without changing fixture semantics; source
+  formatting and diff checks pass, while the lint rerun remains user-owned.
   Standard SemVer releases use the refreshed shared runner: preflight/validation
   failures restart on current source, while the same target automatically
   reconciles prepared intent at its saved version before a new increment. The
@@ -38,7 +52,7 @@ references and validation belong in [release notes](../changelog/README.md),
   The pending 0.13.0 remains appropriate for the public Abandoned variant and
   ordinary delivery-retirement semantic cut; consumers must handle both.
   Snapshot integrity, shell syntax and metadata-preserving manifest sorting
-  pass; both lockfiles remain byte-identical. The GitHub description matches
+  passed during snapshot adoption; both lockfiles were then byte-identical. The GitHub description matches
   current scope. New recovery/hook fixture execution remains user-owned; source/snapshot scope
   belongs in the [release guide](../releasing.md).
   The reviewed baseline is now `f52c0e2476aee094359ed21de91c468540d3969f`, with

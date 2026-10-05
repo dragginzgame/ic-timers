@@ -8,12 +8,18 @@ All notable changes to this project are recorded here.
 
 - Re-export `ic_metrics::MeasurementSummary` as the canonical summary while retaining
   the existing snapshot accessors, callback attribution and registration identity.
-  The exact dependency selects local `ic-metrics 0.1.1` and matches both lockfiles;
-  registry publication remains a separate adoption prerequisite.
+  Select published registry `ic-metrics 0.1.3` in both lockfiles, removing the
+  sibling-checkout requirement ([#9](https://github.com/dragginzgame/ic-timers/issues/9)).
 - Standardize the three SemVer release commands on the reviewed Shared Tooling
   runner, including automatic recovery when the same target is rerun and an atomic push of the selected branch
   and tag. Release preparation uses UTC dates and preserves both locked dependency selections
   and build artifacts.
+
+### Fixed
+
+- Keep the ordinary delivery guard captured until callback completion, preserving
+  discard retirement and normal completion handling. Explicitly unregister the
+  recurring completion fixture before native thread-local teardown.
 
 ### Breaking
 
@@ -49,7 +55,8 @@ All notable changes to this project are recorded here.
   the shared runner's phase/failure/resume fixtures in the existing release gate.
 - Add native and PocketIC fixtures covering discarded ordinary deliveries,
   traps before and after an await, pending commands, stale authority and capture
-  release for both ordinary policies and lifetimes. Qualification remains pending;
+  release for both ordinary policies and lifetimes. Keep native assertions and
+  identity ownership compatible with warning-denied Clippy. Qualification remains pending;
   see the [callback contract](docs/design/0.5-policy-specific-callback-authority.md#ordinary-delivery-abandonment).
 - Reconcile current README, safety, callback-contract, release and handoff
   documentation with the completed 0.12 minor bump. Remove pending-bump

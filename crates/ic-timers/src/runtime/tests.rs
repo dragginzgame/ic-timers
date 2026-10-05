@@ -181,7 +181,7 @@ fn dropped_ordinary_deliveries_retire_confirmed_scheduled_and_running_work() {
                     weak.upgrade().is_none(),
                     "removed callbacks must release captures"
                 );
-                assert!(timer_inventory().unwrap().timers().is_empty());
+                assert_eq!(timer_inventory().unwrap().timers(), []);
             }
         }
     }
@@ -213,7 +213,8 @@ fn abandoned_running_work_discards_scheduling_commands_and_finishes_unregistrati
                 match command {
                     "cancel" => cancel_claim(&claim, None).unwrap(),
                     "reconcile" => {
-                        reconcile_ordinary_claim(&claim, None, Some(TimerSchedule::At(40))).unwrap()
+                        reconcile_ordinary_claim(&claim, None, Some(TimerSchedule::At(40)))
+                            .unwrap();
                     }
                     "ensure" if after_completion => ensure_recurring_claim(&claim, None).unwrap(),
                     "ensure" => ensure_once_claim(&claim, None, TimerSchedule::At(40)).unwrap(),
@@ -273,7 +274,7 @@ fn stale_delivery_drop_cannot_retire_rearmed_or_reused_identity() {
     drop(old_delivery);
     assert_eq!(timer_inventory().unwrap(), before);
     registration.unregister().unwrap();
-    let replacement = register_once(timer.clone(), DeclarationLifetime::Retained, |_| async {
+    let replacement = register_once(timer, DeclarationLifetime::Retained, |_| async {
         OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
     })
     .unwrap();
