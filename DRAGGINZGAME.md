@@ -44,7 +44,13 @@ Consumer choices described in those guides remain subject to this baseline.
 - An explicit instruction is sufficient for its named action. Carry established
   authorization forward; do not require magic phrases or repeated confirmation.
   Complete authorized preparation so any required approval concerns a concrete
-  result. Recording feedback does not authorize upstream messages or writes.
+  result. Apply authorized current-repository fixes directly to the working tree
+  and run the appropriate focused checks; a detached patch alone does not complete
+  a local repair. Inspection remains distinct from repair authorization.
+  The maintainer grants standing authorization to file or update owning-repository
+  GitHub issues for findings from authorized work, following the feedback rules
+  below. This does not authorize sibling source edits, issue assignment/closure,
+  unrelated messages or release effects.
 
 ## Ownership and simplification
 
@@ -114,6 +120,10 @@ Consumer choices described in those guides remain subject to this baseline.
 
 ## Validation and evidence
 
+- Use the [shared audit methods](audits/README.md) for reusable code-hygiene,
+  structural and module reviews. Keep product invariants and validation commands
+  in consumer overlays. Audit adoption adds no automatic broad gate or schedule;
+  findings do not supply repair authority. Preserve historical reports locally.
 - Run the smallest relevant checks automatically during authorized development.
   Broad workspace, full CI and release gates run only when explicitly requested
   or in their configured CI pipeline. Local command lists must distinguish focused
@@ -183,6 +193,20 @@ Consumer choices described in those guides remain subject to this baseline.
 
 ## Rust workspaces and portable tooling
 
+- Provide [local developer setup](docs/local-setup.md) through explicit
+  `make install-tools` and offline `make tools-check`, including pinned jq and
+  Mike Farah yq under `.tools/host/bin`. Make/CI callers select the local tools;
+  document system bootstrap packages and product toolchains separately.
+- Provide the [common local IC executable setup](docs/ic-tools.md) through
+  `make install-ic-tools` and offline `make ic-tools-check`. Keep the common tool
+  names available under the checkout's `.tools/ic/bin`, with one reviewed pin
+  matrix and explicit installation. Consumers own version qualification and
+  scoped pin exceptions; ordinary validation never downloads tools implicitly.
+- Apply the [dependency pinning rules](rules/dependency-pinning.md): immutable
+  Git/action identities, compatible registry requirements with locked builds,
+  verified tool downloads, and explicitly qualified sibling or moving inputs.
+  Run the declaration checker in CI and release gates; consumers own the chosen
+  versions, approved exceptions and runtime qualification evidence.
 - Cargo workspace members inherit package versions from the root. Apply the
   [Cargo dependency rules](rules/cargo-dependencies.md): every direct dependency
   is declared in root `[workspace.dependencies]`, and every child manifest uses
@@ -252,7 +276,11 @@ Consumer choices described in those guides remain subject to this baseline.
   and the smallest useful verification.
 - Track upstream acceptance separately from verified consumer adoption. Resolve
   product-specific feedback locally instead of promoting it to universal policy.
-  Submit feedback or change another repository only within explicit authority.
+  For another repository's finding, search its issues and file or update the
+  matching issue under the standing authorization above. Include a concrete fix
+  or patch where feasible and its actual validation results. Keep shared snapshots
+  intact; repair at the source owner and adopt a reviewed committed revision.
+  Other cross-repository changes retain their separate authority.
   If issue access or a remote is unavailable, report the finding and blocker to
   the maintainer without inventing an issue URL or creating a local tracker.
 - Report the outcome, changed files, relevant verification, skipped checks,

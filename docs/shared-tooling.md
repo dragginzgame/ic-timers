@@ -1,62 +1,121 @@
 # Shared Tooling adoption
 
-IC Timers adopts reviewed revision [`cb86188c5956866564de4fb6ec6be67b27981ab9`](https://github.com/dragginzgame/shared-tooling/tree/cb86188c5956866564de4fb6ec6be67b27981ab9).
-The [baseline snapshot manifest](../.shared-tooling.snapshot) records twenty-one exact files,
-including [the baseline](../DRAGGINZGAME.md), linked governance, release and
-validation runners and verification fixtures. [AGENTS.md](../AGENTS.md) owns the product overlay and the
-maintainer-approved validation and release-authority exceptions.
-The supplemental [audit snapshot](../.shared-tooling-audits.snapshot) records nineteen
-files from [`a37771f1b6b5fc9a88ed6ab3b705bdda35cd8fa3`](https://github.com/dragginzgame/shared-tooling/tree/a37771f1b6b5fc9a88ed6ab3b705bdda35cd8fa3),
-including the six unchanged methods, their adoption/provenance guidance and
-linked documents/catalogs and the host-parser installer/fixtures. Its two
-principle documents and integrity helpers are byte-identical to the baseline's
-copies and recorded in both manifests. The fifteen-file
-[helper snapshot](../.shared-tooling/helpers/.shared-tooling.snapshot) records reviewed committed
-`b32d3038c850a7c53470c326b0f7f11263b31669`: Cargo/checksum helpers, IC setup
-and formatter prerequisite checks. The thirteen earlier helper files are
-byte-identical to their original `d957d1f` adoption.
-The helper slice lives under `.shared-tooling/helpers/` so its newer checksum
-owner cannot replace the checksum required by either older manifest. The
-checker/filter and unchanged checker fixture moved out of the audit manifest
-into this slice; their former executable paths are removed. Each changed file
-has one source revision. The shared snapshot verifier remains byte-identical
-across all three sources.
+IC Timers adopts Shared Tooling 0.1.11 at reviewed committed revision
+[`46c02774a8335cb3949d6f04284c4f53375353c1`](https://github.com/dragginzgame/shared-tooling/tree/46c02774a8335cb3949d6f04284c4f53375353c1).
+The [baseline snapshot](../.shared-tooling.snapshot) records twenty-three exact
+files, including the paired baseline/maintenance rule, release and validation
+runners, checksum owner and linked guides. The supplemental
+[audit snapshot](../.shared-tooling-audits.snapshot) records nineteen files:
+the six unchanged audit methods, provenance/setup guidance, pin catalogs and
+host-parser installer/fixtures. Its overlapping principles and integrity helpers
+are identical to the baseline's records. The sixteen-file
+[helper snapshot](../.shared-tooling/helpers/.shared-tooling.snapshot) records
+Cargo/checksum helpers, IC setup, formatter prerequisites and annotated-tag
+admission at the same revision. Its separate directory retains existing caller
+paths; no alternate runtime or new helper invocation is introduced.
 
-The maintainer-authorized adoption of
-[Shared Tooling #6](https://github.com/dragginzgame/shared-tooling/issues/6)
-uses an explicit revision-bound reference in [AGENTS.md](../AGENTS.md) to the
-[dependency-preparation section at `a7efade1a68e43f148252a1a73908a46c4cbe9e9`](https://github.com/dragginzgame/shared-tooling/blob/a7efade1a68e43f148252a1a73908a46c4cbe9e9/rules/cargo-dependencies.md#preparing-authorized-dependency-changes).
-The committed section requires tracing affected independent graphs, preparing
-their applicable lockfiles together, preserving unrelated selections and
-verifying owning locked metadata before declaring the change complete. It keeps
-cache fetching locked and retains local command authority. Source review covers
-that committed section and the corresponding release-cache cross-reference;
-this is accepted guidance, not a new consumer runtime or host qualification.
+[AGENTS.md](../AGENTS.md) owns the product overlay and approved command-authority
+exceptions. Tests, builds, lint and all release effects remain maintainer-owned.
+The independent root/testing workspaces, both lockfiles and audited PocketIC
+admission remain local. Optional helpers described in shared guides are reference
+material until a separate caller adoption. Refresh through the upstream
+[distribution workflow](consuming-snapshots.md) from a clean reviewed checkout;
+CI/release validation uses these offline manifests, never a mutable sibling.
+The former document-only copy under `docs/shared-tooling/` remains retired.
 
-The baseline's release/hook/validation executables remain unchanged at `cb86188`.
-The later Cargo/IC helper adoption is scoped below. Newer host-installer and
-validation-runner changes remain outside it. The structured checker and parser
-setup originally adopted at `a37771f` retains its historical record below.
-The inspected [upstream CI for `a7efade`](https://github.com/dragginzgame/shared-tooling/actions/runs/37443591873)
-passed Linux regression and lint/security; both macOS jobs were queued. No mutable
-sibling bytes are authority, and no new checker or download is implicitly introduced here.
+## Shared Tooling 0.1.11 refresh
 
-A subsequent read-only review on 2026-10-06 found committed sibling HEAD
-`47cd2ccaf0e8b428f06e6db0262df76cfc1581de` (0.1.7), with additional dirty work
-excluded from that identity. Its
-[upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37458968809)
-passed lint/security but failed all three portable regression jobs. Linux
-stopped in the RustSec preparation fixture after retaining its scratch path;
-the available log does not establish the underlying error. Both macOS jobs
-reported `release metadata test failed: partial version read passed preflight`
-inside the nested validation-runner fixture. No whole-baseline refresh or
-qualification is inferred. The consumer snapshots remain at their recorded
-revisions, and uncommitted helpers are ineligible for revision-bound adoption.
+The maintainer authorized the selected refresh after inspection. A clean detached
+source checkout at `46c0277` exported each manifest through the upstream
+refresh helper into owned temporary consumers. The verified exports were installed
+only after checking that changed destination files had no unrelated local edits.
+Both root manifests were refreshed together because they share the checksum owner.
+The baseline adds only the linked verification-helper and tag-maintenance guides;
+no tag-deletion executable or unrelated helper is adopted. The nested helper set
+remains sixteen files. Its only byte change since `b32d303` is success-only cleanup
+in the dependency fixture, preserving failed scratch evidence; production helpers,
+including the prepared #16 tag checker, are unchanged.
 
-Refresh through the upstream distribution helper from a clean reviewed checkout,
-then verify `bash scripts/ci/verify-shared-tooling-snapshot.sh`. CI and releases
-use the offline snapshot; a mutable sibling checkout supplies no authority.
-The former document-only copy under `docs/shared-tooling/` is retired.
+### Logger and release callers
+
+The canonical logger fixes
+[Shared Tooling #22](https://github.com/dragginzgame/shared-tooling/issues/22):
+passing/ignored Rust paths containing `error::` remain ordinary output. Actual
+`error:`, `error[E...]:` and failed-test diagnostics still receive highlighting.
+Retained summaries preserve nearby ordinary context without tagging it as an
+error; raw failed-attempt logs remain undecorated and survive retries.
+The logger also clears its own temporary checkout/snapshot identity before target
+dispatch, allowing an independently located child logger to choose its checkout.
+It preserves Make release selections, failure-log policy and nesting depth.
+
+The existing `release-verify` recipe still selects the complete target list in
+its existing fail-fast order and binds logs to the Git release-state directory.
+`run-release.sh`, version arithmetic, hooks and hook installation are byte-identical
+to the prior baseline. No release plan, commit, tag, push or publication behavior
+is replaced. `test-release-gate.sh` supplies independent Make/logger identities
+and retains failures. Its new source-reviewed cases use the actual consumer recipe
+and prepared/stock search paths to check passing/ignored names, typed/bare/no-space
+errors, failed namespaced tests, neutral retained context, raw logs and child
+checkout routing with exact inherited release version/commit and nesting depth.
+These cases remain inside the already-selected complete gate.
+
+The shared AWK finalizer now includes the
+[#23 precision correction](https://github.com/dragginzgame/shared-tooling/issues/23)
+and its upstream release-runner fixture cases. This fixes the previously reported
+large-component boundary in the existing vendored fixture subject. It does not
+replace the local Perl finalizer: its accepted whitespace, identity admission,
+file ownership and transactional rollback remain with the
+[existing consumer owner](#changelog-finalizer-review-and-history-fix).
+No second active release selector or new compatibility path is introduced.
+
+### Policy and setup scope
+
+The baseline and `rules/agent-maintenance.md` now jointly adopt
+[#24](https://github.com/dragginzgame/shared-tooling/issues/24): authorized local
+repairs are applied in the worktree; inspection remains inspection; owning-repo
+issue reports follow a duplicate search and distinguish preparation from native
+qualification. Reporting authority does not authorize sibling source changes,
+assignment/closure or release effects. The prior authorized #16 worktree is the
+local-repair walkthrough; the explicitly requested #23 report and upstream
+correction provide the issue-owner walkthrough. Neither proves this refreshed
+consumer's qualification. The local filesystem scope now makes that issue-report
+boundary explicit, and redundant dirty-work wording was removed after checking
+that the baseline retains it. Product validation/release exceptions are preserved.
+
+The separate `a7efade` dependency-preparation reference is retired because the
+same obligations are now in the adopted Cargo rule: trace both independent graphs,
+prepare affected locks together, preserve selections and check owning locked
+metadata during authorized dependency changes. Workspace boundaries and command
+authority are unchanged; this tooling refresh changes no dependency or lockfile.
+The GitHub description was inspected and remains consistent with the README.
+
+The host installer now rejects a failed version producer even if it emits the
+expected version. Existing jq/yq pins and no-flag Make/CI setup/check calls are
+unchanged. Its new ripgrep option is not enabled here; IC Timers retains its
+explicit system-ripgrep bootstrap. The shared guide describes optional upstream
+setup; [local release setup](releasing.md#structured-dependency-checks-and-host-parsers)
+owns our callers.
+The all-host retention-fixture repair from
+[#21](https://github.com/dragginzgame/shared-tooling/issues/21) is qualified upstream;
+that standalone fixture and its unrelated executable subjects are not imported.
+
+### Evidence and acceptance
+
+Exact-source [upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37500153922)
+passed Linux portable regression, lint/security and both native macOS 15 jobs
+(Intel and Apple Silicon). This qualifies Shared Tooling's subjects at `46c0277`;
+it does not qualify this consumer worktree. Preparation checks are exact exported
+bytes/modes, all three snapshot manifests, shell syntax, local documentation
+references and diff inspection. No test, build, lint gate, formatter, tool
+installation or release effect ran locally.
+
+Acceptance remains the maintainer's normal complete gate and matching consumer
+Linux/MSRV and native macOS CI, including the expanded logger and existing tag,
+metadata, installer and recovery fixtures. #16 stays open pending that evidence.
+The single undated 0.14.4 draft contains this repository-only batch. Runtime source,
+Cargo versions, dependency selections and both lockfiles are unchanged; there is
+no downstream Wasm, instruction or heap delta from these tooling edits.
+Historical adoption/qualification records below retain their original source scope.
 
 ## Audit-method adoption review
 
@@ -296,7 +355,7 @@ the local release guide owns consumer commands and prerequisites.
 
 ## Formatter prerequisite adoption
 
-The next compatible 0.14.3 draft adopts the shared formatter guard and its
+The compatible 0.14.3 batch adopted the shared formatter guard and its
 fixture from clean committed
 [`b32d303`](https://github.com/dragginzgame/shared-tooling/tree/b32d3038c850a7c53470c326b0f7f11263b31669)
 (Shared Tooling 0.1.9). The reviewed changes since `d957d1f` also add host-fixture
@@ -344,6 +403,47 @@ evidence or qualify the subsequent 0.14.3 worktree.
 
 ## Release-tooling adoption
 
+### Annotated-tag checker adoption
+
+The compatible undated 0.14.4 draft addresses
+[#16](https://github.com/dragginzgame/ic-timers/issues/16) using the existing shared
+`check-release-tag.sh` at reviewed committed `b32d303`. It was exported from a
+clean detached source through the distribution helper, extending the nested slice
+from fifteen to sixteen files with all prior hashes/modes unchanged. The baseline
+and audit/parser manifests remain unchanged. Dirty sibling finalizer/logger work
+and 0.1.10's unrelated macOS failures do not supply this helper's source or evidence.
+
+The existing `check-tag-at-head.sh` now owns only selection: no arguments read
+the workspace version and HEAD; the two-argument late callbacks retain the exact
+saved release commit/version. It delegates stable-version/full-commit validation,
+commit resolution, annotated-tag type and exact tag target to the shared owner.
+All standalone commit/tag/push/publication and late reconciliation callers keep
+their selection and ordering. The duplicate validation body is deleted, with no
+forwarder or second admission path. Error wording now comes from the shared owner;
+wrong-target diagnostics identify the selected SHA. No named function/type was
+removed. Timer source, dependencies, Cargo versions and locks are unchanged.
+
+The two isolated adapter fixtures include the new helper in their exported inputs.
+The existing tag fixture covers accepted annotations, missing/lightweight/wrong
+tags, invalid or abbreviated identities and an older selected commit despite
+newer HEAD. Its new command substitutes reject failed commit resolution, tag-type
+and tag-target producers with empty or exactly matching output, and check refs
+remain unchanged. These fixtures are still selected by the complete release gate.
+They were not executed during preparation. Source/export/snapshot integrity,
+shell syntax and diff checks are preparation evidence; no commits, tags, pushes,
+formatter, tests, builds, lint, installation or release ran locally. The upstream shared
+verification fixture includes tag admission at the all-host-green `b32d303`,
+but cannot qualify these new consumer callers. #16 remains open for qualification
+of the completed worktree under the maintainer's gate.
+
+Released consumer `e001ab98195d3c8541430a934fd76f756c0717d2` (0.14.3) passed
+[main Linux/MSRV and both complete native macOS gates](https://github.com/dragginzgame/ic-timers/actions/runs/37493326312)
+and [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37493325538).
+That source qualifies the completed audit/tool/parser/lock/Cargo adoptions, not
+the later tag-checker worktree. At the maintainer's explicit request, consumer
+issues #11–#15 were closed with that source-bound evidence. The release
+[host record](releasing.md#host-support) retains the historical failure boundaries.
+
 ### Changelog finalizer review and history fix
 
 The compatible 0.14.3 batch fixes the existing consumer-owned finalizer's
@@ -361,8 +461,8 @@ advisories and the five-file rollback transaction remain unchanged. No named
 function or type was removed.
 
 Review of the unchanged shared finalizer at `b32d303` and newly committed
-`21f3ec3dd97f2968c9f0b08924451bb2f71770d1` found a source-level precision hazard
-that prevents adopting it yet. Its `historical()` first compares split component
+`21f3ec3dd97f2968c9f0b08924451bb2f71770d1` found a rare source-level precision
+hazard. Its `historical()` first compares split component
 values with `a[n] != b[n]`, before using string-prefixed ordering. Numeric strings
 from `split()` can compare numerically, so equal-length values above the exact
 floating-point range may collapse at that first comparison. See the
@@ -370,9 +470,12 @@ floating-point range may collapse at that first comparison. See the
 and the [exact upstream source](https://github.com/dragginzgame/shared-tooling/blob/21f3ec3dd97f2968c9f0b08924451bb2f71770d1/scripts/ci/finalize-release-changelog.awk).
 For example, adjacent components `9007199254740992` and `9007199254740993` are
 both valid u64 values. The upstream correction should force string comparison
-for equality too and qualify adjacent large components on all hosts. That is
-read-only review feedback; no upstream file or issue was changed and no local
-reproduction was run. The local parser remains the sole active consumer selector;
+for equality too and qualify adjacent large components on all hosts. At the
+maintainer's explicit request, this source-review finding was filed as
+[Shared Tooling #23](https://github.com/dragginzgame/shared-tooling/issues/23),
+including the proposed correction and unexecuted qualification case. No upstream
+source was modified and no local reproduction was run. The local parser remains
+the sole active consumer selector;
 no vendored file is patched and no new selector is added to the snapshot.
 
 Maintained fixtures now cover imported undated history with original spacing,
@@ -386,6 +489,10 @@ Upstream [0.1.9 CI](https://github.com/dragginzgame/shared-tooling/actions/runs/
 has now passed all native hosts, but does not prove this additional boundary or
 qualify the local fix. Native consumer gates remain maintainer-owned. The new
 0.1.10 installer/cache and fixture-retention changes were inspected but not adopted.
+Shared Tooling #23 is a P3 boundary case requiring manually enormous version
+components; it does not block adoption or justify a release by itself. The local
+undated-history fix is independent of that issue. No dirty upstream correction
+is eligible for snapshot adoption.
 
 ### Established runner and recovery
 

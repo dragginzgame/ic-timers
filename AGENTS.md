@@ -5,27 +5,29 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `cb86188c5956866564de4fb6ec6be67b27981ab9`. Its provenance and
+  from revision `46c02774a8335cb3949d6f04284c4f53375353c1` (0.1.11). Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
 - Apply the unchanged [shared audit methods](audits/README.md) from revision
-  `a37771f1b6b5fc9a88ed6ab3b705bdda35cd8fa3`, recorded separately in
+  `46c02774a8335cb3949d6f04284c4f53375353c1`, recorded separately in
   [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). That
   supplemental snapshot also supplies pinned host-parser setup at the same
   reviewed revision. The isolated
   [Cargo/IC helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
   supplies the structured dependency checker, Cargo readers/rewrites, IC
-  installer and formatter prerequisite guard from
-  `b32d3038c850a7c53470c326b0f7f11263b31669`. Apply the
+  installer, formatter prerequisite guard and annotated-tag checker from
+  `46c02774a8335cb3949d6f04284c4f53375353c1`. Apply the
   [dependency pinning rules](rules/dependency-pinning.md) with the exact local
   [qualification exceptions](docs/releasing.md#dependency-pin-exceptions).
   The [local hygiene overlay](docs/audits/code-hygiene.md) and adoption record scope
   their product obligations. This supplements the pinned baseline's review
   contract. Host and IC setup are explicit; verification is offline. The local
   audited PocketIC admission and automatic single-artifact provisioning contract
-  remain separate from generic IC setup. The newer full baseline, release runner
-  and host-installer changes are not adopted by these slices.
+  remain separate from generic IC setup. The paired baseline and maintenance
+  rule are adopted together; all three snapshots use the same reviewed revision.
+  Optional helpers described in shared guides do not become local commands
+  without a separate caller adoption.
 - Maintainer-approved validation exception: tests, builds, lint gates and
   deployment validation are user-owned, including focused tests. Do not run
   them without an explicit request. Read-only inspection, script syntax, diff,
@@ -55,20 +57,15 @@ This file is normative for automated contributors.
 - Make changes only in this repository unless the maintainer explicitly names
   another exact target and authorizes mutation there.
 - Inspection, review, audit, diagnosis, design, and feedback requests for other
-  repositories are read-only.
-- Preserve unrelated dirty worktree state.
+  repositories do not authorize source changes there. Owning-repository GitHub
+  issue reports follow the shared standing authorization; issue assignment and
+  closure retain their separate authority.
 - Retain the maintainer-approved independent workspace boundary required by
   the two-lockfile release workflow: `Cargo.toml` owns library dependencies and
   `testing/Cargo.toml` owns
   unpublished host/probe dependencies. This preserves separate lockfiles,
   Wasm profiles and release qualification without pulling host tooling into
   the publishable workspace. Members inherit from their respective root.
-- For authorized dependency changes, apply the reviewed
-  [preparation rule](https://github.com/dragginzgame/shared-tooling/blob/a7efade1a68e43f148252a1a73908a46c4cbe9e9/rules/cargo-dependencies.md#preparing-authorized-dependency-changes)
-  from revision `a7efade1a68e43f148252a1a73908a46c4cbe9e9` across both
-  independent workspace graphs. This explicitly referenced rule supplements the
-  pinned baseline; it preserves dependency, validation and release command
-  authority. Scope and provenance belong in [the adoption record](docs/shared-tooling.md).
 
 ## Status
 

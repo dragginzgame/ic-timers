@@ -12,8 +12,12 @@ a publishable package, must provide these Make targets:
 The names, version arithmetic, phase order, failure behavior and external effects
 are identical across repositories. Each repository supplies its canonical version
 source, metadata file set, validation gate, branch and remote. A repository
-without package metadata uses its latest finalized changelog version as the
-version source. Pre-release versions require a separately selected release plan;
+without package metadata may use a dedicated version file; otherwise it uses
+its latest finalized changelog version. Shared Tooling owns its current local
+version in root `VERSION`, displayed by `make version`. Its undated changelog
+heading names the next proposed release. Preparation updates both files and
+stages them together; neither a version file nor a changelog heading proves
+that a tag was pushed. Pre-release versions require a separately selected release plan;
 these commands must reject ambiguous or unsupported version inputs.
 
 ## Required workflow
@@ -26,7 +30,10 @@ these commands must reject ambiguous or unsupported version inputs.
    still have different staged content. Check pending changelog/candidate
    agreement here, before the validation gate or saved preparation intent. Prepare
    the selected dependency cache before an offline gate without changing the
-   lockfile selection. Never infer a deployment destination or credentials.
+   lockfile selection. Authorized dependency changes must already have
+   [prepared every affected independent lockfile](../rules/cargo-dependencies.md#preparing-authorized-dependency-changes);
+   cache fetching stays locked and does not repair stale dependency graphs.
+   Never infer a deployment destination or credentials.
 2. **Validate.** Run the repository's documented complete release gate against
    the selected source and dependencies. Patch, minor and major use the same
    gate. Stop before version mutation if validation fails; retain failure logs
@@ -176,6 +183,29 @@ the runner does not reconstruct an old checkout or substitute new validation for
 the older release. Update receipt verifier arguments and their source/tree/tag
 bindings together during adoption. A failed consumer check still stops recovery.
 
+## Nested validation and adoption fixtures
+
+Release selections propagate through Make command-line variables, including
+`MAKEFLAGS` and `MAKEOVERRIDES`. Preserve them in normal adapters and same-checkout
+nested validation. An independently configured fixture owns its own selections:
+clear inherited `MAKEFLAGS`, `MFLAGS` and `MAKEOVERRIDES` before its Make calls,
+then supply the fixture's intended release variables explicitly.
+
+The validation logger's `VALIDATION_REPOSITORY_ROOT` and
+`VALIDATION_RUNNER_SNAPSHOT_PATH` bind its temporary source snapshot. They stop
+at that runner's dispatch boundary; dispatched targets retain release selections,
+failure-log policy and nesting depth. An independent fixture must establish its
+own checkout and log destination, clearing inherited logger checkout/snapshot
+identity when it can also run under older snapshots. Do not globally strip
+release selections in the release runner to accommodate a fixture.
+
+Qualify adoption fixtures through actual Make release overrides and the actual
+logger in a distinct parent checkout, as well as standalone invocation. Use a
+cheap parent gate sentinel to catch routing errors without starting a real gate;
+verify that nested validation reaches its intended checkout, preserves selected
+release identity and retains distinct failed-attempt logs. Keep consumer fixes
+outside immutable shared snapshots until adopting a reviewed upstream revision.
+
 ## Authority and recovery
 
 The maintainer invokes the one-shot commands. Agents never run them, even when a
@@ -220,6 +250,40 @@ plan is retained evidence and does not block the next release. A later failure
 from a separately chained command does not undo that successful branch/tag push.
 Package publication requires a consumer-owned publication command and an eligible
 package; do not append `make publish` automatically to the standard release flow.
+
+## Shared changelog finalization
+
+Release adapters reuse `scripts/ci/finalize-release-changelog.awk` for candidate
+selection and heading rewriting instead of implementing another changelog parser:
+
+```bash
+awk -v version="$RELEASE_VERSION" -v previous="$RELEASE_PREVIOUS" \
+  -v date="$RELEASE_DATE" \
+  -f scripts/ci/finalize-release-changelog.awk CHANGELOG.md > "$candidate"
+```
+
+The adapter validates these identities from the saved release intent and owns
+the temporary candidate path. Check the command's status before using its
+output; never redirect directly over the input. Preflight can discard a
+successful candidate without modifying the changelog. Preparation installs it
+inside the consumer's existing metadata transaction, preserving backups,
+rollback, receipts and exact prepared-payload checks.
+
+Pass the saved previous version even after package metadata has been bumped.
+Undated numbered sections at or below that version remain history. One pending
+numbered section must agree with the target; competing candidates or a target
+already dated differently are conflicts. The helper also understands the older
+`Draft` input, but maintained notes follow the numbered-draft rules. With no
+draft it creates the selected heading; it does not invent release-note content.
+
+The optional `-v allow_finalized=1` admits exactly one already-finalized target
+at the top with the same date and no pending candidate. Select it only where
+the adapter's recovery contract admits that exact state; it does not establish
+source, payload or publication identity. The helper is not a general historical
+ledger linter or an empty-note gate. Before deleting local selectors, review
+their extra checks separately: preserve independent corruption/identity checks,
+and reconcile prose requirements with the [changelog rules](../rules/changelogs.md).
+Do not silently change a consumer's refusal or recovery behavior during adoption.
 
 ## Adoption and verification
 

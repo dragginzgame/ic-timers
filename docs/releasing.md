@@ -466,6 +466,17 @@ Both complete macOS jobs were queued at inspection; latest inspected complete
 all-host qualification remains 0.14.0. These results qualify the earlier
 helper/CI repair on the inspected hosts, not the subsequent formatter worktree.
 
+For release commit `e001ab98195d3c8541430a934fd76f756c0717d2` (0.14.3),
+[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37493326312)
+passed Linux checks, MSRV and both complete native macOS release gates.
+The matching [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37493325538)
+passed its exact-tag/main-ancestry checks. This is the latest inspected all-host
+qualification, including formatter prerequisites, changelog preparation and the
+earlier Cargo/IC helper wiring. Registry publication was not independently
+checked. These results do not qualify the later 0.14.4 tag-checker and tooling
+worktree. The [0.1.11 refresh owner](shared-tooling.md#shared-tooling-0111-refresh)
+records exact upstream all-host evidence and pending consumer qualification.
+
 Version preparation uses Bash, Perl, Git, Cargo and the explicitly installed
 jq/yq parser pair. It owns regular metadata
 files; symlinked or non-file outputs are rejected before mutation. Applicable
@@ -583,6 +594,13 @@ tools require explicit setup. Make and the repository fixture select
 `.tools/host/bin`, with an explicit yq path. CI performs setup in each applicable
 job before its gates. No system jq/yq selection is introduced. PocketIC keeps its
 separate exact audited admission owner.
+
+The 0.14.4 tooling refresh adopts Shared Tooling 0.1.11's failed-version-producer
+refusal and retained host-fixture evidence. jq/yq pins and these no-flag setup/check
+calls remain unchanged. The optional shared `--with-ripgrep` interface is not
+selected here; system ripgrep remains an explicit bootstrap prerequisite. The
+[refresh owner](shared-tooling.md#shared-tooling-0111-refresh) distinguishes shared
+guide examples from these consumer commands and records pending qualification.
 
 Use the [bootstrap prerequisites](local-setup.md#bootstrap-prerequisites)
 for Linux Mint/Ubuntu and macOS, plus this repository's Rust toolchains,
@@ -925,10 +943,22 @@ to user-operated validation without package publication, cleanup, another gate
 or runtime instrumentation. The logger's optional ripgrep branch has a stock
 grep fallback; no new host installation is required.
 
+The 0.14.4 logger refresh keeps passing/ignored `error::` test names and retained
+context ordinary while highlighting actual diagnostics. Dispatched child loggers
+choose their own checkout; inherited release selections, log policy and nesting
+depth remain. The existing release-gate fixture covers these source-reviewed
+cases through the actual adapter and both prepared/stock search paths. No target
+membership, ordering or gate is removed; fresh consumer execution remains pending.
+
 The tag checker takes explicit commit/version arguments only in those late
 callbacks. Its no-argument mode still checks the current workspace and HEAD for
 standalone tagging and publishing. Missing commit selections, floating refs,
 lightweight/wrong tags, invalid metadata or failed checks stop recovery.
+The compatible 0.14.4 worktree delegates those checks to the recorded shared
+`check-release-tag.sh`; the local adapter retains only identity selection.
+Diagnostics come from the shared owner, including the selected SHA for a wrong
+target. The [adoption record](shared-tooling.md#annotated-tag-checker-adoption)
+owns source, unchanged caller contracts and pending qualification.
 When newer fixes exist, completing the older release does not implicitly publish
 those fixes: the runner validates them afresh before preparing the requested
 next increment. Changed remote history must be established before replay;

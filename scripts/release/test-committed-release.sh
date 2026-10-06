@@ -14,6 +14,7 @@ mkdir -p "$fixture/current/scripts" "$fixture/current/.shared-tooling/helpers/sc
 cp "$root/Makefile" "$fixture/current/"
 cp -R "$root/scripts/release" "$fixture/current/scripts/"
 cp "$root/.shared-tooling/helpers/scripts/ci/read-cargo-workspace-version.sh" \
+    "$root/.shared-tooling/helpers/scripts/ci/check-release-tag.sh" \
     "$fixture/current/.shared-tooling/helpers/scripts/ci/"
 cp "$root/tool-versions.env" "$fixture/current/"
 printf '%s\n' '[workspace.package]' 'version = "0.1.0"' > "$fixture/selected/Cargo.toml"

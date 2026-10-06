@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# This independent fixture owns its Make selections and logger checkout.
+unset MAKEFLAGS MFLAGS MAKEOVERRIDES
+unset VALIDATION_REPOSITORY_ROOT VALIDATION_RUNNER_SNAPSHOT_PATH
+
 repository_root="$(git rev-parse --show-toplevel)"
 export PATH="${repository_root}/.tools/host/bin:${PATH}"
 export YQ="${repository_root}/.tools/host/bin/yq"
@@ -57,7 +61,7 @@ fi
 # Execute the real orchestration with cheap leaf targets. Expected checks remain
 # independent of Makefile variables; their spelling and recipe layout do not.
 temporary_root="$(mktemp -d)"
-trap 'rm -rf -- "${temporary_root}"' EXIT
+trap 'if [[ $? == 0 ]]; then rm -rf -- "${temporary_root}"; else printf "Failed release-gate fixture retained: %s\n" "${temporary_root}" >&2; fi' EXIT
 # Make's CURDIR is physical, including under macOS's /var -> /private/var.
 # Enter through an alias on every host so this path distinction stays covered.
 mkdir "${temporary_root}/workspace"
@@ -249,5 +253,58 @@ if PATH="$fixture_root/stock-bin" "${fixture_make[@]}" release-verify \
     FAIL_TARGET=fetch > stock-host-output 2>&1; then exit 1; fi
 grep -Fq 'failed fetch' "$failure_root/latest.log"
 grep -Fq 'Full failure log retained at:' stock-host-output
+
+# Qualify the actual consumer logger with both its optional search backends.
+cat >> overrides.mk <<'EOF'
+logging-pass:
+	@echo 'test error::tests::passing ... ok'
+	@echo 'test error::tests::ignored ... ignored'
+logging-fail:
+	@echo 'test error::tests::context ... ok'
+	@echo 'error[E0308]: typed-marker'
+	@echo 'error:no-space-marker'
+	@echo 'error:'
+	@echo 'test error::tests::actual ... FAILED'
+	@exit 7
+logging-parent:
+	+bash child/scripts/ci/run-validation-targets.sh child-gate
+EOF
+for backend in prepared stock; do
+    logger_path="$PATH"
+    if [[ "$backend" == stock ]]; then logger_path="$fixture_root/stock-bin"; fi
+    PATH="$logger_path" bash scripts/ci/run-validation-targets.sh logging-pass \
+        > "$backend-passing-output" 2>&1
+    grep -Fxq 'test error::tests::passing ... ok' "$backend-passing-output"
+    grep -Fxq 'test error::tests::ignored ... ignored' "$backend-passing-output"
+    if grep -Fq '[ERR:' "$backend-passing-output"; then exit 1; fi
+    if PATH="$logger_path" "${fixture_make[@]}" release-verify \
+        RELEASE_TARGETS=logging-fail > "$backend-failing-output" 2>&1; then exit 1; fi
+    for log in "$backend-failing-output" "$failure_root/latest-errors.log"; do
+        grep -Fq '[logging-fail] test error::tests::context ... ok' "$log"
+        for diagnostic in 'error[E0308]: typed-marker' 'error:no-space-marker' \
+            'error:' 'test error::tests::actual ... FAILED'; do
+            grep -Fxq "[ERR:logging-fail] $diagnostic" "$log"
+        done
+        if grep -Fq '[ERR:logging-fail] test error::tests::context ... ok' "$log"; then exit 1; fi
+    done
+    grep -Fxq 'test error::tests::context ... ok' "$failure_root/latest.log"
+    grep -Fxq 'error:no-space-marker' "$failure_root/latest.log"
+    if grep -Fq '[ERR:' "$failure_root/latest.log"; then exit 1; fi
+done
+
+# A child logger must select its own checkout while retaining release identity.
+mkdir -p child/scripts/ci
+cp "$repository_root/scripts/ci/run-validation-targets.sh" child/scripts/ci/
+cat > child/Makefile <<'EOF'
+child-gate:
+	@test "$(RELEASE_VERSION)" = 9.8.7
+	@test "$(RELEASE_COMMIT)" = fixture-selected-commit
+	@test "$$VALIDATION_RUNNER_DEPTH" = 2
+	@echo child-checkout-marker
+EOF
+"${fixture_make[@]}" release-verify RELEASE_TARGETS=logging-parent \
+    RELEASE_VERSION=9.8.7 RELEASE_COMMIT=fixture-selected-commit \
+    > nested-logging-output 2>&1
+grep -Fq child-checkout-marker nested-logging-output
 
 echo "Release gate execution checks passed"

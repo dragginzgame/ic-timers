@@ -2,6 +2,21 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.4]
+
+### Development
+
+- Refresh the reviewed Shared Tooling snapshots to 0.1.11. Passing `error::`
+  test names remain ordinary validation output, while actual diagnostics retain
+  highlighting and failure logs. Adopt the paired maintenance policy and stricter
+  host-tool version admission; validation and release execution remain user-owned.
+  This is repository-only work.
+- Delegate annotated release-tag validation to the reviewed shared checker,
+  preserving HEAD checks for publication and saved-commit checks for release
+  recovery ([#16](https://github.com/dragginzgame/ic-timers/issues/16)).
+  This is repository-only work; timer behavior and dependency selections are
+  unchanged.
+
 ## [0.14.3] - 2026-10-06
 
 ### Development

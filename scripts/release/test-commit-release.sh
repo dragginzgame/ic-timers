@@ -12,6 +12,7 @@ for script in commit-release check-tag-at-head workspace-version readme-version;
 done
 cp "${repository_root}/scripts/ci/ensure-clean.sh" "${temporary_root}/scripts/ci/"
 cp "${repository_root}/.shared-tooling/helpers/scripts/ci/read-cargo-workspace-version.sh" \
+    "${repository_root}/.shared-tooling/helpers/scripts/ci/check-release-tag.sh" \
     "${temporary_root}/.shared-tooling/helpers/scripts/ci/"
 # Cargo coherence is tested by test-lockfiles; this fixture isolates Git phases.
 printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "${temporary_root}/scripts/release/check-lockfiles.sh"
@@ -195,7 +196,7 @@ git tag v0.1.0
 expect_failure 'must be annotated' bash scripts/release/commit-release.sh
 git tag -d v0.1.0 >/dev/null
 git tag -a v0.1.0 HEAD~1 -m fixture
-expect_failure 'does not point to HEAD' bash scripts/release/commit-release.sh
+expect_failure 'does not point to' bash scripts/release/commit-release.sh
 git tag -d v0.1.0 >/dev/null
 git tag -a v0.1.0 -m fixture
 printf '%s\n' 'Unstaged change.' >> README.md
