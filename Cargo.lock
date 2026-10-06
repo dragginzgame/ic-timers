@@ -32,7 +32,7 @@ checksum = "10b83d9a638bfd00724929c30df68c154b3fab6c0fb660ee78369f171c2aa144"
 
 [[package]]
 name = "ic-timers"
-version = "0.14.1"
+version = "0.14.2"
 dependencies = [
  "ic-cdk-timers",
  "ic-metrics",
