@@ -4008,7 +4008,7 @@ fn coalesced_watchdog_requests_preserve_paired_handles_without_reinstallation() 
     let _fixture = setup();
     let timer = identity("paired-request-preservation");
     let registration = register_watchdog(
-        timer.clone(),
+        timer,
         TimerCadence::from_nanos(5).unwrap(),
         DeclarationLifetime::Retained,
         |context| {
