@@ -2,7 +2,7 @@
 
 # Current status
 
-Last updated: 2026-10-05
+Last updated: 2026-10-06
 
 ## Purpose
 
@@ -17,20 +17,24 @@ references and validation belong in [release notes](../changelog/README.md),
   accepted batch under its automatically selected, undated next version.
   The maintainer's bump finalizes and dates it; a dated section alone does not prove
   tagging, publication or deployment.
-- The maintainer's release commit `6eedf5a` and local tag `v0.13.0` match the
-  current Cargo version and finalized changelog. Publication and deployment
-  were not independently checked. The selected undated 0.13.1 section starts
-  with repository-only documentation corrections; it changes no public contract
-  and keeps the complete user-operated release gate. Further compatible work
-  extends that same section. No version or lockfile mutation is authorized here.
+- At the latest inspection, Cargo, the finalized changelog and local tag
+  `v0.13.1` match release commit `54bbcfc`; the maintainer reports it is live.
+  Publication and deployment were not independently checked. Both lockfiles
+  select registry `ic-metrics 0.1.5`; its shared Wasm instruction reader replaces
+  the direct reader while retaining counter type 1 and local callback attribution.
+  The selected undated 0.13.2 section fixes a repository-only release fixture:
+  compare the physical workspace path and exercise a directory alias on every
+  host. Runtime source, package identity and both lockfiles remain unchanged.
+  Read Cargo, the changelog and Git again for later release identity rather than
+  using this inspection record as a version-selection marker.
 - Apply the pinned [Shared Tooling baseline and local overlay](../../AGENTS.md).
   Its [adoption record](../shared-tooling.md) scopes provenance and exceptions.
   Historical release notes retain evidence; no new versioned note or mutable
   handoff release marker is required for version preparation.
-  Shared measurement arithmetic uses published registry `ic-metrics 0.1.3`;
-  attribution and registration identity remain local. The root dependency and
-  both lockfiles select one registry package; every other lock record and all
-  consumer package versions are preserved. Locked offline metadata and manifest
+  During the 0.13.0 adoption, shared measurement arithmetic selected published
+  registry `ic-metrics 0.1.3`; attribution and registration identity remained local.
+  The root dependency and both lockfiles selected one registry package, preserving
+  every other lock record and consumer package version. Locked offline metadata and manifest
   sorting pass for both workspaces. Warning-denied library Clippy, four measurement
   tests and focused registration/reset identity, stale delivery, discarded delivery,
   binding-failure and normal-completion checks pass on Linux. The initial Clippy
@@ -171,9 +175,9 @@ references and validation belong in [release notes](../changelog/README.md),
   Normal live-await control and Watchdog prearming remain separate. Native drop and
   PocketIC pre-await/continuation trap fixtures are unexecuted; cleanup qualification
   and cost deltas remain pending with the [callback contract](../design/0.5-policy-specific-callback-authority.md#ordinary-delivery-abandonment).
-  The finalized 0.13.0 section records the minor semantic cut; the undated 0.13.1
-  section records subsequent documentation. Package versions and lockfiles remain
-  maintainer-owned.
+  The finalized 0.13.0 section records the minor semantic cut; finalized 0.13.1
+  records the shared instruction reader and documentation. Package versions and
+  lockfiles remain maintainer-owned.
 
 - One volatile canister-local registry owns at most 64 structured identities,
   declaration claims, callback generations, policy states, pending commands,
@@ -317,6 +321,40 @@ Generation ownership, provider binding, workspace formatting and audit follow-up
 are recorded in the [0.10.12 note](../changelog/0.10.12.md).
 
 ## Evidence
+
+On 2026-10-06 the committed Shared Tooling head and remote main both remained
+`f52c0e2476aee094359ed21de91c468540d3969f`; the 20-file snapshot verified. The
+dirty upstream maintenance rules remain outside the reviewed snapshot. Both
+0.13.1 macOS jobs failed the release fixture's logical-versus-physical default
+cache comparison, while Linux checks passed. MSRV and tag jobs did not acquire
+hosted runners. The 0.13.2 fixture repair retains all gate and override assertions;
+its source/syntax scope and pending native rerun are recorded in the
+[host matrix](../releasing.md#host-support). No tests, builds, lint gates, version
+mutation or release execution were performed during this repair.
+
+The extraction workflow also ran the previously authorized focused qualification
+for the shared-reader wiring: native and Wasm library Clippy with warnings denied,
+Rust 1.88 Wasm compilation, and four named native tests for role-specific
+measurement saturation, completion totals, registration identity and abandoned
+work. They passed while Cargo still identified the package as 0.13.0. The
+maintainer subsequently committed that exact platform source and selected
+0.13.1; its release commit changed metadata only. Both locked workspace graphs
+resolve one registry ic-metrics 0.1.5 with `ic`, preserving every external
+selection except metrics. These checks use the consumer/test-owned native
+substitute; they do not establish timer PocketIC or full release qualification.
+
+
+A 2026-10-05 source review traced the 0.13.1 reader through the downloaded registry
+source to `ic0::performance_counter(1)`, and reviewed ordinary delivery ownership
+and scoped native fixture cleanup. This is source evidence, with no new test,
+build, lint, PocketIC or cost measurements. GitHub's main and tag CI runs for
+`54bbcfc4985d4657578150cbe7112795297115fd` were queued when inspected:
+[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37370535919) and
+[tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37370535920).
+[Issue #9](https://github.com/dragginzgame/ic-timers/issues/9) remains open for the
+owning native release/CI qualification; its registry implementation is present.
+No open PR was listed. Shared Tooling's committed head remains the adopted
+revision; its dirty maintenance-rule draft is outside the reviewed snapshot.
 
 Inspected hosted validation for 0.9.4 is scoped in its
 [delivery note](../changelog/0.9.4.md). Release reports and Git references alone do

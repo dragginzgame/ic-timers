@@ -62,8 +62,13 @@ fi
 # independent of Makefile variables; their spelling and recipe layout do not.
 temporary_root="$(mktemp -d)"
 trap 'rm -rf -- "${temporary_root}"' EXIT
-cp "${makefile}" "${temporary_root}/Makefile"
-cd "${temporary_root}"
+# Make's CURDIR is physical, including under macOS's /var -> /private/var.
+# Enter through an alias on every host so this path distinction stays covered.
+mkdir "${temporary_root}/workspace"
+ln -s workspace "${temporary_root}/workspace-alias"
+cp "${makefile}" "${temporary_root}/workspace/Makefile"
+cd "${temporary_root}/workspace-alias"
+fixture_root="$(pwd -P)"
 
 # Exercise real fetch recipes with a recording Cargo stub, never the network.
 mkdir -p bin
@@ -84,7 +89,7 @@ chmod +x bin/cargo
 fetch_calls=('fetch --manifest-path Cargo.toml --locked'
     'fetch --manifest-path testing/Cargo.toml --locked')
 for failed_manifest in '' Cargo.toml testing/Cargo.toml; do
-    if PATH="${temporary_root}/bin:${PATH}" FIXTURE_FAIL_FETCH="${failed_manifest}" \
+    if PATH="${fixture_root}/bin:${PATH}" FIXTURE_FAIL_FETCH="${failed_manifest}" \
         make --no-print-directory fetch >fetch-output 2>&1; then
         if [[ -n "${failed_manifest}" ]]; then
             echo "error: dependency preparation accepted failed ${failed_manifest} fetch" >&2
@@ -118,7 +123,7 @@ for target in test msrv; do
     esac
     for failed_call in '' "${calls[@]}"; do
         : > api-test-events
-        if PATH="${temporary_root}/bin:${PATH}" FIXTURE_CARGO_LOG=api-test-events \
+        if PATH="${fixture_root}/bin:${PATH}" FIXTURE_CARGO_LOG=api-test-events \
             FIXTURE_FAIL_CARGO_CALL="${failed_call}" make --no-print-directory \
             "${target}" MSRV=1.88.0 >api-test-output 2>&1; then
             if [[ -n "${failed_call}" ]]; then
@@ -146,7 +151,7 @@ cat > scripts/ci/check-pocketic.sh <<'EOF'
 printf '%s\n%s\n' "${POCKET_IC_BIN}" "${POCKET_IC_AUTO_INSTALL}" > provisioning
 if [[ -z "${POCKET_IC_BIN}" ]]; then exit 2; fi
 EOF
-default_binary="${temporary_root}/target/tools/pocket-ic/16.0.0/pocket-ic"
+default_binary="${fixture_root}/target/tools/pocket-ic/16.0.0/pocket-ic"
 for source in default environment command-line same-as-default empty; do
     case "${source}" in
         default)

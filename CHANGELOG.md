@@ -2,6 +2,16 @@
 
 All notable changes to this project are recorded here.
 
+## [0.13.2]
+
+### Fixed
+
+- Correct release-gate fixture comparisons when the workspace is reached through
+  a directory symlink, including macOS's `/var` temporary paths. Exercise the
+  alias on every host while retaining exact default and override PocketIC
+  selection checks. Production provisioning and the complete release gate are
+  unchanged; this is repository-only test tooling.
+
 ## [0.13.1] - 2026-10-05
 
 ### Changed

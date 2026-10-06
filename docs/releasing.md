@@ -76,7 +76,7 @@ impact or silently weakens validation. A `none` subject is still rejected.
 Keep completed user-visible changes in one numbered, undated section at the top:
 
 ```text
-## [0.13.1]
+## [0.13.2]
 ```
 
 Automated contributors derive the candidate from the latest finalized release
@@ -338,6 +338,26 @@ continues to target Wasm on the Internet Computer.
 | Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The release gate pins the audited PocketIC 16.0.0 Linux x86_64 artifact. Recorded results remain scoped to their original subjects. |
 | macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. Native execution and qualification for this change remain pending. |
 | macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. Native execution and qualification for this change remain pending. |
+
+Inspection on 2026-10-06 of the 0.13.1 source at
+`54bbcfc4985d4657578150cbe7112795297115fd` found both native macOS jobs in
+[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37370535919)
+failed in `test-release-gate.sh` at the default PocketIC path comparison. The
+verified artifacts and preceding snapshot/release fixtures passed on each host;
+the complete gate did not pass. Make selected the physical `/private/var/...`
+workspace, while the fixture expected the logical `/var/...` temporary path.
+The fixture now derives its expected cache from `pwd -P` and deliberately enters
+through a directory symlink on every host. It retains exact default, environment,
+command-line, same-as-default and empty override checks; production provisioning
+is unchanged. Source review, shell syntax and diff checks are the preparation
+scope; corrected fixture execution and complete native qualification remain
+maintainer-owned and pending.
+
+For that same source, the Linux `checks` job passed its CI and nested-probe lint
+steps. The separate MSRV job and
+[tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37370535920)
+failed to acquire hosted runners, without executing their steps. These service
+failures do not qualify those gates and are distinct from the macOS fixture bug.
 
 Version preparation uses Bash, Perl, Git and Cargo. It owns regular metadata
 files; symlinked or non-file outputs are rejected before mutation. Applicable
