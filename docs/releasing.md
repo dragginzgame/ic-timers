@@ -341,8 +341,8 @@ continues to target Wasm on the Internet Computer.
 | Host | Current workflow configuration and evidence scope |
 | --- | --- |
 | Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The release gate pins the audited PocketIC 16.0.0 Linux x86_64 artifact. Recorded results remain scoped to their original subjects. |
-| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The complete release gate passed for 0.13.3 at `864397a`; 0.13.4 failed in committed-metadata rejection coverage. Pending repair requires fresh qualification. |
-| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The complete release gate passed for 0.13.3 at `864397a`; 0.13.4 failed in committed-metadata rejection coverage. Pending repair requires fresh qualification. |
+| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The complete release gate passed for 0.13.5 at `98c4b29`, including repaired release fixtures and all maintained runtime/cohort subjects. Later edits need fresh qualification. |
+| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The complete release gate passed for 0.13.5 at `98c4b29`, including repaired release fixtures and all maintained runtime/cohort subjects. Later edits need fresh qualification. |
 
 Inspection on 2026-10-06 of the 0.13.1 source at
 `54bbcfc4985d4657578150cbe7112795297115fd` found both native macOS jobs in
@@ -406,6 +406,20 @@ Both macOS hosts failed `test-committed-release.sh` with
 and cohort stages were not reached. These results do not qualify the complete
 0.13.4 release gate, despite the successful tag job. Registry publication was
 not independently checked.
+
+For release commit `98c4b296d7461525c15a01e30adbe33b75bcfa38` (0.13.5),
+[tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37442171230)
+passed. The matching
+[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37442170942)
+passed Linux checks, MSRV and both complete native macOS release gates.
+The completed host logs confirm the selected-commit and real-index fixtures
+passed. Each macOS job records 142 native tests, doctests,
+14 PocketIC runtime subjects and policy cohorts with audited PocketIC 16.0.0.
+The [cohort review](design/callback-delivery-ownership.md#released-0135-cohort-review)
+records exact installed byte sizes and comparison limits. The tagged root lock
+selects registry ic-metrics 0.1.7, while the testing/probe lock selects 0.1.6;
+both satisfy the tagged compatible 0.1.6 requirement. Results qualify their
+recorded graphs only, not later manifest edits, publication or composed consumers.
 
 Version preparation uses Bash, Perl, Git and Cargo. It owns regular metadata
 files; symlinked or non-file outputs are rejected before mutation. Applicable
@@ -793,7 +807,7 @@ release-gate fixture now checks raw failure retention across failed/successful
 attempts and execution with a tool path excluding ripgrep. Full gate sequencing,
 failure propagation and PocketIC override assertions are retained.
 The 0.13.4 hosted attempt failed at the subjects recorded in the
-[host matrix](#host-support). The pending 0.13.5 repair explicitly returns each
+[host matrix](#host-support). The released 0.13.5 repair explicitly returns each
 metadata-check failure, including workspace-version extraction, both manifest
 ordering checks, README projection and locked resolution. Git path admission
 also returns failed producer status explicitly. This avoids relying on Bash 3.2
@@ -809,12 +823,14 @@ The existing index-preservation, failed-Git-query and ordered locked-fetch
 subjects remain. Both fixtures print their captured adapter output on failure
 before cleanup, so subsequent hosted failures retain the underlying error.
 Source and shell/embedded-shell syntax inspection and diff checks are preparation
-evidence; repaired fixture execution and native Linux/macOS qualification remain
-maintainer-owned and pending. No release was executed during contributor repair.
+evidence. The later Linux and both native macOS 0.13.5 hosted gates pass the repaired
+fixtures, scoped in the [host matrix](#host-support). No release
+was executed during contributor repair.
 
 The prepared host-only cohort row also appends `wasm_bytes`, measured from the
 exact vector installed into PocketIC for each baseline/policy artifact. The
 existing cohort gate builds and measures those artifacts as before; there is no
 new build or evidence command. Earlier hosted logs have instruction subjects
-but no byte counts, so no historical Wasm delta is inferred. Compilation, lint
-and execution of this added output remain user-owned and pending.
+but no byte counts, so no historical Wasm delta is inferred. The completed
+0.13.5 native macOS gates supply executed output, scoped in the
+[cohort review](design/callback-delivery-ownership.md#released-0135-cohort-review).

@@ -53,15 +53,8 @@ pub(crate) fn canister_version() -> u64 {
 /// Return call-context instruction consumption on the IC.
 #[cfg(not(test))]
 pub(crate) fn instruction_counter() -> u64 {
-    #[cfg(target_arch = "wasm32")]
-    {
-        ic_metrics::call_context_instructions()
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    {
-        // Preserve the existing non-IC binding contract; native tests own their fake.
-        ic0::performance_counter(1)
-    }
+    // Native tests own their fake; production retains the IC binding contract.
+    ic0::performance_counter(1)
 }
 
 /// Return current Wasm and stable memory extents in 64 KiB pages without

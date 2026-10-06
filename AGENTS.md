@@ -9,6 +9,14 @@ This file is normative for automated contributors.
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
+- Apply the unchanged [shared audit methods](audits/README.md) from revision
+  `a37771f1b6b5fc9a88ed6ab3b705bdda35cd8fa3`, recorded separately in
+  [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). The
+  [local hygiene overlay](docs/audits/code-hygiene.md) and adoption record scope
+  their product obligations. This supplements the pinned baseline's review
+  contract. Linked pinning/setup documents and catalogs are upstream reference
+  material; their checker, installers and newer full baseline are not adopted
+  by this audit-method update.
 - Maintainer-approved validation exception: tests, builds, lint gates and
   deployment validation are user-owned, including focused tests. Do not run
   them without an explicit request. Read-only inspection, script syntax, diff,
@@ -46,6 +54,12 @@ This file is normative for automated contributors.
   unpublished host/probe dependencies. This preserves separate lockfiles,
   Wasm profiles and release qualification without pulling host tooling into
   the publishable workspace. Members inherit from their respective root.
+- For authorized dependency changes, apply the reviewed
+  [preparation rule](https://github.com/dragginzgame/shared-tooling/blob/a7efade1a68e43f148252a1a73908a46c4cbe9e9/rules/cargo-dependencies.md#preparing-authorized-dependency-changes)
+  from revision `a7efade1a68e43f148252a1a73908a46c4cbe9e9` across both
+  independent workspace graphs. This explicitly referenced rule supplements the
+  pinned baseline; it preserves dependency, validation and release command
+  authority. Scope and provenance belong in [the adoption record](docs/shared-tooling.md).
 
 ## Status
 

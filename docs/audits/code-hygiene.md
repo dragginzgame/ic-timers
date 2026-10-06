@@ -1,65 +1,98 @@
 ![IC Timers — Schedules and tracks background work](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-readme-header.svg)
 
-# Recurring code-hygiene audit
+# IC Timers code-hygiene overlay
 
-Use this narrow audit before a minor release or after a substantial public API
-change. It is not a substitute for the recovery/PocketIC evidence in
-`SAFETY.md`.
+Use the [shared code-hygiene method](../../audits/code-hygiene.md) and
+[common audit contract](../../audits/README.md), unchanged from Shared Tooling
+`a37771f1b6b5fc9a88ed6ab3b705bdda35cd8fa3`. The
+[audit snapshot](../../.shared-tooling-audits.snapshot) identifies those files;
+[AGENTS.md](../../AGENTS.md) supplies local command authority. This overlay
+selects product scope for a requested review, including a review before a minor
+release or after a substantial API change. It adds no automatic gate or schedule.
 
-## Mechanical checks
+## Product authorities and scope
 
-Run:
+Trace the affected facade and owners under `crates/ic-timers/src`, including
+their colocated tests. Include `testing/runtime-probe`, `testing/size-probe`
+and `testing/pocketic` when provider, recovery or measurement assertions are
+in scope. Repository tooling reviews include affected `scripts/`, workflows,
+Make recipes, package inputs and both independent Cargo workspaces.
 
-```text
-make ci
-make msrv
+Retain these local obligations:
+
+- The crate root exposes the intended facade. `platform` is the only direct
+  `ic-cdk-timers` boundary and remains private; provider handles and functions
+  do not become public control paths. Implementation imports use defining
+  owners rather than accidental crate-root re-exports.
+- Snapshots are inert observations, validated configuration admits inputs,
+  and claims/callback contexts carry runtime authority. Constructors and public
+  validation boundaries retain typed rejection and negative coverage.
+- Delegated callback capabilities expire with the exact claim, role and work
+  attempt. A registration's longer lifetime cannot authorize stale delivery.
+- Registry arbitration, effect confirmation, handle restoration and callback
+  finalization retain their distinct suspension and rollback obligations.
+  Preserve atomic transitions when reviewing large functions or similar flows.
+- Scheduler starts, work dispatches, work starts, completions, unacknowledged
+  attempts and measurements remain separate events. Counters, totals, deadlines
+  and generations retain checked or documented saturating arithmetic.
+- [Architecture](../architecture.md), [callback authority](../design/0.5-policy-specific-callback-authority.md)
+  and [delivery ownership](../design/callback-delivery-ownership.md) own runtime
+  interpretation. [SAFETY.md](../../SAFETY.md) owns recovery guarantees and their
+  maintained PocketIC proof; a native substitute or hygiene verdict cannot
+  establish IC trap/rollback behavior.
+- README, architecture, status, changelog and safety statements stay aligned
+  with the actual implementation and source-bound evidence. Applications retain
+  durable intent and reconstruct runtime declarations after upgrades.
+- [Release rules](../releasing.md) own forward-only version preparation, exact
+  tags, pre-1.0 minor compatibility cuts and repository-only delivery, including
+  the maintainer-approved repository-only release exception.
+
+The shared methods own generic API, import, error, dependency, artifact and
+documentation questions. Scope exclusions must name their reason; unavailable
+required recovery proof is a gap. A structural review does not replace lifecycle,
+security, persistence, deployment or performance qualification.
+
+## Inspection and validation commands
+
+Cheap inspection permitted by AGENTS.md includes:
+
+```bash
 git diff --check
+rg 'unwrap\(|expect\(|panic!|todo!|unimplemented!|TODO|FIXME|HACK' crates/ic-timers/src
+rg 'pub(\(| )|ic_cdk_timers|ic-cdk-timers' crates/ic-timers/src Cargo.toml crates/ic-timers/Cargo.toml
+bash scripts/ci/verify-shared-tooling-snapshot.sh
+bash scripts/ci/verify-shared-tooling-snapshot.sh --manifest .shared-tooling-audits.snapshot
 ```
 
-Then inspect:
+Inspect command effects before selecting additional evidence. Applicable locked
+metadata and `cargo tree --workspace --duplicates --locked --offline` inspect
+the selected graphs without upgrading them; cache preparation and dependency
+changes retain separate authority. Package-content inspection belongs with the
+existing package owner and does not authorize packaging/build execution.
 
-```text
-rg "unwrap\(|expect\(|panic!|todo!|unimplemented!|TODO|FIXME|HACK" \
-  crates/ic-timers/src
-rg "^pub |pub struct|pub enum|pub trait|pub fn|pub const" \
-  crates/ic-timers/src
-rg "ic_cdk_timers|ic-cdk-timers" crates/ic-timers/src Cargo.toml \
-  crates/ic-timers/Cargo.toml
-cargo tree --workspace --duplicates
-cargo package --locked --offline --allow-dirty --list -p ic-timers
-```
+| Verification class | Local selection and authority |
+| --- | --- |
+| Focused native test | A named owner regression with `cargo test --locked -p ic-timers --lib <fully-qualified-test> -- --exact`; requires an explicit request. Record that the intended test actually executed. |
+| Focused lint/build | Select the affected library or nested probe and its current toolchain/features; requires an explicit request, even for a focused check. |
+| Provider or repository lint/fixtures | Existing `provider-check` and applicable `repository-check` owners; requires an explicit request. |
+| Broad gates | `make ci`, `make msrv` and `make release-verify` remain maintainer-owned. |
+| Recovery and performance | Maintained PocketIC subjects and policy cohorts selected through the release guide; requires an explicit request. |
 
-## Review questions
+Only the existing cohort instruction intervals, exact loaded Wasm bytes and
+documented memory/cycle subjects support cost claims. Use comparable inputs and
+retain the limits in the delivery/measurement owner; structural counts are not
+performance evidence. Audit findings supply no automatic repair, dependency
+update or release authority.
 
-- Does production code avoid panics for invalid input or recoverable state?
-- Is every public value inert data, validated configuration, or documented
-  runtime authority, and is that role clear in its name and rustdoc?
-- Does the crate root expose only the intended facade, with provider, registry,
-  control, and dispatch modules still private?
-- Do implementation modules import from the defining module rather than
-  depending on accidental crate-root re-exports?
-- Are long registry/runtime functions still one atomic transition or binding
-  path? Split by responsibility, but do not fragment rollback-sensitive state
-  merely to reduce line counts.
-- Does every delegated callback capability expire with its exact work attempt,
-  rather than inheriting the longer lifetime of a registration claim?
-- Can any public constructor bypass a validation or control invariant?
-- Does every validation boundary have a negative test?
-- Do scheduler starts, work dispatches, work starts, completions,
-  unacknowledged attempts, and measurements remain distinct?
-- Are counters, totals, deadlines, and generations overflow-safe?
-- Does `platform` remain the only direct `ic-cdk-timers` boundary?
-- Do README, architecture, status, changelog, and `SAFETY.md` make the same
-  implementation and recovery claims?
-- Are external GitHub Actions pinned and dependencies still necessary?
-- Does the package contain only intended public source and metadata?
-- Can an explicit release target only move the package version forward, using
-  canonical SemVer components and an exact tag-name check?
-- Does a public removal or incompatible semantic change advance the pre-1.0
-  minor compatibility line while still deleting the superseded path outright?
-- Is repository-only documentation, evidence, or tooling work kept out of a
-  new crate identity and validated through `repository-check` instead?
+## Reports and historical comparisons
 
-Classify findings as mechanical, behavioral, or design. Fix mechanical and
-clearly safe behavioral findings in the audit change. Keep recovery semantics,
-wire formats, and cross-consumer API choices in design review.
+Requested reports remain in `docs/audits/`, with dated, uniquely named runs and
+their necessary artifacts. Record the exact shared method revision, consumer
+commit, relevant dirty changes and this overlay's content identity. Preserve
+all existing dated reports. The old checklist can be retrieved at
+[released 0.13.5](https://github.com/dragginzgame/ic-timers/blob/98c4b296d7461525c15a01e30adbe33b75bcfa38/docs/audits/code-hygiene.md)
+for historical reproduction; it is ineligible for new runs. Aggregate comparison
+with that method is `N/A (method change)`; unchanged individual assertions retain
+their original proof scope. The [adoption review](../shared-tooling.md#audit-method-adoption-review)
+maps the retired questions and walks an existing report without executing a
+fresh product audit.

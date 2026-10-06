@@ -2,6 +2,32 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.0]
+
+### Breaking
+
+- Use published `ic-metrics 0.2` for measurement arithmetic. The publicly exposed
+  `MeasurementSummary` now belongs to the 0.2 package identity; consumers that
+  exchange it with a direct ic-metrics dependency must update that dependency to
+  0.2 or use IC Timers' re-export. Summary values and saturation are unchanged
+  ([ic-metrics #10](https://github.com/dragginzgame/ic-metrics/issues/10)).
+
+### Changed
+
+- Read instructions through the existing `ic0::performance_counter(1)` platform
+  adapter and remove ic-metrics' retired `ic` feature. Both independent workspace
+  locks select registry 0.2.0, preserving scheduler/work attribution,
+  registration identity and native test fakes
+  ([ic-metrics #10](https://github.com/dragginzgame/ic-metrics/issues/10)).
+
+### Development
+
+- Adopt the committed shared audit methods with an IC Timers overlay, preserving
+  runtime safety obligations and historical reports while removing automatic
+  repair and broad-validation instructions. Verify the audit snapshot alongside
+  the existing tooling baseline ([#11](https://github.com/dragginzgame/ic-timers/issues/11)).
+  This audit-tooling slice is repository-only.
+
 ## [0.13.5] - 2026-10-06
 
 ### Fixed

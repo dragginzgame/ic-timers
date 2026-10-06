@@ -140,6 +140,7 @@ shell-check:
 
 release-check:
 	bash scripts/ci/verify-shared-tooling-snapshot.sh
+	bash scripts/ci/verify-shared-tooling-snapshot.sh --manifest .shared-tooling-audits.snapshot
 	bash scripts/ci/test-release-runner.sh
 	bash scripts/release/test-standard-release.sh
 	bash scripts/release/test-committed-release.sh

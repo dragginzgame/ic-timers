@@ -17,7 +17,7 @@ categories = ["asynchronous", "wasm"]
 
 [workspace.dependencies]
 ic-cdk-timers = "=1.0.0"
-ic-metrics = { version = "0.1.6", features = ["ic"] }
+ic-metrics = "0.2"
 ic0 = "=1.2.0"
 thiserror = "2.0"
 

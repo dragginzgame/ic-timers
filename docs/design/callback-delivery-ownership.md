@@ -163,9 +163,95 @@ Neither hosted log emitted linked byte sizes. The 0.13.4 host-only cohort change
 adds `wasm_bytes` from the exact vector installed into PocketIC to the existing
 row, including the baseline cohort. The four artifacts retain the same build
 profile/toolchain and can be compared without a second file read or extra build.
-That prepared output has not been executed; it cannot retroactively establish
-sizes for 0.13.2 or 0.13.3. No target Wasm or runtime instrumentation changes.
+At preparation, that output had not been executed; it cannot retroactively
+establish sizes for 0.13.2 or 0.13.3. No target Wasm or runtime instrumentation changes.
 Public APIs, snapshots, recurrence, generation allocation, dependency selection
 and upgrade reconstruction are unchanged; 0.13.3 is a compatible fix. No new
 feature, persistence, interval provider, scheduler data structure or global
 control API is justified by the reviewed consumers.
+
+## Released 0.13.5 cohort review
+
+The completed [Apple Silicon gate](https://github.com/dragginzgame/ic-timers/actions/runs/37442170942/job/112198306109)
+and [Intel gate](https://github.com/dragginzgame/ic-timers/actions/runs/37442170942/job/112198305932)
+for `98c4b296d7461525c15a01e30adbe33b75bcfa38` record exact installed byte
+sizes for the four existing cohort artifacts, built with Rust 1.88 and the
+testing workspace's `opt-level = "z"`, thin LTO and stripped release profile.
+The probe lock selects registry `ic-metrics 0.1.6`; the root lock separately
+selects compatible 0.1.7. Neither graph qualifies subsequent worktree edits.
+
+| Cohort | Apple Silicon Wasm bytes | Intel Wasm bytes | Bytes above each host's baseline |
+| --- | ---: | ---: | ---: |
+| Baseline | 263,433 | 262,094 | 0 |
+| Once | 316,941 | 315,602 | 53,508 |
+| AfterCompletion | 317,563 | 316,224 | 54,130 |
+| Watchdog | 318,293 | 316,954 | 54,860 |
+
+Baseline already imports IC Timers initialization, snapshot and inventory APIs,
+as well as the shared Candid/CDK probe surface. These are feature-reachability
+comparisons within this probe, not the total size added by linking IC Timers into
+an arbitrary canister. No historical Wasm reduction can be calculated from logs
+that did not record byte sizes.
+
+Every previously emitted cohort subject matches the inspected 0.13.3 Apple
+Silicon row exactly: initial arm, duplicate ensure, cancellation, snapshot,
+inventory, measured scheduler/work, memory-sampling brackets and dispatch cycles.
+Both Watchdog calibration rows also match. The maintained probes therefore show
+no instruction regression or new instruction saving in these intervals. Runtime
+and probe canister sources are unchanged between those commits; this supports
+keeping the current design rather than attributing release-tooling work to a
+runtime optimization.
+
+The Intel instruction and sampling fields match Apple Silicon, including both
+calibration rows. Absolute Wasm sizes differ by 1,339 bytes across every cohort,
+but the baseline-relative differences match. Recorded dispatch cycles differ:
+Once/AfterCompletion/Watchdog are 16,780,004/16,788,704/33,578,100 on Intel versus
+15,700,004/15,708,704/31,418,100 on Apple Silicon. The calibration cycle rows
+also differ. These host-specific observations are retained separately; this
+review establishes neither the cause nor a cross-host cycle regression.
+
+The zero measured memory-sampling difference is limited to its bracket, and
+dispatch cycles include the driven-round interval. Neither establishes zero
+measurement cost universally or total-message instruction consumption, which
+the calibration explicitly reports as unavailable. Watchdog is only 730 bytes
+larger than AfterCompletion in this build; deleting its distinct prearmed recovery
+semantics is not justified by that size difference. No further runtime change
+or performance release is supported by this review.
+
+## IC Metrics 0.2 adoption
+
+The maintainer requested registry `ic-metrics 0.2` after publication. The root
+catalog and lock already selected 0.2.0 when this continuation inspected them.
+The inherited library declaration stays `workspace = true`, without the removed
+`ic` feature. The nested probe workspace reaches that same declaration through
+its path dependency; its separate lock is updated narrowly from 0.1.6 to 0.2.0
+with `cargo update --manifest-path testing/Cargo.toml -p ic-metrics@0.1.6
+--precise 0.2.0 --offline`. Every unrelated testing lock record and the existing
+root lock are preserved. Both select registry checksum
+`e6df432373e44c1956cbaa15548625efbebdbad4070a916e9fe0c7e4359f6265`.
+
+The downloaded registry package is dependency-free, `no_std`, edition 2024 and
+MSRV 1.88. Its `src/summary/mod.rs` is byte-identical to downloaded registry
+0.1.6. The previously prepared production adapter reads
+`ic0::performance_counter(1)` directly; the test-only native substitute remains
+consumer-owned. This is source comparison, not new execution or measurement.
+The earlier 0.1 extraction checks and released 0.13.5 cohorts retain their
+original dependency identities and do not qualify this selection.
+
+IC Timers exposes the shared type through its facade and the
+`TimerPerformance::scheduler_instructions` / `work_instructions` return values.
+Despite identical arithmetic, `ic_metrics 0.1::MeasurementSummary` and the 0.2
+type are different Rust types. For example, passing a timer performance summary
+to a function accepting the old direct-dependency type can stop compiling.
+The [Cargo resolver's version-incompatibility guidance](https://doc.rust-lang.org/cargo/reference/resolver.html#version-incompatibility-hazards)
+explains this boundary. The complete unpublished batch moves to 0.14.0 under
+the pre-1.0 compatibility rule. Consumers exchanging these values must align
+their direct dependency to 0.2 or use `ic_timers::MeasurementSummary`; no old
+identity alias, dual reader or fallback is retained.
+
+Both owning locked/offline metadata checks pass and dependency-tree inspection
+finds one registry 0.2.0 package per workspace. Diff/source checks pass. No new
+test, build, lint, PocketIC, cohort or release command was run during this
+adoption; those remain maintainer-owned. There is no claimed Wasm or instruction
+saving from moving the reader or updating the dependency. The scope addresses
+[ic-metrics #10](https://github.com/dragginzgame/ic-metrics/issues/10).

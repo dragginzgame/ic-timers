@@ -52,8 +52,8 @@ constraints for the release in which they were written.
 - [Immediate Watchdog evidence](audits/immediate-watchdog-continuation-2026-08-28.md):
   historical pre-release evidence for immediate continuation and retained
   recovery behavior.
-- [Recurring code-hygiene audit](audits/code-hygiene.md): the current review
-  checklist.
+- [IC Timers code-hygiene overlay](audits/code-hygiene.md): product scope,
+  authority and evidence for the [shared audit methods](../audits/README.md).
 - [Initial hygiene report](audits/code-hygiene-2026-08-13.md),
   [follow-up report](audits/code-hygiene-2026-08-14.md),
   [0.3.7 report](audits/code-hygiene-2026-08-15.md),
