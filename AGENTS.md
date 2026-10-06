@@ -5,7 +5,7 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `f52c0e2476aee094359ed21de91c468540d3969f`. Its provenance and
+  from revision `cb86188c5956866564de4fb6ec6be67b27981ab9`. Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
@@ -127,10 +127,12 @@ This file is normative for automated contributors.
   push may use a smaller package/tag job only when it also verifies the exact
   version tag and that the tagged commit is reachable from `main`; do not
   duplicate identical full builds for a same-SHA main-and-tag push.
-- Fresh combined release targets run their requested version bump. Rerunning
-  the same standard target reconciles saved unfinished intent at its exact
-  version before selecting any new increment. Changelog preparation alone
-  neither advances Cargo nor creates runtime release intent.
+- Fresh combined release targets run their requested version bump. A normal
+  target reconciles saved unfinished intent at its exact version first. After
+  that release is committed, newer descendant fixes or a different requested
+  increment trigger fresh validation for the requested next release. Late
+  checks inspect `RELEASE_COMMIT`, independently of HEAD. Changelog preparation
+  alone neither advances Cargo nor creates runtime release intent.
 - Version-bump helpers must support preparing a release from the current
   worktree without requiring a preparatory commit. Preserve unrelated changes,
   leave test execution to deployment. The user stages release metadata.

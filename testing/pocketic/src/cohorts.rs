@@ -55,9 +55,11 @@ fn run_cohort(cohort: &str) {
     let (_server, pic) = fresh_pocket_ic();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
+    let wasm = cohort_wasm(cohort);
+    let wasm_bytes = wasm.len();
     pic.install_canister(
         canister_id,
-        cohort_wasm(cohort),
+        wasm,
         Encode!().expect("encode cohort init"),
         None,
     );
@@ -152,7 +154,7 @@ fn run_cohort(cohort: &str) {
         });
 
     println!(
-        "ic_timers_cohort cohort={} start={} duplicate={} cancel={} snapshot={} inventory={} scheduler={} work={} memory_sampling_empty={} memory_sampling_sampled={} memory_sampling_overhead={} dispatch_cycles={}",
+        "ic_timers_cohort cohort={} start={} duplicate={} cancel={} snapshot={} inventory={} scheduler={} work={} memory_sampling_empty={} memory_sampling_sampled={} memory_sampling_overhead={} dispatch_cycles={} wasm_bytes={}",
         cohort,
         start.instructions,
         duplicate.instructions,
@@ -165,6 +167,7 @@ fn run_cohort(cohort: &str) {
         memory_sampling_sampled,
         memory_sampling_overhead,
         dispatch_cycles,
+        wasm_bytes,
     );
 }
 

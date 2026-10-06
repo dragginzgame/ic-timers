@@ -86,7 +86,7 @@ consumer captures inside `RUNTIME`'s mutable borrow. A nontrapping destructor
 calling `timer_inventory` observed `RuntimeBusy`; cleanup that consumed another
 claim could lose its control capability after that rejection.
 
-The pending 0.13.3 implementation carries a removed entry in its existing
+The released 0.13.3 implementation carries a removed entry in its existing
 `RegistryTransition`. Runtime applies provider effects before dropping that
 transition, outside registry access. Rejected public registration retains a
 local `Rc` until registration access ends. This is temporary destructor custody,
@@ -114,12 +114,13 @@ subjects from the maintained size probe:
 | AfterCompletion | 27,695 | 11,496 |
 | Watchdog | 24,924 | 10,872 |
 
-These are operation intervals from the 0.13.2 artifact, not results for the pending
-change. A bound handle previously copied three boxed identity components to
+These are operation intervals from the 0.13.2 artifact. A bound handle previously
+copied three boxed identity components to
 construct its detached token. An ordinary coalesced ensure removes that temporary
 allocation/deallocation and reinstallation; paired Watchdog requests remove two
 such copies. The same platform operations were already avoided by coalescing.
-No percentage instruction reduction or linked Wasm saving has been measured.
+The subsequent 0.13.3 measurements below quantify operation costs; linked Wasm
+savings are not established by either run.
 A removal now makes one temporary boxed-entry allocation so ordinary transition
 values stay small; the allocation lasts only until provider effects finish.
 Successful registration adds one short-lived `Rc` increment/decrement, with no
@@ -133,12 +134,37 @@ same-message armed removal for all three policies and checks registry access
 from capture Drop in existing ordinary abandonment subjects. No provider work is
 scheduled by those PocketIC destructors.
 
-This pending batch has source and Rust formatting/parsing review only. Native,
-Clippy/MSRV, PocketIC and cohort execution remain maintainer-owned. Acceptance
-requires the complete release gate, the new capture and handle-preservation
-fixtures, unchanged trap/await/cancellation evidence, and comparison with the
-baseline operation intervals and linked cohort Wasms. Reject the optimization
-if duplicate ensures do not improve or actual-effect paths regress materially.
+Initial preparation had source and Rust formatting/parsing review only. The
+maintainer's released source `864397a7c21eec4f396fe9617dbb8d8e1f9cfc73`
+subsequently passed [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37430538342),
+including Linux checks, MSRV and both native macOS complete release gates.
+The [Apple Silicon job](https://github.com/dragginzgame/ic-timers/actions/runs/37430538342/job/112160114006)
+records 142 native tests, doctests, all 14 maintained PocketIC runtime subjects,
+and policy cohorts passing with the audited PocketIC 16.0.0 artifact. This
+includes the added capture-release subjects; native substitute and actual
+canister evidence retain their separate contracts.
+
+| Policy | Initial arm, 0.13.3 | Duplicate ensure, 0.13.3 | Cancel, 0.13.2 → 0.13.3 |
+| --- | ---: | ---: | ---: |
+| Once | 24,934 | 6,617 | 16,800 → 16,806 |
+| AfterCompletion | 28,837 | 8,344 | 25,313 → 26,600 |
+| Watchdog | 25,880 | 7,878 | 21,344 → 22,492 |
+
+Compared with the preceding source-bound probe, duplicate ensures cost about
+27–30% fewer instructions, while initial arming costs about 4% more and recurring
+cancellation about 5% more. These are individual probe operation intervals,
+including their brackets, not total-message or application throughput results.
+Snapshot/inventory subjects are unchanged; executed-work subjects are slightly
+lower. The correctness fix has an observable cold/control-path cost, so it
+should not be described as a universal speedup. No heap bound or linked Wasm
+reduction follows from these results.
+
+Neither hosted log emitted linked byte sizes. The 0.13.4 host-only cohort change
+adds `wasm_bytes` from the exact vector installed into PocketIC to the existing
+row, including the baseline cohort. The four artifacts retain the same build
+profile/toolchain and can be compared without a second file read or extra build.
+That prepared output has not been executed; it cannot retroactively establish
+sizes for 0.13.2 or 0.13.3. No target Wasm or runtime instrumentation changes.
 Public APIs, snapshots, recurrence, generation allocation, dependency selection
 and upgrade reconstruction are unchanged; 0.13.3 is a compatible fix. No new
 feature, persistence, interval provider, scheduler data structure or global

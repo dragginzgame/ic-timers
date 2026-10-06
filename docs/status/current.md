@@ -17,21 +17,50 @@ references and validation belong in [release notes](../changelog/README.md),
   accepted batch under its automatically selected, undated next version.
   The maintainer's bump finalizes and dates it; a dated section alone does not prove
   tagging, publication or deployment.
-- Cargo, both lockfiles, the finalized changelog and local `v0.13.2` tag match
-  release commit `134899f1620b29f51711ff479c37c681db3fb9ec`. Publication was not
-  independently checked. The main and tag hosted gates passed; native macOS
-  release qualification now includes PocketIC 16.0.0. See the
+- The maintainer reports 0.13.3 live. Cargo, both lockfiles, finalized changelog
+  and local tag identify release commit `864397a7c21eec4f396fe9617dbb8d8e1f9cfc73`.
+  Publication was not independently checked. Tag and main gates passed,
+  including Linux checks, MSRV and both native macOS complete release gates.
+  The Apple Silicon log records 142 native tests and 14 PocketIC runtime subjects
+  plus policy cohorts. The preceding 0.13.2 qualification remains source-bound
+  at `134899f`; neither run qualifies the current working tree. See the
   [source-bound host record](../releasing.md#host-support).
-- The undated 0.13.3 draft covers a compatible callback-capture destruction fix
+- Released 0.13.3 covers a compatible callback-capture destruction fix
   and removal of handle detachment/reinstallation for rejected/coalesced public
   requests. API, snapshots, recurrence, generations and dependencies are unchanged.
   Removed captures remain in their returned transition until provider cleanup
   finishes; rejected factories retain a local Rc across registry access. Native
-  and PocketIC capture-access fixtures are prepared. Source/formatting/diff review
-  is the only evidence for this pending batch; tests, lint/build, MSRV, PocketIC,
-  cohort measurement and release execution remain maintainer-owned. The
+  and PocketIC capture-access fixtures passed in matching hosted qualification.
+  Duplicate ensure costs fell about 27–30%; initial arm rose about 4%, and
+  recurring cancellation about 5% in the maintained operation probes. These are
+  operation intervals, not a universal speedup or total-message cost.
+  Tests, lint/build, MSRV, PocketIC, cohort measurement
+  and release execution remain maintainer-owned. The
   [delivery ownership contract](../design/callback-delivery-ownership.md#capture-removal-and-coalesced-requests)
   records implementation, baseline cost, temporary allocation and acceptance.
+- The undated 0.13.4 draft covers compatible repository-only release recovery
+  for [#10](https://github.com/dragginzgame/ic-timers/issues/10), using reviewed
+  Shared Tooling `cb86188`. Late adapters inspect exact `RELEASE_COMMIT` metadata
+  and tags separately from HEAD; normal commands finish an older committed
+  release before fresh validation for newer fixes or another requested increment.
+  Current adapter code owns checks, with no execution of old snapshot scripts.
+  The 22-file snapshot includes the maintenance rule, hook failure fix and
+  canonical validation logger. Preflight rejects hidden staged implementation
+  edits, commit admission checks the exact prepared index, and real release-gate
+  failures retain unique raw logs across retries outside tracked release inputs.
+  Preflight now delegates selected dependency-cache preparation to `make fetch`
+  before validation, avoiding an offline cache check that blocked cold checkouts.
+  The real-index fixture covers failed Git producers/partial output and both
+  locked fetches, preserving metadata and failing before release intent. No
+  dependency fetching was performed during contributor preparation.
+  The host-only cohort now appends exact loaded `wasm_bytes` to its existing
+  baseline/policy rows. Old hosted logs omitted byte sizes; no historical Wasm
+  delta is inferred. This changes evidence output only, with no target Wasm
+  instrumentation or runtime behavior change.
+  Source/snapshot/syntax/diff inspection is preparation evidence; consumer
+  fixtures and native qualification remain unexecuted. Cargo versions, both
+  locks and timer runtime are unchanged. Usually bundle this tooling with the
+  next code-bearing release; a maintainer-selected patch retains the full gate.
 - Apply the pinned [Shared Tooling baseline and local overlay](../../AGENTS.md).
   Its [adoption record](../shared-tooling.md) scopes provenance and exceptions.
   Historical release notes retain evidence; no new versioned note or mutable
@@ -66,8 +95,8 @@ references and validation belong in [release notes](../changelog/README.md),
   execution remains user-owned and pending, with scope recorded in the
   [callback contract](../design/0.5-policy-specific-callback-authority.md#ordinary-delivery-abandonment).
   Standard SemVer releases use the refreshed shared runner: preflight/validation
-  failures restart on current source, while the same target automatically
-  reconciles prepared intent at its saved version before a new increment. The
+  failures restart on current source, while normal targets automatically
+  reconcile prepared intent at its saved version before a new increment. The
   local retry wrapper and its duplicate fixtures are removed; no release was
   executed during adoption. The shared hook formats only fully staged selected
   files, and the local formatting/gate owners cover both workspaces with pinned
@@ -78,7 +107,7 @@ references and validation belong in [release notes](../changelog/README.md),
   passed during snapshot adoption; both lockfiles were then byte-identical. The GitHub description matches
   current scope. New recovery/hook fixture execution remains user-owned; source/snapshot scope
   belongs in the [release guide](../releasing.md).
-  The reviewed baseline is now `f52c0e2476aee094359ed21de91c468540d3969f`, with
+  The reviewed baseline is now `cb86188c5956866564de4fb6ec6be67b27981ab9`, with
   shared rules in `DRAGGINZGAME.md`. Maintainer-owned validation and release
   exceptions remain explicit; the [local host matrix](../releasing.md#host-support)
   records required macOS workflows and their unresolved qualification.
@@ -327,12 +356,27 @@ are recorded in the [0.10.12 note](../changelog/0.10.12.md).
 
 ## Evidence
 
-Current released baseline: 0.13.2 main CI and both complete native macOS gates
-passed at `134899f`, including 138 native tests and 13 PocketIC subjects. Exact
+Latest inspected release: 0.13.3 at `864397a`, tag and main CI passed, including
+Linux/MSRV and both native macOS complete gates. Apple Silicon records 142 native
+tests, 14 PocketIC runtime subjects, doctests and policy cohorts. The preceding
+0.13.2 qualification at `134899f` retains its own 138 native/13 PocketIC scope.
+Exact
 links and qualification scope belong in the [host matrix](../releasing.md#host-support).
 The maintainer authorized closing [#9](https://github.com/dragginzgame/ic-timers/issues/9)
-with that integration/CI evidence; it is closed. No tests were executed locally
-by the contributor in this audit. The pending 0.13.3 source is unqualified.
+with that integration/CI evidence; it is closed. Issue #10 is the only open issue
+and no open PR covers it; its consumer repair is prepared locally, with execution
+and native qualification pending. No GitHub writes were made during this review.
+The committed Shared Tooling head and remote main matched adopted `cb86188`;
+its upstream Linux regression and lint/security passed, but both macOS jobs
+failed at snapshot-distribution fixture source-path admission after passing the
+shared logger tests. The diagnosis and remaining qualification boundary belong
+in the [adoption record](../shared-tooling.md). The preceding `9437bab` Linux and
+both macOS upstream gates passed, qualifying that recovery source alone.
+Later sibling changes were initially dirty and excluded; after they were
+committed at `cb86188`, a separate clean reviewed export adopted them.
+No tests were executed locally during this continuation. The working-tree
+0.13.4 tooling batch has no matching remote CI evidence. See the
+[release runner evidence owner](../releasing.md#standard-release-runner).
 
 Earlier inspection records follow; their pending/failure language describes
 those earlier sources and times, not the current released baseline.
@@ -370,8 +414,9 @@ build, lint, PocketIC or cost measurements. GitHub's main and tag CI runs for
 At that earlier inspection, [issue #9](https://github.com/dragginzgame/ic-timers/issues/9)
 was open for owning native release/CI qualification; the later 0.13.2 gates
 supplied it and the maintainer authorized closure.
-No open PR was listed. Shared Tooling's committed head remains the adopted
-revision; its dirty maintenance-rule draft is outside the reviewed snapshot.
+No open PR was listed at that earlier inspection. Shared Tooling's committed
+head then remained the adopted revision; its maintenance-rule draft was outside
+that earlier reviewed snapshot.
 
 Inspected hosted validation for 0.9.4 is scoped in its
 [delivery note](../changelog/0.9.4.md). Release reports and Git references alone do
@@ -393,5 +438,6 @@ publication evidence, then continue the maintainer's requested work within the
 ownership boundaries above. Update the one changelog draft and record scoped
 verification with its owner. Do not select another release version during ordinary continuation.
 Leave Cargo versions, both lockfiles and Git release execution to the maintainer.
-Release commands always perform the requested bump; preparing notes does not
-advance the workspace version.
+Fresh release commands perform the requested bump. Retries first reconcile saved
+intent, then advance only when the common recovery contract selects a follow-up.
+Preparing notes does not advance the workspace version.

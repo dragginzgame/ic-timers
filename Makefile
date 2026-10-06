@@ -142,6 +142,8 @@ release-check:
 	bash scripts/ci/verify-shared-tooling-snapshot.sh
 	bash scripts/ci/test-release-runner.sh
 	bash scripts/release/test-standard-release.sh
+	bash scripts/release/test-committed-release.sh
+	bash scripts/release/test-release-index.sh
 	bash scripts/release/test-finalize-changelog.sh
 	bash scripts/release/test-readme-version.sh
 	bash scripts/release/test-release-impact.sh
@@ -165,9 +167,10 @@ ci:
 	done
 
 release-verify:
-	+@set -e; for target in $(RELEASE_TARGETS); do \
-		$(MAKE) --no-print-directory "$$target"; \
-	done
+	+@set -e; state_root="$$(git rev-parse --git-path release-state)"; \
+		VALIDATION_REPOSITORY_ROOT="$(CURDIR)" \
+		VALIDATION_FAILURE_LOG_DIR="$$state_root/validation-failures" \
+		bash scripts/ci/run-validation-targets.sh --fail-fast $(RELEASE_TARGETS)
 
 release-impact:
 	@set -e; impact="$$(bash scripts/release/classify-release-impact.sh)"; \
@@ -260,10 +263,14 @@ release-preflight:
 	@bash scripts/release/adapter.sh preflight
 release-prepare-version:
 	@IC_TIMERS_RELEASE_DATE="$(RELEASE_DATE)" bash scripts/release/bump-version.sh "$(RELEASE_VERSION)"
-release-prepared-check release-commit-check release-committed-check:
+release-prepared-check:
 	@bash scripts/release/adapter.sh check
+release-commit-check:
+	@bash scripts/release/adapter.sh commit-check
+release-committed-check:
+	@bash scripts/release/adapter.sh check-committed
 release-files:
 	@printf '%s\0' Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md
 release-tagged-check release-push-check:
-	@bash scripts/release/adapter.sh check
-	@bash scripts/release/check-tag-at-head.sh
+	@bash scripts/release/adapter.sh check-committed
+	@bash scripts/release/check-tag-at-head.sh "$(RELEASE_COMMIT)" "$(RELEASE_VERSION)"

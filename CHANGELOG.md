@@ -2,6 +2,29 @@
 
 All notable changes to this project are recorded here.
 
+## [0.13.4]
+
+### Fixed
+
+- Recover an interrupted committed release through the normal release commands
+  after newer fixes are committed. Check the saved release's metadata and tag at
+  its exact commit, then run fresh validation for the requested next increment.
+  This addresses [#10](https://github.com/dragginzgame/ic-timers/issues/10) using
+  the reviewed Shared Tooling recovery fix. This is repository-only release
+  tooling; package publication and cleanup remain separate.
+- Reject staged implementation edits hidden by a restored working file, require
+  the release index to match prepared metadata, and retain complete validation
+  failure logs across retries through the shared validation runner.
+- Prepare both locked dependency caches during release preflight through the
+  existing fetch target, allowing cold-cache releases to reach validation without
+  a separate manual fetch. Fetch and Git admission failures stop before mutation.
+
+### Testing
+
+- Report exact loaded Wasm byte sizes alongside policy-cohort instruction costs
+  in the existing qualification gate, enabling baseline and release comparisons
+  without separate builds or measurement commands.
+
 ## [0.13.3] - 2026-10-06
 
 ### Fixed

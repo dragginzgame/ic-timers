@@ -259,18 +259,23 @@ metadata.
 Standard commands may be rerun after any interrupted attempt. Before preparation,
 the shared runner starts fresh preflight and complete validation on current
 source; older preparation-free records are preserved as evidence. After
-preparation may have begun, the same target selects the saved release before
+preparation may have begun, a normal target selects the saved release before
 computing another increment and reconciles its exact source, version, date and
 destination. Plans are internal recovery records and do not require a different
-command. Actual kind, identity, payload, destination and concurrency conflicts
-still reject. An explicit exact recovery selector remains available:
+command. Uncommitted preparation remains bound to its source and kind. Once the
+release commit exists, newer descendant commits or a different requested
+increment are allowed: finish the saved release, then run fresh preflight and
+the full gate for the requested increment from the actual local version.
+Identity, payload, destination and concurrency conflicts still reject.
+An explicit exact recovery selector remains available:
 
 ```text
 make release-resume VERSION=0.13.0
 ```
 
 The vendored shared runner fixture owns restart and automatic recovery coverage;
-the local Make fixture verifies direct delegation and selection forwarding.
+the local Make fixtures verify direct delegation, selection forwarding and
+selected-commit metadata checks. Explicit resume finishes only its saved release.
 The superseded local retry wrapper and its duplicate fixtures are removed.
 
 The user-operated release targets run the complete release gate, update the
@@ -370,9 +375,21 @@ The Intel complete gate also passed. The matching
 [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37425186206)
 passed. This qualifies that committed source and its selected dependencies;
 it does not establish publication, downstream composition, other host versions,
-or qualification for the pending 0.13.3 source. Historical preparation-only and
+or qualification for later source. Historical preparation-only and
 failed records below retain their original scope rather than describing current
 0.13.2 qualification.
+
+For release commit `864397a7c21eec4f396fe9617dbb8d8e1f9cfc73` (0.13.3), the
+[tag job](https://github.com/dragginzgame/ic-timers/actions/runs/37430538306)
+passed when inspected on 2026-10-06. Its
+[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37430538342)
+passed Linux checks, MSRV and both native macOS complete release gates. The
+Apple Silicon log records 142 native tests, doctests, all 14 PocketIC runtime
+subjects and policy cohorts passing with the audited PocketIC 16.0.0 artifact.
+The [callback ownership record](design/callback-delivery-ownership.md#capture-removal-and-coalesced-requests)
+compares the exact 0.13.2/0.13.3 instruction subjects, including initial-arm and
+cancellation increases. This qualifies released 0.13.3 source, not the subsequent
+working-tree release-tooling and host-only measurement changes.
 
 Version preparation uses Bash, Perl, Git and Cargo. It owns regular metadata
 files; symlinked or non-file outputs are rejected before mutation. Applicable
@@ -673,11 +690,87 @@ The three standard SemVer entry points use the [common release contract](release
 with explicit `RELEASE_REMOTE=origin` and `RELEASE_BRANCH=main`. The complete local
 release gate is unchanged. Consumer adapters retain the five metadata outputs,
 README projection and independently locked workspaces. Publishing stays separate.
-The same standard target automatically resumes unfinished preparation intent
-at its saved source, candidate, UTC date and destination. No release was executed
-during adoption. The 20-file snapshot is exported from committed Shared Tooling
-revision `f52c0e2476aee094359ed21de91c468540d3969f`, including the standard hook
-and installer and the new Cargo/hook rules. Snapshot integrity, shell syntax,
-manifest formatting and locked metadata are separate from workflow execution.
-The new recovery and hook fixtures, hosted setup and native macOS qualification
-remain user-owned and pending; source adoption does not qualify those workflows.
+Normal targets select unfinished preparation intent before another increment.
+The 22-file snapshot is exported from committed Shared Tooling revision
+`cb86188c5956866564de4fb6ec6be67b27981ab9`; the
+[adoption record](shared-tooling.md) distinguishes upstream qualification from
+consumer evidence. This refresh addresses
+[#10](https://github.com/dragginzgame/ic-timers/issues/10).
+
+The runner owns commit ancestry, saved source/tree/subject, destination, locking,
+annotated tagging and exact atomic branch/tag publication. Local committed,
+tagged and push callbacks instead inspect `RELEASE_COMMIT`: the current adapter
+exports its immutable source tree into an owned temporary directory and invokes
+the current workspace-version, README and lockfile check owners there. Both
+workspace manifest-sort checks and the exact dated changelog heading remain
+required. No scripts from the older tree are executed. Failed archive reads,
+including partial output, fail closed; the temporary copy is removed without
+touching build artifacts, plans or validation logs. This is cold release-path
+disk work and has no crate, Wasm, runtime instruction or heap impact.
+
+Preflight reads staged, unstaged and untracked paths separately, with NUL records
+and rename detection disabled, before admitting only the five metadata outputs.
+Its existing bump check rejects candidate/changelog conflicts before validation
+or intent creation. After admission, preflight invokes the existing `make fetch`
+owner for both locked workspaces. It does not require cached archives before
+that owner can populate them. Fetching retains Cargo's configured network/cache
+policy and both lock selections; there is no offline-to-online retry or dependency
+update. The complete gate retains its existing fetch-first ordering, and either
+workspace's failed fetch stops preflight before validation or release mutation.
+The final commit adapter checks the entire index, requires
+all five outputs to be tracked and the worktree to match the index, then applies
+the existing metadata checks. Staged implementation changes hidden by restoring
+only the working file cannot pass either admission boundary.
+
+The complete `release-verify` target now delegates its unchanged target list,
+in the same fail-fast order, to the canonical validation runner with its root
+explicitly bound to Make's current repository. Raw failed
+attempts are retained uniquely under the Git directory's
+`release-state/validation-failures/`; `latest.log` is only a convenience copy.
+Later attempts preserve earlier raw logs. Failed retention preserves the owned
+temporary logs and reports their path. This adds logging and scratch disk work
+to user-operated validation without package publication, cleanup, another gate
+or runtime instrumentation. The logger's optional ripgrep branch has a stock
+grep fallback; no new host installation is required.
+
+The tag checker takes explicit commit/version arguments only in those late
+callbacks. Its no-argument mode still checks the current workspace and HEAD for
+standalone tagging and publishing. Missing commit selections, floating refs,
+lightweight/wrong tags, invalid metadata or failed checks stop recovery.
+When newer fixes exist, completing the older release does not implicitly publish
+those fixes: the runner validates them afresh before preparing the requested
+next increment. Changed remote history must be established before replay;
+publication, deployment and cleanup remain separate.
+
+`test-committed-release.sh` exercises the actual local Make callbacks and metadata
+owners with Git/Cargo command stubs: selected metadata despite newer HEAD,
+both locked workspace reads, corruption of all five metadata outputs, tag
+conflicts, archive failure before/after output, failed resolution/manifest sorting,
+missing selection and temporary-copy cleanup. The real-Git tag fixture now
+checks an earlier selected commit separately from HEAD. The shared runner fixture
+owns the patch/minor/major and same/different-kind interruption matrix, lost
+push replies, fresh-gate failure/retry, conflicts and locking. These fixtures
+remain in the complete release gate on Linux and both native macOS jobs.
+The new real-index fixture reuses existing Git history without creating commits
+and checks hidden staged source, stale staged metadata, valid staged metadata,
+untracked outputs and preservation of the selected index. It also injects failed
+staged/unstaged/untracked producers with empty or plausible partial NUL output,
+and failed index/worktree comparison. The cache scenarios exercise actual
+preflight and the real fetch recipe with Cargo stubs, requiring both locked fetches
+in order and stopping at either workspace's failure. Changelog, package metadata,
+locks, source/index and absence of release intent remain checked independently.
+These are producer and orchestration fixtures, not successful downloads or live
+release execution. The existing actual
+release-gate fixture now checks raw failure retention across failed/successful
+attempts and execution with a tool path excluding ripgrep. Full gate sequencing,
+failure propagation and PocketIC override assertions are retained.
+Consumer fixture execution and native qualification of this refresh remain
+maintainer-owned and pending. No release was executed during adoption; source,
+snapshot and syntax checks are separate from workflow qualification.
+
+The prepared host-only cohort row also appends `wasm_bytes`, measured from the
+exact vector installed into PocketIC for each baseline/policy artifact. The
+existing cohort gate builds and measures those artifacts as before; there is no
+new build or evidence command. Earlier hosted logs have instruction subjects
+but no byte counts, so no historical Wasm delta is inferred. Compilation, lint
+and execution of this added output remain user-owned and pending.

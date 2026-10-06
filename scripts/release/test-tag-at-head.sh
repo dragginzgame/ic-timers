@@ -33,6 +33,12 @@ expect_rejection 'must be annotated'
 git tag -d v0.1.0 >/dev/null
 git tag -a v0.1.0 -m fixture
 bash "${checker}"
+release_commit="$(git rev-parse HEAD)"
 git commit --allow-empty -qm 'advance head'
 expect_rejection 'does not point to HEAD'
+bash "${checker}" "$release_commit" 0.1.0
+if bash "${checker}" "$(git rev-parse HEAD)" 0.1.0 > output 2>&1; then exit 1; fi
+if bash "${checker}" HEAD 0.1.0 > output 2>&1; then exit 1; fi
+if bash "${checker}" "$release_commit" 0.1.01 > output 2>&1; then exit 1; fi
+if bash "${checker}" "$release_commit" > output 2>&1; then exit 1; fi
 echo 'Exact annotated release-tag checks passed'

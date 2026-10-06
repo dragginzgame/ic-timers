@@ -5,13 +5,7 @@ repository_root="$(git rev-parse --show-toplevel)"
 makefile="${repository_root}/Makefile"
 bump_script="${repository_root}/scripts/release/bump-version.sh"
 impact_checker="${repository_root}/scripts/release/check-bump-impact.sh"
-
-if grep -RE --include='*.sh' \
-    '(^|[;&|[:space:]])rg([[:space:]]|$)' \
-    "${repository_root}/scripts/ci" "${repository_root}/scripts/release" >/dev/null; then
-    echo "error: runner-executed scripts must not require ripgrep" >&2
-    exit 1
-fi
+export GITHUB_ACTIONS=false GITHUB_STEP_SUMMARY=''
 
 if downgrade_output="$(bash "${bump_script}" 0.0.0 2>&1)"; then
     echo "error: version bump accepted a downgrade" >&2
@@ -69,6 +63,8 @@ ln -s workspace "${temporary_root}/workspace-alias"
 cp "${makefile}" "${temporary_root}/workspace/Makefile"
 cd "${temporary_root}/workspace-alias"
 fixture_root="$(pwd -P)"
+git init -q
+export VALIDATION_REPOSITORY_ROOT="$fixture_root" VALIDATION_RUNNER_SNAPSHOT_PATH='' VALIDATION_RUNNER_DEPTH=0
 
 # Exercise real fetch recipes with a recording Cargo stub, never the network.
 mkdir -p bin
@@ -146,6 +142,7 @@ done
 
 # Exercise the actual recipe and Make variable origins without provisioning.
 mkdir -p scripts/ci
+cp "$repository_root/scripts/ci/run-validation-targets.sh" scripts/ci/
 cat > scripts/ci/check-pocketic.sh <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n%s\n' "${POCKET_IC_BIN}" "${POCKET_IC_AUTO_INSTALL}" > provisioning
@@ -186,8 +183,9 @@ fetch actions-check shell-check release-check provider-check fmt-check check cli
 	@printf '%s\n' '$@' >> checks-ran
 	@if [ '$@' = '$(FAIL_TARGET)' ]; then echo 'failed $@' >&2; exit 1; fi
 EOF
-fixture_make=(make --no-print-directory -f Makefile -f overrides.mk
-    'MAKE=make --no-print-directory -f Makefile -f overrides.mk')
+printf '\ninclude overrides.mk\n' >> Makefile
+fixture_make=(make --no-print-directory -f Makefile
+    'MAKE=make --no-print-directory -f Makefile')
 ci_targets=(actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package)
 release_targets=(fetch pocketic-check "${ci_targets[@]}" msrv testing-check
     pocketic-check pocketic-watchdog pocketic-check pocketic-cohorts)
@@ -223,5 +221,28 @@ for gate in ci release-verify pocketic-watchdog pocketic-cohorts; do
         rm checks-ran
     done
 done
+
+# Failures in the actual adapter keep unique raw logs across subsequent attempts.
+failure_root="$fixture_root/.git/release-state/validation-failures"
+failure_logs=("$failure_root"/*-0-fetch.log)
+[[ -f "${failure_logs[0]}" ]]
+cp "${failure_logs[0]}" retained-fetch-log
+"${fixture_make[@]}" release-verify >/dev/null 2>&1
+cmp retained-fetch-log "${failure_logs[0]}"
+if "${fixture_make[@]}" release-verify FAIL_TARGET=fetch > retained-failure-output 2>&1; then exit 1; fi
+new_failure_logs=("$failure_root"/*-0-fetch.log)
+[[ "${#new_failure_logs[@]}" -gt "${#failure_logs[@]}" ]]
+grep -Fq 'failed fetch' "$failure_root/latest.log"
+cmp retained-fetch-log "${failure_logs[0]}"
+
+# The canonical logger's optional ripgrep branch must also work on stock hosts.
+mkdir -p stock-bin
+for tool in bash make git cp mktemp rm mkdir date tee sed grep awk tail dirname; do
+    ln -s "$(command -v "$tool")" "stock-bin/$tool"
+done
+if PATH="$fixture_root/stock-bin" "${fixture_make[@]}" release-verify \
+    FAIL_TARGET=fetch > stock-host-output 2>&1; then exit 1; fi
+grep -Fq 'failed fetch' "$failure_root/latest.log"
+grep -Fq 'Full failure log retained at:' stock-host-output
 
 echo "Release gate execution checks passed"
