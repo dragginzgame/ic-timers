@@ -71,11 +71,17 @@ references and validation belong in [release notes](../changelog/README.md),
   report captured adapter output before failure cleanup. Source, shell syntax
   and diff inspection remain preparation evidence; no tests/builds/lint gates
   were run. The release-check repair leaves Cargo and runtime sources unchanged.
-  A separate concurrent dependency update now requires `ic-metrics 0.1.6` and
-  selects it in the root lock; the inspected testing lock still selects 0.1.5
-  and needs alignment before locked validation. Those edits are preserved and
-  are outside the repair's qualification. Native and hosted qualification remains
-  user-owned; #10 stays open until it succeeds.
+  The separate dependency update requires `ic-metrics 0.1.6`; the maintainer's
+  release preflight stopped at the stale testing lock before version mutation.
+  With explicit authorization, a targeted offline Cargo update aligned that lock
+  to 0.1.6 and preserved every other record. Both existing locked metadata checks
+  pass; each independent graph selects one registry 0.1.6 package. This is metadata
+  preparation, not test/build or complete release qualification. The requested
+  prevention feedback is filed as
+  [Shared Tooling #6](https://github.com/dragginzgame/shared-tooling/issues/6).
+  No upstream filesystem change or consumer release effect was performed.
+  Native and hosted qualification remains user-owned; #10 stays open until it
+  succeeds.
 - Apply the pinned [Shared Tooling baseline and local overlay](../../AGENTS.md).
   Its [adoption record](../shared-tooling.md) scopes provenance and exceptions.
   Historical release notes retain evidence; no new versioned note or mutable

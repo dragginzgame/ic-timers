@@ -733,6 +733,18 @@ that owner can populate them. Fetching retains Cargo's configured network/cache
 policy and both lock selections; there is no offline-to-online retry or dependency
 update. The complete gate retains its existing fetch-first ordering, and either
 workspace's failed fetch stops preflight before validation or release mutation.
+Locked fetching prepares an already consistent graph; it does not repair stale
+lockfiles after a dependency requirement changes. The maintainer's 0.13.5 attempt
+from `9d10b49851620296b55878b6aafb4ef92db6d45e` passed the root fetch and stopped
+at the testing fetch: the root required/selected `ic-metrics 0.1.6`, while
+`testing/Cargo.lock` still selected 0.1.5. An explicitly authorized targeted
+offline update corrected only that package record. Both existing locked metadata
+checks passed, with all other selections preserved; tests and full native release
+qualification remain separate. Future dependency preparation must trace every
+affected workspace, including path-dependent probes, and align applicable locks
+before cache fetching. The requested common guidance is owned by
+[Shared Tooling #6](https://github.com/dragginzgame/shared-tooling/issues/6), without
+unlocking release fetches or changing release phase order.
 The final commit adapter checks the entire index, requires
 all five outputs to be tracked and the worktree to match the index, then applies
 the existing metadata checks. Staged implementation changes hidden by restoring

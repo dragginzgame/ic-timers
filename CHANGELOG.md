@@ -14,6 +14,12 @@ All notable changes to this project are recorded here.
   [#10](https://github.com/dragginzgame/ic-timers/issues/10). These release-check
   repairs leave timer behavior unchanged.
 
+### Changed
+
+- Align both workspace locks with the published `ic-metrics 0.1.6` requirement,
+  preserving all other dependency selections and allowing locked release
+  preflight to resolve the testing workspace.
+
 ## [0.13.4] - 2026-10-06
 
 ### Fixed
