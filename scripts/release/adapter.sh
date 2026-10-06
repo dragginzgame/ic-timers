@@ -3,23 +3,27 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 check_metadata() {
-    [[ "$(bash "$script_dir/workspace-version.sh")" == "${RELEASE_VERSION:?}" ]]
-    cargo sort --workspace --check
-    cargo sort --workspace --check testing
-    bash "$script_dir/readme-version.sh" --check
-    bash "$script_dir/check-lockfiles.sh"
+    # Bash 3.2 does not reliably apply errexit to functions in subshells.
+    # Preserve every failed check explicitly before proceeding to the next one.
+    local version
+    version="$(bash "$script_dir/workspace-version.sh")" || return
+    [[ "$version" == "${RELEASE_VERSION:?}" ]] || return
+    cargo sort --workspace --check || return
+    cargo sort --workspace --check testing || return
+    bash "$script_dir/readme-version.sh" --check || return
+    bash "$script_dir/check-lockfiles.sh" || return
     awk -v heading="## [$RELEASE_VERSION] - ${RELEASE_DATE:?}" \
         '$0 == heading { n++ } END { if (n != 1) exit 1 }' CHANGELOG.md
 }
 
 admit_release_paths() {
-    paths="$(mktemp "${TMPDIR:-/tmp}/timers-release-paths.XXXXXX")"
+    paths="$(mktemp "${TMPDIR:-/tmp}/timers-release-paths.XXXXXX")" || return
     trap 'rm -f "$paths"' EXIT
     # Inspect index and worktree independently; a restored working file can
     # otherwise conceal unrelated staged content from HEAD-to-worktree diff.
-    git diff --cached --no-renames --name-only -z HEAD -- > "$paths"
-    git diff --no-renames --name-only -z -- >> "$paths"
-    git ls-files --others --exclude-standard -z >> "$paths"
+    git diff --cached --no-renames --name-only -z HEAD -- > "$paths" || return
+    git diff --no-renames --name-only -z -- >> "$paths" || return
+    git ls-files --others --exclude-standard -z >> "$paths" || return
     while IFS= read -r -d '' path; do
         case "$path" in Cargo.toml|Cargo.lock|testing/Cargo.lock|CHANGELOG.md|README.md) ;;
             *) printf 'uncommitted non-release path: %q\n' "$path" >&2; exit 1 ;;
@@ -57,7 +61,7 @@ case "${1:-}" in
         snapshot="$(mktemp -d "${TMPDIR:-/tmp}/timers-release-metadata.XXXXXX")"
         trap 'rm -rf -- "$snapshot"' EXIT
         git archive --format=tar "$commit" | tar -xf - -C "$snapshot"
-        (cd "$snapshot"; check_metadata)
+        (cd "$snapshot" && check_metadata)
         ;;
     *) echo 'usage: adapter.sh preflight|check|commit-check|check-committed' >&2; exit 2 ;;
 esac

@@ -5,7 +5,7 @@ set -euo pipefail
 # proves consumer selection, not live release execution or native qualification.
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/committed-release-check.XXXXXX")"
-trap 'rm -rf -- "$fixture"' EXIT
+trap 'status=$?; if [[ "$status" != 0 && -f "$fixture/output" ]]; then cat "$fixture/output" >&2; fi; rm -rf -- "$fixture"; exit "$status"' EXIT
 mkdir -p "$fixture/current/scripts" "$fixture/selected/testing" "$fixture/bin" "$fixture/tmp"
 cp "$root/Makefile" "$fixture/current/"
 cp -R "$root/scripts/release" "$fixture/current/scripts/"
@@ -49,13 +49,18 @@ cat >> "$fixture/bin/cargo" <<'STUB'
 set -euo pipefail
 printf 'cargo %s\n' "$*" >> "$EVENTS"
 case "$*" in
-    'sort --workspace --check' | 'sort --workspace --check testing') [[ "${FAIL_SORT:-0}" == 0 ]] ;;
+    'sort --workspace --check' | 'sort --workspace --check testing')
+        if [[ "${FAIL_SORT:-}" == "$*" ]]; then
+            echo 'fixture manifest ordering failure' >&2
+            exit 35
+        fi
+        ;;
     'metadata --manifest-path Cargo.toml --locked --offline --format-version 1') lock=Cargo.lock ;;
     'metadata --manifest-path testing/Cargo.toml --locked --offline --format-version 1') lock=testing/Cargo.lock ;;
     *) echo "unexpected Cargo command: $*" >&2; exit 35 ;;
 esac
 if [[ "$1" == metadata ]]; then
-    [[ "${FAIL_METADATA:-0}" == 0 ]] || { echo 'fixture locked metadata failure' >&2; exit 36; }
+    [[ "${FAIL_METADATA:-}" != "$lock" ]] || { echo 'fixture locked metadata failure' >&2; exit 36; }
     version="$(sed -n 's/^version = "\([^"]*\)"$/\1/p' "$lock")"
     printf '{"packages":[{"name":"ic-timers","version":"%s"}]}\n' "$version"
 fi
@@ -102,12 +107,40 @@ for phase in before after; do
     reject release-committed-check "$phase archive failure"
 done
 unset FAIL_ARCHIVE
-export FAIL_METADATA=1
-reject release-committed-check 'failed locked resolution'
-grep -Fq 'fixture locked metadata failure' "$fixture/output"
+# Fail each workspace independently. A later successful check must never mask
+# the original failure, including on Apple's Bash 3.2.
+for lock in Cargo.lock testing/Cargo.lock; do
+    : > "$EVENTS"
+    export FAIL_METADATA="$lock"
+    reject release-push-check "failed $lock resolution"
+    grep -Fq 'fixture locked metadata failure' "$fixture/output"
+    if grep -Eq '^git cat-file ' "$EVENTS"; then
+        echo 'error: push check inspected tags after failed locked resolution' >&2
+        exit 1
+    fi
+    if [[ "$lock" == Cargo.lock ]] && grep -Fqx \
+        'cargo metadata --manifest-path testing/Cargo.toml --locked --offline --format-version 1' "$EVENTS"; then
+        echo 'error: locked resolution continued after root workspace failure' >&2
+        exit 1
+    fi
+done
 unset FAIL_METADATA
-export FAIL_SORT=1
-reject release-committed-check 'manifest ordering failure'
+for command in 'sort --workspace --check' 'sort --workspace --check testing'; do
+    : > "$EVENTS"
+    export FAIL_SORT="$command"
+    reject release-push-check "$command failure"
+    grep -Fq 'fixture manifest ordering failure' "$fixture/output"
+    # Sorting failure stops before either lock resolver or tag lookup.
+    if grep -Eq '^cargo metadata |^git cat-file ' "$EVENTS"; then
+        echo 'error: committed check continued after manifest ordering failure' >&2
+        exit 1
+    fi
+    if [[ "$command" == 'sort --workspace --check' ]] && grep -Fqx \
+        'cargo sort --workspace --check testing' "$EVENTS"; then
+        echo 'error: manifest ordering continued after root workspace failure' >&2
+        exit 1
+    fi
+done
 unset FAIL_SORT
 if "$real_make" --no-print-directory release-committed-check RELEASE_COMMIT= \
     RELEASE_VERSION=0.1.0 RELEASE_DATE=2026-10-06 > "$fixture/output" 2>&1; then exit 1; fi

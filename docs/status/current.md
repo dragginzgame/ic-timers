@@ -17,13 +17,14 @@ references and validation belong in [release notes](../changelog/README.md),
   accepted batch under its automatically selected, undated next version.
   The maintainer's bump finalizes and dates it; a dated section alone does not prove
   tagging, publication or deployment.
-- The maintainer reports 0.13.3 live. Cargo, both lockfiles, finalized changelog
-  and local tag identify release commit `864397a7c21eec4f396fe9617dbb8d8e1f9cfc73`.
-  Publication was not independently checked. Tag and main gates passed,
-  including Linux checks, MSRV and both native macOS complete release gates.
-  The Apple Silicon log records 142 native tests and 14 PocketIC runtime subjects
-  plus policy cohorts. The preceding 0.13.2 qualification remains source-bound
-  at `134899f`; neither run qualifies the current working tree. See the
+- The maintainer reports 0.13.4 live. Cargo, both lockfiles, finalized changelog
+  and local tag identify release commit `aa0e933eb56ff0e3e6832ad822f77c95a1392199`.
+  Publication was not independently checked. Tag CI and main MSRV passed, but
+  main Linux checks and both native macOS complete release gates failed in the
+  new release fixtures. The last complete qualification remains 0.13.3 at
+  `864397a`: Linux/MSRV and both macOS gates passed, with 142 native tests,
+  14 PocketIC runtime subjects and policy cohorts in the Apple Silicon log.
+  Neither source qualifies the pending repair. See the
   [source-bound host record](../releasing.md#host-support).
 - Released 0.13.3 covers a compatible callback-capture destruction fix
   and removal of handle detachment/reinstallation for rejected/coalesced public
@@ -38,7 +39,7 @@ references and validation belong in [release notes](../changelog/README.md),
   and release execution remain maintainer-owned. The
   [delivery ownership contract](../design/callback-delivery-ownership.md#capture-removal-and-coalesced-requests)
   records implementation, baseline cost, temporary allocation and acceptance.
-- The undated 0.13.4 draft covers compatible repository-only release recovery
+- Released 0.13.4 covers compatible repository-only release recovery
   for [#10](https://github.com/dragginzgame/ic-timers/issues/10), using reviewed
   Shared Tooling `cb86188`. Late adapters inspect exact `RELEASE_COMMIT` metadata
   and tags separately from HEAD; normal commands finish an older committed
@@ -57,10 +58,24 @@ references and validation belong in [release notes](../changelog/README.md),
   baseline/policy rows. Old hosted logs omitted byte sizes; no historical Wasm
   delta is inferred. This changes evidence output only, with no target Wasm
   instrumentation or runtime behavior change.
-  Source/snapshot/syntax/diff inspection is preparation evidence; consumer
-  fixtures and native qualification remain unexecuted. Cargo versions, both
-  locks and timer runtime are unchanged. Usually bundle this tooling with the
-  next code-bearing release; a maintainer-selected patch retains the full gate.
+  Contributor source/snapshot/syntax/diff inspection was preparation evidence;
+  the subsequent hosted attempt failed as recorded above. Timer runtime and
+  dependency selections are unchanged. A repository-only patch retains the
+  complete gate rather than using tag success as complete qualification.
+- The undated 0.13.5 draft repairs those compatible repository-only failures.
+  Metadata and Git admission functions explicitly propagate failed commands
+  instead of relying on Bash 3.2 subshell errexit. Sort and lock failures are
+  injected independently for both workspaces. The index fixture deliberately
+  uses a shallow clone with its own controlled baseline tag, satisfying impact
+  classification without remote history or production changes. Both fixtures
+  report captured adapter output before failure cleanup. Source, shell syntax
+  and diff inspection remain preparation evidence; no tests/builds/lint gates
+  were run. The release-check repair leaves Cargo and runtime sources unchanged.
+  A separate concurrent dependency update now requires `ic-metrics 0.1.6` and
+  selects it in the root lock; the inspected testing lock still selects 0.1.5
+  and needs alignment before locked validation. Those edits are preserved and
+  are outside the repair's qualification. Native and hosted qualification remains
+  user-owned; #10 stays open until it succeeds.
 - Apply the pinned [Shared Tooling baseline and local overlay](../../AGENTS.md).
   Its [adoption record](../shared-tooling.md) scopes provenance and exceptions.
   Historical release notes retain evidence; no new versioned note or mutable
@@ -356,16 +371,20 @@ are recorded in the [0.10.12 note](../changelog/0.10.12.md).
 
 ## Evidence
 
-Latest inspected release: 0.13.3 at `864397a`, tag and main CI passed, including
-Linux/MSRV and both native macOS complete gates. Apple Silicon records 142 native
-tests, 14 PocketIC runtime subjects, doctests and policy cohorts. The preceding
+Latest inspected release: 0.13.4 at `aa0e933`, tag CI and main MSRV passed, while
+main Linux checks and both native macOS gates failed in release fixtures.
+The pending 0.13.5 repair has no matching remote CI. The last complete hosted
+qualification is 0.13.3 at `864397a`; Apple Silicon records 142 native tests,
+14 PocketIC runtime subjects, doctests and policy cohorts. The preceding
 0.13.2 qualification at `134899f` retains its own 138 native/13 PocketIC scope.
 Exact
 links and qualification scope belong in the [host matrix](../releasing.md#host-support).
 The maintainer authorized closing [#9](https://github.com/dragginzgame/ic-timers/issues/9)
 with that integration/CI evidence; it is closed. Issue #10 is the only open issue
-and no open PR covers it; its consumer repair is prepared locally, with execution
-and native qualification pending. No GitHub writes were made during this review.
+and no open PR covers it; the released consumer repair needs the pending fixture
+corrections and successful native qualification. No GitHub writes were made
+during this repair. The earlier authorized ic-metrics comments on #1, #3 and #4
+record IC Timers 0.13.3 consumer qualification; they do not qualify 0.13.4.
 The committed Shared Tooling head and remote main matched adopted `cb86188`;
 its upstream Linux regression and lint/security passed, but both macOS jobs
 failed at snapshot-distribution fixture source-path admission after passing the
@@ -374,8 +393,10 @@ in the [adoption record](../shared-tooling.md). The preceding `9437bab` Linux an
 both macOS upstream gates passed, qualifying that recovery source alone.
 Later sibling changes were initially dirty and excluded; after they were
 committed at `cb86188`, a separate clean reviewed export adopted them.
-No tests were executed locally during this continuation. The working-tree
-0.13.4 tooling batch has no matching remote CI evidence. See the
+No tests were executed locally during this continuation. Shared Tooling's only
+new inspected changes are uncommitted snapshot-fixture path correction and its
+changelog; they are not a new adopted baseline. The working-tree 0.13.5 repair
+has no matching remote CI evidence. See the
 [release runner evidence owner](../releasing.md#standard-release-runner).
 
 Earlier inspection records follow; their pending/failure language describes

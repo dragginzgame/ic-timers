@@ -2,6 +2,18 @@
 
 All notable changes to this project are recorded here.
 
+## [0.13.5]
+
+### Fixed
+
+- Stop committed release metadata checks at the first failure on Bash 3.2,
+  preserving manifest ordering and locked-resolution rejection on macOS.
+- Exercise release-index checks in a controlled shallow checkout with its own
+  baseline tag, removing their dependence on hosted checkout history. This
+  addresses the hosted qualification failures in the release-tooling repair for
+  [#10](https://github.com/dragginzgame/ic-timers/issues/10). These release-check
+  repairs leave timer behavior unchanged.
+
 ## [0.13.4] - 2026-10-06
 
 ### Fixed

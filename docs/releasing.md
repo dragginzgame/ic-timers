@@ -341,8 +341,8 @@ continues to target Wasm on the Internet Computer.
 | Host | Current workflow configuration and evidence scope |
 | --- | --- |
 | Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The release gate pins the audited PocketIC 16.0.0 Linux x86_64 artifact. Recorded results remain scoped to their original subjects. |
-| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The complete release gate passed for 0.13.2 at `134899f`; pending source changes require fresh qualification. |
-| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The complete release gate passed for 0.13.2 at `134899f`; pending source changes require fresh qualification. |
+| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The complete release gate passed for 0.13.3 at `864397a`; 0.13.4 failed in committed-metadata rejection coverage. Pending repair requires fresh qualification. |
+| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The complete release gate passed for 0.13.3 at `864397a`; 0.13.4 failed in committed-metadata rejection coverage. Pending repair requires fresh qualification. |
 
 Inspection on 2026-10-06 of the 0.13.1 source at
 `54bbcfc4985d4657578150cbe7112795297115fd` found both native macOS jobs in
@@ -390,6 +390,22 @@ The [callback ownership record](design/callback-delivery-ownership.md#capture-re
 compares the exact 0.13.2/0.13.3 instruction subjects, including initial-arm and
 cancellation increases. This qualifies released 0.13.3 source, not the subsequent
 working-tree release-tooling and host-only measurement changes.
+
+For release commit `aa0e933eb56ff0e3e6832ad822f77c95a1392199` (0.13.4),
+the maintainer reports publication live and the
+[tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37433514158)
+passed. The matching
+[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37433514493)
+passed MSRV but failed Linux checks and both native macOS complete gates.
+Linux reached `test-release-index.sh`, reported a shallow source clone and exited
+128, with the adapter output hidden in the fixture's deleted temporary file.
+Source inspection identifies its next-version preflight's reachable-tag
+requirement as an unmet prerequisite in the default shallow main checkout.
+Both macOS hosts failed `test-committed-release.sh` with
+`committed check accepted manifest ordering failure`; later runtime/PocketIC
+and cohort stages were not reached. These results do not qualify the complete
+0.13.4 release gate, despite the successful tag job. Registry publication was
+not independently checked.
 
 Version preparation uses Bash, Perl, Git and Cargo. It owns regular metadata
 files; symlinked or non-file outputs are rejected before mutation. Applicable
@@ -751,7 +767,7 @@ checks an earlier selected commit separately from HEAD. The shared runner fixtur
 owns the patch/minor/major and same/different-kind interruption matrix, lost
 push replies, fresh-gate failure/retry, conflicts and locking. These fixtures
 remain in the complete release gate on Linux and both native macOS jobs.
-The new real-index fixture reuses existing Git history without creating commits
+The real-index fixture reuses the current commit without creating commits
 and checks hidden staged source, stale staged metadata, valid staged metadata,
 untracked outputs and preservation of the selected index. It also injects failed
 staged/unstaged/untracked producers with empty or plausible partial NUL output,
@@ -764,9 +780,25 @@ release execution. The existing actual
 release-gate fixture now checks raw failure retention across failed/successful
 attempts and execution with a tool path excluding ripgrep. Full gate sequencing,
 failure propagation and PocketIC override assertions are retained.
-Consumer fixture execution and native qualification of this refresh remain
-maintainer-owned and pending. No release was executed during adoption; source,
-snapshot and syntax checks are separate from workflow qualification.
+The 0.13.4 hosted attempt failed at the subjects recorded in the
+[host matrix](#host-support). The pending 0.13.5 repair explicitly returns each
+metadata-check failure, including workspace-version extraction, both manifest
+ordering checks, README projection and locked resolution. Git path admission
+also returns failed producer status explicitly. This avoids relying on Bash 3.2
+errexit inside a function invoked from the selected-tree subshell. The fixture
+injects each workspace's sort and lock failure independently, uses explicit
+stub failure exits, checks temporary-copy cleanup and verifies sorting failures
+stop before metadata resolution or tag lookup.
+
+The index fixture deliberately uses a depth-one local transport clone and gives
+only that isolated clone a controlled current-version baseline tag. It does not
+fetch remote history, create commits or change production impact classification.
+The existing index-preservation, failed-Git-query and ordered locked-fetch
+subjects remain. Both fixtures print their captured adapter output on failure
+before cleanup, so subsequent hosted failures retain the underlying error.
+Source and shell/embedded-shell syntax inspection and diff checks are preparation
+evidence; repaired fixture execution and native Linux/macOS qualification remain
+maintainer-owned and pending. No release was executed during contributor repair.
 
 The prepared host-only cohort row also appends `wasm_bytes`, measured from the
 exact vector installed into PocketIC for each baseline/policy artifact. The

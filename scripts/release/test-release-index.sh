@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Reuse committed history without creating fixture commits. The current adapter
-# reads a real isolated Git index; Cargo calls are stubs, not compilation.
+# Reuse the current commit without creating fixture commits. Deliberately use
+# a shallow checkout like CI; only the isolated clone receives a baseline tag.
+# The adapter reads a real Git index; Cargo calls are stubs, not compilation.
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/release-index-check.XXXXXX")"
-trap 'rm -rf -- "$fixture"' EXIT
-git clone -q --local --no-hardlinks "$root" "$fixture/repo"
+trap 'status=$?; if [[ "$status" != 0 && -f "$fixture/output" ]]; then cat "$fixture/output" >&2; fi; rm -rf -- "$fixture"; exit "$status"' EXIT
+git clone -q --no-local --depth 1 "$root" "$fixture/repo"
 mkdir "$fixture/bin" "$fixture/tmp"
 export FETCH_EVENTS="$fixture/fetch-events"
 real_bash="$(command -v bash)"
@@ -35,6 +36,10 @@ original_head="$(git rev-parse HEAD)"
 export RELEASE_VERSION="$(bash "$root/scripts/release/workspace-version.sh")"
 export RELEASE_PREVIOUS="$RELEASE_VERSION"
 export RELEASE_DATE="$(sed -n "s/^## \[$RELEASE_VERSION\] - //p" CHANGELOG.md)"
+# CI's main checkout need not contain release tags. Supply the impact owner's
+# prerequisite locally, without fetching history or changing the source repo.
+git tag -f "v$RELEASE_PREVIOUS" "$original_head" > /dev/null
+[[ "$(git rev-parse --is-shallow-repository)" == true ]]
 
 reject() {
     if bash "$root/scripts/release/adapter.sh" "$1" > "$fixture/output" 2>&1; then
