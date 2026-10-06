@@ -2,6 +2,21 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.3]
+
+### Development
+
+- Finalize release notes using the bump's known previous version. Preserve older
+  undated sections as history, retaining strict rejection of competing pending notes
+  and already dated targets. Compare version components exactly, retain complete
+  candidate admission, and preserve file ownership and rollback. This is
+  repository-only work.
+- Check the reviewed cargo-sort version and prepared rustfmt before `fmt`,
+  `fmt-check` and hook qualification. Reject failed version commands even when
+  they print the expected version, and keep preparation explicit and offline
+  checks free of tool installation. This is repository-only work; timer behavior
+  and dependency selections are unchanged.
+
 ## [0.14.2] - 2026-10-06
 
 ### Fixed

@@ -14,9 +14,11 @@ fi
 version="${1:-}"
 release_date="${2:-$(date +%F)}"
 changelog="${3:-CHANGELOG.md}"
+previous_version="${IC_TIMERS_RELEASE_PREVIOUS:-}"
 
 if [[ ! "${version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] ||
-    [[ ! "${release_date}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+    [[ ! "${release_date}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] ||
+    [[ -n "${previous_version}" && ! "${previous_version}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
     usage
     exit 2
 fi
@@ -32,6 +34,7 @@ trap cleanup EXIT
 
 IC_TIMERS_RELEASE_VERSION="${version}" \
 IC_TIMERS_RELEASE_DATE="${release_date}" \
+IC_TIMERS_RELEASE_PREVIOUS="${previous_version}" \
 perl -0 -e '
     use strict;
     use warnings;
@@ -46,6 +49,22 @@ perl -0 -e '
     }
     my $version = $ENV{IC_TIMERS_RELEASE_VERSION};
     my $date = $ENV{IC_TIMERS_RELEASE_DATE};
+    my $previous = $ENV{IC_TIMERS_RELEASE_PREVIOUS};
+    # Canonical components compare by length then text, never floating point.
+    my $older = sub {
+        my ($left, $right) = @_;
+        my @left = split /\./, $left;
+        my @right = split /\./, $right;
+        for my $index (0 .. 2) {
+            next if $left[$index] eq $right[$index];
+            return length($left[$index]) < length($right[$index])
+                if length($left[$index]) != length($right[$index]);
+            return $left[$index] lt $right[$index];
+        }
+        return 0;
+    };
+    die "error: previous version must precede the release target\n"
+        if length($previous) && !$older->($previous, $version);
     # The explicit bump owns the version. Select one current draft, whether
     # versionless or already named; history is never used as pending notes.
     die "error: changelog already finalized ## [$version]\n"
@@ -53,7 +72,12 @@ perl -0 -e '
     my $number = qr/(?:0|[1-9][0-9]*)/;
     my @drafts;
     while ($text =~ /^## \[(Draft|$number\.$number\.$number)\][ \t]*(?:\n|\z)(.*?)(?=^## |\z)/msg) {
-        push @drafts, [$-[0], $+[0] - $-[0], $1, $2];
+        my $draft = [$-[0], $+[0] - $-[0], $1, $2];
+        # The bump owns the previous identity. Imported undated notes at or
+        # below it stay historical; only newer numbered sections are pending.
+        next if length($previous) && $draft->[2] ne "Draft" &&
+            !$older->($previous, $draft->[2]);
+        push @drafts, $draft;
     }
     die "error: changelog has multiple undated release candidates; choose one\n"
         if @drafts > 1;

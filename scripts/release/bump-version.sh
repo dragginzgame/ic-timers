@@ -78,7 +78,8 @@ release_impact="$(
 bash scripts/release/check-bump-impact.sh "${release_impact}" "${previous_version}"
 
 release_date="${IC_TIMERS_RELEASE_DATE:-$(date -u +%F)}"
-bash scripts/release/finalize-changelog.sh --check "${new_version}" "${release_date}"
+IC_TIMERS_RELEASE_PREVIOUS="${previous_version}" \
+    bash scripts/release/finalize-changelog.sh --check "${new_version}" "${release_date}"
 bash scripts/release/readme-version.sh --check
 if ! bash scripts/release/warn-release-prose.sh "${new_version}"; then
     echo "warning: advisory release-prose check could not run; continuing" >&2
@@ -135,7 +136,8 @@ for path in "${metadata_files[@]}"; do
 done
 mutation_started=true
 
-bash scripts/release/finalize-changelog.sh "${new_version}" "${release_date}"
+IC_TIMERS_RELEASE_PREVIOUS="${previous_version}" \
+    bash scripts/release/finalize-changelog.sh "${new_version}" "${release_date}"
 
 bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh" set "${previous_version}" "${new_version}"
 bash scripts/release/readme-version.sh --update

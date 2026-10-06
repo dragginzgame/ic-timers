@@ -181,6 +181,9 @@ for source in default environment command-line same-as-default empty; do
 done
 rm provisioning
 cat > overrides.mk <<'EOF'
+# Keep this orchestration fixture independent of prepared formatter tools.
+format-tools-check:
+	@:
 fetch actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package pocketic-check msrv testing-check pocketic-watchdog pocketic-cohorts:
 	@printf '%s\n' '$@' >> checks-ran
 	@if [ '$@' = '$(FAIL_TARGET)' ]; then echo 'failed $@' >&2; exit 1; fi

@@ -3,7 +3,8 @@ set -euo pipefail
 
 repository_root="$(git rev-parse --show-toplevel)"
 source "${repository_root}/tool-versions.env"
-[[ "$(cargo sort --version)" == "cargo-sort ${IC_TIMERS_CARGO_SORT_VERSION}" ]]
+bash "${repository_root}/.shared-tooling/helpers/scripts/ci/check-format-tools.sh" \
+    "${IC_TIMERS_CARGO_SORT_VERSION}"
 temporary_root="$(mktemp -d)"
 trap 'rm -rf -- "${temporary_root}"' EXIT
 # Reuse committed objects read-only; the fixture never creates a commit.
@@ -20,6 +21,9 @@ git read-tree HEAD
 git checkout-index --all
 cp "${repository_root}/Makefile" Makefile
 cp "${repository_root}/tool-versions.env" tool-versions.env
+# The current fmt prerequisite must also exist in the fixture's exact index.
+cp -p "${repository_root}/.shared-tooling/helpers/scripts/ci/check-format-tools.sh" \
+    .shared-tooling/helpers/scripts/ci/
 mkdir -p src testing/src
 for workspace in . testing; do
     cat > "${workspace}/Cargo.toml" <<'EOF'
@@ -33,7 +37,8 @@ edition = "2024"
 EOF
     printf 'pub fn fixture( ){}\n' > "${workspace}/src/lib.rs"
 done
-git add Makefile tool-versions.env Cargo.toml src/lib.rs testing/Cargo.toml testing/src/lib.rs
+git add Makefile tool-versions.env Cargo.toml src/lib.rs testing/Cargo.toml testing/src/lib.rs \
+    .shared-tooling/helpers/scripts/ci/check-format-tools.sh
 printf 'unrelated working edit\n' >> README.md
 cp README.md "${temporary_root}/unrelated-readme"
 

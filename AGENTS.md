@@ -15,8 +15,9 @@ This file is normative for automated contributors.
   supplemental snapshot also supplies pinned host-parser setup at the same
   reviewed revision. The isolated
   [Cargo/IC helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
-  supplies the structured dependency checker, Cargo readers/rewrites and IC
-  installer from `d957d1f8801885c5b69e4a9ef900155f5f2a8a9d`. Apply the
+  supplies the structured dependency checker, Cargo readers/rewrites, IC
+  installer and formatter prerequisite guard from
+  `b32d3038c850a7c53470c326b0f7f11263b31669`. Apply the
   [dependency pinning rules](rules/dependency-pinning.md) with the exact local
   [qualification exceptions](docs/releasing.md#dependency-pin-exceptions).
   The [local hygiene overlay](docs/audits/code-hygiene.md) and adoption record scope

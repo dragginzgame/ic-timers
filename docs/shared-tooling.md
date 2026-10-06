@@ -10,9 +10,11 @@ files from [`a37771f1b6b5fc9a88ed6ab3b705bdda35cd8fa3`](https://github.com/dragg
 including the six unchanged methods, their adoption/provenance guidance and
 linked documents/catalogs and the host-parser installer/fixtures. Its two
 principle documents and integrity helpers are byte-identical to the baseline's
-copies and recorded in both manifests. The thirteen-file
+copies and recorded in both manifests. The fifteen-file
 [helper snapshot](../.shared-tooling/helpers/.shared-tooling.snapshot) records reviewed committed
-`d957d1f8801885c5b69e4a9ef900155f5f2a8a9d`: Cargo/checksum helpers and IC setup.
+`b32d3038c850a7c53470c326b0f7f11263b31669`: Cargo/checksum helpers, IC setup
+and formatter prerequisite checks. The thirteen earlier helper files are
+byte-identical to their original `d957d1f` adoption.
 The helper slice lives under `.shared-tooling/helpers/` so its newer checksum
 owner cannot replace the checksum required by either older manifest. The
 checker/filter and unchanged checker fixture moved out of the audit manifest
@@ -292,7 +294,100 @@ visible. No issue closure is implied. Helper contracts also have an exact
 [upstream guide](https://github.com/dragginzgame/shared-tooling/blob/d957d1f8801885c5b69e4a9ef900155f5f2a8a9d/docs/verification-helpers.md);
 the local release guide owns consumer commands and prerequisites.
 
+## Formatter prerequisite adoption
+
+The next compatible 0.14.3 draft adopts the shared formatter guard and its
+fixture from clean committed
+[`b32d303`](https://github.com/dragginzgame/shared-tooling/tree/b32d3038c850a7c53470c326b0f7f11263b31669)
+(Shared Tooling 0.1.9). The reviewed changes since `d957d1f` also add host-fixture
+diagnostics, restore authenticated archive bytes rather than repacking on macOS,
+and document shared changelog finalization. No release runner, finalizer, hook
+or host-installer implementation is changed in this consumer adoption. Existing
+host setup already provisions the required ripgrep; switching its installer is
+separate from the formatter admission defect.
+
+`fmt` and `fmt-check` share `format-tools-check`, which passes the existing local
+`IC_TIMERS_CARGO_SORT_VERSION=2.1.4` pin to the canonical guard. Successful exact
+`cargo sort --version` and successful `cargo fmt --version` are required before
+any files are formatted or checked. The probes force offline Cargo and disable
+rustup automatic installation. Toolchain selection remains the caller's existing
+`RUSTUP_TOOLCHAIN`/Rustup contract, and both independent workspace rosters are
+unchanged. The hook fixture retires its duplicated version comparison, overlays
+the current guard into its isolated index, and still exercises actual consumer
+formatting and preservation. Orchestration fixtures substitute this prerequisite
+alongside their other leaf commands; the shared negative fixture owns tool
+admission rather than duplicating it locally.
+The exact [formatter contract](https://github.com/dragginzgame/shared-tooling/blob/b32d3038c850a7c53470c326b0f7f11263b31669/docs/verification-helpers.md#formatter-prerequisites)
+is a revision-bound reference; the complete newer baseline is not adopted.
+
+The source was clean and exported through the distribution helper to an owned
+temporary Git consumer, then installed as the fifteen-file nested slice. All
+thirteen prior hashes/modes are unchanged. The snapshot retains one source
+revision for every byte, and the older baseline/audit manifests remain intact.
+Subsequent dirty installer/cache and fixture proposals in the sibling checkout
+are excluded from the committed source identity and this adoption.
+Native upstream [CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37489483879)
+passed Linux regression/lint-security and Apple Silicon portable regression
+plus real IC tool installation at the inspected source; Intel was still running.
+Those subjects do not qualify the new consumer Make prerequisite or hook fixture.
+Local preparation uses source/export/integrity, script syntax and diff inspection
+only; no formatter execution, tests, builds, lint gate, installation or release
+ran. Fresh consumer native qualification remains maintainer-owned.
+
+The pushed 0.14.2 consumer at `88aedf0a5353d176037062ae262dd67bae11beae`
+has successful [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37489635619)
+and [main Linux/MSRV jobs](https://github.com/dragginzgame/ic-timers/actions/runs/37489635451).
+Both complete macOS jobs were queued at inspection. This supersedes 0.14.1's
+missing-ripgrep failures on the inspected Linux jobs and qualifies the earlier
+Cargo/IC helper fixture wiring there. It does not supply complete all-host
+evidence or qualify the subsequent 0.14.3 worktree.
+
 ## Release-tooling adoption
+
+### Changelog finalizer review and history fix
+
+The compatible 0.14.3 batch fixes the existing consumer-owned finalizer's
+classification of undated history. Previously every undated numbered heading was
+pending, so an imported section at the current package version competed with the
+next draft or conflicted with the requested release. `bump-version.sh` now passes
+its validated, strictly older `previous_version` to both calls through
+`IC_TIMERS_RELEASE_PREVIOUS`. Sections at or below it remain history. The CLI is
+unchanged; standalone use without that identity conservatively treats every
+undated numbered section as pending. Supplied previous identities must be
+canonical and strictly below the target. The local comparator uses component
+length and explicit Perl string equality/ordering; no numeric conversion occurs.
+Path/mode ownership, completed candidate status, whitespace handling, empty-note
+advisories and the five-file rollback transaction remain unchanged. No named
+function or type was removed.
+
+Review of the unchanged shared finalizer at `b32d303` and newly committed
+`21f3ec3dd97f2968c9f0b08924451bb2f71770d1` found a source-level precision hazard
+that prevents adopting it yet. Its `historical()` first compares split component
+values with `a[n] != b[n]`, before using string-prefixed ordering. Numeric strings
+from `split()` can compare numerically, so equal-length values above the exact
+floating-point range may collapse at that first comparison. See the
+[GNU AWK comparison contract](https://www.gnu.org/software/gawk/manual/html_node/Variable-Typing.html)
+and the [exact upstream source](https://github.com/dragginzgame/shared-tooling/blob/21f3ec3dd97f2968c9f0b08924451bb2f71770d1/scripts/ci/finalize-release-changelog.awk).
+For example, adjacent components `9007199254740992` and `9007199254740993` are
+both valid u64 values. The upstream correction should force string comparison
+for equality too and qualify adjacent large components on all hosts. That is
+read-only review feedback; no upstream file or issue was changed and no local
+reproduction was run. The local parser remains the sole active consumer selector;
+no vendored file is patched and no new selector is added to the snapshot.
+
+Maintained fixtures now cover imported undated history with original spacing,
+strict previous identities, those adjacent large components, spaced dated-target
+refusal and failed candidate production after plausible output. The existing
+version-preparation fixture carries undated previous history through preflight,
+rollback and real preparation. Existing competing-draft, symlink/directory,
+mode, absent-file and rollback subjects remain. Shell syntax, snapshot integrity
+and diff inspection are preparation evidence; no fixture or release command ran.
+Upstream [0.1.9 CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37489483879)
+has now passed all native hosts, but does not prove this additional boundary or
+qualify the local fix. Native consumer gates remain maintainer-owned. The new
+0.1.10 installer/cache and fixture-retention changes were inspected but not adopted.
+
+### Established runner and recovery
 
 The shared runner owns the three standard SemVer entry points, ordering, Git
 operations and exact-version recovery. Consumer adapters retain the five release

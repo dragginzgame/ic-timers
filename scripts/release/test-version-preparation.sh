@@ -62,7 +62,7 @@ cat > "${temporary_root}/CHANGELOG.md" <<'EOF'
 
 - Fix terminal cleanup.
 
-## [0.1.0] - 2026-08-01
+## [0.1.0]
 
 - Initial release.
 EOF
@@ -428,6 +428,7 @@ mv scripts/release/original-warn-release-prose.sh scripts/release/warn-release-p
 test ! -f unexpected-gate
 grep -Fqx '  version = "0.1.1" # Workspace truth; preserve spacing and this comment.' Cargo.toml
 test "$(bash scripts/release/workspace-version.sh)" = 0.1.1
+grep -Fqx '## [0.1.0]' CHANGELOG.md
 grep -Fqx 'ic-timers = "=0.1.1"' README.md
 grep -Fqx '| API line | `0.1` |' README.md
 # The earlier dependency version must survive the bump unchanged.

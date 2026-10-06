@@ -5,9 +5,10 @@ repository_root="$(git rev-parse --show-toplevel)"
 finalizer="${repository_root}/scripts/release/finalize-changelog.sh"
 temporary_root="$(mktemp -d)"
 trap 'rm -rf -- "${temporary_root}"' EXIT
+export IC_TIMERS_RELEASE_PREVIOUS=0.1.0
 
-# Empty-note fixtures intentionally warn. Keep successful child output private,
-# but show the full diagnostic if finalization unexpectedly fails.
+# Keep successful child output private, but show the full diagnostic if
+# finalization unexpectedly fails. Empty-note fixtures intentionally warn.
 finalize_fixture() {
     if ! bash "${finalizer}" "$@" > "${temporary_root}/finalizer.log" 2>&1; then
         cat "${temporary_root}/finalizer.log" >&2
@@ -70,14 +71,91 @@ for scenario in empty-draft missing-draft missing-file misplaced-draft; do
     fi
 done
 
+# Imported undated versions at or below the saved previous version are history,
+# including their original whitespace. Only the current pending notes move.
+printf '## [0.1.0]  \t\n\n- Imported previous notes.\n\n## [0.0.9]\n\n- Older notes.\n' \
+    > "${temporary_root}/undated-history.md"
+for label in Draft 0.1.1 absent; do
+    printf '# Changelog\n\n' > "${temporary_root}/CHANGELOG.md"
+    printf '# Changelog\n\n## [0.1.1] - 2026-08-02\n\n' > "${temporary_root}/expected.md"
+    if [[ "${label}" != absent ]]; then
+        printf '## [%s]  \t\n\n- Pending notes.\n\n' "${label}" >> "${temporary_root}/CHANGELOG.md"
+        printf '%s\n\n' '- Pending notes.' >> "${temporary_root}/expected.md"
+    fi
+    cat "${temporary_root}/undated-history.md" >> "${temporary_root}/CHANGELOG.md"
+    cat "${temporary_root}/undated-history.md" >> "${temporary_root}/expected.md"
+    cp "${temporary_root}/CHANGELOG.md" "${temporary_root}/original.md"
+    finalize_fixture --check 0.1.1 2026-08-02 "${temporary_root}/CHANGELOG.md"
+    cmp "${temporary_root}/original.md" "${temporary_root}/CHANGELOG.md"
+    finalize_fixture 0.1.1 2026-08-02 "${temporary_root}/CHANGELOG.md"
+    cmp "${temporary_root}/expected.md" "${temporary_root}/CHANGELOG.md"
+done
+
+# Comparison must not lose precision above the exact floating-point range.
+# These adjacent components are also within Cargo SemVer's u64 range.
+previous=0.9007199254740992.0
+candidate=0.9007199254740993.0
+printf '# Changelog\n\n## [%s]\n\n- Pending notes.\n\n## [%s]\n\n- History.\n' \
+    "${candidate}" "${previous}" > "${temporary_root}/CHANGELOG.md"
+printf '# Changelog\n\n## [%s] - 2026-08-02\n\n- Pending notes.\n\n## [%s]\n\n- History.\n' \
+    "${candidate}" "${previous}" > "${temporary_root}/expected.md"
+IC_TIMERS_RELEASE_PREVIOUS="${previous}" \
+    finalize_fixture "${candidate}" 2026-08-02 "${temporary_root}/CHANGELOG.md"
+cmp "${temporary_root}/expected.md" "${temporary_root}/CHANGELOG.md"
+
 # Release preparation must refuse competing pending batches without editing them.
 printf '# Changelog\n\n## [Draft]\n\n- First batch.\n\n## [0.1.1]\n\n- Second batch.\n' > "${temporary_root}/CHANGELOG.md"
+cat "${temporary_root}/undated-history.md" >> "${temporary_root}/CHANGELOG.md"
 cp "${temporary_root}/CHANGELOG.md" "${temporary_root}/original.md"
 if bash "${finalizer}" --check 0.1.1 2026-08-02 "${temporary_root}/CHANGELOG.md" >/dev/null 2>&1; then
     echo 'error: release preparation accepted competing drafts' >&2
     exit 1
 fi
 cmp "${temporary_root}/original.md" "${temporary_root}/CHANGELOG.md"
+
+# Malformed/non-increasing previous identities and dated targets never authorize
+# a rewrite. Spaced dated headings retain the consumer's existing refusal.
+printf '# Changelog\n\n## [Draft]\n\n- Pending notes.\n' > "${temporary_root}/CHANGELOG.md"
+cp "${temporary_root}/CHANGELOG.md" "${temporary_root}/original.md"
+for previous in malformed 00.1.0 0.1.1 0.2.0; do
+    if IC_TIMERS_RELEASE_PREVIOUS="${previous}" bash "${finalizer}" \
+        0.1.1 2026-08-02 "${temporary_root}/CHANGELOG.md" >/dev/null 2>&1; then
+        echo "error: finalization accepted invalid previous identity ${previous}" >&2
+        exit 1
+    fi
+    cmp "${temporary_root}/original.md" "${temporary_root}/CHANGELOG.md"
+done
+for date in 2026-08-01 2026-08-02; do
+    printf '# Changelog\n\n## [0.1.1]  - \t%s \t\n\n- Published notes.\n' \
+        "${date}" > "${temporary_root}/CHANGELOG.md"
+    cp "${temporary_root}/CHANGELOG.md" "${temporary_root}/original.md"
+    if bash "${finalizer}" 0.1.1 2026-08-02 "${temporary_root}/CHANGELOG.md" >/dev/null 2>&1; then
+        echo 'error: finalization accepted a spaced dated target' >&2
+        exit 1
+    fi
+    cmp "${temporary_root}/original.md" "${temporary_root}/CHANGELOG.md"
+done
+
+# A failed candidate producer may print plausible bytes. Status owns
+# admission, and failure must preserve the complete original changelog.
+mkdir "${temporary_root}/bin"
+printf '# Changelog\n\n## [Draft]\n\n- Pending notes.\n' > "${temporary_root}/CHANGELOG.md"
+cp "${temporary_root}/CHANGELOG.md" "${temporary_root}/original.md"
+printf '%s\n' '#!/usr/bin/env bash' \
+    "printf '# Changelog\\n\\n## [0.1.1] - 2026-08-02\\n\\n- Partial notes.\\n'" \
+    'exit 1' > "${temporary_root}/bin/perl"
+chmod +x "${temporary_root}/bin/perl"
+for operation in check prepare; do
+    arguments=(0.1.1 2026-08-02 "${temporary_root}/CHANGELOG.md")
+    if [[ "${operation}" == check ]]; then arguments=(--check "${arguments[@]}"); fi
+    if PATH="${temporary_root}/bin:${PATH}" bash "${finalizer}" \
+        "${arguments[@]}" >/dev/null 2>&1; then
+        echo "error: ${operation} accepted failed candidate output" >&2
+        exit 1
+    fi
+    cmp "${temporary_root}/original.md" "${temporary_root}/CHANGELOG.md"
+done
+rm "${temporary_root}/bin/perl"
 
 # A chosen minor line cannot silently become a patch through its bump command.
 printf '# Changelog\n\n## [0.2.0]\n\n- Public contract change.\n' > "${temporary_root}/CHANGELOG.md"

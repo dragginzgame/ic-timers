@@ -413,6 +413,8 @@ Prepare host parsers through `make update-dev` or `make install-host-tools`
 before validation. `make actions-check` verifies them offline and delegates
 Actions and Cargo declaration checks to the reviewed shared parser; it never
 downloads tools. See the [setup and pin boundaries](docs/releasing.md#structured-dependency-checks-and-host-parsers).
+Both `fmt` and `fmt-check` first require the exact cargo-sort pin and prepared
+rustfmt for the selected toolchain; missing tools require explicit setup.
 To run the development-toolchain probe checks locally, use
 `make testing-check MSRV=1.99.0`. The host-side real-canister suites use exact
 `ic-testkit` 0.17.3 and the pinned PocketIC 16.0.0 server on Linux x86_64 or

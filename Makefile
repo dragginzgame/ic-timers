@@ -1,5 +1,5 @@
 .PHONY: \
-	actions-check build bump-x check ci clean clippy docs-check ensure-clean fetch fmt fmt-check help \
+	actions-check build bump-x check ci clean clippy docs-check ensure-clean fetch fmt fmt-check format-tools-check help \
 	install-hooks install-host-tools host-tools-check install-tools tools-check install-ic-tools ic-tools-check major minor msrv package patch pocketic-cohorts pocketic-watchdog publish release-check release-commit \
 	pocketic-check provider-check release-major release-minor release-patch release-push release-stage \
 	release-impact release-tag-check release-verify release-x repository-check shell-check test testing-check update-dev \
@@ -58,13 +58,17 @@ fetch:
 	cargo fetch --manifest-path Cargo.toml --locked
 	cargo fetch --manifest-path testing/Cargo.toml --locked
 
-fmt:
+format-tools-check:
+	@set -e; . ./tool-versions.env; \
+		bash .shared-tooling/helpers/scripts/ci/check-format-tools.sh "$$IC_TIMERS_CARGO_SORT_VERSION"
+
+fmt: format-tools-check
 	cargo sort --workspace
 	cargo sort --workspace testing
 	cargo fmt --all
 	cargo fmt --manifest-path testing/Cargo.toml --all
 
-fmt-check:
+fmt-check: format-tools-check
 	cargo sort --workspace --check
 	cargo sort --workspace --check testing
 	cargo fmt --all -- --check
@@ -175,6 +179,7 @@ release-check:
 	bash .shared-tooling/helpers/scripts/ci/verify-shared-tooling-snapshot.sh \
 		--consumer "$(CURDIR)/.shared-tooling/helpers"
 	bash scripts/ci/test-host-tools.sh
+	bash .shared-tooling/helpers/scripts/ci/test-format-tools.sh
 	bash .shared-tooling/helpers/scripts/ci/test-ic-tools.sh
 	bash .shared-tooling/helpers/scripts/ci/test-evidence-checksums.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/test-dependency-pins.sh

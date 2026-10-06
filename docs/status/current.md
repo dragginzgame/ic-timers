@@ -12,31 +12,41 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Current tooling batch
 
-The undated 0.14.2 draft repairs the missing ripgrep prerequisite in 0.14.1
-CI for [#13](https://github.com/dragginzgame/ic-timers/issues/13). All Linux,
-MSRV, macOS and tag job definitions explicitly provision it before fixtures.
-The same compatible repository-only batch adopts the shared exact lock rewrite,
-structured version reader and Cargo inheritance gate for each independent root
-([#14](https://github.com/dragginzgame/ic-timers/issues/14),
-[#15](https://github.com/dragginzgame/ic-timers/issues/15)). Explicit development
-and CI setup now prepare the full pinned IC bundle
-([#12](https://github.com/dragginzgame/ic-timers/issues/12)); native macOS evidence
-selects its PocketIC binary through the unchanged exact raw-hash admission gate.
-Default automatic single-artifact provisioning and explicit-override protection
-remain intact. Shared release/hook/validation runners and host-parser installer
-are unchanged. The helper slice is thirteen committed files from `d957d1f`;
-the baseline retains twenty-one records and the audit/parser slice nineteen.
-See the [adoption owner](../shared-tooling.md#cargo-and-ic-helper-adoption).
-This adoption leaves Cargo versions, dependency selections and runtime source
-unchanged. No tests, builds, lint, installation or complete gate ran locally for this adoption,
-and it has no matching hosted result. The cheap locked metadata check stopped
-at missing offline `ic-metrics 0.2.1` sources before verifying both graphs. A
-concurrent root lock selection of 0.2.1 is preserved; no dependency selection
-was changed by this work. Testing's independent locked/offline metadata passed
-with metrics 0.2.0 and local timers 0.14.1; the shared reader reports 0.14.1.
-The maintainer owns qualification and
-release execution. Newer dirty sibling edits are excluded; issues remain open
-pending qualification and authorized closure.
+The undated compatible 0.14.3 draft adopts the shared formatter prerequisite
+guard from clean committed Shared Tooling 0.1.9 at `b32d303`, and repairs the
+consumer-owned changelog finalizer. Both `fmt` and `fmt-check` verify the existing
+exact cargo-sort 2.1.4 pin and prepared rustfmt
+before formatting; probes are offline with rustup automatic installation disabled.
+The hook fixture uses the same guard and includes it in its isolated index.
+Shared negative fixtures are wired into the unchanged complete gate. No runtime,
+toolchain, dependency, Cargo version or lockfile mutation is part of this batch.
+The bump passes its validated previous version into both finalizer calls, so
+older undated numbered sections remain history. Version components compare by
+length and explicit string equality/ordering without numeric conversion. Accepted
+heading whitespace, strict dated-target refusal, path/mode ownership, complete
+candidate admission and rollback remain unchanged. Fixtures cover imported
+history, exact large-component ordering, invalid previous identities and failed
+candidate output; the version-preparation fixture exercises undated previous
+history through its existing transaction subjects. No functions/types were
+deleted; the anonymous hook comparison was replaced and the local parser repaired.
+Source/export/integrity, shell syntax and diff inspection are preparation
+evidence; tests, formatter execution, builds, lint, installation and release
+remain maintainer-owned. There is no hosted result for this worktree.
+
+The nested helper slice now records fifteen files at `b32d303`; its thirteen
+earlier files are byte-identical to `d957d1f`. The twenty-one-file baseline and
+nineteen-file audit/parser slice are unchanged. New host-installer changes remain
+outside this batch. The [formatter owner](../shared-tooling.md#formatter-prerequisite-adoption)
+and [finalizer owner](../shared-tooling.md#changelog-finalizer-review-and-history-fix) record the
+review and qualification boundaries. Pushed 0.14.2 at `88aedf0` passed tag CI
+and main Linux/MSRV; both complete macOS jobs were in progress at the latest
+inspection. Upstream 0.1.9 has now passed all three native hosts. New committed
+Shared Tooling 0.1.10 at `21f3ec3` has the identical finalizer, whose split-component
+numeric equality has a source-reviewed precision hazard. It is not adopted or
+patched; upstream correction and all-host boundary evidence are needed first.
+Its CI is in progress, and its installer/cache and fixture-retention changes are
+not adopted.
+Issues remain open; no closure or upstream mutation is authorized here.
 
 ## Consumer-owned instruction reader
 
@@ -78,11 +88,12 @@ the [source-bound host record](../releasing.md#host-support).
   The maintainer's bump finalizes and dates it; a dated section alone does not prove
   tagging, publication or deployment.
 - Cargo, both local-package lock entries, finalized changelog and tag identify
-  release commit `fbd319de7a60d6475232439e398fff2263a9d666` (0.14.1).
-  The maintainer reports it live; registry publication was not independently
-  checked. Main MSRV passed, but Linux checks, both macOS complete gates and
-  tag CI failed at the shared fixture's missing `rg` prerequisite. The 0.14.2
-  draft repairs setup and has no matching hosted qualification.
+  release commit `88aedf0a5353d176037062ae262dd67bae11beae` (0.14.2).
+  The maintainer reports it pushed; registry publication was not independently
+  checked. Tag CI and main Linux/MSRV passed; both complete macOS jobs were
+  in progress at the latest inspection. This repairs 0.14.1's missing-ripgrep failures on Linux
+  and qualifies the earlier helper fixtures there. The 0.14.3 tooling draft
+  has no matching hosted qualification.
   Released 0.14.0 at `902323a` is the latest inspected complete all-host
   qualification; tag, Linux/MSRV and both native macOS gates passed. Its Apple
   Silicon log records 142 native tests, doctests, 14 PocketIC runtime subjects
@@ -475,9 +486,11 @@ are recorded in the [0.10.12 note](../changelog/0.10.12.md).
 
 ## Evidence
 
-Latest inspected release: 0.14.1 at `fbd319d`; main MSRV passed, but Linux,
-both macOS gates and tag CI failed at missing `rg`. The source-bound repair
-and pending rerun are recorded in the [adoption owner](../shared-tooling.md#structured-checker-ci-repair).
+Latest inspected release: 0.14.2 at `88aedf0`; tag CI and main Linux/MSRV passed,
+while both complete macOS gates were queued. Exact source and scope are recorded
+in the [adoption owner](../shared-tooling.md#formatter-prerequisite-adoption).
+The 0.14.1 missing-`rg` failure remains historical evidence; it does not describe
+the successful 0.14.2 Linux rerun or qualify later formatter changes.
 Latest complete all-host qualification is 0.14.0 at `902323a`: tag CI, main
 Linux/MSRV and both native macOS gates passed. Apple Silicon
 records 142 native tests, doctests, 14 PocketIC subjects and cohorts; its six

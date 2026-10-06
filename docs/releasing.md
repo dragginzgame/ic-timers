@@ -94,6 +94,12 @@ The maintainer should not need to fix a heading manually before deployment.
 
 During preparation the helper refuses competing undated release candidates,
 a named draft that conflicts with the requested bump, or an already dated target.
+Both finalizer calls receive the bump's validated previous package version;
+undated numbered sections at or below it are retained as history. Version
+components compare by length and text without floating-point conversion.
+Same-date finalization is still refused. See the
+[finalizer review](shared-tooling.md#changelog-finalizer-review-and-history-fix)
+for the ownership and fixture scope.
 It cannot silently select among batches, override a chosen minor boundary or
 relabel published history. It also rejects a requested version that is not a strict
 canonical-SemVer increase, an existing exact release tag, or a subject with no
@@ -453,6 +459,13 @@ unchanged. Shell/source/diff inspection is repair evidence; rerunning native
 qualification remains maintainer-owned. Details belong in the
 [adoption owner](shared-tooling.md#structured-checker-ci-repair).
 
+Pushed 0.14.2 at `88aedf0a5353d176037062ae262dd67bae11beae` passed
+[tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37489635619)
+and main [Linux/MSRV jobs](https://github.com/dragginzgame/ic-timers/actions/runs/37489635451).
+Both complete macOS jobs were queued at inspection; latest inspected complete
+all-host qualification remains 0.14.0. These results qualify the earlier
+helper/CI repair on the inspected hosts, not the subsequent formatter worktree.
+
 Version preparation uses Bash, Perl, Git, Cargo and the explicitly installed
 jq/yq parser pair. It owns regular metadata
 files; symlinked or non-file outputs are rejected before mutation. Applicable
@@ -525,6 +538,19 @@ as ordinary commands before empty-result assertions. This tightens the fixture's
 producer-failure handling without changing the audited version, digest, binary
 verification or override ownership. Source and shell syntax were reviewed;
 the changed fixture has not been executed.
+
+### Formatter prerequisites
+
+Both `make fmt` and `make fmt-check` depend on `format-tools-check`. The reviewed
+shared guard requires successful exact cargo-sort 2.1.4 output using the existing
+`tool-versions.env` pin and successful rustfmt availability for the selected
+toolchain. Failed probes reject even if stdout looks correct. They force Cargo
+offline and disable rustup automatic installation; setup remains explicit through
+`make update-dev` or CI. The guard neither formats nor builds. The following
+formatter recipes still cover both independent workspaces with their existing
+options. The hook's isolated index must include the guard along with the current
+Makefile and versions file. Fixture wiring and pending native qualification
+belong in the [adoption owner](shared-tooling.md#formatter-prerequisite-adoption).
 
 ### Structured dependency checks and host parsers
 

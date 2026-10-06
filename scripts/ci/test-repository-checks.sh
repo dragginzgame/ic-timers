@@ -89,6 +89,9 @@ fi
 printf '%s\n' "${CLASSIFICATION:-repository}"
 EOF
 cat > overrides.mk <<'EOF'
+# The shared formatter fixture owns tool admission; this fixture owns ordering.
+format-tools-check:
+	@:
 actions-check shell-check release-check provider-check fmt-check:
 	@printf '%s\n' '$@' >> checks-ran
 	@if [ '$@' = '$(FAIL_TARGET)' ]; then echo 'failed $@' >&2; exit 1; fi
