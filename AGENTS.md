@@ -5,19 +5,19 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `46c02774a8335cb3949d6f04284c4f53375353c1` (0.1.11). Its provenance and
+  from revision `33c2a6f0018a94915f819ff219e270500ed5b73b` (0.1.12). Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
-- Apply the unchanged [shared audit methods](audits/README.md) from revision
-  `46c02774a8335cb3949d6f04284c4f53375353c1`, recorded separately in
+- Apply the [shared audit methods](audits/README.md) from revision
+  `33c2a6f0018a94915f819ff219e270500ed5b73b`, recorded separately in
   [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). That
   supplemental snapshot also supplies pinned host-parser setup at the same
   reviewed revision. The isolated
   [Cargo/IC helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
   supplies the structured dependency checker, Cargo readers/rewrites, IC
-  installer, formatter prerequisite guard and annotated-tag checker from
-  `46c02774a8335cb3949d6f04284c4f53375353c1`. Apply the
+  installer, formatter prerequisite guard, annotated-tag checker and release-command
+  adoption checker from `33c2a6f0018a94915f819ff219e270500ed5b73b`. Apply the
   [dependency pinning rules](rules/dependency-pinning.md) with the exact local
   [qualification exceptions](docs/releasing.md#dependency-pin-exceptions).
   The [local hygiene overlay](docs/audits/code-hygiene.md) and adoption record scope
@@ -56,10 +56,6 @@ This file is normative for automated contributors.
 
 - Make changes only in this repository unless the maintainer explicitly names
   another exact target and authorizes mutation there.
-- Inspection, review, audit, diagnosis, design, and feedback requests for other
-  repositories do not authorize source changes there. Owning-repository GitHub
-  issue reports follow the shared standing authorization; issue assignment and
-  closure retain their separate authority.
 - Retain the maintainer-approved independent workspace boundary required by
   the two-lockfile release workflow: `Cargo.toml` owns library dependencies and
   `testing/Cargo.toml` owns

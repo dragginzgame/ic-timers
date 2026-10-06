@@ -1,9 +1,9 @@
 # Shared Tooling snapshot v1
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	46c02774a8335cb3949d6f04284c4f53375353c1
+revision	33c2a6f0018a94915f819ff219e270500ed5b73b
 file	4c981184847462ab3c01cac087e28309f8e054253fd95c7bbe56f643877aa708	x	scripts/ci/verify-file-checksum.sh
-file	4024efa6850788102bbfa97c471ea3b45d760e547a31b11e7c6a91a79e3eaca8	x	scripts/ci/verify-shared-tooling-snapshot.sh
+file	b6764190803118331d7441233bcd6a3031c99c0c5219cc4a5c29dfb1a1040e41	x	scripts/ci/verify-shared-tooling-snapshot.sh
 file	4d875dd6b8822f68ae86a357cde9af67b33302331a11333e31941eb1c41a6929	x	scripts/ci/check-dependency-pins.sh
 file	43b22d137421962ab6b34634e60d94b8cc6cf5483f9bc55afa8a0d1cd0964a28	-	scripts/ci/dependency-pins.jq
 file	75c53efefe025efb4f817879c802c201ca9d06a2c7ba7aefc25701b9aebf6170	x	scripts/ci/test-dependency-pins.sh
@@ -18,3 +18,4 @@ file	43e2b571a909c2d63b2e3b11d208744995997575b34f0c1fbe5ea3104d40bcca	x	scripts/
 file	a52db278800a9f02d85a6b8a780a9b1eed860c49d5442cef9db1f7f9d7ddee0a	x	scripts/ci/check-format-tools.sh
 file	bf3ac5d22e63798ffe67539b138d277cc3364a4665babff5b494b210b1e140ce	x	scripts/ci/test-format-tools.sh
 file	d7b179f9ceaec6e11c690c975b61f91bedc80526415f71571615064db14f0c9c	x	scripts/ci/check-release-tag.sh
+file	5dd38585740657f98f655c15c4f617ca05dc4b6304e0925675a44376ec33309b	x	scripts/ci/check-release-commands.sh

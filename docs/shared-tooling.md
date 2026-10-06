@@ -1,18 +1,19 @@
 # Shared Tooling adoption
 
-IC Timers adopts Shared Tooling 0.1.11 at reviewed committed revision
-[`46c02774a8335cb3949d6f04284c4f53375353c1`](https://github.com/dragginzgame/shared-tooling/tree/46c02774a8335cb3949d6f04284c4f53375353c1).
-The [baseline snapshot](../.shared-tooling.snapshot) records twenty-three exact
+IC Timers adopts Shared Tooling 0.1.12 at reviewed committed revision
+[`33c2a6f0018a94915f819ff219e270500ed5b73b`](https://github.com/dragginzgame/shared-tooling/tree/33c2a6f0018a94915f819ff219e270500ed5b73b).
+The [baseline snapshot](../.shared-tooling.snapshot) records twenty-five exact
 files, including the paired baseline/maintenance rule, release and validation
 runners, checksum owner and linked guides. The supplemental
 [audit snapshot](../.shared-tooling-audits.snapshot) records nineteen files:
 the six unchanged audit methods, provenance/setup guidance, pin catalogs and
 host-parser installer/fixtures. Its overlapping principles and integrity helpers
-are identical to the baseline's records. The sixteen-file
+are identical to the baseline's records. The seventeen-file
 [helper snapshot](../.shared-tooling/helpers/.shared-tooling.snapshot) records
 Cargo/checksum helpers, IC setup, formatter prerequisites and annotated-tag
-admission at the same revision. Its separate directory retains existing caller
-paths; no alternate runtime or new helper invocation is introduced.
+admission and standard-release command checks at the same revision. Its separate
+directory retains existing helper paths. Optional helpers require an explicit
+caller adoption; the new command checker is selected directly in `release-check`.
 
 [AGENTS.md](../AGENTS.md) owns the product overlay and approved command-authority
 exceptions. Tests, builds, lint and all release effects remain maintainer-owned.
@@ -22,6 +23,104 @@ material until a separate caller adoption. Refresh through the upstream
 [distribution workflow](consuming-snapshots.md) from a clean reviewed checkout;
 CI/release validation uses these offline manifests, never a mutable sibling.
 The former document-only copy under `docs/shared-tooling/` remains retired.
+
+## Shared Tooling 0.1.12 adoption
+
+The maintainer authorized the next tooling cleanup after released 0.14.4.
+Shared Tooling 0.1.12 became clean and committed during that preparation; exact
+source [upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37511845192)
+at `33c2a6f` passed Linux portable regression, lint/security and native macOS 15
+Intel/Apple Silicon. All three consumer manifests were reviewed and exported from
+a clean detached checkout through the upstream distribution helper. Overlapping
+root verifier records are refreshed together; the nested verifier has the same
+new bytes. No sibling source was modified or dirty byte adopted.
+
+The paired baseline/maintenance rule and audit authority changes are included.
+They allow relevant issue work while retaining separate authorization for sibling
+file edits and all release effects. Redundant local issue-scope wording was
+retired; the maintainer-owned tests/builds/lint/release exceptions and independent
+workspace/PocketIC contracts remain. The baseline adds only its referenced
+read-only `gh-ci.sh` and flat governance file list. The list is documentation
+selection for new consumers, not an executable instruction to widen these
+manifests. Existing linked guides are present and checked in the exported tree.
+Standalone yq installers, shared portable-suite prerequisites and upstream CI
+artifact-upload recipes are outside our caller adoption. Current host/IC pins,
+no-flag parser setup and system-ripgrep bootstrap remain locally owned.
+
+### Standard-release command checker
+
+[#17](https://github.com/dragginzgame/ic-timers/issues/17) removes
+`scripts/release/test-standard-release.sh` completely. It contained only the
+copied generic smoke block and no named functions/types. `release-check` now calls
+`.shared-tooling/helpers/scripts/ci/check-release-commands.sh` with the actual
+consumer root and explicit `tool-versions.env` input. The helper itself is
+byte-identical to the already-qualified 0.1.11 source. No compatibility adapter,
+local generic duplicate or second fixture dispatcher remains.
+
+The checker exports the actual Makefile and selected input into its own scratch
+checkout, puts the recording runner at the Makefile's existing relative path,
+and never invokes the real release runner. It verifies exact NUL-separated
+patch/minor/major/resume arguments, success/failure propagation and all ordered
+pairs of conflicting goals before dispatch. It clears inherited Make/logger
+identities, retains failed logs and deletes only successful owned scratch. The
+remaining local fixtures still own both-lockfile metadata, index admission,
+PocketIC ordering, prepared payloads, exact tags and interruption recovery.
+The version-preparation fixture's cross-reference moves to the shared owner.
+
+### Recorded release destination and integrity bootstrap
+
+[#18](https://github.com/dragginzgame/ic-timers/issues/18) adopts owner corrections
+for [Shared Tooling #25](https://github.com/dragginzgame/shared-tooling/issues/25)
+and [#27](https://github.com/dragginzgame/shared-tooling/issues/27). Standard release
+intent still records the selected sole push URL. The runner rechecks that URL
+after validation, after local push admission and immediately before dispatch.
+The atomic branch/tag push uses the captured URL with an option boundary, matching
+remote observation; later remote-name changes cannot redirect that dispatch.
+Selected commit/tag refs, no-follow-tags, retained intent and lost-response
+reconciliation remain. Local late callbacks retain `RELEASE_COMMIT` selection;
+standalone HEAD/tag/publication guards remain local.
+
+The adopted runner fixture expects captured-URL argv and exercises URL replacement
+or addition during validation, final admission and remote observation, followed
+by exact-destination retry without duplicate commit/tag. Existing uncertain-effect
+and older-release recovery cases remain. No local command substitute parses the
+runner's old push shape, so no parallel consumer Git substitute needs rewriting.
+
+Snapshot verification now hashes inspected files directly with a trusted host
+SHA-256 backend and executes no inspected helper. It retains file/mode/path and
+manifest admission. This is independent integrity checking, not signed provenance
+or protection against an untrusted verifier/manifest. `test-shared-snapshots.sh`
+exports each actual consumer manifest with exact file modes into owned temporary
+directories, proves the unchanged export admissible, then rejects payload-only,
+helper-only and combined corruption. A marker detects any execution of the
+changed no-op helper. Only copies are altered; failed fixture logs are retained.
+The existing complete gate selects these checks after real snapshot admission.
+
+The governance file list and already-present linked guides satisfy the local
+export scope of [Shared Tooling #28](https://github.com/dragginzgame/shared-tooling/issues/28).
+Source-tree link checks alone are insufficient; documentation references are also
+inspected against the assembled baseline/audit export. No automatic widening,
+new dependency, runtime API or persistence mechanism is introduced.
+
+### Qualification boundary
+
+Released consumer `49e4e8a25025c6a6329c993ea85255341474682b` (0.14.4) passed
+[main Linux/MSRV and both complete native macOS gates](https://github.com/dragginzgame/ic-timers/actions/runs/37505847432)
+and [tag identity/main ancestry CI](https://github.com/dragginzgame/ic-timers/actions/runs/37505847427).
+This qualifies the previous tag-checker, logger and restricted-PATH fixture repair.
+With the maintainer's explicit authorization, #16 was closed with that evidence.
+It does not qualify the later 0.14.5 worktree, and registry publication was not
+independently checked.
+
+The one undated 0.14.5 draft is compatible repository-only work. No named
+function/method/type was removed; the retired fixture had only top-level commands.
+Timer source, Cargo versions, dependencies and both lockfiles are unchanged, so
+there is no downstream Wasm/instruction/heap change. Preparation evidence is exact
+export bytes/modes, three integrity manifests, shell syntax, local/exported
+references and diff inspection. No tests, build, lint gate, installation, release
+command, staging, commit, tag, push or publication ran locally. #17/#18 remain
+open pending fresh consumer qualification through the existing complete gate and
+supported native-host CI. The records below retain their historical source scope.
 
 ## Shared Tooling 0.1.11 refresh
 
@@ -456,8 +555,9 @@ They were not executed during preparation. Source/export/snapshot integrity,
 shell syntax and diff checks are preparation evidence; no commits, tags, pushes,
 formatter, tests, builds, lint, installation or release ran locally. The upstream shared
 verification fixture includes tag admission at the all-host-green `b32d303`,
-but cannot qualify these new consumer callers. #16 remains open for qualification
-of the completed worktree under the maintainer's gate.
+but could not qualify the new consumer callers during preparation. Released
+0.14.4 subsequently passed all native consumer gates and #16 was closed; the
+[current qualification boundary](#qualification-boundary) records that evidence.
 
 Released consumer `e001ab98195d3c8541430a934fd76f756c0717d2` (0.14.3) passed
 [main Linux/MSRV and both complete native macOS gates](https://github.com/dragginzgame/ic-timers/actions/runs/37493326312)

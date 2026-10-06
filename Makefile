@@ -178,6 +178,7 @@ release-check:
 	bash scripts/ci/verify-shared-tooling-snapshot.sh --manifest .shared-tooling-audits.snapshot
 	bash .shared-tooling/helpers/scripts/ci/verify-shared-tooling-snapshot.sh \
 		--consumer "$(CURDIR)/.shared-tooling/helpers"
+	bash scripts/ci/test-shared-snapshots.sh
 	bash scripts/ci/test-host-tools.sh
 	bash .shared-tooling/helpers/scripts/ci/test-format-tools.sh
 	bash .shared-tooling/helpers/scripts/ci/test-ic-tools.sh
@@ -186,7 +187,7 @@ release-check:
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/test-cargo-metadata.sh
 	perl .shared-tooling/helpers/scripts/ci/test-local-lock-versions.pl
 	bash scripts/ci/test-release-runner.sh
-	bash scripts/release/test-standard-release.sh
+	bash .shared-tooling/helpers/scripts/ci/check-release-commands.sh "$(CURDIR)" tool-versions.env
 	bash scripts/release/test-committed-release.sh
 	bash scripts/release/test-release-index.sh
 	bash scripts/release/test-finalize-changelog.sh

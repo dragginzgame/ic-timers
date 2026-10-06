@@ -2,6 +2,19 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.5]
+
+### Development
+
+- Replace the copied standard-release smoke fixture with the reviewed shared
+  checker, retaining local metadata, lockfile and recovery coverage
+  ([#17](https://github.com/dragginzgame/ic-timers/issues/17)).
+- Refresh Shared Tooling to 0.1.12: bind standard release pushes to the recorded
+  destination URL and verify snapshots without executing inspected checksum helpers. Add
+  isolated corruption checks for all three consumer snapshots
+  ([#18](https://github.com/dragginzgame/ic-timers/issues/18)).
+  This batch is repository-only; timer behavior and dependency selections are unchanged.
+
 ## [0.14.4] - 2026-10-06
 
 ### Development

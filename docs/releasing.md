@@ -470,12 +470,24 @@ For release commit `e001ab98195d3c8541430a934fd76f756c0717d2` (0.14.3),
 [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37493326312)
 passed Linux checks, MSRV and both complete native macOS release gates.
 The matching [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37493325538)
-passed its exact-tag/main-ancestry checks. This is the latest inspected all-host
+passed its exact-tag/main-ancestry checks. At that inspection it was the latest all-host
 qualification, including formatter prerequisites, changelog preparation and the
 earlier Cargo/IC helper wiring. Registry publication was not independently
 checked. These results do not qualify the later 0.14.4 tag-checker and tooling
 worktree. The [0.1.11 refresh owner](shared-tooling.md#shared-tooling-0111-refresh)
 records exact upstream all-host evidence and pending consumer qualification.
+
+For release commit `49e4e8a25025c6a6329c993ea85255341474682b` (0.14.4),
+[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37505847432)
+passed Linux checks, MSRV and both complete native macOS release gates. Matching
+[tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37505847427) passed
+exact tag/version and main ancestry admission. These results qualify tag-checker
+delegation, the 0.1.11 logger refresh and the repaired restricted-PATH fixture.
+The maintainer-authorized closure of #16 records that evidence. This is the latest
+inspected complete consumer qualification; it does not qualify the new 0.14.5
+worktree. Registry publication was not independently checked. The
+[0.1.12 adoption owner](shared-tooling.md#shared-tooling-0112-adoption) records the
+new source, caller scope and pending native consumer evidence.
 
 Version preparation uses Bash, Perl, Git, Cargo and the explicitly installed
 jq/yq parser pair. It owns regular metadata
@@ -607,6 +619,13 @@ for Linux Mint/Ubuntu and macOS, plus this repository's Rust toolchains,
 cargo-sort and ripgrep for shared fixtures. Setup requires no sudo. Native
 Linux x86_64 and macOS 15 Intel/Apple Silicon qualification of this consumer
 adoption remains pending; upstream fixtures do not qualify these new callers.
+
+IC Timers still selects the two-parser host installer without `--with-ripgrep`.
+The shared 0.1.12 bootstrap examples now rely on pinned local ripgrep; for our
+current callers, additionally prepare system ripgrep with
+`sudo apt-get install -y ripgrep` on Linux Mint/Ubuntu or `brew install ripgrep`
+on macOS. CI already does
+this explicitly. No additional setup or download runs during ordinary checks.
 
 ### Pinned IC tool setup
 

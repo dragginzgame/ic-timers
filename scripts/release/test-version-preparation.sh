@@ -248,8 +248,8 @@ if [[ "${output}" != *'continuing because the maintainer invoked an explicit ver
     exit 1
 fi
 
-# Standard Make delegation and shared phase ordering belong to the separate
-# test-standard-release and test-release-runner fixtures in release-check.
+# Standard Make delegation and shared phase ordering are checked by the shared
+# release-command checker and test-release-runner in release-check.
 # test-commit-release exercises the actual local worktree admission.
 cp Makefile preparation-only.mk
 cp "${repository_root}/Makefile" Makefile

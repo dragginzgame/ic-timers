@@ -12,59 +12,47 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Current tooling batch
 
-The undated compatible 0.14.4 draft combines the prepared
-[#16](https://github.com/dragginzgame/ic-timers/issues/16) tag-checker delegation
-with the maintainer-authorized Shared Tooling 0.1.11 refresh. All three exact
-snapshots now identify clean committed `46c02774a8335cb3949d6f04284c4f53375353c1`:
-23 baseline files, 19 audit/setup files and 16 nested helpers. Shared checksum
-records are reconciled together. Baseline and maintenance policy are paired;
-redundant dependency-preparation reference/dirty-work wording is retired while
-product validation and release exceptions remain intact.
+The undated compatible 0.14.5 draft implements
+[#17](https://github.com/dragginzgame/ic-timers/issues/17) and
+[#18](https://github.com/dragginzgame/ic-timers/issues/18). All three exact snapshots
+now identify clean committed Shared Tooling 0.1.12
+`33c2a6f0018a94915f819ff219e270500ed5b73b`: 25 baseline files, 19 audit/setup files
+and 17 nested helpers. Overlapping root integrity records were refreshed together.
+The paired maintenance policy is adopted while tests/builds/lint and all release
+execution remain maintainer-owned. Sibling file edits still require their own
+authorization. No dependency, lockfile, Cargo version or timer source changed.
 
-The logger keeps passing/ignored `error::` test names ordinary, highlights actual
-diagnostics and retains neutral context plus undecorated raw failure logs. Child
-loggers choose their own checkout while release selections and nesting depth
-remain inherited. The existing gate fixture adds prepared/stock-path diagnostic,
-retention and nested-checkout cases. Host version producers must succeed; jq/yq
-pins and current no-flag setup/check calls are unchanged. Optional ripgrep setup
-and unrelated helper commands are not enabled. The shared AWK precision fix is
-adopted for its existing fixture subject; the active local Perl finalizer retains
-its whitespace, admission and transaction contracts. Timer code, Cargo identities,
-dependencies and locks are unchanged. No named function/type was removed.
+`release-check` directly selects the shared release-command checker with the
+actual root and `tool-versions.env`. The copied `test-standard-release.sh` is
+removed with no wrapper; local metadata/index/lock/recovery fixtures remain.
+No named function/type was deleted. Standard release pushes now recheck and use
+the captured sole destination URL. Snapshot verification hashes files without
+executing inspected code. A new isolated fixture checks all three actual exports
+and rejects payload-only, helper-only and combined corruption without executing
+a changed helper. Failed scratch/logs remain retained.
 
-#16's local adapter retains workspace/HEAD or saved-commit selection and delegates
-annotated-tag admission; its shared helper is unchanged since the prepared 0.1.9
-export. Callers, release ordering and full PocketIC gate remain intact. #16 stays
-open pending fresh consumer qualification. See the
-[refresh owner](../shared-tooling.md#shared-tooling-0111-refresh) and
-[tag-checker owner](../shared-tooling.md#annotated-tag-checker-adoption).
+The referenced read-only CI helper and flat governance file list are adopted;
+existing guides are checked in the export. The list does not automatically widen
+consumer manifests. Optional shared suite prerequisites, standalone yq setup and
+upstream artifact-upload workflows are not introduced. Local host/IC pins, system
+ripgrep preparation, independent workspaces and audited PocketIC gate remain.
+See the [adoption owner](../shared-tooling.md#shared-tooling-0112-adoption).
 
-Exact-source [upstream 0.1.11 CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37500153922)
-passed Linux, lint/security and both native macOS jobs, superseding 0.1.10's
-retention-fixture failures for that upstream subject. Source/export/snapshot,
-shell syntax, local documentation references and diff inspection are preparation
-evidence. No local tests, builds, lint, installation or release effects ran.
-The maintainer still owns the complete consumer gate; upstream success and
-released 0.14.3's evidence cannot qualify this worktree.
+Exact-source [upstream 0.1.12 CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37511845192)
+passed Linux portable regression, lint/security and both native macOS jobs.
+Consumer source/export/modes, snapshot integrity, shell syntax, local/exported
+documentation references and diff checks are preparation evidence. No contributor
+tests, builds, lint, installation or release effects ran. #17/#18 stay open pending
+fresh consumer qualification; this worktree is not qualified by older release CI.
 
-The maintainer's local gate at preparatory commit `8f03721` stopped in the
-restricted-PATH logging pass case: Make directly executed `echo`, which was
-missing from the fixture's tool set. Retained evidence identifies status 127;
-the prepared-path cases completed but later restricted/nested cases were not
-reached. The current repair adds external `echo`, resolves executable paths with
-`type -P` and preserves the grep-only branch. Its
-[evidence owner](../shared-tooling.md#consumer-restricted-path-fixture-repair)
-records the original log/scratch paths. Source syntax/diff checks are preparation
-only; no contributor test rerun, release command or new native qualification is
-claimed. The undated 0.14.4 batch and open #16 remain pending the repaired gate.
-
-Released 0.14.3 at `e001ab9` passed main Linux/MSRV and both complete macOS gates
-plus tag CI, qualifying its formatter, undated-history and Cargo/IC adoptions.
-The maintainer authorized closure of #11–#15 with those hosted results; they are
-closed. No package publication was independently checked. Shared Tooling #23
-remains a P3 manually enormous version boundary, not standalone release value;
-its committed correction is now included without changing our active selector.
-No upstream source was modified.
+Released 0.14.4 at `49e4e8a` passed main Linux/MSRV and both complete native macOS
+release gates plus matching tag CI. It qualifies the previous tag-checker, logger
+and restricted-PATH fixture repair. #16 was closed with the maintainer's explicit
+authorization and exact hosted evidence; #11–#15 remain closed. The earlier local
+fixture failure and its repair retain their scoped
+[evidence](../shared-tooling.md#consumer-restricted-path-fixture-repair).
+The maintainer reports publication live; registry publication was not independently
+checked. No upstream files were changed.
 
 ## Consumer-owned instruction reader
 
@@ -106,16 +94,14 @@ the [source-bound host record](../releasing.md#host-support).
   The maintainer's bump finalizes and dates it; a dated section alone does not prove
   tagging, publication or deployment.
 - Cargo, both local-package lock entries, finalized changelog and tag identify
-  release commit `e001ab98195d3c8541430a934fd76f756c0717d2` (0.14.3).
-  Its [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37493326312)
-  passed Linux, MSRV and both complete native macOS gates, and matching
-  [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37493325538) passed.
-  This is the latest inspected complete all-host qualification; it does not
-  qualify the new 0.14.4 tag-checker and tooling worktree. Registry publication was not
-  independently checked. Earlier 0.14.2's main and tag runs also completed
-  successfully, superseding its formerly queued macOS qualification.
-  The earlier 0.13.4 failures retain their source-bound record. See the
-  [source-bound host record](../releasing.md#host-support).
+  release commit `49e4e8a25025c6a6329c993ea85255341474682b` (0.14.4).
+  Its [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37505847432)
+  passed Linux, MSRV and both complete native macOS gates; matching
+  [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37505847427) passed.
+  This is the latest inspected complete consumer qualification; it does not
+  qualify the later 0.14.5 worktree. Registry publication was not independently
+  checked. Earlier 0.14.2/0.14.3 results and prior failures retain their exact
+  source scope in the [host record](../releasing.md#host-support).
 - Released 0.13.3 covers a compatible callback-capture destruction fix
   and removal of handle detachment/reinstallation for rejected/coalesced public
   requests. API, snapshots, recurrence, generations and dependencies are unchanged.
@@ -502,8 +488,8 @@ are recorded in the [0.10.12 note](../changelog/0.10.12.md).
 
 ## Evidence
 
-Current complete consumer qualification is released 0.14.3 at `e001ab9`, as
-recorded in Release state above; the 0.14.4 worktree remains unqualified.
+Current complete consumer qualification is released 0.14.4 at `49e4e8a`, as
+recorded in Release state above; the 0.14.5 worktree remains unqualified.
 The following earlier inspections retain their historical source scope.
 
 At the earlier inspection, release 0.14.2 at `88aedf0` had tag CI and main Linux/MSRV passes,
