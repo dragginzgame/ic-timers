@@ -2655,63 +2655,43 @@ fn terminal_scheduler_failure_clears_queued_work_before_transient_removal() {
 }
 
 #[test]
-fn transition_error_restores_handles_or_retires_the_claim() {
+fn rejected_and_coalesced_requests_preserve_bound_handles_without_reinstallation() {
     let _fixture = setup();
-    let timer = identity("transition-error-restore");
-    let registration = register_once(
-        timer.clone(),
-        DeclarationLifetime::Retained,
-        |_context| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
-    )
-    .expect("registration should succeed");
+    let timer = identity("request-handle-preservation");
+    let registration = register_once(timer.clone(), DeclarationLifetime::Retained, |_| async {
+        OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
+    })
+    .unwrap();
     registration
         .ensure_scheduled(TimerSchedule::At(15))
-        .expect("provider wake-up should arm");
-    let handles = with_registry_mut(|registry| {
-        registry
-            .take_provider_handles_for_claim(&registration.claim)
-            .map_err(TimerError::from)
-    })
-    .expect("provider handle should detach");
+        .unwrap();
+    let before = timer_snapshot(&timer).unwrap().unwrap();
 
-    assert!(matches!(
-        finish_detached_claim_transition(
-            &registration.claim,
-            handles,
-            Err(TimerError::OwnershipInvariant),
-        ),
-        Err(TimerError::OwnershipInvariant)
-    ));
-    assert!(
-        registration
-            .has_armed_wakeup()
-            .expect("restored claim should remain readable")
-    );
-    assert_eq!(timer_count(), 1);
-
-    let handles = with_registry_mut(|registry| {
-        registry
-            .take_provider_handles_for_claim(&registration.claim)
-            .map_err(TimerError::from)
-    })
-    .expect("restored provider handle should detach again");
+    // If either request attempts a handle reinstall it consumes this fault.
     inject_provider_install_fault();
     assert!(matches!(
-        finish_detached_claim_transition(
-            &registration.claim,
-            handles,
-            Err(TimerError::Schedule(ScheduleError::DeadlineOverflow)),
-        ),
+        registration.ensure_scheduled(TimerSchedule::After(Duration::MAX)),
+        Err(TimerError::Schedule(ScheduleError::DelayOutOfRange))
+    ));
+    assert_eq!(timer_snapshot(&timer).unwrap().unwrap(), before);
+    registration
+        .ensure_scheduled(TimerSchedule::At(20))
+        .unwrap();
+    assert!(registration.has_armed_wakeup().unwrap());
+    assert_eq!(timer_count(), 1);
+    let after = timer_snapshot(&timer).unwrap().unwrap();
+    assert_eq!(after.generation(), before.generation());
+    assert_eq!(after.next_deadline_ns(), before.next_deadline_ns());
+    assert_eq!(after.observability().counters().coalesced(), 1);
+
+    // A real replacement must still encounter the unconsumed installation fault.
+    assert!(matches!(
+        registration.reconcile_schedule(Some(TimerSchedule::At(25))),
         Err(TimerError::OwnershipInvariant)
     ));
     assert!(!registration.has_armed_wakeup().unwrap());
-    assert_retained_provider_binding_failure(&timer, 1, 1);
     assert_eq!(timer_count(), 0);
-
-    registration
-        .cancel()
-        .expect("fixture cleanup should succeed");
-    assert_eq!(timer_count(), 0);
+    registration.unregister().unwrap();
 }
 
 #[test]
@@ -4021,4 +4001,255 @@ fn recovery_retires_an_interrupted_attempts_exact_deadline_proposal() {
     assert_eq!(recovered.observability().counters().unacknowledged(), 1);
     assert_eq!(recovered.registration_id(), before.registration_id());
     assert_eq!(timer_count(), 1);
+}
+
+#[test]
+fn coalesced_watchdog_requests_preserve_paired_handles_without_reinstallation() {
+    let _fixture = setup();
+    let timer = identity("paired-request-preservation");
+    let registration = register_watchdog(
+        timer.clone(),
+        TimerCadence::from_nanos(5).unwrap(),
+        DeclarationLifetime::Retained,
+        |context| {
+            inject_provider_install_fault();
+            context.ensure_scheduled().unwrap();
+            context.ensure_scheduled_immediately().unwrap();
+            // The pending immediate request would replace the successor; Stop
+            // via exact cancellation wins and needs no handle installation.
+            context.cancel().unwrap();
+            WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
+        },
+    )
+    .unwrap();
+    registration.ensure_scheduled().unwrap();
+    set_time(15);
+    assert!(run_next_due());
+    assert_eq!(timer_count(), 2);
+    inject_provider_install_fault();
+    registration.ensure_scheduled().unwrap();
+    registration.ensure_scheduled_immediately().unwrap();
+    assert_eq!(timer_count(), 2);
+    // Read/reset the injection so actual work can complete without an unrelated
+    // injected failure; a no-op demand must not have consumed it.
+    assert!(take_provider_install_fault());
+    assert!(run_next_due());
+    assert!(take_provider_install_fault());
+    assert_eq!(timer_count(), 0);
+    registration.unregister().unwrap();
+}
+
+struct RemovalCapture {
+    timer: TimerIdentity,
+    dropped: Rc<Cell<bool>>,
+}
+
+impl Drop for RemovalCapture {
+    fn drop(&mut self) {
+        assert!(timer_snapshot(&self.timer).unwrap().is_none());
+        assert_eq!(
+            timer_count(),
+            0,
+            "provider cleanup must precede capture Drop"
+        );
+        // Reuse the removed identity and capacity from consumer destruction.
+        // This also proves nested mutation can run without a registry borrow.
+        let replacement = register_once(
+            self.timer.clone(),
+            DeclarationLifetime::Retained,
+            |_| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
+        )
+        .unwrap();
+        replacement.ensure_scheduled(TimerSchedule::At(20)).unwrap();
+        replacement.unregister().unwrap();
+        self.dropped.set(true);
+    }
+}
+
+#[test]
+fn cancellation_and_unregistration_release_captures_after_provider_cleanup() {
+    for policy in 0..3 {
+        for armed in [false, true] {
+            for unregister in [false, true] {
+                let _fixture = setup();
+                let timer = identity("normal-removal-capture");
+                let dropped = Rc::new(Cell::new(false));
+                let captured = RemovalCapture {
+                    timer: timer.clone(),
+                    dropped: Rc::clone(&dropped),
+                };
+                let lifetime = if unregister {
+                    DeclarationLifetime::Retained
+                } else {
+                    DeclarationLifetime::RemoveWhenStopped
+                };
+                let claim = match policy {
+                    0 => {
+                        register_once(timer, lifetime, move |_| {
+                            std::hint::black_box(&captured);
+                            async {
+                                OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
+                            }
+                        })
+                        .unwrap()
+                        .claim
+                    }
+                    1 => {
+                        register_after_completion(
+                            timer,
+                            TimerCadence::from_nanos(5).unwrap(),
+                            lifetime,
+                            move |_| {
+                                std::hint::black_box(&captured);
+                                async {
+                                    AfterCompletionRunResult::new(
+                                        TimerCompletion::no_work(),
+                                        AfterCompletionDecision::Stop,
+                                    )
+                                }
+                            },
+                        )
+                        .unwrap()
+                        .claim
+                    }
+                    _ => {
+                        register_watchdog(
+                            timer,
+                            TimerCadence::from_nanos(5).unwrap(),
+                            lifetime,
+                            move |_| {
+                                std::hint::black_box(&captured);
+                                WatchdogRunResult::new(
+                                    TimerCompletion::no_work(),
+                                    WatchdogDecision::Stop,
+                                )
+                            },
+                        )
+                        .unwrap()
+                        .claim
+                    }
+                };
+                if armed {
+                    if policy == 0 {
+                        ensure_once_claim(&claim, None, TimerSchedule::At(20)).unwrap();
+                    } else {
+                        ensure_recurring_claim(&claim, None).unwrap();
+                    }
+                }
+                if unregister {
+                    unregister_claim(&claim).unwrap();
+                } else {
+                    cancel_claim(&claim, None).unwrap();
+                }
+                assert!(dropped.get());
+            }
+        }
+    }
+}
+
+#[test]
+fn rejected_registration_releases_its_captures_outside_registry_borrow() {
+    struct RejectedCapture(Rc<Cell<bool>>);
+    impl Drop for RejectedCapture {
+        fn drop(&mut self) {
+            assert_eq!(timer_inventory().unwrap().len(), 1);
+            self.0.set(true);
+        }
+    }
+    let _fixture = setup();
+    let timer = identity("duplicate-capture");
+    let original = register_once(timer.clone(), DeclarationLifetime::Retained, |_| async {
+        OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
+    })
+    .unwrap();
+    for policy in 0..3 {
+        let dropped = Rc::new(Cell::new(false));
+        let captured = RejectedCapture(Rc::clone(&dropped));
+        let rejected = match policy {
+            0 => register_once(timer.clone(), DeclarationLifetime::Retained, move |_| {
+                std::hint::black_box(&captured);
+                async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
+            })
+            .map(|_| ()),
+            1 => register_after_completion(
+                timer.clone(),
+                TimerCadence::from_nanos(5).unwrap(),
+                DeclarationLifetime::Retained,
+                move |_| {
+                    std::hint::black_box(&captured);
+                    async {
+                        AfterCompletionRunResult::new(
+                            TimerCompletion::no_work(),
+                            AfterCompletionDecision::Stop,
+                        )
+                    }
+                },
+            )
+            .map(|_| ()),
+            _ => register_watchdog(
+                timer.clone(),
+                TimerCadence::from_nanos(5).unwrap(),
+                DeclarationLifetime::Retained,
+                move |_| {
+                    std::hint::black_box(&captured);
+                    WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
+                },
+            )
+            .map(|_| ()),
+        };
+        assert!(matches!(
+            rejected,
+            Err(TimerError::Register(
+                RegisterError::IdentityAlreadyRegistered(_)
+            ))
+        ));
+        assert!(dropped.get());
+    }
+    original.unregister().unwrap();
+}
+
+#[test]
+fn terminal_provider_and_scheduler_failures_release_captures_outside_registry_borrow() {
+    let _fixture = setup();
+    let timer = identity("binding-failure-capture");
+    let dropped = Rc::new(Cell::new(false));
+    let captured = RemovalCapture {
+        timer: timer.clone(),
+        dropped: Rc::clone(&dropped),
+    };
+    let registration = register_once(timer, DeclarationLifetime::RemoveWhenStopped, move |_| {
+        std::hint::black_box(&captured);
+        async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
+    })
+    .unwrap();
+    inject_provider_install_fault();
+    assert!(matches!(
+        registration.ensure_scheduled(TimerSchedule::At(20)),
+        Err(TimerError::OwnershipInvariant)
+    ));
+    assert!(dropped.get());
+
+    let timer = identity("scheduler-failure-capture");
+    let dropped = Rc::new(Cell::new(false));
+    let captured = RemovalCapture {
+        timer: timer.clone(),
+        dropped: Rc::clone(&dropped),
+    };
+    let registration = register_watchdog(
+        timer,
+        TimerCadence::from_nanos(5).unwrap(),
+        DeclarationLifetime::RemoveWhenStopped,
+        move |_| {
+            std::hint::black_box(&captured);
+            WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
+        },
+    )
+    .unwrap();
+    registration
+        .reconcile_schedule(Some(TimerSchedule::At(u64::MAX)))
+        .unwrap();
+    set_time(u64::MAX);
+    assert!(run_next_due());
+    assert!(dropped.get());
+    assert_eq!(timer_inventory().unwrap().timers(), []);
 }

@@ -62,19 +62,23 @@ fn assert_running_work_rejected(registry: &mut TimerRegistry, token: &CallbackTo
         Err(RegistryError::StaleCallback)
     );
     assert_eq!(
-        registry.complete_ordinary(
-            token,
-            20,
-            OrdinaryRunResult::new(TimerCompletion::no_work(), OrdinaryDirective::Stop),
-        ),
+        registry
+            .complete_ordinary(
+                token,
+                20,
+                OrdinaryRunResult::new(TimerCompletion::no_work(), OrdinaryDirective::Stop),
+            )
+            .map(|_| ()),
         Err(RegistryError::StaleCallback)
     );
     assert_eq!(
-        registry.complete_watchdog_work(
-            token,
-            20,
-            WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
-        ),
+        registry
+            .complete_watchdog_work(
+                token,
+                20,
+                WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
+            )
+            .map(|_| ()),
         Err(RegistryError::StaleCallback)
     );
     assert_eq!(registry.inventory(), before);
@@ -239,7 +243,9 @@ fn removal_invalidates_old_claim_before_identity_reuse() {
     registry.cancel(&old).expect("cancel should succeed");
     assert!(registry.is_empty());
     assert_eq!(
-        registry.ensure_once(&old, 10, TimerSchedule::At(20)),
+        registry
+            .ensure_once(&old, 10, TimerSchedule::At(20))
+            .map(|_| ()),
         Err(RegistryError::UnknownRegistration)
     );
 
@@ -248,7 +254,9 @@ fn removal_invalidates_old_claim_before_identity_reuse() {
         .expect("identity can be claimed again after removal");
     assert!(new.claim_generation() > old_generation);
     assert_eq!(
-        registry.ensure_once(&old, 10, TimerSchedule::At(20)),
+        registry
+            .ensure_once(&old, 10, TimerSchedule::At(20))
+            .map(|_| ()),
         Err(RegistryError::StaleRegistration)
     );
 }
@@ -294,7 +302,7 @@ fn fresh_cancellation_preserves_retained_declarations_and_releases_transients() 
             } else {
                 assert!(registry.is_empty());
                 assert_eq!(
-                    registry.cancel(&claim),
+                    registry.cancel(&claim).map(|_| ()),
                     Err(RegistryError::UnknownRegistration)
                 );
             }
@@ -478,7 +486,7 @@ fn measurement_routing_rejects_a_policy_role_mismatch() {
     let pages = crate::platform::memory_pages();
 
     assert_eq!(
-        registry.ensure_watchdog_immediately(&claim, 10),
+        registry.ensure_watchdog_immediately(&claim, 10).map(|_| ()),
         Err(RegistryError::PolicyMismatch { actual: "once" })
     );
 
@@ -1857,7 +1865,7 @@ fn watchdog_terminal_cancellation_makes_queued_callbacks_stale() {
         Some(TimerSchedule::After(Duration::MAX)),
     ] {
         assert_eq!(
-            registry.reconcile_ordinary(&claim, 0, schedule),
+            registry.reconcile_ordinary(&claim, 0, schedule).map(|_| ()),
             Err(RegistryError::PolicyMismatch { actual: "watchdog" })
         );
         assert_eq!(registry.inventory(), before);
@@ -2220,7 +2228,7 @@ fn ordinary_cancellation_at_maximum_generation_preserves_lifetime_and_rejects_de
             } else {
                 assert!(registry.is_empty());
                 assert_eq!(
-                    registry.cancel(&claim),
+                    registry.cancel(&claim).map(|_| ()),
                     Err(RegistryError::UnknownRegistration)
                 );
             }
@@ -2303,7 +2311,7 @@ fn watchdog_cancellation_at_maximum_generation_clears_the_selected_callbacks() {
             } else {
                 assert!(registry.is_empty());
                 assert_eq!(
-                    registry.cancel(&claim),
+                    registry.cancel(&claim).map(|_| ()),
                     Err(RegistryError::UnknownRegistration)
                 );
             }

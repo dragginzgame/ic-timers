@@ -336,8 +336,8 @@ continues to target Wasm on the Internet Computer.
 | Host | Current workflow configuration and evidence scope |
 | --- | --- |
 | Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The release gate pins the audited PocketIC 16.0.0 Linux x86_64 artifact. Recorded results remain scoped to their original subjects. |
-| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. Native execution and qualification for this change remain pending. |
-| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. Native execution and qualification for this change remain pending. |
+| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The complete release gate passed for 0.13.2 at `134899f`; pending source changes require fresh qualification. |
+| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The complete release gate passed for 0.13.2 at `134899f`; pending source changes require fresh qualification. |
 
 Inspection on 2026-10-06 of the 0.13.1 source at
 `54bbcfc4985d4657578150cbe7112795297115fd` found both native macOS jobs in
@@ -350,14 +350,29 @@ The fixture now derives its expected cache from `pwd -P` and deliberately enters
 through a directory symlink on every host. It retains exact default, environment,
 command-line, same-as-default and empty override checks; production provisioning
 is unchanged. Source review, shell syntax and diff checks are the preparation
-scope; corrected fixture execution and complete native qualification remain
-maintainer-owned and pending.
+scope. Subsequent 0.13.2 CI qualified the repaired fixture on both native hosts,
+as recorded below; the earlier failed attempt remains separate evidence.
 
 For that same source, the Linux `checks` job passed its CI and nested-probe lint
 steps. The separate MSRV job and
 [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37370535920)
 failed to acquire hosted runners, without executing their steps. These service
 failures do not qualify those gates and are distinct from the macOS fixture bug.
+
+Inspection on 2026-10-06 of release commit
+`134899f1620b29f51711ff479c37c681db3fb9ec` found
+[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37425186029)
+successful: Linux checks and MSRV passed, and both macOS 15 jobs passed the
+complete release gate under native Bash 3.2. The Apple Silicon job log records
+138 native tests, doctests, all 13 PocketIC recovery/ordinary/churn subjects,
+and policy cohorts passing with the exact audited PocketIC 16.0.0 artifact.
+The Intel complete gate also passed. The matching
+[tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37425186206)
+passed. This qualifies that committed source and its selected dependencies;
+it does not establish publication, downstream composition, other host versions,
+or qualification for the pending 0.13.3 source. Historical preparation-only and
+failed records below retain their original scope rather than describing current
+0.13.2 qualification.
 
 Version preparation uses Bash, Perl, Git and Cargo. It owns regular metadata
 files; symlinked or non-file outputs are rejected before mutation. Applicable
@@ -513,8 +528,10 @@ Dependency fetching, locked offline metadata, Rust formatting/parsing, shell and
 embedded fixture-shell syntax, source flow and diff whitespace checks passed.
 No PocketIC server binaries, builds, lint gates, native tests or PocketIC
 fixtures were executed.
-Before release, the maintainer runs the complete `release-verify` gate, including
-MSRV, nested lint, watchdog/ordinary recovery and policy cohorts. Record fresh
+The 0.13.2 native macOS gates now supply matching compilation, lint, recovery
+and cohort qualification for this harness, scoped in the host matrix above.
+For changed source, the maintainer runs the complete `release-verify` gate,
+including MSRV, nested lint, watchdog/ordinary recovery and policy cohorts. Record fresh
 Wasm/instruction subjects and native Linux/macOS qualification rather than
 reusing receipts from the previous simulator. Package version and Git release
 execution remain maintainer-owned.

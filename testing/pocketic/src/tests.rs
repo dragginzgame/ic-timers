@@ -652,6 +652,7 @@ struct OrdinaryObservation {
     unacknowledged: u64,
     instruction_samples: u64,
     captures_dropped: u64,
+    capture_registry_accessible: bool,
     inventory_len: u64,
 }
 
@@ -797,6 +798,7 @@ fn assert_ordinary_abandonment(observed: &OrdinaryObservation, removed: bool) {
     assert_eq!(observed.instruction_samples, 0);
     assert_eq!(observed.unacknowledged, u64::from(!removed));
     assert_eq!(observed.captures_dropped, u64::from(removed));
+    assert!(observed.capture_registry_accessible);
     assert_eq!(observed.inventory_len, u64::from(!removed));
 }
 
@@ -964,4 +966,32 @@ fn provider_replacement_churn_preserves_cancellation_and_reports_memory() {
         drained.wasm_pages,
         drained.inventory_len
     );
+}
+
+#[test]
+fn armed_callback_removal_releases_captures_with_registry_access() {
+    for policy in 0_u8..3 {
+        let (_server, pic) = fresh_pocket_ic();
+        let canister_id = pic.create_canister();
+        pic.add_cycles(canister_id, INIT_CYCLES);
+        pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
+        pic.update_call(
+            canister_id,
+            Principal::anonymous(),
+            "remove_armed_callback",
+            Encode!(&policy).unwrap(),
+        )
+        .unwrap();
+        let removed = ordinary_observation(&pic, canister_id);
+        assert!(!removed.declared);
+        assert!(!removed.armed);
+        assert_eq!(removed.captures_dropped, 1);
+        assert!(removed.capture_registry_accessible);
+        pic.advance_time(Duration::from_secs(2));
+        drive_rounds(&pic, 8);
+        let after_deadline = ordinary_observation(&pic, canister_id);
+        assert_eq!(after_deadline.completed, 0);
+        assert_eq!(after_deadline.captures_dropped, 1);
+        assert_eq!(after_deadline.inventory_len, 0);
+    }
 }

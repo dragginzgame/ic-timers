@@ -126,8 +126,9 @@ The remaining module hierarchy keeps six responsibilities separate:
    or pending unregister removes the entry. The guard performs no provider calls
    and releases removed callbacks outside the registry borrow. Explicit cancellation,
    replacement and unconfirmed installation failure remain distinct from abandonment.
-   The native drop and PocketIC trap fixtures are unexecuted qualification for this
-   semantic cut, not an extension of the existing Watchdog recovery evidence.
+   The native drop and PocketIC trap subjects passed in the 0.13.2 hosted
+   release gates; [source and host scope](releasing.md#host-support) remain
+   separate from Watchdog recovery and pending source qualification.
    Watchdog completion decides removal once after selecting its final state:
    inactive declarations follow their lifetime and pending unregister command,
    while retained or replaced successors keep their declaration.
@@ -135,8 +136,12 @@ The remaining module hierarchy keeps six responsibilities separate:
    terminal removal through the entry already selected and authorized by their
    transition. The shared entry predicate uses that transition's failure and
    declaration lifetime; no second lookup reconstructs the decision. The registry's
-   existing removal exit applies it after the entry borrow ends. Runtime detaches
-   handles before those transitions and applies provider cleanup afterward.
+   existing removal exit transfers the removed entry into its transition.
+   Public control leaves handles bound for no-op/rejected requests and detaches
+   them after actual transitions, including from removed entries. Runtime applies
+   provider cleanup before releasing removed captures outside registry access.
+   Watchdog dispatch/completion retain their separate pre-transition detachment
+   and rollback rules; see the [capture ownership contract](design/callback-delivery-ownership.md#capture-removal-and-coalesced-requests).
    Watchdog cancellation selects the handles to clear in one state match. An
    immediate stop uses that selection for state replacement, cancellation
    accounting and provider cleanup; running work keeps its pending command, and

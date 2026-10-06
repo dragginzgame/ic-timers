@@ -5,8 +5,9 @@ use ic_timers::{
     AfterCompletionContext, AfterCompletionDecision, AfterCompletionRegistration,
     AfterCompletionRunResult, DeclarationLifetime, InactiveReason, OnceContext, OnceDecision,
     OnceRegistration, OnceRunResult, TimerCadence, TimerCompletion, TimerError, TimerIdentity,
-    TimerRegistrationStatus, TimerRuntimeStateSnapshot, TimerSchedule, register_after_completion,
-    register_once, timer_inventory, timer_snapshot,
+    TimerRegistrationStatus, TimerRuntimeStateSnapshot, TimerSchedule, WatchdogDecision,
+    WatchdogRunResult, register_after_completion, register_once, register_watchdog,
+    timer_inventory, timer_snapshot,
 };
 use std::{
     cell::{Cell, RefCell},
@@ -34,6 +35,9 @@ struct CapturedState;
 
 impl Drop for CapturedState {
     fn drop(&mut self) {
+        CAPTURE_REGISTRY_ACCESSIBLE.with(|accessible| {
+            accessible.set(accessible.get() && timer_inventory().is_ok());
+        });
         CAPTURES_DROPPED.with(|count| count.set(count.get().saturating_add(1)));
     }
 }
@@ -49,6 +53,7 @@ thread_local! {
     static TRAP_POINT: Cell<TrapPoint> = const { Cell::new(TrapPoint::None) };
     static WORK_CONTEXT: RefCell<Option<WorkContext>> = const { RefCell::new(None) };
     static CAPTURES_DROPPED: Cell<u64> = const { Cell::new(0) };
+    static CAPTURE_REGISTRY_ACCESSIBLE: Cell<bool> = const { Cell::new(true) };
 }
 
 #[derive(CandidType)]
@@ -67,6 +72,7 @@ struct Observation {
     unacknowledged: u64,
     instruction_samples: u64,
     captures_dropped: u64,
+    capture_registry_accessible: bool,
     inventory_len: u64,
 }
 
@@ -298,9 +304,66 @@ fn ordinary_observation() -> Observation {
                 .samples()
         }),
         captures_dropped: CAPTURES_DROPPED.with(Cell::get),
+        capture_registry_accessible: CAPTURE_REGISTRY_ACCESSIBLE.with(Cell::get),
         inventory_len: timer_inventory()
             .expect("ordinary inventory")
             .timers()
             .len() as u64,
+    }
+}
+
+/// Remove armed authority in one message before any consumer work can start.
+#[ic_cdk::update]
+fn remove_armed_callback(policy: u8) {
+    let deadline = ic_cdk::api::time()
+        .checked_add(super::CADENCE_NS)
+        .expect("fixture deadline");
+    let captured = CapturedState;
+    match policy {
+        0 => {
+            let timer = register_once(identity(), DeclarationLifetime::Retained, move |_| {
+                std::hint::black_box(&captured);
+                async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
+            })
+            .expect("register Once");
+            timer
+                .ensure_scheduled(TimerSchedule::At(deadline))
+                .expect("arm Once");
+            timer.unregister().expect("unregister Once");
+        }
+        1 => {
+            let timer = register_after_completion(
+                identity(),
+                TimerCadence::from_nanos(super::CADENCE_NS).expect("cadence"),
+                DeclarationLifetime::RemoveWhenStopped,
+                move |_| {
+                    std::hint::black_box(&captured);
+                    async {
+                        AfterCompletionRunResult::new(
+                            TimerCompletion::no_work(),
+                            AfterCompletionDecision::Stop,
+                        )
+                    }
+                },
+            )
+            .expect("register after-completion");
+            timer.ensure_scheduled().expect("arm after-completion");
+            timer.cancel().expect("cancel transient");
+        }
+        2 => {
+            let timer = register_watchdog(
+                identity(),
+                TimerCadence::from_nanos(super::CADENCE_NS).expect("cadence"),
+                DeclarationLifetime::Retained,
+                move |_| {
+                    std::hint::black_box(&captured);
+                    WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
+                },
+            )
+            .expect("register Watchdog");
+            timer.ensure_scheduled().expect("arm Watchdog");
+            timer.unregister().expect("unregister Watchdog");
+        }
+        _ => ic_cdk::trap("unknown removal policy"),
     }
 }

@@ -511,10 +511,12 @@ where
     let callback = erase_ordinary_callback(callback, OnceContext::new, OrdinaryRunResult::from);
     let claim = with_registry_mut(|registry| {
         registry
-            .register_once_with_callback(identity, lifetime, callback)
+            .register_once_with_callback(identity, lifetime, Rc::clone(&callback))
             .map_err(TimerError::from)
-    })?;
-    Ok(OnceRegistration { claim })
+    });
+    // Keep the factory's captures alive through rejected registration too.
+    drop(callback);
+    Ok(OnceRegistration { claim: claim? })
 }
 
 /// Register one asynchronous callback with configured after-completion recurrence.
@@ -547,10 +549,17 @@ where
     );
     let claim = with_registry_mut(|registry| {
         registry
-            .register_after_completion_with_callback(identity, cadence, lifetime, callback)
+            .register_after_completion_with_callback(
+                identity,
+                cadence,
+                lifetime,
+                Rc::clone(&callback),
+            )
             .map_err(TimerError::from)
-    })?;
-    Ok(AfterCompletionRegistration { claim })
+    });
+    // Keep the factory's captures alive through rejected registration too.
+    drop(callback);
+    Ok(AfterCompletionRegistration { claim: claim? })
 }
 
 /// Register one synchronous pre-armed watchdog callback without scheduling it.
@@ -574,10 +583,12 @@ where
     })));
     let claim = with_registry_mut(|registry| {
         registry
-            .register_watchdog_with_callback(identity, cadence, lifetime, callback)
+            .register_watchdog_with_callback(identity, cadence, lifetime, Rc::clone(&callback))
             .map_err(TimerError::from)
-    })?;
-    Ok(WatchdogRegistration { claim })
+    });
+    // Keep the factory's captures alive through rejected registration too.
+    drop(callback);
+    Ok(WatchdogRegistration { claim: claim? })
 }
 
 /// Reconstruct or reconcile one `Once` declaration synchronously.
@@ -780,21 +791,20 @@ fn apply_claim_transition(
     context: Option<&CallbackToken>,
     operation: impl FnOnce(&mut TimerRegistry) -> Result<RegistryTransition, RegistryError>,
 ) -> Result<(), TimerError> {
-    let (handles, transition) = with_registry_mut(|registry| {
+    let (transition, handles) = with_registry_mut(|registry| {
         if let Some(token) = context {
             registry
                 .validate_running_context(token)
                 .map_err(TimerError::from)?;
         }
-        // A terminal transition may remove a transient declaration. Detach its
-        // capabilities first so every owned provider timer is restored or cleared.
-        let handles = registry
-            .take_provider_handles_for_claim(claim)
-            .map_err(TimerError::from)?;
-        let transition = operation(registry).map_err(TimerError::from);
-        Ok((handles, transition))
+        registry
+            .transition_claim(claim, operation)
+            .map_err(TimerError::from)
     })?;
-    finish_detached_claim_transition(claim, handles, transition)
+    match finish_transition(transition, handles) {
+        result @ (Ok(()) | Err(TimerError::ControlFailure(_))) => result,
+        Err(error) => retire_failed_claim(claim, error),
+    }
 }
 
 fn ensure_once_claim(
@@ -856,23 +866,6 @@ fn unregister_claim(claim: &RegistrationClaim) -> Result<(), TimerError> {
     apply_claim_transition(claim, None, |registry| registry.unregister(claim))
 }
 
-fn finish_detached_claim_transition(
-    claim: &RegistrationClaim,
-    handles: ProviderHandles,
-    transition: Result<RegistryTransition, TimerError>,
-) -> Result<(), TimerError> {
-    match transition {
-        Ok(transition) => match finish_transition(transition, handles) {
-            result @ (Ok(()) | Err(TimerError::ControlFailure(_))) => result,
-            Err(error) => retire_failed_claim(claim, error),
-        },
-        Err(error) => match restore_provider_handles(handles) {
-            Ok(()) => Err(error),
-            Err(restoration_error) => retire_failed_claim(claim, restoration_error),
-        },
-    }
-}
-
 fn retire_failed_claim(claim: &RegistrationClaim, error: TimerError) -> Result<(), TimerError> {
     match fail_claim_provider_binding(claim) {
         Ok(()) | Err(TimerError::RegistrationExpired) => Err(error),
@@ -885,8 +878,11 @@ fn finish_transition(
     handles: ProviderHandles,
 ) -> Result<(), TimerError> {
     let failure = transition.failure();
-    let effect = transition.into_effect();
-    apply_effect(&effect, handles)?;
+    let applied = apply_effect(transition.effect(), handles);
+    // Callback capture destructors may inspect or control other timers. Drop
+    // them after both the registry borrow and provider cleanup have ended.
+    drop(transition);
+    applied?;
     failure.map_or(Ok(()), |failure| Err(TimerError::ControlFailure(failure)))
 }
 
@@ -1261,7 +1257,9 @@ fn fail_claim_provider_binding(claim: &RegistrationClaim) -> Result<(), TimerErr
             .fail_registration(claim, TimerControlFailure::ProviderBindingFailed)
             .map_err(TimerError::from)
     });
-    clear_provider_handles(failed?);
+    let (handles, transition) = failed?;
+    clear_provider_handles(handles);
+    drop(transition);
     Ok(())
 }
 

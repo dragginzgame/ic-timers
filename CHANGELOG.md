@@ -2,6 +2,23 @@
 
 All notable changes to this project are recorded here.
 
+## [0.13.3]
+
+### Fixed
+
+- Release removed and rejected callback captures after registry access ends,
+  with removed timers' provider cleanup completed before capture destruction.
+  This permits normal cancellation and unregistration destructors to inspect
+  the registry without receiving an internal borrow error.
+
+### Changed
+
+- Leave bound provider handles in place for rejected and coalesced control
+  requests, avoiding temporary identity copies and handle reinstallation.
+  Scheduling, cancellation arbitration and Watchdog prearming are unchanged.
+- Add native and PocketIC capture-release coverage and reconcile current
+  qualification documentation with the successful 0.13.2 hosted gates.
+
 ## [0.13.2] - 2026-10-06
 
 ### Fixed

@@ -18,7 +18,7 @@ use crate::{
         WatchdogRunResult, WatchdogRuntimeStateSnapshot,
     },
 };
-use std::{cell::RefCell, collections::BTreeMap, future::Future, pin::Pin, rc::Rc};
+use std::{cell::RefCell, collections::BTreeMap, fmt, future::Future, pin::Pin, rc::Rc};
 use thiserror::Error;
 
 /// Maximum declarations owned by one canonical registry.
@@ -169,10 +169,23 @@ impl RegistryEffect {
 }
 
 /// One pure transition and any terminal checked-control failure it produced.
-#[derive(Debug, Eq, PartialEq)]
 pub struct RegistryTransition {
     effect: RegistryEffect,
     failure: Option<TimerControlFailure>,
+    // Removal transfers callback captures out of the registry borrow. Keep
+    // them alive until runtime has also applied the provider cleanup.
+    removed: Option<Box<Entry>>,
+}
+
+impl fmt::Debug for RegistryTransition {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("RegistryTransition")
+            .field("effect", &self.effect)
+            .field("failure", &self.failure)
+            .field("removed", &self.removed.is_some())
+            .finish()
+    }
 }
 
 impl RegistryTransition {
@@ -180,6 +193,7 @@ impl RegistryTransition {
         Self {
             effect,
             failure: None,
+            removed: None,
         }
     }
 
@@ -187,6 +201,7 @@ impl RegistryTransition {
         Self {
             effect,
             failure: Some(failure),
+            removed: None,
         }
     }
 
@@ -198,6 +213,7 @@ impl RegistryTransition {
         self.failure
     }
 
+    #[cfg(test)]
     pub(crate) fn into_effect(self) -> RegistryEffect {
         self.effect
     }
@@ -742,6 +758,25 @@ impl TimerRegistry {
         })
     }
 
+    /// Apply public control with handles left in place for no-op and rejected
+    /// requests. Removed entries carry their handles and captures out together.
+    pub(crate) fn transition_claim(
+        &mut self,
+        claim: &RegistrationClaim,
+        operation: impl FnOnce(&mut Self) -> Result<RegistryTransition, RegistryError>,
+    ) -> Result<(RegistryTransition, ProviderHandles), RegistryError> {
+        self.entry(claim)?;
+        let mut transition = operation(self)?;
+        let handles = if let Some(entry) = &mut transition.removed {
+            entry.take_provider_handles(claim.identity())
+        } else if matches!(transition.effect(), RegistryEffect::None) {
+            ProviderHandles::default()
+        } else {
+            self.take_provider_handles(claim.identity())
+        };
+        Ok((transition, handles))
+    }
+
     pub(crate) fn ensure_once(
         &mut self,
         claim: &RegistrationClaim,
@@ -1129,8 +1164,7 @@ impl TimerRegistry {
             }
             EntryKind::Ordinary { .. } | EntryKind::Watchdog { .. } => {
                 let transition = self.cancel(claim)?;
-                self.entries.remove(identity);
-                Ok(transition)
+                Ok(remove_after(&mut self.entries, identity, transition, true))
             }
         }
     }
@@ -1637,7 +1671,7 @@ impl TimerRegistry {
         &mut self,
         claim: &RegistrationClaim,
         failure: TimerControlFailure,
-    ) -> Result<ProviderHandles, RegistryError> {
+    ) -> Result<(ProviderHandles, RegistryTransition), RegistryError> {
         let identity = claim.identity();
         let (handles, remove) = {
             let entry = self.entry_mut(claim)?;
@@ -1657,10 +1691,13 @@ impl TimerRegistry {
                 matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped),
             )
         };
-        if remove {
-            self.entries.remove(identity);
-        }
-        Ok(handles)
+        let transition = remove_after(
+            &mut self.entries,
+            identity,
+            RegistryTransition::normal(RegistryEffect::None),
+            remove,
+        );
+        Ok((handles, transition))
     }
 
     pub(crate) fn validate_running_context(
@@ -2035,11 +2072,11 @@ const fn select_pending_watchdog(
 fn remove_after(
     entries: &mut BTreeMap<TimerIdentity, Entry>,
     identity: &TimerIdentity,
-    transition: RegistryTransition,
+    mut transition: RegistryTransition,
     remove: bool,
 ) -> RegistryTransition {
-    if remove {
-        entries.remove(identity);
+    if remove && let Some(entry) = entries.remove(identity) {
+        transition.removed = Some(Box::new(entry));
     }
     transition
 }

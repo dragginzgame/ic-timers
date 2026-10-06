@@ -17,16 +17,21 @@ references and validation belong in [release notes](../changelog/README.md),
   accepted batch under its automatically selected, undated next version.
   The maintainer's bump finalizes and dates it; a dated section alone does not prove
   tagging, publication or deployment.
-- At the latest inspection, Cargo, the finalized changelog and local tag
-  `v0.13.1` match release commit `54bbcfc`; the maintainer reports it is live.
-  Publication and deployment were not independently checked. Both lockfiles
-  select registry `ic-metrics 0.1.5`; its shared Wasm instruction reader replaces
-  the direct reader while retaining counter type 1 and local callback attribution.
-  The selected undated 0.13.2 section fixes a repository-only release fixture:
-  compare the physical workspace path and exercise a directory alias on every
-  host. Runtime source, package identity and both lockfiles remain unchanged.
-  Read Cargo, the changelog and Git again for later release identity rather than
-  using this inspection record as a version-selection marker.
+- Cargo, both lockfiles, the finalized changelog and local `v0.13.2` tag match
+  release commit `134899f1620b29f51711ff479c37c681db3fb9ec`. Publication was not
+  independently checked. The main and tag hosted gates passed; native macOS
+  release qualification now includes PocketIC 16.0.0. See the
+  [source-bound host record](../releasing.md#host-support).
+- The undated 0.13.3 draft covers a compatible callback-capture destruction fix
+  and removal of handle detachment/reinstallation for rejected/coalesced public
+  requests. API, snapshots, recurrence, generations and dependencies are unchanged.
+  Removed captures remain in their returned transition until provider cleanup
+  finishes; rejected factories retain a local Rc across registry access. Native
+  and PocketIC capture-access fixtures are prepared. Source/formatting/diff review
+  is the only evidence for this pending batch; tests, lint/build, MSRV, PocketIC,
+  cohort measurement and release execution remain maintainer-owned. The
+  [delivery ownership contract](../design/callback-delivery-ownership.md#capture-removal-and-coalesced-requests)
+  records implementation, baseline cost, temporary allocation and acceptance.
 - Apply the pinned [Shared Tooling baseline and local overlay](../../AGENTS.md).
   Its [adoption record](../shared-tooling.md) scopes provenance and exceptions.
   Historical release notes retain evidence; no new versioned note or mutable
@@ -44,7 +49,7 @@ references and validation belong in [release notes](../changelog/README.md),
   armed; explicit unregistration corrects fixture cleanup. Two earlier filters
   matched no tests; exact names supplied the recorded evidence. This is focused
   native-substitute evidence, with no broad suite or PocketIC qualification.
-  [Registry adoption](https://github.com/dragginzgame/ic-timers/issues/9) remains
+  [Registry adoption](https://github.com/dragginzgame/ic-timers/issues/9) was
   committed by the maintainer at `685b4ff` during these checks, with the compatible
   `0.1.3` requirement and both locks still selecting the verified package. That
   adoption is included in the tagged 0.13.0 source; the focused evidence remains
@@ -195,7 +200,7 @@ references and validation belong in [release notes](../changelog/README.md),
   do not wrap. Consumer durable authority reconstructs volatile retained declarations
   synchronously before downstream hooks; shared-registry adoption is atomic.
   Policy-specific contexts store their token directly and use the shared
-  claim-transition validation boundary before provider-handle detachment; see the
+  claim-transition validation boundary before applying control; see the
   [control simplification note](../changelog/0.11.3.md).
 - Ordinary inactive state owns its reason; running state owns its pending command.
   Watchdog inactive state owns its reason; awaiting-work state owns its pending
@@ -322,6 +327,17 @@ are recorded in the [0.10.12 note](../changelog/0.10.12.md).
 
 ## Evidence
 
+Current released baseline: 0.13.2 main CI and both complete native macOS gates
+passed at `134899f`, including 138 native tests and 13 PocketIC subjects. Exact
+links and qualification scope belong in the [host matrix](../releasing.md#host-support).
+The maintainer authorized closing [#9](https://github.com/dragginzgame/ic-timers/issues/9)
+with that integration/CI evidence; it is closed. No tests were executed locally
+by the contributor in this audit. The pending 0.13.3 source is unqualified.
+
+Earlier inspection records follow; their pending/failure language describes
+those earlier sources and times, not the current released baseline.
+
+
 On 2026-10-06 the committed Shared Tooling head and remote main both remained
 `f52c0e2476aee094359ed21de91c468540d3969f`; the 20-file snapshot verified. The
 dirty upstream maintenance rules remain outside the reviewed snapshot. Both
@@ -351,8 +367,9 @@ build, lint, PocketIC or cost measurements. GitHub's main and tag CI runs for
 `54bbcfc4985d4657578150cbe7112795297115fd` were queued when inspected:
 [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37370535919) and
 [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37370535920).
-[Issue #9](https://github.com/dragginzgame/ic-timers/issues/9) remains open for the
-owning native release/CI qualification; its registry implementation is present.
+At that earlier inspection, [issue #9](https://github.com/dragginzgame/ic-timers/issues/9)
+was open for owning native release/CI qualification; the later 0.13.2 gates
+supplied it and the maintainer authorized closure.
 No open PR was listed. Shared Tooling's committed head remains the adopted
 revision; its dirty maintenance-rule draft is outside the reviewed snapshot.
 

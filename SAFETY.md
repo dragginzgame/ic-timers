@@ -177,8 +177,9 @@ See the [0.11.0 verification scope](docs/changelog/0.11.0.md).
   completion or performance sample is synthesized. Normal cancellation and
   replacement retire authority before dropping old provider futures, so those
   drops and unconfirmed binding failures do not count as abandonment.
-  Native drop fixtures and PocketIC pre-await/continuation trap subjects are
-  maintained but unexecuted for this change. Successful CDK/provider destruction
+  Native drop fixtures and PocketIC pre-await/continuation trap subjects passed
+  in the 0.13.2 hosted release gates, with source/host scope in the
+  [release qualification record](docs/releasing.md#host-support). Successful CDK/provider destruction
   and available canonical registry ownership remain assumptions; capture Drop
   code must be bounded, nontrapping and safe in cleanup context, and must not
   schedule provider work there. Ordinary cleanup does not repair application
@@ -229,8 +230,9 @@ See the [0.11.0 verification scope](docs/changelog/0.11.0.md).
   supplies no global memory cap. See the [pinned provider cancellation source](https://docs.rs/ic-cdk-timers/1.0.0/src/ic_cdk_timers/lib.rs.html#197).
 - Recorded recovery evidence uses PocketIC 15.0.0 and `ic-cdk-timers` 1.0.0.
   The current host harness uses `ic-testkit` 0.17.3 with pinned PocketIC 16.0.0;
-  new compilation, lint, native-host recovery and cohort qualification remain
-  pending. A provider or evidence-binary change requires a renewed source and
+  the complete 0.13.2 release gate passed on native macOS 15 Intel and Apple
+  Silicon. This source-bound qualification is recorded in the release guide;
+  pending changes need fresh evidence. A provider or evidence-binary change requires a renewed source and
   recovery audit; older receipts do not qualify the new harness.
 - The recorded IcyDB and Canic adoption subjects independently supply exact-0.5.0
   shared-registry evidence, recorded separately from this library's

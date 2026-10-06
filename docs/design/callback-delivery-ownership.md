@@ -74,3 +74,72 @@ is scoped in the [adoption record](../shared-tooling.md). Cargo versions and loc
 remain unchanged. The root changelog owns the maintainer's release selection;
 this document does not select a version or establish delivery.
 All version bumps and Git/release execution remain maintainer-owned.
+
+
+## Capture removal and coalesced requests
+
+The 2026-10-06 source review at release commit
+`134899f1620b29f51711ff479c37c681db3fb9ec` found that ordinary abandonment
+returned removed callbacks after its registry borrow, but normal cancellation,
+unregistration, transient control failure and rejected registration could drop
+consumer captures inside `RUNTIME`'s mutable borrow. A nontrapping destructor
+calling `timer_inventory` observed `RuntimeBusy`; cleanup that consumed another
+claim could lose its control capability after that rejection.
+
+The pending 0.13.3 implementation carries a removed entry in its existing
+`RegistryTransition`. Runtime applies provider effects before dropping that
+transition, outside registry access. Rejected public registration retains a
+local `Rc` until registration access ends. This is temporary destructor custody,
+not a retained timer, retry queue or new mutation authority. Ordinary abandonment
+keeps its separate provider-call-free cleanup contract. Capture destructors
+must still be bounded and nontrapping, and must not schedule provider work from
+CDK cleanup.
+
+Public control now validates its claim before applying the pure transition.
+Rejected requests leave owned handles intact. A no-effect transition retains
+those handles in the selected entry; a removal transfers the entry and detaches
+its handles from that returned owner; other effects detach handles after the
+transition. No user callback runs in between. Watchdog callback completion keeps
+its existing explicit detachment and trap/rollback rule.
+The obsolete detached-error restoration finalizer is removed: input rejection
+no longer creates detached capabilities needing restoration. Binding/restoration
+errors after an actual provider effect retain their existing cleanup owners.
+
+The release baseline's successful Apple Silicon gate reports these instruction
+subjects from the maintained size probe:
+
+| Policy | Initial arm | Duplicate ensure |
+| --- | ---: | ---: |
+| Once | 24,006 | 9,512 |
+| AfterCompletion | 27,695 | 11,496 |
+| Watchdog | 24,924 | 10,872 |
+
+These are operation intervals from the 0.13.2 artifact, not results for the pending
+change. A bound handle previously copied three boxed identity components to
+construct its detached token. An ordinary coalesced ensure removes that temporary
+allocation/deallocation and reinstallation; paired Watchdog requests remove two
+such copies. The same platform operations were already avoided by coalescing.
+No percentage instruction reduction or linked Wasm saving has been measured.
+A removal now makes one temporary boxed-entry allocation so ordinary transition
+values stay small; the allocation lasts only until provider effects finish.
+Successful registration adds one short-lived `Rc` increment/decrement, with no
+additional callback allocation. There is no persistent heap-growth claim.
+
+Native fixtures cover removed captures inspecting the absent entry, reusing its
+identity, and mutating timers after provider cleanup across all three policies;
+rejected factories; transient binding/scheduler failures; and rejected/coalesced
+requests retaining installation-fault injections until a real arm. PocketIC adds
+same-message armed removal for all three policies and checks registry access
+from capture Drop in existing ordinary abandonment subjects. No provider work is
+scheduled by those PocketIC destructors.
+
+This pending batch has source and Rust formatting/parsing review only. Native,
+Clippy/MSRV, PocketIC and cohort execution remain maintainer-owned. Acceptance
+requires the complete release gate, the new capture and handle-preservation
+fixtures, unchanged trap/await/cancellation evidence, and comparison with the
+baseline operation intervals and linked cohort Wasms. Reject the optimization
+if duplicate ensures do not improve or actual-effect paths regress materially.
+Public APIs, snapshots, recurrence, generation allocation, dependency selection
+and upgrade reconstruction are unchanged; 0.13.3 is a compatible fix. No new
+feature, persistence, interval provider, scheduler data structure or global
+control API is justified by the reviewed consumers.

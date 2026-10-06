@@ -158,8 +158,9 @@ unregistrations are removed; other pending schedules are discarded. No completio
 work count or performance sample is fabricated. A future that remains alive and
 pending still owns Running state; cancellation does not interrupt it.
 
-This abandonment path is implemented with native drop and real-await PocketIC
-fixtures, but their execution and cleanup qualification remain pending. It does
+This abandonment path is covered by native drop and real-await PocketIC fixtures.
+The 0.13.2 hosted release gates passed those subjects on both supported macOS
+hosts; [qualification is bound to that source](docs/releasing.md#host-support). It does
 not recover application effects committed before an await or automatically retry
 work. Capture destructors must remain bounded, nontrapping and safe in CDK cleanup.
 
