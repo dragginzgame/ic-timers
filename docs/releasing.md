@@ -139,17 +139,18 @@ lookup fails. Source and shell syntax were reviewed; these scenarios have not
 been executed. The lookup uses Git and Bash without adding a host dependency
 or establishing native macOS qualification.
 
-The repository checks also retain producer failure status during workflow
-discovery and provider-source inspection. Actions validation completes a NUL
-record listing before reading workflows and removes its temporary listing on
-exit; nested paths and spaces retain their existing meaning. Provider validation
-rejects a failed search or sort before comparing the allowed source path. The
-repository fixture independently injects discovery, search and ordering failures
-with empty or matching records, checks discovery cleanup, and retains accepted
-pinned workflows and rejected unpinned workflows. Source, shell and embedded
-fixture-shell syntax were reviewed, and diff whitespace checks passed. These
-fixture scenarios have not been executed. This repository-only work changes no
-runtime contract and supplies no native macOS qualification.
+The repository checks retain producer failure status during Git configuration
+inventory and provider-source inspection. The shared structured Actions checker
+captures the complete NUL inventory before reading configurations and removes
+its scratch directory on exit; nested paths and spaces retain their meaning.
+Provider validation rejects a failed search or sort before comparing the allowed
+source path. The repository fixture injects inventory, search and ordering
+failures with empty or matching records, checks inventory cleanup, and retains
+accepted pinned workflows and rejected moving references. The updated shared
+checker fixtures cover quoted/folded references, Docker digests, composites,
+reusable workflows, malformed inputs and independent tracked lockfiles. The new
+adoption fixtures have not been executed locally; this repository-only work
+changes no timer runtime contract and supplies no new native macOS qualification.
 
 Combined release targets run `bump-version.sh --check` before deployment
 validation. This preflight checks the requested version, impact, unambiguous
@@ -342,7 +343,7 @@ continues to target Wasm on the Internet Computer.
 | --- | --- |
 | Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The release gate pins the audited PocketIC 16.0.0 Linux x86_64 artifact. Recorded results remain scoped to their original subjects. |
 | macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The complete release gate passed for 0.13.5 at `98c4b29`, including repaired release fixtures and all maintained runtime/cohort subjects. Later edits need fresh qualification. |
-| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The complete release gate passed for 0.13.5 at `98c4b29`, including repaired release fixtures and all maintained runtime/cohort subjects. Later edits need fresh qualification. |
+| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The complete gate passed for 0.14.0 at `902323a`, including the 0.2 metrics graph and maintained runtime/cohort subjects. Later tooling edits need fresh qualification. |
 
 Inspection on 2026-10-06 of the 0.13.1 source at
 `54bbcfc4985d4657578150cbe7112795297115fd` found both native macOS jobs in
@@ -421,6 +422,21 @@ selects registry ic-metrics 0.1.7, while the testing/probe lock selects 0.1.6;
 both satisfy the tagged compatible 0.1.6 requirement. Results qualify their
 recorded graphs only, not later manifest edits, publication or composed consumers.
 
+For release commit `902323a9e896ce3771044fdc23a7a2d03d49cf28` (0.14.0),
+the maintainer reports publication live and the matching
+[tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37476634555)
+passed. Inspection on 2026-10-06 of
+[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37476635415)
+found Linux checks, MSRV and the Apple Silicon complete gate successful; Intel
+was still running. Both independent release locks select registry ic-metrics
+0.2.0. The completed Apple Silicon log records 142 native tests, doctests,
+14 PocketIC runtime subjects and policy cohorts with the audited ARM64 server
+digest `781f643d4b16105e7544ca810a972f99c0ef1919016c680faa93f10909a14496`.
+Its six cohort/calibration rows match the same-host 0.13.5 rows exactly, including
+Wasm bytes, as recorded in the [measurement owner](design/callback-delivery-ownership.md#ic-metrics-02-adoption).
+Intel qualification remains pending. Registry publication was not independently
+checked; subsequent parser/checker edits have no matching hosted qualification.
+
 Version preparation uses Bash, Perl, Git and Cargo. It owns regular metadata
 files; symlinked or non-file outputs are rejected before mutation. Applicable
 Make targets use GNU Make. macOS 15 supplies Bash 3.2, GNU Make 3.81 and the
@@ -431,8 +447,8 @@ Homebrew tool installation. Native host prerequisites and setup must be qualifie
 at their owning workflow boundary.
 
 For local macOS setup, install Rustup, then run `make update-dev` to install the
-development toolchain declared in `rust-toolchain.toml`, its components and the
-Wasm target. The full release gate also needs the pinned MSRV toolchain:
+development toolchain declared in `rust-toolchain.toml`, its components, Wasm
+target and pinned host parsers. The full release gate also needs the MSRV toolchain:
 
 ```text
 rustup toolchain install 1.88.0 --profile minimal --component clippy --component rustfmt --target wasm32-unknown-unknown
@@ -492,6 +508,57 @@ as ordinary commands before empty-result assertions. This tightens the fixture's
 producer-failure handling without changing the audited version, digest, binary
 verification or override ownership. Source and shell syntax were reviewed;
 the changed fixture has not been executed.
+
+### Structured dependency checks and host parsers
+
+`make actions-check` retains the existing gate entry point and delegates to
+the reviewed shared structured checker. It parses workflows, composite actions
+and both independent workspaces' manifests. Git inventory failures, malformed
+metadata and missing or untracked workspace lockfiles fail closed. The checker
+does not resolve dependency versions, install tools or provide runtime evidence.
+
+Before local validation, run `make update-dev` for complete development setup,
+or explicitly prepare only the host parsers:
+
+```text
+make install-host-tools
+make host-tools-check
+```
+
+The shared installer selects jq 1.8.2 and Mike Farah yq 4.47.2 from the single
+parser pin owner, `ci/tool-versions.env`. It verifies both downloaded payloads
+before executing either, checks exact versions, activates the pair together and
+retains previous/failed candidates under ignored `.tools/`. `actions-check`
+verifies the active pair offline before reading declarations; absent or changed
+tools require explicit setup. Make and the repository fixture select
+`.tools/host/bin`, with an explicit yq path. CI performs setup in each applicable
+job before its gates. No system jq/yq selection or broader IC tool installation
+is introduced. PocketIC keeps its existing separate audited owner.
+
+Use the [bootstrap prerequisites](local-setup.md#bootstrap-prerequisites)
+for Linux Mint/Ubuntu and macOS, plus this repository's Rust toolchains,
+cargo-sort and ripgrep for shared fixtures. Setup requires no sudo. Native
+Linux x86_64 and macOS 15 Intel/Apple Silicon qualification of this consumer
+adoption remains pending; upstream fixtures do not qualify these new callers.
+
+### Dependency pin exceptions
+
+[Exact exception records](../ci/dependency-pinning-exceptions.json) retain four
+existing qualified selections rather than changing dependencies to make the new
+checker pass. `ic-cdk-timers =1.0.0` fixes provider behavior audited in
+[SAFETY](../SAFETY.md), including cancellation heap retention and dispatch limits.
+`ic0 =1.2.0` preserves the production platform bindings and counter-1 reader
+reviewed in the [measurement owner](design/callback-delivery-ownership.md#ic-metrics-02-adoption).
+The test workspace retains `ic-cdk =0.20.3` for probe execution/suspension and
+`ic-testkit =0.17.3` for its explicit instance lifecycle with audited PocketIC
+16.0.0. These are product qualification boundaries, not blanket exact-pin policy.
+
+Each exception matches its declaring root, dependency name and literal version.
+Changing any selection requires reviewing its reason and rerunning the affected
+source/runtime/host qualification; the old record cannot admit a new version.
+Both tracked lockfiles and the existing locked/offline metadata checks remain
+required. Registry compatibility ranges, path inheritance and local workspace
+ownership are unchanged. No exception permits a floating action or Docker image.
 
 ### PocketIC artifact pins
 

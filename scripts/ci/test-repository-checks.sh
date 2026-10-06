@@ -9,7 +9,10 @@ git init -q "${temporary_root}"
 mkdir -p "${temporary_root}"/{.githooks,scripts/{ci,dev,release},crates/ic-timers/src}
 cp "${repository_root}/Makefile" "${temporary_root}/Makefile"
 cp "${repository_root}/scripts/ci/check-provider-boundary.sh" "${temporary_root}/scripts/ci/"
-cp "${repository_root}/scripts/ci/check-github-actions-pinned.sh" "${temporary_root}/scripts/ci/"
+cp "${repository_root}/scripts/ci/check-dependency-pins.sh" \
+    "${repository_root}/scripts/ci/dependency-pins.jq" "${temporary_root}/scripts/ci/"
+export PATH="${repository_root}/.tools/host/bin:${PATH}"
+export YQ="${repository_root}/.tools/host/bin/yq"
 cd "${temporary_root}"
 
 for script in .githooks/pre-commit scripts/ci/valid.sh scripts/dev/valid.sh scripts/release/valid.sh; do
@@ -38,35 +41,40 @@ for directory in ci dev release; do
     rm -- "${broken}"
 done
 
-# Workflow discovery retains nested paths, spaces and producer failure status.
+# Git inventory retains nested paths, spaces and producer failure status.
 mkdir -p '.github/workflows/nested' scan-bin scan-tmp
-printf '%s\n' 'steps:' \
-    '  - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' \
+printf '%s\n' 'jobs:' '  test:' '    steps:' \
+    '      - uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"' \
     > '.github/workflows/nested/pinned workflow.yml'
-bash scripts/ci/check-github-actions-pinned.sh
-printf '%s\n' 'steps:' '  - uses: actions/checkout@main' \
+bash scripts/ci/check-dependency-pins.sh
+printf '%s\n' 'jobs:' '  test:' '    steps:' '      - uses: actions/checkout@main' \
     > '.github/workflows/unpinned.yaml'
-expect_failure 'must be pinned to a full commit SHA' bash scripts/ci/check-github-actions-pinned.sh
+expect_failure 'action-ref' bash scripts/ci/check-dependency-pins.sh
 rm .github/workflows/unpinned.yaml
-cat > scan-bin/find <<'EOF'
+IC_TIMERS_FIXTURE_GIT="$(command -v git)"
+export IC_TIMERS_FIXTURE_GIT
+cat > scan-bin/git <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-if [[ "${FIXTURE_PARTIAL_OUTPUT:-0}" == 1 ]]; then
-    printf '%s\0' '.github/workflows/nested/pinned workflow.yml'
+if [[ "$1" == ls-files ]]; then
+    if [[ "${FIXTURE_PARTIAL_OUTPUT:-0}" == 1 ]]; then
+        printf '%s\0' '.github/workflows/nested/pinned workflow.yml'
+    fi
+    echo 'injected workflow inventory failure' >&2
+    exit 2
 fi
-echo 'injected workflow discovery failure' >&2
-exit 2
+exec "${IC_TIMERS_FIXTURE_GIT}" "$@"
 EOF
-chmod +x scan-bin/find
+chmod +x scan-bin/git
 for partial_output in 0 1; do
-    expect_failure 'injected workflow discovery failure' env \
+    expect_failure 'injected workflow inventory failure' env \
         PATH="${temporary_root}/scan-bin:${PATH}" TMPDIR="${temporary_root}/scan-tmp" \
-        FIXTURE_PARTIAL_OUTPUT="${partial_output}" bash scripts/ci/check-github-actions-pinned.sh
-    # The discovery record file is owned by the checker and cleaned on failure.
-    debris="$(find scan-tmp -type f -print)"
+        FIXTURE_PARTIAL_OUTPUT="${partial_output}" bash scripts/ci/check-dependency-pins.sh
+    # The complete inventory scratch directory is cleaned on failure.
+    debris="$(find scan-tmp -mindepth 1 -print)"
     test -z "${debris}"
 done
-rm scan-bin/find
+rm scan-bin/git
 
 cat > scripts/release/classify-release-impact.sh <<'EOF'
 #!/usr/bin/env bash

@@ -1,5 +1,6 @@
 /target/
 /testing/target/
+/.tools/
 **/*.rs.bk
 .DS_Store
 .shared-tooling-refresh.*/

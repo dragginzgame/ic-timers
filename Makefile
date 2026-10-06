@@ -1,6 +1,6 @@
 .PHONY: \
 	actions-check build bump-x check ci clean clippy docs-check ensure-clean fetch fmt fmt-check help \
-	install-hooks major minor msrv package patch pocketic-cohorts pocketic-watchdog publish release-check release-commit \
+	install-hooks install-host-tools host-tools-check major minor msrv package patch pocketic-cohorts pocketic-watchdog publish release-check release-commit \
 	pocketic-check provider-check release-major release-minor release-patch release-push release-stage \
 	release-impact release-tag-check release-verify release-x repository-check shell-check test testing-check update-dev \
 	version wasm-check
@@ -11,6 +11,7 @@ POCKET_IC_VERSION := 16.0.0
 POCKET_IC_BIN_ORIGIN := $(origin POCKET_IC_BIN)
 POCKET_IC_BIN ?= $(CURDIR)/target/tools/pocket-ic/$(POCKET_IC_VERSION)/pocket-ic
 POCKET_IC_AUTO_INSTALL := $(if $(filter undefined,$(POCKET_IC_BIN_ORIGIN)),1,0)
+export PATH := $(CURDIR)/.tools/host/bin:$(PATH)
 
 CI_TARGETS := actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package
 RELEASE_TARGETS := fetch pocketic-check ci msrv testing-check pocketic-watchdog pocketic-cohorts
@@ -35,11 +36,13 @@ help:
 	@echo "  release-impact      Classify changes since the current version tag"
 	@echo "  repository-check    Validate a non-published repository-only update"
 	@echo "  publish             Publish the clean, tagged release to crates.io"
-	@echo "  actions-check       Verify external Actions use full commit SHAs"
+	@echo "  actions-check       Check parsed Actions and dependency pin declarations"
+	@echo "  install-host-tools  Explicitly install the reviewed jq/yq parser pair"
+	@echo "  host-tools-check    Verify the installed parser pair offline"
 	@echo "  shell-check         Check repository shell-script syntax"
 	@echo "  msrv                Check with the minimum supported Rust version"
 	@echo "  ci                  Run the local CI gate"
-	@echo "  update-dev          Install the pinned Rust tools, Wasm target, and hook"
+	@echo "  update-dev          Install pinned Rust tools, parsers, Wasm target, and hook"
 	@echo "  patch|minor|major   Prepare version metadata without deployment tests"
 	@echo "  release-{patch,minor,major}  Commit, tag, and push a SemVer release"
 	@echo "  release-x VERSION=x.y.z      Commit, tag, and push an exact release"
@@ -130,8 +133,17 @@ pocketic-cohorts: pocketic-check
 		cargo +$(MSRV) test --manifest-path testing/Cargo.toml -p ic-timers-pocketic --locked \
 			comparable_policy_cohorts_report_size_and_instruction_subjects -- --nocapture
 
+install-host-tools:
+	bash scripts/dev/install-host-tools.sh
+
+host-tools-check:
+	bash scripts/dev/install-host-tools.sh --check
+
+# Keep the established gate entry point; the shared owner also checks Cargo
+# declarations and the tracked lockfile of each independent workspace.
 actions-check:
-	bash scripts/ci/check-github-actions-pinned.sh
+	bash scripts/dev/install-host-tools.sh --check
+	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/check-dependency-pins.sh
 
 shell-check:
 	@set -e; for script in .githooks/pre-commit scripts/ci/*.sh scripts/dev/*.sh scripts/release/*.sh; do \
@@ -141,6 +153,8 @@ shell-check:
 release-check:
 	bash scripts/ci/verify-shared-tooling-snapshot.sh
 	bash scripts/ci/verify-shared-tooling-snapshot.sh --manifest .shared-tooling-audits.snapshot
+	bash scripts/ci/test-host-tools.sh
+	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/test-dependency-pins.sh
 	bash scripts/ci/test-release-runner.sh
 	bash scripts/release/test-standard-release.sh
 	bash scripts/release/test-committed-release.sh

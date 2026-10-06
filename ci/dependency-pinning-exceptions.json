@@ -1,0 +1,34 @@
+[
+  {
+    "rule": "cargo-exact",
+    "file": "Cargo.toml",
+    "subject": "ic-cdk-timers",
+    "value": "=1.0.0",
+    "reason": "Provider queue, cancellation and dispatch behavior is source-audited at this version; a change requires renewed recovery qualification.",
+    "evidence": "docs/releasing.md#dependency-pin-exceptions"
+  },
+  {
+    "rule": "cargo-exact",
+    "file": "Cargo.toml",
+    "subject": "ic0",
+    "value": "=1.2.0",
+    "reason": "Production platform bindings, including instruction counter 1, retain the source identity used by the maintained timer evidence.",
+    "evidence": "docs/releasing.md#dependency-pin-exceptions"
+  },
+  {
+    "rule": "cargo-exact",
+    "file": "testing/Cargo.toml",
+    "subject": "ic-cdk",
+    "value": "=0.20.3",
+    "reason": "Probe callback execution and suspension use this CDK runtime; changing it requires fresh canister recovery evidence.",
+    "evidence": "docs/releasing.md#dependency-pin-exceptions"
+  },
+  {
+    "rule": "cargo-exact",
+    "file": "testing/Cargo.toml",
+    "subject": "ic-testkit",
+    "value": "=0.17.3",
+    "reason": "The host harness is qualified with the audited PocketIC 16.0.0 server and its existing explicit instance lifecycle.",
+    "evidence": "docs/releasing.md#dependency-pin-exceptions"
+  }
+]

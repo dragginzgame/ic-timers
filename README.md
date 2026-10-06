@@ -394,7 +394,8 @@ operational measurements.
 
 | Command | Purpose |
 | --- | --- |
-| `make update-dev` | Install the pinned toolchain, components, Wasm target, and formatting hook |
+| `make update-dev` | Install the pinned toolchain, components, host parsers, Wasm target, and formatting hook |
+| `make install-host-tools` / `make host-tools-check` | Install the pinned jq/yq pair or verify it offline |
 | `make fmt` / `make fmt-check` | Sort manifests and format or check Rust in the root and `testing/` workspaces |
 | `make ci` | Run the normal warning-denied checks, native tests, Wasm build, and package checks |
 | `make msrv` | Check the workspace with Rust 1.88.0 |
@@ -406,6 +407,10 @@ operational measurements.
 
 Normal development and hosted CI use Rust 1.99.0. Hosted CI also lints every
 supported nested probe configuration with both Rust 1.99.0 and Rust 1.88.0.
+Prepare host parsers through `make update-dev` or `make install-host-tools`
+before validation. `make actions-check` verifies them offline and delegates
+Actions and Cargo declaration checks to the reviewed shared parser; it never
+downloads tools. See the [setup and pin boundaries](docs/releasing.md#structured-dependency-checks-and-host-parsers).
 To run the development-toolchain probe checks locally, use
 `make testing-check MSRV=1.99.0`. The host-side real-canister suites use exact
 `ic-testkit` 0.17.3 and the pinned PocketIC 16.0.0 server on Linux x86_64 or

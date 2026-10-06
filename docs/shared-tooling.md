@@ -5,10 +5,11 @@ The [baseline snapshot manifest](../.shared-tooling.snapshot) records twenty-one
 including [the baseline](../DRAGGINZGAME.md), linked governance, release and
 validation runners and verification fixtures. [AGENTS.md](../AGENTS.md) owns the product overlay and the
 maintainer-approved validation and release-authority exceptions.
-The separate [audit snapshot](../.shared-tooling-audits.snapshot) records seventeen
+The supplemental [audit snapshot](../.shared-tooling-audits.snapshot) records twenty-two
 files from [`a37771f1b6b5fc9a88ed6ab3b705bdda35cd8fa3`](https://github.com/dragginzgame/shared-tooling/tree/a37771f1b6b5fc9a88ed6ab3b705bdda35cd8fa3),
 including the six unchanged methods, their adoption/provenance guidance and
-linked reference documents/catalogs. Its two principle documents and both
+linked documents/catalogs, the structured dependency checker/filter/fixtures and
+the host-parser installer/fixtures. Its two principle documents and both
 integrity helpers are byte-identical to the baseline's copies and recorded in
 both manifests. The adoption guide's ownership moved from the baseline manifest
 to the audit manifest; each changed document has one source revision.
@@ -25,12 +26,25 @@ that committed section and the corresponding release-cache cross-reference;
 this is accepted guidance, not a new consumer runtime or host qualification.
 
 The baseline's release/hook/validation executables remain unchanged at `cb86188`.
-The newer commits also introduce declaration pinning, executable setup and
-validation-runner changes. Those are outside these narrow adoptions and need
-a separate complete baseline review, tool preparation and consumer qualification.
+The newer commits also introduce broader executable setup and validation-runner
+changes. Those are outside these narrow adoptions and need a separate review,
+tool preparation and consumer qualification. The structured checker and parser
+setup at `a37771f` now have the scoped adoption record below.
 The inspected [upstream CI for `a7efade`](https://github.com/dragginzgame/shared-tooling/actions/runs/37443591873)
 passed Linux regression and lint/security; both macOS jobs were queued. No mutable
 sibling bytes are authority, and no new checker or download is implicitly introduced here.
+
+A subsequent read-only review on 2026-10-06 found committed sibling HEAD
+`47cd2ccaf0e8b428f06e6db0262df76cfc1581de` (0.1.7), with additional dirty work
+excluded from that identity. Its
+[upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37458968809)
+passed lint/security but failed all three portable regression jobs. Linux
+stopped in the RustSec preparation fixture after retaining its scratch path;
+the available log does not establish the underlying error. Both macOS jobs
+reported `release metadata test failed: partial version read passed preflight`
+inside the nested validation-runner fixture. No whole-baseline refresh or
+qualification is inferred. The consumer snapshots remain at their recorded
+revisions, and uncommitted helpers are ineligible for revision-bound adoption.
 
 Refresh through the upstream distribution helper from a clean reviewed checkout,
 then verify `bash scripts/ci/verify-shared-tooling-snapshot.sh`. CI and releases
@@ -82,9 +96,10 @@ The linked Rust/simplicity principles and integrity helpers have identical Git
 blob identities at both revisions. The newer pinning/setup documents and catalogs
 are present to preserve the unchanged adoption/provenance documents' offline
 links; they describe upstream capabilities, not installed consumer commands.
-AGENTS.md scopes their reference-only status. No parser/tool installer, pinning
-checker, setup Make target or changed release/validation runner is adopted.
-Full `a37771f` baseline adoption remains a separate scope.
+At the audit-method adoption, AGENTS.md scoped their reference-only status; no
+parser/tool installer, pinning checker or setup target was activated. The later
+checker adoption below activates only dependency pinning and host-parser setup.
+No changed release/validation runner or whole `a37771f` baseline is adopted.
 
 A representative walk of the preserved
 [0.4.1 report](audits/code-hygiene-0.4.1-2026-08-15.md) supports the installed
@@ -130,6 +145,49 @@ different revision implicitly. Verify both offline:
 bash scripts/ci/verify-shared-tooling-snapshot.sh
 bash scripts/ci/verify-shared-tooling-snapshot.sh --manifest .shared-tooling-audits.snapshot
 ```
+
+## Structured checker adoption
+
+[Issue #13](https://github.com/dragginzgame/ic-timers/issues/13) records two
+admission defects in the retired line regex: rejection of quoted SHA references
+and acceptance of Docker tags without digests. The shared owner at committed
+`a37771f` already parses these declarations and has maintained YAML/TOML fixtures.
+This adoption adds five unchanged files to that existing revision's supplemental
+snapshot: the checker, jq filter, checker fixtures, host-parser installer and
+installer fixtures. The clean detached source/export helper produces the exact
+22-file manifest; the older 21-file baseline remains untouched. Dirty upstream
+work and the failed newer whole-baseline CI do not supply copied bytes.
+
+The established `actions-check` command remains the local gate adapter. It
+verifies the installed jq/yq pair offline, then runs the one shared checker over
+Actions and Cargo declarations. Existing CI/repository target lists continue
+to select that adapter. The weaker `check-github-actions-pinned.sh` is deleted
+and every maintained caller moves. Repository fixtures now inject failed Git
+inventory with empty/partial records; nested paths, spaces and scratch cleanup
+remain covered. Generic declaration cases have the shared fixture owner, while
+provider confinement and repository-only gate ordering remain local.
+
+Explicit `install-host-tools` / offline `host-tools-check` adopt only the parser
+prerequisite of [#12](https://github.com/dragginzgame/ic-timers/issues/12).
+Explicit `update-dev` and all applicable CI jobs provision it before gates. Ordinary validation
+does not download parsers; the IC toolset installer, Quill and PocketIC provisioning
+remain outside this batch. The original PocketIC gate and pin owner are unchanged.
+There is one parser pin owner and no copied installer implementation.
+
+The [four exact IC exceptions](releasing.md#dependency-pin-exceptions) preserve
+existing selections at their qualified runtime/harness boundaries. No dependency,
+lockfile, Cargo package version or timer source changes to admit this gate.
+The compatible repository-only batch selects an undated 0.14.1 changelog draft;
+it need not create another package identity and remains bundled until a code
+release or an explicit maintainer-owned repository-only release choice.
+
+Preparation evidence is source review, exact export/snapshot integrity, shell
+syntax and diff inspection. No installer, fixture, lint, build or complete gate
+has been executed locally. The `a37771f` upstream all-host result recorded above
+qualifies its subjects only; this consumer's new Linux/macOS setup, fixtures and
+gate invocation remain unqualified until maintained native execution. Evidence
+for published 0.14.0 cannot qualify these subsequent tooling edits. Issue closure
+and release execution remain maintainer-owned.
 
 ## Release-tooling adoption
 

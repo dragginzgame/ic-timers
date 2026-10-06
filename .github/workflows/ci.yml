@@ -40,6 +40,8 @@ jobs:
         run: |
           source tool-versions.env
           cargo install cargo-sort --version "$IC_TIMERS_CARGO_SORT_VERSION" --locked
+          make install-host-tools
+          echo "$GITHUB_WORKSPACE/.tools/host/bin" >> "$GITHUB_PATH"
       - name: Check MSRV, provider visibility and nested probes
         run: |
           bash scripts/ci/test-repository-checks.sh
@@ -68,6 +70,8 @@ jobs:
         run: |
           source tool-versions.env
           cargo install cargo-sort --version "$IC_TIMERS_CARGO_SORT_VERSION" --locked
+          make install-host-tools
+          echo "$GITHUB_WORKSPACE/.tools/host/bin" >> "$GITHUB_PATH"
       - name: Run CI gate
         run: make ci
       - name: Lint nested probes with internal toolchain
@@ -123,6 +127,8 @@ jobs:
         run: |
           source tool-versions.env
           cargo install cargo-sort --version "$IC_TIMERS_CARGO_SORT_VERSION" --locked
+          make install-host-tools
+          echo "$GITHUB_WORKSPACE/.tools/host/bin" >> "$GITHUB_PATH"
       - name: Run the complete native release gate
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: make release-verify
@@ -160,4 +166,6 @@ jobs:
           bash scripts/release/check-lockfiles.sh
           source tool-versions.env
           cargo install cargo-sort --version "$IC_TIMERS_CARGO_SORT_VERSION" --locked
+          make install-host-tools
+          echo "$GITHUB_WORKSPACE/.tools/host/bin" >> "$GITHUB_PATH"
           make release-check

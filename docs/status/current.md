@@ -10,9 +10,26 @@ This is the compact session handoff. Historical implementation, delivery
 references and validation belong in [release notes](../changelog/README.md),
 [audits](../audits/code-hygiene.md) and the [safety boundary](../../SAFETY.md).
 
+## Current tooling batch
+
+The undated 0.14.1 draft contains compatible repository-only structured checker
+adoption for [#13](https://github.com/dragginzgame/ic-timers/issues/13), including
+the parser prerequisite of [#12](https://github.com/dragginzgame/ic-timers/issues/12).
+The weaker regex script is removed; the existing `actions-check` entry point
+uses the unchanged shared YAML/TOML checker. Explicit parser setup and offline
+verification preserve current dependency selections and PocketIC provisioning.
+The supplemental `a37771f` snapshot now contains 22 files; the main baseline
+stays at `cb86188` with 21 files. Scope and preparation evidence belong in the
+[adoption owner](../shared-tooling.md#structured-checker-adoption).
+No tests, builds, lint, tool installation or complete gate ran locally. New
+Linux/macOS consumer qualification remains maintainer-owned. This draft does
+not change Cargo versions or create release intent; repository-only work normally
+waits for a code-bearing release. No broader IC tool installation or uncommitted
+upstream helper is adopted.
+
 ## Consumer-owned instruction reader
 
-The pending 0.14.0 includes the consumer-owned reader and registry ic-metrics
+Released 0.14.0 includes the consumer-owned reader and registry ic-metrics
 0.2.0 in both independent lock graphs. Production uses the already-owned ic0
 counter-1 binding; test-only native counter handling is unchanged. The retired
 `ic` feature is absent. Summary arithmetic is unchanged, but the exposed
@@ -37,22 +54,28 @@ adoption ran only a targeted offline testing-lock update, both cheap locked
 metadata checks, dependency-tree inspection and diff/source checks. Root already
 selected 0.2.0 and was preserved; every non-metrics testing lock record is
 unchanged. No new tests, builds, lint gates, commit, release or publication ran;
-hosted qualification remains tied to the older released source.
+that adoption's preparation evidence remains separate from hosted qualification.
+The maintainer subsequently released 0.14.0 at `902323a`; matching tag CI and
+Linux/MSRV and Apple Silicon passed, with Intel qualification still pending at inspection. See
+the [source-bound host record](../releasing.md#host-support).
 
 ## Release state
 
 - Read `[workspace.package].version` in [Cargo.toml](../../Cargo.toml) for
   package identity. The top [changelog section](../../CHANGELOG.md) records the
-  accepted batch under its automatically selected, undated next version.
+  released batch or, when present, its automatically selected, undated next version.
   The maintainer's bump finalizes and dates it; a dated section alone does not prove
   tagging, publication or deployment.
 - Cargo, both local-package lock entries, finalized changelog and tag identify
-  release commit `98c4b296d7461525c15a01e30adbe33b75bcfa38` (0.13.5).
-  Registry publication was not independently checked. Tag CI, main Linux/MSRV
-  and both complete native macOS gates passed. Each macOS job records 142 native
-  tests, doctests, 14 PocketIC runtime subjects and policy cohorts. This is the
-  latest complete all-host qualification. The earlier 0.13.4 failures retain
-  their source-bound record. None of these runs qualifies subsequent edits. See the
+  release commit `902323a9e896ce3771044fdc23a7a2d03d49cf28` (0.14.0).
+  The maintainer reports it live; registry publication was not independently
+  checked. Matching tag CI, main Linux/MSRV and the complete Apple Silicon gate
+  passed; Intel was running at inspection. The compatible 0.14.1 tooling draft has no matching
+  hosted qualification and does not change the package identity.
+  Released 0.13.5 at `98c4b29` remains the latest inspected complete all-host
+  qualification, with 142 native tests, doctests, 14 PocketIC runtime subjects
+  and policy cohorts in each macOS gate. That evidence does not qualify 0.14.0.
+  The earlier 0.13.4 failures retain their source-bound record. See the
   [source-bound host record](../releasing.md#host-support).
 - Released 0.13.3 covers a compatible callback-capture destruction fix
   and removal of handle detachment/reinstallation for rejected/coalesced public
@@ -109,8 +132,8 @@ hosted qualification remains tied to the older released source.
   root lock selects compatible registry 0.1.7 and its testing lock selects 0.1.6;
   both satisfy the tagged 0.1.6 requirement. Independent graphs need not select
   identical compatible packages. The current manifest requires 0.2 and both
-  locks select 0.2.0; this later adoption lies outside tagged-source
-  qualification. The requested
+  locks select 0.2.0; this later adoption lies outside 0.13.5 qualification.
+  Its matching 0.14.0 hosted qualification remains pending. The requested
   prevention feedback is filed as
   [Shared Tooling #6](https://github.com/dragginzgame/shared-tooling/issues/6).
   No upstream filesystem change or contributor release effect was performed.
@@ -121,16 +144,18 @@ hosted qualification remains tied to the older released source.
   revision-bound rule in [AGENTS.md](../../AGENTS.md) from Shared Tooling
   `a7efade1a68e43f148252a1a73908a46c4cbe9e9`. The full snapshot remains reviewed
   `cb86188` (21 files), with the adoption guide transferred into the separate
-  17-file audit snapshot at `a37771f`. The audit adoption preserves baseline
+  original 17-file audit slice at `a37771f`, subsequently extended to 22 files
+  for the structured checker/parser adoption. The audit adoption preserves baseline
   executables and product code; the subsequent metrics adapter/dependency change
   has its separate evidence owner above.
-  The newer declaration checker, installers and logger changes need a separate
-  complete baseline review and consumer qualification. Scope belongs in the
+  The broader IC installers and logger changes still need a separate review
+  and consumer qualification; only the checker/host-parser setup is added here.
+  Scope belongs in the
   [adoption record](../shared-tooling.md).
   Its repository-only audit-method adoption and additional snapshot verification
-  remain in the same pending 0.14.0 batch, selected for the public measurement
-  type's ic-metrics 0.2 identity cut. Cargo package versions remain unchanged;
-  release execution is maintainer-owned.
+  shipped in the same 0.14.0 batch, selected for the public measurement
+  type's ic-metrics 0.2 identity cut. The maintainer performed version mutation
+  and release execution.
 - The 0.13.5 Apple Silicon cohort review records 263,433 baseline Wasm bytes and
   316,941/317,563/318,293 bytes for Once/AfterCompletion/Watchdog. Every previously
   emitted instruction/cycle subject matches the 0.13.3 row. Baseline already
@@ -435,7 +460,13 @@ are recorded in the [0.10.12 note](../changelog/0.10.12.md).
 
 ## Evidence
 
-Latest inspected release: 0.13.5 at `98c4b29`; tag CI, main Linux/MSRV and both
+Latest inspected release: 0.14.0 at `902323a`; tag CI, main Linux/MSRV and the
+complete Apple Silicon gate passed, while Intel was running. Apple Silicon
+records 142 native tests, doctests, 14 PocketIC subjects and cohorts; its six
+measurement rows match 0.13.5 exactly, including Wasm bytes. Exact source and
+comparison scope belong in the [measurement owner](../design/callback-delivery-ownership.md#ic-metrics-02-adoption).
+Latest complete all-host qualification
+remains 0.13.5 at `98c4b29`; tag CI, main Linux/MSRV and both
 complete native macOS gates passed. The repaired metadata/index fixtures pass
 on Linux and both macOS hosts. Each macOS gate records 142 native tests,
 14 PocketIC runtime subjects, doctests and cohorts. The preceding
@@ -444,17 +475,18 @@ Exact
 links and qualification scope belong in the [host matrix](../releasing.md#host-support).
 The maintainer authorized closing [#9](https://github.com/dragginzgame/ic-timers/issues/9)
 with that integration/CI evidence; it is closed. The authorized closure of #10
-now records complete 0.13.5 qualification. The only open issue is
-[#11](https://github.com/dragginzgame/ic-timers/issues/11), and no open PR covers it.
-The requested #11 adoption is now implemented from committed `a37771f`: six
+now records complete 0.13.5 qualification. Open adoption obligations remain in
+[GitHub](https://github.com/dragginzgame/ic-timers/issues); no open PR was listed.
+The requested [#11](https://github.com/dragginzgame/ic-timers/issues/11) adoption
+is released from committed `a37771f`: six
 unchanged shared methods, a product-only hygiene overlay, preserved reports and
 a separate verified audit manifest. The obligation map and representative
 historical-report walk belong in the
 [adoption owner](../shared-tooling.md#audit-method-adoption-review). This is
 documentation adoption, not a fresh product audit; no local test/build/lint or
 complete Make gate was executed. GitHub closure is not authorized by the repair
-request alone. The audit slice remains repository-only within the undated
-0.14.0 draft; the metrics dependency makes the complete batch crate-impacting.
+request alone. The audit slice is repository-only within released 0.14.0;
+the metrics dependency makes the complete batch crate-impacting.
 The earlier authorized ic-metrics comments on #1, #3 and #4
 record IC Timers 0.13.3 consumer qualification; they do not qualify 0.13.4.
 The committed Shared Tooling head and remote main matched adopted `cb86188`;
@@ -474,8 +506,8 @@ export supplies the audit snapshot only, with linked setup/pinning material
 scoped as reference rather than full policy/tool adoption. Its upstream Linux
 regression, lint/security and both native macOS jobs passed. Both consumer
 snapshots, 154 local links/anchors and diff checks pass as adoption evidence.
-Working-tree documentation/Make changes and the
-separate dependency edits have no matching remote CI evidence. See the
+Those documentation/Make and dependency changes are now included in released
+`902323a`; its matching hosted run remains incomplete at inspection. See the
 [release runner evidence owner](../releasing.md#standard-release-runner).
 
 Earlier inspection records follow; their pending/failure language describes

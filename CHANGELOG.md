@@ -2,6 +2,23 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.1]
+
+### Development
+
+- Replace line-based Actions validation with the reviewed shared YAML/TOML
+  checker. Quoted and folded SHA references are accepted; moving references,
+  unpinned Docker actions and malformed declarations are rejected. Preserve
+  both workspace lockfiles and the existing qualified IC dependency pins
+  ([#13](https://github.com/dragginzgame/ic-timers/issues/13)).
+- Add explicit, checksum-verified jq/yq setup with `make install-host-tools`
+  and offline verification with `make host-tools-check`. Explicit `update-dev`
+  and CI prepare the parsers
+  before validation; ordinary checks never download them. This is the parser
+  prerequisite of [#12](https://github.com/dragginzgame/ic-timers/issues/12),
+  without changing PocketIC provisioning or installing the broader IC toolset.
+  This batch is repository-only.
+
 ## [0.14.0] - 2026-10-06
 
 ### Breaking

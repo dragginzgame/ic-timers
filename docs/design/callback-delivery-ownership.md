@@ -255,3 +255,19 @@ test, build, lint, PocketIC, cohort or release command was run during this
 adoption; those remain maintainer-owned. There is no claimed Wasm or instruction
 saving from moving the reader or updating the dependency. The scope addresses
 [ic-metrics #10](https://github.com/dragginzgame/ic-metrics/issues/10).
+
+The maintainer subsequently released this adoption as 0.14.0 at
+`902323a9e896ce3771044fdc23a7a2d03d49cf28`. Cargo, both local-package lock
+entries and tag `v0.14.0` agree. Its matching tag CI, main Linux/MSRV and Apple
+Silicon complete gate passed; Intel was unfinished when inspected. The
+[host record](../releasing.md#host-support) keeps exact run links and scope.
+The earlier preparation checks remain separate from that hosted execution.
+
+The completed [0.14.0 Apple Silicon gate](https://github.com/dragginzgame/ic-timers/actions/runs/37476635415/job/112313644296)
+subsequently supplied that comparison. Its four cohort and two calibration rows
+match the recorded 0.13.5 Apple Silicon rows exactly, including Wasm sizes,
+operation instruction fields, sampling brackets and dispatch cycles. The new
+registry 0.2.0 graph therefore shows zero observed delta in these maintained
+subjects after consumer ownership of the counter reader. This is a same-host,
+source-bound result, not a universal size/cost guarantee or qualification for
+the subsequent structured-checker adoption.
