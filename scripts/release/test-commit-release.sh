@@ -2,13 +2,17 @@
 set -euo pipefail
 
 repository_root="$(git rev-parse --show-toplevel)"
+export PATH="${repository_root}/.tools/host/bin:${PATH}"
+export YQ="${repository_root}/.tools/host/bin/yq"
 temporary_root="$(mktemp -d)"
 trap 'rm -rf -- "${temporary_root}"' EXIT
-mkdir -p "${temporary_root}"/{scripts/{ci,release},bin}
+mkdir -p "${temporary_root}"/{scripts/{ci,release},.shared-tooling/helpers/scripts/ci,bin}
 for script in commit-release check-tag-at-head workspace-version readme-version; do
     cp "${repository_root}/scripts/release/${script}.sh" "${temporary_root}/scripts/release/"
 done
 cp "${repository_root}/scripts/ci/ensure-clean.sh" "${temporary_root}/scripts/ci/"
+cp "${repository_root}/.shared-tooling/helpers/scripts/ci/read-cargo-workspace-version.sh" \
+    "${temporary_root}/.shared-tooling/helpers/scripts/ci/"
 # Cargo coherence is tested by test-lockfiles; this fixture isolates Git phases.
 printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "${temporary_root}/scripts/release/check-lockfiles.sh"
 cd "${temporary_root}"

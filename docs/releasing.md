@@ -342,8 +342,8 @@ continues to target Wasm on the Internet Computer.
 | Host | Current workflow configuration and evidence scope |
 | --- | --- |
 | Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The release gate pins the audited PocketIC 16.0.0 Linux x86_64 artifact. Recorded results remain scoped to their original subjects. |
-| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The complete release gate passed for 0.13.5 at `98c4b29`, including repaired release fixtures and all maintained runtime/cohort subjects. Later edits need fresh qualification. |
-| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The complete gate passed for 0.14.0 at `902323a`, including the 0.2 metrics graph and maintained runtime/cohort subjects. Later tooling edits need fresh qualification. |
+| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The complete gate passed for 0.14.0 at `902323a`; 0.14.1 failed at missing fixture prerequisite `rg`. Its setup repair needs fresh qualification. |
+| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The complete gate passed for 0.14.0 at `902323a`, including the 0.2 metrics graph and runtime/cohort subjects; 0.14.1 failed at missing `rg`. Its setup repair needs fresh qualification. |
 
 Inspection on 2026-10-06 of the 0.13.1 source at
 `54bbcfc4985d4657578150cbe7112795297115fd` found both native macOS jobs in
@@ -427,17 +427,34 @@ the maintainer reports publication live and the matching
 [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37476634555)
 passed. Inspection on 2026-10-06 of
 [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37476635415)
-found Linux checks, MSRV and the Apple Silicon complete gate successful; Intel
-was still running. Both independent release locks select registry ic-metrics
+found Linux checks, MSRV and both complete native macOS gates successful.
+Both independent release locks select registry ic-metrics
 0.2.0. The completed Apple Silicon log records 142 native tests, doctests,
 14 PocketIC runtime subjects and policy cohorts with the audited ARM64 server
 digest `781f643d4b16105e7544ca810a972f99c0ef1919016c680faa93f10909a14496`.
 Its six cohort/calibration rows match the same-host 0.13.5 rows exactly, including
 Wasm bytes, as recorded in the [measurement owner](design/callback-delivery-ownership.md#ic-metrics-02-adoption).
-Intel qualification remains pending. Registry publication was not independently
-checked; subsequent parser/checker edits have no matching hosted qualification.
+Registry publication was not independently checked; the subsequent parser/checker
+adoption has its separate failed qualification below.
 
-Version preparation uses Bash, Perl, Git and Cargo. It owns regular metadata
+Release `fbd319de7a60d6475232439e398fff2263a9d666` (0.14.1) is reported live.
+Its [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37483380254)
+passed MSRV but failed Linux checks and both macOS complete gates; matching
+[tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37483380756)
+also failed. All four failures report `scripts/ci/test-dependency-pins.sh:
+line 45: rg: command not found`. Parser setup and the preceding host-tool
+fixtures passed; the shared rejection fixture then could not inspect its output.
+This is missing consumer CI provisioning, not proof of a checker admission bug
+or timer runtime failure. It does not qualify the complete 0.14.1 release gate.
+The compatible repair adds explicit ripgrep bootstrap through apt on Linux and
+Homebrew on both macOS hosts, before fixtures, with a command-availability check.
+The shared snapshot, ordinary offline validation and the complete gate stay
+unchanged. Shell/source/diff inspection is repair evidence; rerunning native
+qualification remains maintainer-owned. Details belong in the
+[adoption owner](shared-tooling.md#structured-checker-ci-repair).
+
+Version preparation uses Bash, Perl, Git, Cargo and the explicitly installed
+jq/yq parser pair. It owns regular metadata
 files; symlinked or non-file outputs are rejected before mutation. Applicable
 Make targets use GNU Make. macOS 15 supplies Bash 3.2, GNU Make 3.81 and the
 standard BSD/Unix tools used here. Required host tools are Git, Perl with core
@@ -448,7 +465,7 @@ at their owning workflow boundary.
 
 For local macOS setup, install Rustup, then run `make update-dev` to install the
 development toolchain declared in `rust-toolchain.toml`, its components, Wasm
-target and pinned host parsers. The full release gate also needs the MSRV toolchain:
+target and pinned host/IC bundles. The full release gate also needs the MSRV toolchain:
 
 ```text
 rustup toolchain install 1.88.0 --profile minimal --component clippy --component rustfmt --target wasm32-unknown-unknown
@@ -516,6 +533,12 @@ the reviewed shared structured checker. It parses workflows, composite actions
 and both independent workspaces' manifests. Git inventory failures, malformed
 metadata and missing or untracked workspace lockfiles fail closed. The checker
 does not resolve dependency versions, install tools or provide runtime evidence.
+The live caller enables `--cargo-inheritance`: member package versions and
+ordinary, development, build and target-specific dependencies must inherit their
+own root. The independent `testing/` workspace retains its own catalog and lock.
+The shared stable version reader validates the selected manifest with offline
+Cargo before projecting TOML; version mutation remains consumer-owned. Parser
+setup is therefore required before `make version` and release preflight too.
 
 Before local validation, run `make update-dev` for complete development setup,
 or explicitly prepare only the host parsers:
@@ -532,14 +555,48 @@ retains previous/failed candidates under ignored `.tools/`. `actions-check`
 verifies the active pair offline before reading declarations; absent or changed
 tools require explicit setup. Make and the repository fixture select
 `.tools/host/bin`, with an explicit yq path. CI performs setup in each applicable
-job before its gates. No system jq/yq selection or broader IC tool installation
-is introduced. PocketIC keeps its existing separate audited owner.
+job before its gates. No system jq/yq selection is introduced. PocketIC keeps its
+separate exact audited admission owner.
 
 Use the [bootstrap prerequisites](local-setup.md#bootstrap-prerequisites)
 for Linux Mint/Ubuntu and macOS, plus this repository's Rust toolchains,
 cargo-sort and ripgrep for shared fixtures. Setup requires no sudo. Native
 Linux x86_64 and macOS 15 Intel/Apple Silicon qualification of this consumer
 adoption remains pending; upstream fixtures do not qualify these new callers.
+
+### Pinned IC tool setup
+
+`make install-ic-tools` explicitly prepares Quill 0.5.4, ICP CLI 1.6.0, didc
+0.6.2, ic-wasm 0.11.1, PocketIC 16.0.0 and wasm-opt 132 from
+[`ci/ic-tools.tsv`](../ci/ic-tools.tsv). `make ic-tools-check` verifies the bundle
+offline. `make install-tools` / `make tools-check` operate on both the parser
+and IC bundles. `update-dev` and CI use explicit setup; ordinary checks never
+invoke these installers without `--check`. Make prepends `.tools/host/bin` and
+`.tools/ic/bin` to PATH. Bootstrap also needs tar with xz support for IC assets.
+
+The shared installer verifies archives before extraction, preserves Binaryen's
+native runtime libraries, and activates a complete checked bundle under ignored
+`.tools/`. Failed candidates and previous bundles remain available. Installed
+file receipts and versions are checked before reuse; changed pins require
+explicit setup. Tool installation neither deploys canisters nor selects
+credentials or a network target.
+
+Native macOS CI supplies `.tools/ic/bin/pocket-ic` as an explicit `POCKET_IC_BIN`
+override to the existing release gate. The consumer's independently audited raw
+hash and exact version remain required. Locally, the same selection is optional:
+
+```text
+make install-tools
+POCKET_IC_BIN="$PWD/.tools/ic/bin/pocket-ic" make release-verify
+```
+
+Without an override, the required automatic single-artifact evidence cache
+provisioning is unchanged. Invalid explicit overrides never download or get
+replaced. The generic six-tool setup does not replace this product contract or
+the [PocketIC artifact pins](#pocketic-artifact-pins). Shared fixtures are wired
+into `release-check`; execution and fresh native qualification remain
+maintainer-owned. Exact source and scope belong in the
+[adoption record](shared-tooling.md#cargo-and-ic-helper-adoption).
 
 ### Dependency pin exceptions
 

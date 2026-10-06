@@ -2,6 +2,31 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.2]
+
+### Fixed
+
+- Prepare ripgrep before regression fixtures in Linux, MSRV, native macOS and
+  tag CI jobs. This fixes 0.14.1's missing-tool failures while retaining the
+  shared structured checker and complete release gate
+  ([#13](https://github.com/dragginzgame/ic-timers/issues/13)).
+  This repair is repository-only.
+
+### Development
+
+- Use the shared exact local-package lock rewrite for both release lockfiles,
+  preserving external identities and checking the complete candidate before
+  replacement ([#14](https://github.com/dragginzgame/ic-timers/issues/14)).
+- Enforce Cargo inheritance against each independent workspace root and use
+  the shared structured workspace-version reader. Version mutation and release
+  recovery remain locally owned ([#15](https://github.com/dragginzgame/ic-timers/issues/15)).
+- Add explicit `install-ic-tools` / offline `ic-tools-check` and combined
+  `install-tools` / `tools-check` setup for the pinned six-tool IC bundle.
+  Development setup and CI prepare it before validation; native macOS evidence
+  still admits PocketIC by its independently audited binary hash
+  ([#12](https://github.com/dragginzgame/ic-timers/issues/12)).
+  This batch is repository-only; runtime and dependency selections are unchanged.
+
 ## [0.14.1] - 2026-10-06
 
 ### Development

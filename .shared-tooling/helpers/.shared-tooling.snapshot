@@ -1,0 +1,17 @@
+# Shared Tooling snapshot v1
+format	1
+source	https://github.com/dragginzgame/shared-tooling
+revision	d957d1f8801885c5b69e4a9ef900155f5f2a8a9d
+file	4c981184847462ab3c01cac087e28309f8e054253fd95c7bbe56f643877aa708	x	scripts/ci/verify-file-checksum.sh
+file	4024efa6850788102bbfa97c471ea3b45d760e547a31b11e7c6a91a79e3eaca8	x	scripts/ci/verify-shared-tooling-snapshot.sh
+file	4d875dd6b8822f68ae86a357cde9af67b33302331a11333e31941eb1c41a6929	x	scripts/ci/check-dependency-pins.sh
+file	43b22d137421962ab6b34634e60d94b8cc6cf5483f9bc55afa8a0d1cd0964a28	-	scripts/ci/dependency-pins.jq
+file	6916702870adb5442fbf9f88b41db259edc2b6b0e9d20bd5a7b11539db73947b	x	scripts/ci/test-dependency-pins.sh
+file	40f31a19d6115411ebffe7c26e3ed30b8af7eead10dd4830de8d5a9312291222	x	scripts/ci/read-cargo-workspace-version.sh
+file	1719211830ee32ef422e12e226179ccf37c1b6a9e2c9a41bb2b71766cad52c3e	x	scripts/ci/test-cargo-metadata.sh
+file	236f9b2d7fe391a73d03cfe355c0d26fa73de8db1553c7e670f7b19aeb65d086	x	scripts/ci/rewrite-local-lock-versions.pl
+file	d4b498337bfd681466e7b541cb2783779aad2a8b326e927450d98f3b570fb5c6	x	scripts/ci/test-local-lock-versions.pl
+file	7a78004b2fa56448ffa8a4fc9aac8e7e9343a0243bf857a3db908fb2f59cfb4f	x	scripts/dev/install-ic-tools.sh
+file	0d4a45581e26987baaaa91cd49748e3b7b3ffa76b01f32d1db84560bd5baa68a	x	scripts/ci/test-ic-tools.sh
+file	22bf8001f496799c0e26795479b9e313fe3ceddec2e47b8444f8af8e7bc32bae	x	scripts/ci/verify-evidence-checksums.sh
+file	43e2b571a909c2d63b2e3b11d208744995997575b34f0c1fbe5ea3104d40bcca	x	scripts/ci/test-evidence-checksums.sh

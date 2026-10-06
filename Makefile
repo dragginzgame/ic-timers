@@ -1,6 +1,6 @@
 .PHONY: \
 	actions-check build bump-x check ci clean clippy docs-check ensure-clean fetch fmt fmt-check help \
-	install-hooks install-host-tools host-tools-check major minor msrv package patch pocketic-cohorts pocketic-watchdog publish release-check release-commit \
+	install-hooks install-host-tools host-tools-check install-tools tools-check install-ic-tools ic-tools-check major minor msrv package patch pocketic-cohorts pocketic-watchdog publish release-check release-commit \
 	pocketic-check provider-check release-major release-minor release-patch release-push release-stage \
 	release-impact release-tag-check release-verify release-x repository-check shell-check test testing-check update-dev \
 	version wasm-check
@@ -11,7 +11,7 @@ POCKET_IC_VERSION := 16.0.0
 POCKET_IC_BIN_ORIGIN := $(origin POCKET_IC_BIN)
 POCKET_IC_BIN ?= $(CURDIR)/target/tools/pocket-ic/$(POCKET_IC_VERSION)/pocket-ic
 POCKET_IC_AUTO_INSTALL := $(if $(filter undefined,$(POCKET_IC_BIN_ORIGIN)),1,0)
-export PATH := $(CURDIR)/.tools/host/bin:$(PATH)
+export PATH := $(CURDIR)/.tools/host/bin:$(CURDIR)/.tools/ic/bin:$(PATH)
 
 CI_TARGETS := actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package
 RELEASE_TARGETS := fetch pocketic-check ci msrv testing-check pocketic-watchdog pocketic-cohorts
@@ -39,10 +39,13 @@ help:
 	@echo "  actions-check       Check parsed Actions and dependency pin declarations"
 	@echo "  install-host-tools  Explicitly install the reviewed jq/yq parser pair"
 	@echo "  host-tools-check    Verify the installed parser pair offline"
+	@echo "  install-ic-tools    Explicitly install the reviewed six-tool IC bundle"
+	@echo "  ic-tools-check      Verify the installed IC bundle offline"
+	@echo "  install-tools / tools-check  Prepare or verify both tool bundles"
 	@echo "  shell-check         Check repository shell-script syntax"
 	@echo "  msrv                Check with the minimum supported Rust version"
 	@echo "  ci                  Run the local CI gate"
-	@echo "  update-dev          Install pinned Rust tools, parsers, Wasm target, and hook"
+	@echo "  update-dev          Install pinned Rust/host/IC tools, Wasm target, and hook"
 	@echo "  patch|minor|major   Prepare version metadata without deployment tests"
 	@echo "  release-{patch,minor,major}  Commit, tag, and push a SemVer release"
 	@echo "  release-x VERSION=x.y.z      Commit, tag, and push an exact release"
@@ -139,22 +142,44 @@ install-host-tools:
 host-tools-check:
 	bash scripts/dev/install-host-tools.sh --check
 
+install-ic-tools:
+	bash .shared-tooling/helpers/scripts/dev/install-ic-tools.sh --consumer "$(CURDIR)"
+
+ic-tools-check:
+	bash .shared-tooling/helpers/scripts/dev/install-ic-tools.sh --consumer "$(CURDIR)" --check
+
+install-tools:
+	bash scripts/dev/install-host-tools.sh
+	bash .shared-tooling/helpers/scripts/dev/install-ic-tools.sh --consumer "$(CURDIR)"
+
+tools-check:
+	bash scripts/dev/install-host-tools.sh --check
+	bash .shared-tooling/helpers/scripts/dev/install-ic-tools.sh --consumer "$(CURDIR)" --check
+
 # Keep the established gate entry point; the shared owner also checks Cargo
 # declarations and the tracked lockfile of each independent workspace.
 actions-check:
 	bash scripts/dev/install-host-tools.sh --check
-	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/check-dependency-pins.sh
+	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/check-dependency-pins.sh \
+		--consumer "$(CURDIR)" --cargo-inheritance
 
 shell-check:
-	@set -e; for script in .githooks/pre-commit scripts/ci/*.sh scripts/dev/*.sh scripts/release/*.sh; do \
+	@set -e; for script in .githooks/pre-commit scripts/ci/*.sh scripts/dev/*.sh scripts/release/*.sh \
+		.shared-tooling/helpers/scripts/ci/*.sh .shared-tooling/helpers/scripts/dev/*.sh; do \
 		bash -n "$$script"; \
 	done
 
 release-check:
 	bash scripts/ci/verify-shared-tooling-snapshot.sh
 	bash scripts/ci/verify-shared-tooling-snapshot.sh --manifest .shared-tooling-audits.snapshot
+	bash .shared-tooling/helpers/scripts/ci/verify-shared-tooling-snapshot.sh \
+		--consumer "$(CURDIR)/.shared-tooling/helpers"
 	bash scripts/ci/test-host-tools.sh
-	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/test-dependency-pins.sh
+	bash .shared-tooling/helpers/scripts/ci/test-ic-tools.sh
+	bash .shared-tooling/helpers/scripts/ci/test-evidence-checksums.sh
+	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/test-dependency-pins.sh
+	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/test-cargo-metadata.sh
+	perl .shared-tooling/helpers/scripts/ci/test-local-lock-versions.pl
 	bash scripts/ci/test-release-runner.sh
 	bash scripts/release/test-standard-release.sh
 	bash scripts/release/test-committed-release.sh

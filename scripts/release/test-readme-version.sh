@@ -2,6 +2,8 @@
 set -euo pipefail
 
 repository_root="$(git rev-parse --show-toplevel)"
+export PATH="${repository_root}/.tools/host/bin:${PATH}"
+export YQ="${repository_root}/.tools/host/bin/yq"
 temporary_root="$(mktemp -d)"
 trap 'rm -rf -- "${temporary_root}"' EXIT
 cat > "${temporary_root}/Cargo.toml" <<'MANIFEST'

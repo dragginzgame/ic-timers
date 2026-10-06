@@ -6,16 +6,18 @@ temporary_root="$(mktemp -d)"
 trap 'rm -rf -- "${temporary_root}"' EXIT
 
 git init -q "${temporary_root}"
-mkdir -p "${temporary_root}"/{.githooks,scripts/{ci,dev,release},crates/ic-timers/src}
+mkdir -p "${temporary_root}"/{.githooks,scripts/{ci,dev,release},.shared-tooling/helpers/scripts/{ci,dev},crates/ic-timers/src}
 cp "${repository_root}/Makefile" "${temporary_root}/Makefile"
 cp "${repository_root}/scripts/ci/check-provider-boundary.sh" "${temporary_root}/scripts/ci/"
-cp "${repository_root}/scripts/ci/check-dependency-pins.sh" \
-    "${repository_root}/scripts/ci/dependency-pins.jq" "${temporary_root}/scripts/ci/"
+cp "${repository_root}/.shared-tooling/helpers/scripts/ci/check-dependency-pins.sh" \
+    "${repository_root}/.shared-tooling/helpers/scripts/ci/dependency-pins.jq" \
+    "${temporary_root}/.shared-tooling/helpers/scripts/ci/"
 export PATH="${repository_root}/.tools/host/bin:${PATH}"
 export YQ="${repository_root}/.tools/host/bin/yq"
 cd "${temporary_root}"
 
-for script in .githooks/pre-commit scripts/ci/valid.sh scripts/dev/valid.sh scripts/release/valid.sh; do
+for script in .githooks/pre-commit scripts/ci/valid.sh scripts/dev/valid.sh scripts/release/valid.sh \
+    .shared-tooling/helpers/scripts/dev/valid.sh; do
     printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "${script}"
 done
 
@@ -34,8 +36,9 @@ expect_failure() {
 }
 
 make --no-print-directory shell-check >/dev/null
-for directory in ci dev release; do
-    broken="scripts/${directory}/broken.sh"
+for directory in scripts/ci scripts/dev scripts/release \
+    .shared-tooling/helpers/scripts/ci .shared-tooling/helpers/scripts/dev; do
+    broken="${directory}/broken.sh"
     printf '%s\n' 'if then' > "${broken}"
     expect_failure "${broken}" make --no-print-directory shell-check
     rm -- "${broken}"
@@ -46,10 +49,10 @@ mkdir -p '.github/workflows/nested' scan-bin scan-tmp
 printf '%s\n' 'jobs:' '  test:' '    steps:' \
     '      - uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"' \
     > '.github/workflows/nested/pinned workflow.yml'
-bash scripts/ci/check-dependency-pins.sh
+bash .shared-tooling/helpers/scripts/ci/check-dependency-pins.sh --consumer "$temporary_root"
 printf '%s\n' 'jobs:' '  test:' '    steps:' '      - uses: actions/checkout@main' \
     > '.github/workflows/unpinned.yaml'
-expect_failure 'action-ref' bash scripts/ci/check-dependency-pins.sh
+expect_failure 'action-ref' bash .shared-tooling/helpers/scripts/ci/check-dependency-pins.sh --consumer "$temporary_root"
 rm .github/workflows/unpinned.yaml
 IC_TIMERS_FIXTURE_GIT="$(command -v git)"
 export IC_TIMERS_FIXTURE_GIT
@@ -69,7 +72,8 @@ chmod +x scan-bin/git
 for partial_output in 0 1; do
     expect_failure 'injected workflow inventory failure' env \
         PATH="${temporary_root}/scan-bin:${PATH}" TMPDIR="${temporary_root}/scan-tmp" \
-        FIXTURE_PARTIAL_OUTPUT="${partial_output}" bash scripts/ci/check-dependency-pins.sh
+        FIXTURE_PARTIAL_OUTPUT="${partial_output}" \
+        bash .shared-tooling/helpers/scripts/ci/check-dependency-pins.sh --consumer "$temporary_root"
     # The complete inventory scratch directory is cleaned on failure.
     debris="$(find scan-tmp -mindepth 1 -print)"
     test -z "${debris}"

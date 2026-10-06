@@ -2,6 +2,8 @@
 set -euo pipefail
 
 repository_root="$(git rev-parse --show-toplevel)"
+export PATH="${repository_root}/.tools/host/bin:${PATH}"
+export YQ="${repository_root}/.tools/host/bin/yq"
 makefile="${repository_root}/Makefile"
 bump_script="${repository_root}/scripts/release/bump-version.sh"
 impact_checker="${repository_root}/scripts/release/check-bump-impact.sh"

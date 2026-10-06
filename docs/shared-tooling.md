@@ -5,14 +5,20 @@ The [baseline snapshot manifest](../.shared-tooling.snapshot) records twenty-one
 including [the baseline](../DRAGGINZGAME.md), linked governance, release and
 validation runners and verification fixtures. [AGENTS.md](../AGENTS.md) owns the product overlay and the
 maintainer-approved validation and release-authority exceptions.
-The supplemental [audit snapshot](../.shared-tooling-audits.snapshot) records twenty-two
+The supplemental [audit snapshot](../.shared-tooling-audits.snapshot) records nineteen
 files from [`a37771f1b6b5fc9a88ed6ab3b705bdda35cd8fa3`](https://github.com/dragginzgame/shared-tooling/tree/a37771f1b6b5fc9a88ed6ab3b705bdda35cd8fa3),
 including the six unchanged methods, their adoption/provenance guidance and
-linked documents/catalogs, the structured dependency checker/filter/fixtures and
-the host-parser installer/fixtures. Its two principle documents and both
-integrity helpers are byte-identical to the baseline's copies and recorded in
-both manifests. The adoption guide's ownership moved from the baseline manifest
-to the audit manifest; each changed document has one source revision.
+linked documents/catalogs and the host-parser installer/fixtures. Its two
+principle documents and integrity helpers are byte-identical to the baseline's
+copies and recorded in both manifests. The thirteen-file
+[helper snapshot](../.shared-tooling/helpers/.shared-tooling.snapshot) records reviewed committed
+`d957d1f8801885c5b69e4a9ef900155f5f2a8a9d`: Cargo/checksum helpers and IC setup.
+The helper slice lives under `.shared-tooling/helpers/` so its newer checksum
+owner cannot replace the checksum required by either older manifest. The
+checker/filter and unchanged checker fixture moved out of the audit manifest
+into this slice; their former executable paths are removed. Each changed file
+has one source revision. The shared snapshot verifier remains byte-identical
+across all three sources.
 
 The maintainer-authorized adoption of
 [Shared Tooling #6](https://github.com/dragginzgame/shared-tooling/issues/6)
@@ -26,10 +32,9 @@ that committed section and the corresponding release-cache cross-reference;
 this is accepted guidance, not a new consumer runtime or host qualification.
 
 The baseline's release/hook/validation executables remain unchanged at `cb86188`.
-The newer commits also introduce broader executable setup and validation-runner
-changes. Those are outside these narrow adoptions and need a separate review,
-tool preparation and consumer qualification. The structured checker and parser
-setup at `a37771f` now have the scoped adoption record below.
+The later Cargo/IC helper adoption is scoped below. Newer host-installer and
+validation-runner changes remain outside it. The structured checker and parser
+setup originally adopted at `a37771f` retains its historical record below.
 The inspected [upstream CI for `a7efade`](https://github.com/dragginzgame/shared-tooling/actions/runs/37443591873)
 passed Linux regression and lint/security; both macOS jobs were queued. No mutable
 sibling bytes are authority, and no new checker or download is implicitly introduced here.
@@ -136,14 +141,17 @@ passed Linux regression, lint/security and both native macOS regressions at
 `a37771f`. This qualifies upstream's maintained subjects, not this consumer's
 new Make invocation, product behavior or full release gate.
 
-Refresh the baseline and audit manifests separately from their reviewed clean
-source revisions; the custom audit export uses
-`--manifest .shared-tooling-audits.snapshot`. Do not refresh either source to a
-different revision implicitly. Verify both offline:
+Refresh baseline/audit slices directly with their manifest arguments from their
+reviewed clean revisions. For the nested helper slice, export its declared paths
+to an owned temporary Git consumer through the distribution helper, then copy
+that verified tree and manifest under `.shared-tooling/helpers/`. Keep committed
+source paths and modes intact inside that root. Do not implicitly advance another
+slice or copy uncommitted source. Verify all three offline:
 
 ```bash
 bash scripts/ci/verify-shared-tooling-snapshot.sh
 bash scripts/ci/verify-shared-tooling-snapshot.sh --manifest .shared-tooling-audits.snapshot
+bash .shared-tooling/helpers/scripts/ci/verify-shared-tooling-snapshot.sh --consumer "$PWD/.shared-tooling/helpers"
 ```
 
 ## Structured checker adoption
@@ -177,9 +185,9 @@ There is one parser pin owner and no copied installer implementation.
 The [four exact IC exceptions](releasing.md#dependency-pin-exceptions) preserve
 existing selections at their qualified runtime/harness boundaries. No dependency,
 lockfile, Cargo package version or timer source changes to admit this gate.
-The compatible repository-only batch selects an undated 0.14.1 changelog draft;
-it need not create another package identity and remains bundled until a code
-release or an explicit maintainer-owned repository-only release choice.
+At preparation, the compatible repository-only batch selected an undated
+0.14.1 changelog draft. The maintainer subsequently chose and released that
+repository-only package identity; its qualification record follows.
 
 Preparation evidence is source review, exact export/snapshot integrity, shell
 syntax and diff inspection. No installer, fixture, lint, build or complete gate
@@ -188,6 +196,101 @@ qualifies its subjects only; this consumer's new Linux/macOS setup, fixtures and
 gate invocation remain unqualified until maintained native execution. Evidence
 for published 0.14.0 cannot qualify these subsequent tooling edits. Issue closure
 and release execution remain maintainer-owned.
+
+## Structured checker CI repair
+
+The maintainer released the adoption at `fbd319de7a60d6475232439e398fff2263a9d666`
+(0.14.1). Its [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37483380254)
+passed MSRV but failed Linux and both complete macOS gates. The matching
+[tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37483380756)
+failed for the same reason: shared `test-dependency-pins.sh` uses `rg` in its
+rejection helper, but consumer CI provisioned parsers without this documented
+system prerequisite. The preceding host-tool fixtures passed; this failure
+cannot qualify subsequent fixtures or runtime gates.
+
+The [#13](https://github.com/dragginzgame/ic-timers/issues/13) repair provisions
+ripgrep explicitly through apt in all Linux jobs and Homebrew in the native
+macOS job, then checks command availability before any fixtures. It preserves
+the shared sources/manifests, offline ordinary checks and complete release gate.
+No fixture is skipped or vendored helper patched. The one compatible 0.14.2
+draft is repository-only; Cargo, locks, dependencies and runtime are unchanged.
+Source/YAML projection, extracted shell syntax and diff checks are preparation
+evidence. No local test, build, lint or release gate ran; fresh hosted/native
+qualification remains pending for the worktree repair.
+
+A read-only review found the lock rewrite and Cargo reader/inheritance helpers
+for [#14](https://github.com/dragginzgame/ic-timers/issues/14) and
+[#15](https://github.com/dragginzgame/ic-timers/issues/15) committed at
+`d957d1f8801885c5b69e4a9ef900155f5f2a8a9d`. Its
+[upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37484175750)
+passed Linux regression and lint/security but failed both macOS regressions
+after IC installation fixtures, before reporting host-tool success. The available
+failed logs do not establish the underlying host-fixture error or native
+qualification of later metadata helpers. Their subsequent authorized consumer
+adoption is recorded below; upstream results do not qualify the new callers.
+
+## Cargo and IC helper adoption
+
+The maintainer authorized the remaining adoption after the CI repair review.
+A clean detached temporary clone exported the committed helpers from
+[`d957d1f`](https://github.com/dragginzgame/shared-tooling/tree/d957d1f8801885c5b69e4a9ef900155f5f2a8a9d)
+through the distribution helper into a separately rooted, verified manifest. The sibling
+had newer dirty changes at export time; none were copied. The release/hook/
+validation runners, six audit methods and parser installer remain unchanged.
+This adopts selected helpers, not the whole upstream baseline.
+
+For [#14](https://github.com/dragginzgame/ic-timers/issues/14), the existing
+`update-local-lock.sh` selects `ic-timers` and delegates transformation to the
+shared Perl helper. It captures a complete successful candidate before replacing
+the selected lockfile. Both root and testing adapters, regular-file ownership,
+rollback backups and the two final locked/offline checks remain local. Local
+identities and unqualified exact dependency references change; registry/Git
+identities, source-qualified references and unrelated bytes do not.
+
+For [#15](https://github.com/dragginzgame/ic-timers/issues/15), `actions-check`
+enables the shared `--cargo-inheritance` option. Cargo discovers each manifest's
+own root offline; member versions and ordinary/dev/build/target dependencies
+inherit that root's catalog by alias. The approved independent `testing/` root
+remains separate. The no-argument workspace-version adapter reads its selected
+working/exported manifest through the shared stable TOML reader. Its guarded
+`set PREVIOUS NEW` operation remains a local byte-preserving mutator. Current
+adapter code still checks the selected immutable release tree, never executes
+its older scripts, and retains targets for Cargo manifest validity. Parser setup
+now precedes tag-version inspection. Fixture copies include new dependencies;
+release Cargo stubs delegate manifest-only discovery to real offline Cargo
+while keeping resolution/fetch effects substituted.
+
+For [#12](https://github.com/dragginzgame/ic-timers/issues/12), explicit Make
+setup and `update-dev` adopt the shared six-tool IC installer and unchanged
+`ci/ic-tools.tsv`. Make selects both bundle bin directories; CI explicitly
+prepares and verifies them. Native macOS qualification selects the installed
+PocketIC binary as an explicit override and still checks the independent
+consumer-audited raw binary hash and exact version. Automatic single-artifact
+provisioning into the existing evidence cache remains required when no override
+is supplied. This local admission/provisioning owner is retained deliberately:
+replacing it with the full installer would implicitly download six tools during
+validation and change the override contract. The generic bundle's receipt is
+not a substitute for the consumer's PocketIC evidence pins. Installing ICP CLI
+or Quill supplies no deployment, credential or network-target authority.
+
+`release-check` includes shared Cargo, lockfile, IC-installation and checksum
+fixtures alongside every existing consumer gate. They cover malformed/ambiguous
+versions, parser failure with plausible output, dependency overrides/missing
+aliases, duplicate local identities, source-qualified references, bundle
+interruption and preservation. Wiring is not execution evidence. Preparation
+is committed-source review, export/integrity, script/YAML syntax and cheap
+locked metadata inspection only. That check stopped at missing offline
+`ic-metrics 0.2.1` sources after a concurrent root lock change; no dependency
+selection or cache was changed here. The independent testing graph passed cheap
+locked/offline metadata inspection with `ic-metrics 0.2.0` and local `ic-timers
+0.14.1`; the shared version reader reports 0.14.1. No tests, builds, lint gates, tool
+installation, release execution or upstream mutation ran for this adoption.
+This adoption leaves runtime, manifests and lock selections unchanged.
+Fresh native Linux, Intel and Apple Silicon
+qualification remains maintainer-owned; upstream macOS failures above remain
+visible. No issue closure is implied. Helper contracts also have an exact
+[upstream guide](https://github.com/dragginzgame/shared-tooling/blob/d957d1f8801885c5b69e4a9ef900155f5f2a8a9d/docs/verification-helpers.md);
+the local release guide owns consumer commands and prerequisites.
 
 ## Release-tooling adoption
 

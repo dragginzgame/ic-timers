@@ -394,8 +394,10 @@ operational measurements.
 
 | Command | Purpose |
 | --- | --- |
-| `make update-dev` | Install the pinned toolchain, components, host parsers, Wasm target, and formatting hook |
+| `make update-dev` | Install the pinned toolchain, components, host and IC tools, Wasm target, and formatting hook |
 | `make install-host-tools` / `make host-tools-check` | Install the pinned jq/yq pair or verify it offline |
+| `make install-ic-tools` / `make ic-tools-check` | Install the pinned six-tool IC bundle or verify it offline |
+| `make install-tools` / `make tools-check` | Prepare or verify both host and IC bundles |
 | `make fmt` / `make fmt-check` | Sort manifests and format or check Rust in the root and `testing/` workspaces |
 | `make ci` | Run the normal warning-denied checks, native tests, Wasm build, and package checks |
 | `make msrv` | Check the workspace with Rust 1.88.0 |

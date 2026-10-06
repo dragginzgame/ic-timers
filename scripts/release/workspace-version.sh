@@ -1,17 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Own the repository's workspace.package version, never a dependency version.
-# Deliberately require one literal, canonical SemVer field in that table.
+# Read the selected worktree/export through the shared TOML owner. Mutation
+# remains consumer-owned and preserves the literal field's surrounding bytes.
 if (( $# != 0 )) && [[ $# != 3 || "$1" != set ]]; then
     echo "Usage: $0 [set PREVIOUS_VERSION NEW_VERSION]" >&2
     exit 2
+fi
+if (( $# == 0 )); then
+    script_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+    exec bash "$script_root/.shared-tooling/helpers/scripts/ci/read-cargo-workspace-version.sh" \
+        --stable "$PWD/Cargo.toml"
 fi
 
 perl -e '
     use strict;
     use warnings;
-    my ($operation, $previous, $new) = @ARGV;
+    my ($previous, $new) = @ARGV[1, 2];
     my $semver = qr/(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)/;
     open my $input, "<", "Cargo.toml" or die "Cargo.toml: $!\n";
     my $text = do { local $/; <$input> };
@@ -32,16 +37,12 @@ perl -e '
     }
     die "error: Cargo.toml needs exactly one workspace.package table and version\n"
         unless $tables == 1 && $fields == 1;
-    if (defined $operation) {
-        die "error: expected and new workspace versions must be canonical SemVer\n"
-            unless $previous =~ /^$semver\z/ && $new =~ /^$semver\z/;
-        die "error: workspace version changed: expected $previous, found $version\n"
-            unless $version eq $previous;
-        substr($text, $start, length($version), $new);
-        open my $output, ">", "Cargo.toml" or die "Cargo.toml: $!\n";
-        print {$output} $text or die "Cargo.toml: $!\n";
-        close $output or die "Cargo.toml: $!\n";
-    } else {
-        print "$version\n";
-    }
+    die "error: expected and new workspace versions must be canonical SemVer\n"
+        unless $previous =~ /^$semver\z/ && $new =~ /^$semver\z/;
+    die "error: workspace version changed: expected $previous, found $version\n"
+        unless $version eq $previous;
+    substr($text, $start, length($version), $new);
+    open my $output, ">", "Cargo.toml" or die "Cargo.toml: $!\n";
+    print {$output} $text or die "Cargo.toml: $!\n";
+    close $output or die "Cargo.toml: $!\n";
 ' "$@"

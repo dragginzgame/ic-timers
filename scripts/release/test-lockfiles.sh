@@ -2,6 +2,8 @@
 set -euo pipefail
 
 repository_root="$(git rev-parse --show-toplevel)"
+export PATH="${repository_root}/.tools/host/bin:${PATH}"
+export YQ="${repository_root}/.tools/host/bin/yq"
 checker="${repository_root}/scripts/release/check-lockfiles.sh"
 temporary_root="$(mktemp -d)"
 trap 'rm -rf -- "${temporary_root}"' EXIT

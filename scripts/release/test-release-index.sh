@@ -5,6 +5,9 @@ set -euo pipefail
 # a shallow checkout like CI; only the isolated clone receives a baseline tag.
 # The adapter reads a real Git index; Cargo calls are stubs, not compilation.
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+export PATH="$root/.tools/host/bin:$PATH"
+export YQ="$root/.tools/host/bin/yq"
+export RELEASE_INDEX_REAL_CARGO="$(command -v cargo)"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/release-index-check.XXXXXX")"
 trap 'status=$?; if [[ "$status" != 0 && -f "$fixture/output" ]]; then cat "$fixture/output" >&2; fi; rm -rf -- "$fixture"; exit "$status"' EXIT
 git clone -q --no-local --depth 1 "$root" "$fixture/repo"
@@ -15,6 +18,7 @@ printf '#!%s\n' "$real_bash" > "$fixture/bin/cargo"
 cat >> "$fixture/bin/cargo" <<'STUB'
 set -euo pipefail
 case "$1" in
+    locate-project) exec "$RELEASE_INDEX_REAL_CARGO" "$@" ;;
     sort) ;;
     metadata) printf '{"packages":[{"name":"ic-timers","version":"%s"}]}\n' "$RELEASE_VERSION" ;;
     fetch)

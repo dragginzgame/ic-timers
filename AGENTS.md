@@ -12,15 +12,19 @@ This file is normative for automated contributors.
 - Apply the unchanged [shared audit methods](audits/README.md) from revision
   `a37771f1b6b5fc9a88ed6ab3b705bdda35cd8fa3`, recorded separately in
   [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). That
-  supplemental snapshot also supplies the structured dependency checker and
-  pinned host-parser setup at the same reviewed revision. Apply the
+  supplemental snapshot also supplies pinned host-parser setup at the same
+  reviewed revision. The isolated
+  [Cargo/IC helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
+  supplies the structured dependency checker, Cargo readers/rewrites and IC
+  installer from `d957d1f8801885c5b69e4a9ef900155f5f2a8a9d`. Apply the
   [dependency pinning rules](rules/dependency-pinning.md) with the exact local
   [qualification exceptions](docs/releasing.md#dependency-pin-exceptions).
   The [local hygiene overlay](docs/audits/code-hygiene.md) and adoption record scope
   their product obligations. This supplements the pinned baseline's review
-  contract. Host-parser setup is explicit; validation verifies it offline.
-  IC tool catalogs and installation guidance remain reference material;
-  the IC installer and newer full baseline are not adopted by this update.
+  contract. Host and IC setup are explicit; verification is offline. The local
+  audited PocketIC admission and automatic single-artifact provisioning contract
+  remain separate from generic IC setup. The newer full baseline, release runner
+  and host-installer changes are not adopted by these slices.
 - Maintainer-approved validation exception: tests, builds, lint gates and
   deployment validation are user-owned, including focused tests. Do not run
   them without an explicit request. Read-only inspection, script syntax, diff,

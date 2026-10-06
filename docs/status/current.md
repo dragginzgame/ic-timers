@@ -12,20 +12,31 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Current tooling batch
 
-The undated 0.14.1 draft contains compatible repository-only structured checker
-adoption for [#13](https://github.com/dragginzgame/ic-timers/issues/13), including
-the parser prerequisite of [#12](https://github.com/dragginzgame/ic-timers/issues/12).
-The weaker regex script is removed; the existing `actions-check` entry point
-uses the unchanged shared YAML/TOML checker. Explicit parser setup and offline
-verification preserve current dependency selections and PocketIC provisioning.
-The supplemental `a37771f` snapshot now contains 22 files; the main baseline
-stays at `cb86188` with 21 files. Scope and preparation evidence belong in the
-[adoption owner](../shared-tooling.md#structured-checker-adoption).
-No tests, builds, lint, tool installation or complete gate ran locally. New
-Linux/macOS consumer qualification remains maintainer-owned. This draft does
-not change Cargo versions or create release intent; repository-only work normally
-waits for a code-bearing release. No broader IC tool installation or uncommitted
-upstream helper is adopted.
+The undated 0.14.2 draft repairs the missing ripgrep prerequisite in 0.14.1
+CI for [#13](https://github.com/dragginzgame/ic-timers/issues/13). All Linux,
+MSRV, macOS and tag job definitions explicitly provision it before fixtures.
+The same compatible repository-only batch adopts the shared exact lock rewrite,
+structured version reader and Cargo inheritance gate for each independent root
+([#14](https://github.com/dragginzgame/ic-timers/issues/14),
+[#15](https://github.com/dragginzgame/ic-timers/issues/15)). Explicit development
+and CI setup now prepare the full pinned IC bundle
+([#12](https://github.com/dragginzgame/ic-timers/issues/12)); native macOS evidence
+selects its PocketIC binary through the unchanged exact raw-hash admission gate.
+Default automatic single-artifact provisioning and explicit-override protection
+remain intact. Shared release/hook/validation runners and host-parser installer
+are unchanged. The helper slice is thirteen committed files from `d957d1f`;
+the baseline retains twenty-one records and the audit/parser slice nineteen.
+See the [adoption owner](../shared-tooling.md#cargo-and-ic-helper-adoption).
+This adoption leaves Cargo versions, dependency selections and runtime source
+unchanged. No tests, builds, lint, installation or complete gate ran locally for this adoption,
+and it has no matching hosted result. The cheap locked metadata check stopped
+at missing offline `ic-metrics 0.2.1` sources before verifying both graphs. A
+concurrent root lock selection of 0.2.1 is preserved; no dependency selection
+was changed by this work. Testing's independent locked/offline metadata passed
+with metrics 0.2.0 and local timers 0.14.1; the shared reader reports 0.14.1.
+The maintainer owns qualification and
+release execution. Newer dirty sibling edits are excluded; issues remain open
+pending qualification and authorized closure.
 
 ## Consumer-owned instruction reader
 
@@ -56,7 +67,7 @@ selected 0.2.0 and was preserved; every non-metrics testing lock record is
 unchanged. No new tests, builds, lint gates, commit, release or publication ran;
 that adoption's preparation evidence remains separate from hosted qualification.
 The maintainer subsequently released 0.14.0 at `902323a`; matching tag CI and
-Linux/MSRV and Apple Silicon passed, with Intel qualification still pending at inspection. See
+main Linux/MSRV and both complete macOS gates passed. See
 the [source-bound host record](../releasing.md#host-support).
 
 ## Release state
@@ -67,14 +78,15 @@ the [source-bound host record](../releasing.md#host-support).
   The maintainer's bump finalizes and dates it; a dated section alone does not prove
   tagging, publication or deployment.
 - Cargo, both local-package lock entries, finalized changelog and tag identify
-  release commit `902323a9e896ce3771044fdc23a7a2d03d49cf28` (0.14.0).
+  release commit `fbd319de7a60d6475232439e398fff2263a9d666` (0.14.1).
   The maintainer reports it live; registry publication was not independently
-  checked. Matching tag CI, main Linux/MSRV and the complete Apple Silicon gate
-  passed; Intel was running at inspection. The compatible 0.14.1 tooling draft has no matching
-  hosted qualification and does not change the package identity.
-  Released 0.13.5 at `98c4b29` remains the latest inspected complete all-host
-  qualification, with 142 native tests, doctests, 14 PocketIC runtime subjects
-  and policy cohorts in each macOS gate. That evidence does not qualify 0.14.0.
+  checked. Main MSRV passed, but Linux checks, both macOS complete gates and
+  tag CI failed at the shared fixture's missing `rg` prerequisite. The 0.14.2
+  draft repairs setup and has no matching hosted qualification.
+  Released 0.14.0 at `902323a` is the latest inspected complete all-host
+  qualification; tag, Linux/MSRV and both native macOS gates passed. Its Apple
+  Silicon log records 142 native tests, doctests, 14 PocketIC runtime subjects
+  and cohorts. That evidence does not qualify the later checker/setup changes.
   The earlier 0.13.4 failures retain their source-bound record. See the
   [source-bound host record](../releasing.md#host-support).
 - Released 0.13.3 covers a compatible callback-capture destruction fix
@@ -131,9 +143,11 @@ the [source-bound host record](../releasing.md#host-support).
   preparation, separate from subsequent hosted qualification. Tagged 0.13.5's
   root lock selects compatible registry 0.1.7 and its testing lock selects 0.1.6;
   both satisfy the tagged 0.1.6 requirement. Independent graphs need not select
-  identical compatible packages. The current manifest requires 0.2 and both
-  locks select 0.2.0; this later adoption lies outside 0.13.5 qualification.
-  Its matching 0.14.0 hosted qualification remains pending. The requested
+  identical compatible packages. The current manifest requires 0.2; a later
+  concurrent root lock change selects 0.2.1, while testing retains 0.2.0.
+  The original 0.2.0 adoption lies outside 0.13.5 qualification and its matching
+  0.14.0 hosted qualification passed as recorded above. The concurrent 0.2.1
+  lock selection has no qualification in this adoption. The requested
   prevention feedback is filed as
   [Shared Tooling #6](https://github.com/dragginzgame/shared-tooling/issues/6).
   No upstream filesystem change or contributor release effect was performed.
@@ -148,8 +162,9 @@ the [source-bound host record](../releasing.md#host-support).
   for the structured checker/parser adoption. The audit adoption preserves baseline
   executables and product code; the subsequent metrics adapter/dependency change
   has its separate evidence owner above.
-  The broader IC installers and logger changes still need a separate review
-  and consumer qualification; only the checker/host-parser setup is added here.
+  That batch added only checker/host-parser setup. The current draft adopts the
+  isolated Cargo/IC helpers above; newer logger and host-installer changes remain
+  unadopted. Consumer qualification of the new slice remains pending.
   Scope belongs in the
   [adoption record](../shared-tooling.md).
   Its repository-only audit-method adoption and additional snapshot verification
@@ -460,13 +475,15 @@ are recorded in the [0.10.12 note](../changelog/0.10.12.md).
 
 ## Evidence
 
-Latest inspected release: 0.14.0 at `902323a`; tag CI, main Linux/MSRV and the
-complete Apple Silicon gate passed, while Intel was running. Apple Silicon
+Latest inspected release: 0.14.1 at `fbd319d`; main MSRV passed, but Linux,
+both macOS gates and tag CI failed at missing `rg`. The source-bound repair
+and pending rerun are recorded in the [adoption owner](../shared-tooling.md#structured-checker-ci-repair).
+Latest complete all-host qualification is 0.14.0 at `902323a`: tag CI, main
+Linux/MSRV and both native macOS gates passed. Apple Silicon
 records 142 native tests, doctests, 14 PocketIC subjects and cohorts; its six
 measurement rows match 0.13.5 exactly, including Wasm bytes. Exact source and
 comparison scope belong in the [measurement owner](../design/callback-delivery-ownership.md#ic-metrics-02-adoption).
-Latest complete all-host qualification
-remains 0.13.5 at `98c4b29`; tag CI, main Linux/MSRV and both
+Earlier 0.13.5 at `98c4b29` passed tag CI, main Linux/MSRV and both
 complete native macOS gates passed. The repaired metadata/index fixtures pass
 on Linux and both macOS hosts. Each macOS gate records 142 native tests,
 14 PocketIC runtime subjects, doctests and cohorts. The preceding

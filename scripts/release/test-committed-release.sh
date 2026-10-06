@@ -4,11 +4,17 @@ set -euo pipefail
 # Real Make and metadata owners; Git/Cargo effects are command stubs. This
 # proves consumer selection, not live release execution or native qualification.
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+export PATH="$root/.tools/host/bin:$PATH"
+export YQ="$root/.tools/host/bin/yq"
+export COMMITTED_RELEASE_REAL_CARGO="$(command -v cargo)"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/committed-release-check.XXXXXX")"
 trap 'status=$?; if [[ "$status" != 0 && -f "$fixture/output" ]]; then cat "$fixture/output" >&2; fi; rm -rf -- "$fixture"; exit "$status"' EXIT
-mkdir -p "$fixture/current/scripts" "$fixture/selected/testing" "$fixture/bin" "$fixture/tmp"
+mkdir -p "$fixture/current/scripts" "$fixture/current/.shared-tooling/helpers/scripts/ci" \
+    "$fixture/selected/testing" "$fixture/bin" "$fixture/tmp"
 cp "$root/Makefile" "$fixture/current/"
 cp -R "$root/scripts/release" "$fixture/current/scripts/"
+cp "$root/.shared-tooling/helpers/scripts/ci/read-cargo-workspace-version.sh" \
+    "$fixture/current/.shared-tooling/helpers/scripts/ci/"
 cp "$root/tool-versions.env" "$fixture/current/"
 printf '%s\n' '[workspace.package]' 'version = "0.1.0"' > "$fixture/selected/Cargo.toml"
 printf '%s\n' '| API line | `0.1` |' 'ic-timers = "=0.1.0"' > "$fixture/selected/README.md"
@@ -49,6 +55,8 @@ cat >> "$fixture/bin/cargo" <<'STUB'
 set -euo pipefail
 printf 'cargo %s\n' "$*" >> "$EVENTS"
 case "$*" in
+    'locate-project --workspace --message-format plain --manifest-path '*)
+        exec "$COMMITTED_RELEASE_REAL_CARGO" "$@" ;;
     'sort --workspace --check' | 'sort --workspace --check testing')
         if [[ "${FAIL_SORT:-}" == "$*" ]]; then
             echo 'fixture manifest ordering failure' >&2
