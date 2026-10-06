@@ -117,6 +117,29 @@ Cargo versions, dependency selections and both lockfiles are unchanged; there is
 no downstream Wasm, instruction or heap delta from these tooling edits.
 Historical adoption/qualification records below retain their original source scope.
 
+### Consumer restricted-PATH fixture repair
+
+The maintainer's local validation of preparatory commit `8f03721` stopped in
+`test-release-gate.sh`. Its retained `stock-passing-output` and raw
+`20261006T172609Z-80780-0-logging-pass.log` both report
+`make[4]: echo: No such file or directory` (status 127). The prepared-path cases
+completed; the restricted-path pass case failed before its diagnostic assertions,
+and the later restricted failure/nested-checkout cases were not reached.
+The parent gate log remains at
+`.git/release-state/validation-failures/20261006T172520Z-44432-2-ci.log`, and the
+original fixture remains at `/tmp/tmp.ywUjFrGE9t`. Those local paths describe this
+attempt, not portable documentation links or evidence retained in Git.
+
+GNU Make can execute a simple `echo` recipe directly instead of invoking a shell
+builtin. The consumer fixture omitted external `echo` from its restricted PATH.
+The local repair adds it and resolves all selected binaries with Bash `type -P`,
+so a builtin name cannot produce a broken relative symlink. The restricted PATH
+still excludes ripgrep and exercises the logger's stock grep branch. No shared
+snapshot, production logger or gate membership is changed. Shell syntax and diff
+inspection are preparation checks; the repaired fixture has not been rerun by
+the contributor. Fresh maintainer execution and native-host qualification remain
+required. No named function or type was removed.
+
 ## Audit-method adoption review
 
 [Consumer adoption #11](https://github.com/dragginzgame/ic-timers/issues/11)

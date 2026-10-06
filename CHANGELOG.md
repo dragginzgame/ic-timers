@@ -6,6 +6,9 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Include external `echo` in the release-gate fixture's restricted tool PATH,
+  so Make's direct execution of logging recipes reaches the intended assertions.
+  This repair is repository-only.
 - Refresh the reviewed Shared Tooling snapshots to 0.1.11. Passing `error::`
   test names remain ordinary validation output, while actual diagnostics retain
   highlighting and failure logs. Adopt the paired maintenance policy and stricter

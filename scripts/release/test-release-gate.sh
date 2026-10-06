@@ -246,8 +246,10 @@ cmp retained-fetch-log "${failure_logs[0]}"
 
 # The canonical logger's optional ripgrep branch must also work on stock hosts.
 mkdir -p stock-bin
-for tool in bash make git cp mktemp rm mkdir date tee sed grep awk tail dirname; do
-    ln -s "$(command -v "$tool")" "stock-bin/$tool"
+# Make can execute simple recipes directly, so echo needs an external binary.
+# type -P resolves executables even when Bash supplies a builtin of the same name.
+for tool in bash make git cp mktemp rm mkdir date tee sed grep awk tail dirname echo; do
+    ln -s "$(type -P "$tool")" "stock-bin/$tool"
 done
 if PATH="$fixture_root/stock-bin" "${fixture_make[@]}" release-verify \
     FAIL_TARGET=fetch > stock-host-output 2>&1; then exit 1; fi

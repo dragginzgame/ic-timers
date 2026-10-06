@@ -47,6 +47,17 @@ evidence. No local tests, builds, lint, installation or release effects ran.
 The maintainer still owns the complete consumer gate; upstream success and
 released 0.14.3's evidence cannot qualify this worktree.
 
+The maintainer's local gate at preparatory commit `8f03721` stopped in the
+restricted-PATH logging pass case: Make directly executed `echo`, which was
+missing from the fixture's tool set. Retained evidence identifies status 127;
+the prepared-path cases completed but later restricted/nested cases were not
+reached. The current repair adds external `echo`, resolves executable paths with
+`type -P` and preserves the grep-only branch. Its
+[evidence owner](../shared-tooling.md#consumer-restricted-path-fixture-repair)
+records the original log/scratch paths. Source syntax/diff checks are preparation
+only; no contributor test rerun, release command or new native qualification is
+claimed. The undated 0.14.4 batch and open #16 remain pending the repaired gate.
+
 Released 0.14.3 at `e001ab9` passed main Linux/MSRV and both complete macOS gates
 plus tag CI, qualifying its formatter, undated-history and Cargo/IC adoptions.
 The maintainer authorized closure of #11–#15 with those hosted results; they are
