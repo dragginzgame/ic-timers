@@ -27,8 +27,7 @@ case "$1" in
     metadata) printf '{"packages":[{"name":"ic-timers","version":"%s"}]}\n' "$RELEASE_VERSION" ;;
     fetch)
         printf '%s\n' "$*" >> "$FETCH_EVENTS"
-        [[ "$*" == 'fetch --manifest-path Cargo.toml --locked' ||
-            "$*" == 'fetch --manifest-path testing/Cargo.toml --locked' ]]
+        [[ "$*" == 'fetch --manifest-path Cargo.toml --locked' ]]
         if [[ "${FAIL_FETCH_MANIFEST:-}" == "$3" ]]; then
             echo 'fixture locked fetch failure' >&2
             exit 37
@@ -128,7 +127,7 @@ reject commit-check 'failed index/worktree comparison'
 grep -Fq 'fixture failed index query' "$fixture/output"
 unset FAIL_ADMISSION_QUERY PARTIAL_ADMISSION_OUTPUT
 
-# A clean release preflight prepares both selected locks instead of demanding
+# A clean release preflight prepares the selected lock instead of demanding
 # a warm cache. Fetch failures stop immediately and never mutate release metadata.
 cp CHANGELOG.md "$fixture/original-changelog"
 export RELEASE_VERSION="$(bash "$root/scripts/ci/next-release-version.sh" "$RELEASE_PREVIOUS" patch)"
@@ -137,7 +136,7 @@ export RELEASE_VERSION="$(bash "$root/scripts/ci/next-release-version.sh" "$RELE
 printf '# Changelog\n\n## [%s]\n\n- Cache preparation fixture.\n\n## [%s] - %s\n\n- Prior fixture.\n' \
     "$RELEASE_VERSION" "$RELEASE_PREVIOUS" "$RELEASE_DATE" > CHANGELOG.md
 cp CHANGELOG.md "$fixture/pending-changelog"
-for failed_manifest in '' Cargo.toml testing/Cargo.toml; do
+for failed_manifest in '' Cargo.toml; do
     : > "$FETCH_EVENTS"
     export FAIL_FETCH_MANIFEST="$failed_manifest"
     if [[ -z "$failed_manifest" ]]; then
@@ -147,13 +146,10 @@ for failed_manifest in '' Cargo.toml testing/Cargo.toml; do
         grep -Fq 'fixture locked fetch failure' "$fixture/output"
     fi
     printf '%s\n' 'fetch --manifest-path Cargo.toml --locked' > "$fixture/expected-fetch"
-    if [[ "$failed_manifest" != Cargo.toml ]]; then
-        printf '%s\n' 'fetch --manifest-path testing/Cargo.toml --locked' >> "$fixture/expected-fetch"
-    fi
     cmp "$fixture/expected-fetch" "$FETCH_EVENTS"
     cmp "$fixture/pending-changelog" CHANGELOG.md
     [[ ! -e .git/release-state && -z "$(ls -A "$fixture/tmp")" ]]
-    for path in Cargo.toml Cargo.lock testing/Cargo.lock README.md; do
+    for path in Cargo.toml Cargo.lock README.md; do
         git show "HEAD:$path" > "$fixture/original-metadata"
         cmp "$fixture/original-metadata" "$path"
     done

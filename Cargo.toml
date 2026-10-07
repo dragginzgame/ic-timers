@@ -1,5 +1,11 @@
 [workspace]
-members = ["crates/ic-timers"]
+members = [
+    "crates/ic-timers",
+    "testing/crates/ic-timers-pocketic",
+    "testing/crates/ic-timers-runtime-probe",
+    "testing/crates/ic-timers-size-probe",
+]
+default-members = ["crates/ic-timers"]
 resolver = "3"
 
 [workspace.package]
@@ -16,9 +22,14 @@ keywords = ["internet-computer", "canister", "timer", "dfinity", "icp"]
 categories = ["asynchronous", "wasm"]
 
 [workspace.dependencies]
+candid = "0.10"
+ic-cdk = "=0.20.3"
 ic-cdk-timers = "=1.0.0"
 ic-metrics = "0.2"
+ic-testkit = "0.20"
+ic-timers = { path = "crates/ic-timers" }
 ic0 = "=1.2.0"
+serde = "1.0"
 thiserror = "2.0"
 
 [workspace.lints.rust]
@@ -39,3 +50,12 @@ use_self = "warn"
 doc_markdown = "allow"
 missing_errors_doc = "allow"
 module_name_repetitions = "allow"
+
+# Preserve the former testing workspace's canister optimization settings without
+# changing the library workspace's ordinary release profile.
+[profile.timer-probe]
+inherits = "release"
+lto = "thin"
+opt-level = "z"
+panic = "abort"
+strip = "symbols"

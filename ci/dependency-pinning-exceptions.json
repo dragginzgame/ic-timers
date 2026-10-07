@@ -17,18 +17,10 @@
   },
   {
     "rule": "cargo-exact",
-    "file": "testing/Cargo.toml",
+    "file": "Cargo.toml",
     "subject": "ic-cdk",
     "value": "=0.20.3",
     "reason": "Probe callback execution and suspension use this CDK runtime; changing it requires fresh canister recovery evidence.",
-    "evidence": "docs/releasing.md#dependency-pin-exceptions"
-  },
-  {
-    "rule": "cargo-exact",
-    "file": "testing/Cargo.toml",
-    "subject": "ic-testkit",
-    "value": "=0.17.3",
-    "reason": "The host harness is qualified with the audited PocketIC 16.0.0 server and its existing explicit instance lifecycle.",
     "evidence": "docs/releasing.md#dependency-pin-exceptions"
   }
 ]

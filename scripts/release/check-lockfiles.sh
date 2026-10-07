@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Dependency resolution validates both locks without building either workspace.
+# Dependency resolution validates the complete root graph without building packages.
 # --no-deps would skip resolution and accept stale path-package versions.
 version="$(bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh")"
-for manifest in Cargo.toml testing/Cargo.toml; do
+for manifest in Cargo.toml; do
     # Parse only successful Cargo output; preserve download/resolution failures
     # rather than adding a JSON error for empty or partial producer output.
     metadata_json="$(cargo metadata --manifest-path "${manifest}" --locked --offline --format-version 1)"

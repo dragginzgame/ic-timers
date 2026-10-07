@@ -10,6 +10,33 @@ classify the change, choose the appropriate version, run the required validation
 let the bump label the current changelog draft, and then publish the
 release through the repository's release commands.
 
+## Root workspace and dependencies
+
+The maintainer's dependency-centralization request supersedes the independent
+`testing/` workspace. The root `Cargo.toml` owns `ic-timers` and the three
+unpublished packages under `testing/crates/`, with one root dependency catalog
+and `Cargo.lock`. Member dependencies and package versions inherit from the
+root; probe publication stays disabled. There is no `testing/Cargo.toml` or
+`testing/Cargo.lock` compatibility path.
+
+`ic-timers` remains the default member. Library check, test, lint, docs, MSRV
+and Wasm targets select it explicitly. Formatting covers all four members.
+The full release gate retains every probe lint configuration, watchdog/ordinary
+recovery subject and policy cohort. Probe Wasm builds use `--profile timer-probe`
+and the existing ignored `testing/target` and cohort target directories;
+loaders select the resulting `timer-probe` output directory. The root ordinary
+release profile is unchanged. Dependency resolution now uses root resolver 3;
+fresh measurements and native qualification are required for the combined graph.
+
+The current root catalog selects compatible Testkit 0.20, locked to 0.20.0,
+with Host 0.3.3 transitively, and ic-metrics 0.2.7. PocketIC remains the audited
+16.0.0 server. Its client's exact thiserror 2.0.18 requirement determines the
+shared thiserror selection; the old library-only 2.0.21 graph is not retained.
+The root library version remains 0.14.8; unpublished members now inherit that
+identity. This is repository/test dependency preparation, not a released runtime
+or measurement claim. Historical adoption evidence below remains tied to its
+recorded versions, workspace shapes and hosts.
+
 ## Pre-1.0 compatibility
 
 The implementation policy and the version boundary are separate decisions.
@@ -191,7 +218,7 @@ syntax were reviewed; rerunning the corrected fixture remains maintainer-owned.
 
 The release-commit owner then runs its read-only `--check-before-bump` mode. It
 accepts staged implementation changes and dirty metadata selected by
-`release-stage`: `Cargo.toml`, `Cargo.lock`, `testing/Cargo.lock`, `CHANGELOG.md`
+`release-stage`: `Cargo.toml`, `Cargo.lock`, `CHANGELOG.md`
 and `README.md`. Other unstaged or untracked paths are listed with Bash escaping
 and rejected before dependency fetching, validation or version mutation. Stage
 the intended implementation changes yourself; the helper does not expand the
@@ -260,7 +287,7 @@ All release execution is user-owned: version bumps, tests, staging, commits,
 tags, pushes and publication. Automated contributors prepare only the next
 changelog draft and directly relevant evidence. The user runs `make patch`, `make
 minor`, `make major`, or `make bump-x VERSION=...` when ready to update the
-workspace version and both lockfiles, and `make release-stage` to stage release
+workspace version and the root lockfile, and `make release-stage` to stage release
 metadata.
 
 Standard commands may be rerun after any interrupted attempt. Before preparation,
@@ -304,7 +331,7 @@ Hook and version-preparation regressions print their retained scratch paths on
 failure, including per-scenario Make output and before/after fixture state.
 Successful fixture runs remove their scratch directories. Exact-release failure
 cases use recording phase substitutes; they do not commit, tag or push.
-Release metadata and both lockfiles are checked before the release commit;
+Release metadata and the root lockfile are checked before the release commit;
 unstaged and untracked work is rejected before committing or tagging.
 
 If a standard release stops after the version bump, rerun the same standard
@@ -320,7 +347,7 @@ make publish
 
 `release-commit` commits staged release metadata when the version is untagged.
 If the release commit already exists, it requires a clean `HEAD` whose subject
-is exactly `Release X.Y.Z`, verifies metadata and both lockfiles, then creates
+is exactly `Release X.Y.Z`, verifies metadata and the root lockfile, then creates
 the missing annotated tag. A retry with an existing tag verifies that tag's
 type and commit. Arbitrary clean commits, conflicting tags and new staged
 changes for a tagged version are rejected. A push-only failure can be retried
@@ -340,7 +367,7 @@ both workspaces, then copies/stages only the fully staged selection. Partial
 staging, formatter failure or concurrent edits reject without discarding working
 changes. Unselected and unrelated edits remain untouched. `make install-hooks`
 is explicit per-clone activation; the installer refuses conflicting hook paths.
-The local consumer fixture covers both workspaces, partial staging and formatter
+The local consumer fixture covers library and probe members in one workspace, partial staging and formatter
 failure isolation using the actual formatting targets. Its new scenarios remain
 unexecuted by the automated contributor.
 
@@ -349,6 +376,15 @@ The non-release `make patch`, `make minor`, `make major`, and
 review without running build, lint or test suites.
 
 ### Host support
+
+Released 0.14.8 is `7194dcdb092a33b90886d46b304545d5c09ca0a6`.
+Its [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37601234917)
+passed Linux, MSRV and both complete native macOS gates; matching
+[tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37601234587)
+passed. This qualifies the released two-workspace tooling source, not the current
+single-workspace/Testkit dependency preparation. Green jobs do not prove the
+failure-only artifact-upload acceptance in issue #23.
+
 
 macOS host workflows are required by the
 [adopted engineering baseline](../DRAGGINZGAME.md#host-support).
@@ -762,21 +798,20 @@ maintainer-owned. Exact source and scope belong in the
 
 ### Dependency pin exceptions
 
-[Exact exception records](../ci/dependency-pinning-exceptions.json) retain four
+[Exact exception records](../ci/dependency-pinning-exceptions.json) retain three
 existing qualified selections rather than changing dependencies to make the new
 checker pass. `ic-cdk-timers =1.0.0` fixes provider behavior audited in
 [SAFETY](../SAFETY.md), including cancellation heap retention and dispatch limits.
 `ic0 =1.2.0` preserves the production platform bindings and counter-1 reader
 reviewed in the [measurement owner](design/callback-delivery-ownership.md#ic-metrics-02-adoption).
-The test workspace retains `ic-cdk =0.20.3` for probe execution/suspension and
-`ic-testkit =0.17.3` for its explicit instance lifecycle with audited PocketIC
-16.0.0. These are product qualification boundaries, not blanket exact-pin policy.
+The root catalog retains `ic-cdk =0.20.3` for probe execution/suspension with
+the audited PocketIC 16.0.0 server. Testkit now uses a compatible 0.20 requirement;
+its former exact 0.17.3 exception is retired. These are product qualification boundaries, not blanket exact-pin policy.
 
 Each exception matches its declaring root, dependency name and literal version.
 Changing any selection requires reviewing its reason and rerunning the affected
 source/runtime/host qualification; the old record cannot admit a new version.
-Both tracked lockfiles and the existing locked/offline metadata checks remain
-required. Registry compatibility ranges, path inheritance and local workspace
+The root lockfile and complete locked/offline metadata check remain required. Registry compatibility ranges, path inheritance and local workspace
 ownership are unchanged. No exception permits a floating action or Docker image.
 
 ### PocketIC artifact pins
@@ -834,7 +869,7 @@ unexecuted and do not supply native host qualification.
 
 ### Testkit harness qualification
 
-The host-only `testing/crates/ic-timers-pocketic` package uses published exact `ic-testkit` 0.17.3,
+The original 0.17.3 harness adoption used published exact `ic-testkit` 0.17.3,
 whose complete upstream PocketIC types remain available through the shared crate.
 There is no direct `pocket-ic` dependency in this workspace. Locked dependency
 metadata resolves one `ic-testkit` and one PocketIC 16.0.0 package; no declared
@@ -864,7 +899,7 @@ fixtures were executed.
 The 0.13.2 native macOS gates now supply matching compilation, lint, recovery
 and cohort qualification for this harness, scoped in the host matrix above.
 For changed source, the maintainer runs the complete `release-verify` gate,
-including MSRV, nested lint, watchdog/ordinary recovery and policy cohorts. Record fresh
+including MSRV, probe lint, watchdog/ordinary recovery and policy cohorts. Record fresh
 Wasm/instruction subjects and native Linux/macOS qualification rather than
 reusing receipts from the previous simulator. Package version and Git release
 execution remain maintainer-owned.
@@ -909,12 +944,12 @@ make fetch
 
 An error such as `failed to download js-sys ... --offline was specified` means
 the selected archive is absent from the cache. A different cached version is
-insufficient. Populate both lockfiles' caches and retry the requested operation;
-retain their selected versions. `update-dev` installs the toolchain and hook,
+insufficient. Populate the root lockfile's cache and retry the requested operation;
+retain its selected versions. `update-dev` installs the toolchain and hook,
 and does not prepare these dependency caches.
 
 That gate includes `make ci`, the Rust 1.88 MSRV check, warning-denied linting
-of every supported nested probe configuration, the maintained watchdog/recovery,
+of every supported unpublished probe configuration, the maintained watchdog/recovery,
 ordinary-await and provider-churn PocketIC subjects, and the four policy cohorts.
 If `POCKET_IC_BIN` is unset, the
 gate installs the pinned PocketIC 16.0.0 artifact for the current supported host
@@ -925,36 +960,36 @@ paths also leave hash-mismatched binaries unexecuted. An explicitly supplied `PO
 a strict override: a missing or mismatched override fails and is never
 replaced automatically.
 
-After the version changes, the helper updates `Cargo.lock` and
-`testing/Cargo.lock`, then runs offline `cargo metadata --locked` with dependency
-resolution against both manifests through `check-lockfiles.sh`. This catches
-stale path-package versions without building either workspace or repeating
-the evidence suite. `--no-deps` is not sufficient because it skips lockfile
-validation. `release-stage` stages both lockfiles automatically.
+After the version changes, the helper reads Cargo's no-deps member inventory
+and updates every local package identity in `Cargo.lock` through the shared
+rewriter. External selections are preserved. It then runs offline
+`cargo metadata --locked` with full dependency resolution against the root
+manifest through `check-lockfiles.sh`. The no-deps inventory is not the validation
+gate: it does not establish lockfile coherence. Full locked resolution catches
+stale member versions without building packages or repeating evidence suites.
+`release-stage` stages the root lockfile automatically.
 
 The checker captures successful Cargo output before parsing JSON. Cargo failures
 retain their exit status and diagnostic without a cascading parse error from
-empty or partial output. The release-gate fixture records both locked fetch
-commands and rejection at either download boundary, and checks that preparation
-runs first and stops the gate on failure. The lockfile fixture covers empty and
-matching JSON from failed metadata commands for each manifest while preserving
-both locks. Shell and embedded fixture-shell syntax, recipe inspection and diff
-whitespace checks passed; these fetch/metadata fixtures and real Cargo fetch
-commands have not been run by an automated contributor during their preparation.
+empty or partial output. Updated root-graph fixtures retain locked-fetch failures,
+failed metadata with empty or plausible output, stale package identities,
+rollback/interruption, mode preservation and selected-commit admission. They
+have not been executed by the contributor during this consolidation.
+
 The maintainer's reported 0.11.8 preparation attempt
 failed on uncached `js-sys 0.3.104`, then reported metadata rollback. Read-only
 inspection found that archive and eight other selected testing archives absent
 from the local default cache; it does not establish results in another cache or
 native macOS qualification.
 
-`release-stage` selects only the five outputs the bump owns. Workspace members
+`release-stage` selects only the four outputs the bump owns. Workspace members
 inherit their versions, so their manifests are not version-bump outputs and
 remain under the maintainer's separate code-staging ownership. Stage and commit
 the intended implementation and supporting evidence before the combined release;
 the release commit still rejects unrelated unstaged or untracked work.
 
-Before mutation, the helper captures only its five output files: the workspace
-manifest, both lockfiles, changelog and README. Failed
+Before mutation, the helper captures only its four output files: the workspace
+manifest, root lockfile, changelog and README. Failed
 commands and handled `INT`/`TERM` interruptions restore their pre-bump contents
 and modes, including existing user edits; a previously absent file is removed
 on rollback. If restoration fails, the backup is
@@ -983,11 +1018,11 @@ independently pushed tag from an unmerged commit without running identical
 validation twice at one SHA.
 
 The tag job verifies its event version, main reachability and annotated tag
-before fetching dependencies. It then prepares both locked caches and invokes
+before fetching dependencies. It then prepares the root locked cache and invokes
 `check-lockfiles.sh` against the tagged checkout itself, before running the
 release fixtures. Fixture success alone does not establish coherence of the
 checkout's actual locks. Failed downloads, locked resolution or resolved
-`ic-timers` identity stop the job; both workspaces must resolve one package at
+`ic-timers` identity stop the job; the root graph must resolve one package at
 the Cargo version. This uses the existing fetch and metadata owners and does
 not add compilation to their checks. The changed workflow shell was checked
 for syntax and its sequence reviewed; diff whitespace checks passed. Hosted
@@ -1005,7 +1040,7 @@ retains the complete release gate despite having no runtime changes.
 The three standard SemVer entry points use the [common release contract](releases.md)
 with explicit `RELEASE_REMOTE=origin` and `RELEASE_BRANCH=main`. The complete local
 release gate is unchanged. Consumer adapters retain the five metadata outputs,
-README projection and independently locked workspaces. Publishing stays separate.
+README projection and the complete root graph. Publishing stays separate.
 Normal targets select unfinished preparation intent before another increment.
 The 22-file snapshot is exported from committed Shared Tooling revision
 `cb86188c5956866564de4fb6ec6be67b27981ab9`; the
@@ -1017,22 +1052,22 @@ The runner owns commit ancestry, saved source/tree/subject, destination, locking
 annotated tagging and exact atomic branch/tag publication. Local committed,
 tagged and push callbacks instead inspect `RELEASE_COMMIT`: the current adapter
 exports its immutable source tree into an owned temporary directory and invokes
-the current workspace-version, README and lockfile check owners there. Both
-workspace manifest-sort checks and the exact dated changelog heading remain
+the current workspace-version, README and lockfile check owners there. The root
+workspace manifest-sort check and the exact dated changelog heading remain
 required. No scripts from the older tree are executed. Failed archive reads,
 including partial output, fail closed; the temporary copy is removed without
 touching build artifacts, plans or validation logs. This is cold release-path
 disk work and has no crate, Wasm, runtime instruction or heap impact.
 
 Preflight reads staged, unstaged and untracked paths separately, with NUL records
-and rename detection disabled, before admitting only the five metadata outputs.
+and rename detection disabled, before admitting only the four metadata outputs.
 Its existing bump check rejects candidate/changelog conflicts before validation
 or intent creation. After admission, preflight invokes the existing `make fetch`
-owner for both locked workspaces. It does not require cached archives before
+owner for the complete locked root graph. It does not require cached archives before
 that owner can populate them. Fetching retains Cargo's configured network/cache
-policy and both lock selections; there is no offline-to-online retry or dependency
-update. The complete gate retains its existing fetch-first ordering, and either
-workspace's failed fetch stops preflight before validation or release mutation.
+policy and the existing lock selection; there is no offline-to-online retry or dependency
+update. The complete gate retains its existing fetch-first ordering, and a
+failed fetch stops preflight before validation or release mutation.
 Locked fetching prepares an already consistent graph; it does not repair stale
 lockfiles after a dependency requirement changes. The maintainer's 0.13.5 attempt
 from `9d10b49851620296b55878b6aafb4ef92db6d45e` passed the root fetch and stopped

@@ -108,7 +108,7 @@ jobs:
           echo "$GITHUB_WORKSPACE/.tools/ic/bin" >> "$GITHUB_PATH"
       - name: Run CI gate
         run: make ci
-      - name: Lint nested probes with internal toolchain
+      - name: Lint unpublished probes with internal toolchain
         run: make testing-check MSRV="$IC_TIMERS_INTERNAL_TOOLCHAIN"
       - name: Archive failure evidence
         if: ${{ failure() }}

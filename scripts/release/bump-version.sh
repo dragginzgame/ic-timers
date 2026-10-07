@@ -93,7 +93,7 @@ fi
 # Capture only files this bump mutates, including any existing user edits.
 # Failed updates/checks and catchable interruptions restore that exact state.
 backup_directory="$(mktemp -d "${TMPDIR:-/tmp}/ic-timers-bump.XXXXXX")"
-metadata_files=(Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md)
+metadata_files=(Cargo.toml Cargo.lock CHANGELOG.md README.md)
 mutation_started=false
 bump_completed=false
 cleanup() {
@@ -141,11 +141,10 @@ IC_TIMERS_RELEASE_PREVIOUS="${previous_version}" \
 
 bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh" set "${previous_version}" "${new_version}"
 bash scripts/release/readme-version.sh --update
-# Preserve both tested dependency selections; update only this local package.
+# Preserve the tested dependency selection; update only this local package.
 bash scripts/release/update-local-lock.sh Cargo.lock "$previous_version" "$new_version"
-bash scripts/release/update-local-lock.sh testing/Cargo.lock "$previous_version" "$new_version"
 
-# Version mutation must leave both independently locked workspaces coherent.
+# Version mutation must leave the complete root workspace graph coherent.
 # Behavioral evidence belongs to the user-operated deployment release gate.
 bash scripts/release/check-lockfiles.sh
 bash scripts/release/readme-version.sh --check

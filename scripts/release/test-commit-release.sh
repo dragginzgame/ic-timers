@@ -47,7 +47,7 @@ initial_commit="$(git rev-parse HEAD)"
 bash scripts/release/commit-release.sh --check-before-bump
 expect_failure 'Usage:' bash scripts/release/commit-release.sh --check-before-bump extra
 mkdir -p testing
-for path in Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md; do
+for path in Cargo.toml Cargo.lock CHANGELOG.md README.md; do
     tracked=false
     case "${path}" in Cargo.toml | CHANGELOG.md | README.md) tracked=true ;; esac
     printf '%s\n' '# Dirty metadata fixture.' >> "${path}"

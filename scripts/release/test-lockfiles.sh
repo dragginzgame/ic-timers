@@ -13,8 +13,10 @@ mkdir -p "${temporary_root}"/{crates/ic-timers/src,testing/probe/src}
 cd "${temporary_root}"
 cat > Cargo.toml <<'EOF'
 [workspace]
-members = ["crates/ic-timers"]
+members = ["crates/ic-timers", "testing/probe"]
 resolver = "3"
+[workspace.dependencies]
+ic-timers = { path = "crates/ic-timers" }
 [workspace.package]
 version = "0.1.0"
 EOF
@@ -25,22 +27,16 @@ version = "0.1.0"
 edition = "2024"
 EOF
 printf '%s\n' 'pub fn fixture() {}' > crates/ic-timers/src/lib.rs
-cat > testing/Cargo.toml <<'EOF'
-[workspace]
-members = ["probe"]
-resolver = "3"
-EOF
 cat > testing/probe/Cargo.toml <<'EOF'
 [package]
 name = "probe"
 version = "0.0.0"
 edition = "2024"
 [dependencies]
-ic-timers = { path = "../../crates/ic-timers" }
+ic-timers.workspace = true
 EOF
 printf '%s\n' 'pub fn fixture() {}' > testing/probe/src/lib.rs
 cargo generate-lockfile --offline --quiet
-cargo generate-lockfile --manifest-path testing/Cargo.toml --offline --quiet
 bash "${checker}"
 
 # Preserve Cargo's failure status before parsing empty or plausible JSON output.
@@ -61,8 +57,7 @@ exec "${IC_TIMERS_FIXTURE_CARGO}" "$@"
 EOF
 chmod +x bin/cargo
 cp Cargo.lock original-root.lock
-cp testing/Cargo.lock original-testing.lock
-for failed_manifest in Cargo.toml testing/Cargo.toml; do
+for failed_manifest in Cargo.toml; do
     for produced_output in empty matching; do
         failure_status=0
         output="$(PATH="${temporary_root}/bin:${PATH}" \
@@ -73,12 +68,11 @@ for failed_manifest in Cargo.toml testing/Cargo.toml; do
             exit 1
         fi
         cmp Cargo.lock original-root.lock
-        cmp testing/Cargo.lock original-testing.lock
     done
 done
-rm bin/cargo original-root.lock original-testing.lock
+rm bin/cargo original-root.lock
 
-for lockfile in Cargo.lock testing/Cargo.lock; do
+for lockfile in Cargo.lock; do
     cp "${lockfile}" original.lock
     perl -pi -e 's/^version = "0\.1\.0"$/version = "0.0.0"/' "${lockfile}"
     cp "${lockfile}" stale.lock
@@ -95,12 +89,11 @@ for lockfile in Cargo.lock testing/Cargo.lock; do
 done
 bash "${checker}"
 
-# Coherent locks are insufficient if the resolved crate differs from workspace truth.
+# A coherent lock is insufficient if the resolved crate differs from workspace truth.
 perl -pi -e 's/^version = "0\.1\.0"$/version = "0.1.1"/' crates/ic-timers/Cargo.toml
 cargo generate-lockfile --offline --quiet
-cargo generate-lockfile --manifest-path testing/Cargo.toml --offline --quiet
 if output="$(bash "${checker}" 2>&1)"; then
-    echo 'error: accepted coherent locks for the wrong workspace package version' >&2
+    echo 'error: accepted a coherent lock for the wrong workspace package version' >&2
     exit 1
 fi
 if [[ "${output}" != *'workspace.package version 0.1.0'* ]]; then

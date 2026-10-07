@@ -14,7 +14,7 @@ trap 'status=$?; if [[ "$status" == 0 ]]; then rm -rf -- "$fixture";
         printf "Failed committed-release fixture retained: %s\n" "$fixture" >&2;
     fi; exit "$status"' EXIT
 mkdir -p "$fixture/current/scripts" "$fixture/current/.shared-tooling/helpers/scripts/ci" \
-    "$fixture/selected/testing" "$fixture/bin" "$fixture/tmp"
+    "$fixture/selected" "$fixture/bin" "$fixture/tmp"
 cp "$root/Makefile" "$fixture/current/"
 mkdir -p "$fixture/current/make"
 cp "$root/make/tools.mk" "$fixture/current/make/"
@@ -26,10 +26,9 @@ cp "$root/tool-versions.env" "$fixture/current/"
 printf '%s\n' '[workspace.package]' 'version = "0.1.0"' > "$fixture/selected/Cargo.toml"
 printf '%s\n' '| API line | `0.1` |' 'ic-timers = "=0.1.0"' > "$fixture/selected/README.md"
 printf '%s\n' '## [0.1.0] - 2026-10-06' > "$fixture/selected/CHANGELOG.md"
-for path in Cargo.lock testing/Cargo.lock; do
+for path in Cargo.lock; do
     printf '%s\n' 'version = "0.1.0"' > "$fixture/selected/$path"
 done
-printf '%s\n' '[workspace]' > "$fixture/selected/testing/Cargo.toml"
 cp "$fixture/selected/Cargo.toml" "$fixture/current/"
 printf '%s\n' '## [0.1.1]' > "$fixture/current/CHANGELOG.md"
 printf '%s\n' 'newer HEAD metadata must not qualify an older release' > "$fixture/current/README.md"
@@ -64,14 +63,13 @@ printf 'cargo %s\n' "$*" >> "$EVENTS"
 case "$*" in
     'locate-project --workspace --message-format plain --manifest-path '*)
         exec "$COMMITTED_RELEASE_REAL_CARGO" "$@" ;;
-    'sort --workspace --check' | 'sort --workspace --check testing')
+    'sort --workspace --check')
         if [[ "${FAIL_SORT:-}" == "$*" ]]; then
             echo 'fixture manifest ordering failure' >&2
             exit 35
         fi
         ;;
     'metadata --manifest-path Cargo.toml --locked --offline --format-version 1') lock=Cargo.lock ;;
-    'metadata --manifest-path testing/Cargo.toml --locked --offline --format-version 1') lock=testing/Cargo.lock ;;
     *) echo "unexpected Cargo command: $*" >&2; exit 35 ;;
 esac
 if [[ "$1" == metadata ]]; then
@@ -97,13 +95,13 @@ reject() {
 for target in release-committed-check release-tagged-check release-push-check; do
     : > "$EVENTS"
     check "$target"
-    for manifest in Cargo.toml testing/Cargo.toml; do
+    for manifest in Cargo.toml; do
         grep -Fqx "cargo metadata --manifest-path $manifest --locked --offline --format-version 1" "$EVENTS"
     done
     [[ -z "$(ls -A "$fixture/tmp")" ]]
 done
-# All five metadata outputs must be checked in the selected tree, not HEAD.
-for path in Cargo.toml README.md CHANGELOG.md Cargo.lock testing/Cargo.lock; do
+# All four metadata outputs must be checked in the selected tree, not HEAD.
+for path in Cargo.toml README.md CHANGELOG.md Cargo.lock; do
     cp "$SELECTED_TREE/$path" "$fixture/saved"
     printf '%s\n' 'invalid selected release metadata' > "$SELECTED_TREE/$path"
     reject release-push-check "$path corruption"
@@ -122,9 +120,9 @@ for phase in before after; do
     reject release-committed-check "$phase archive failure"
 done
 unset FAIL_ARCHIVE
-# Fail each workspace independently. A later successful check must never mask
+# Fail root graph admission. A later successful check must never mask
 # the original failure, including on Apple's Bash 3.2.
-for lock in Cargo.lock testing/Cargo.lock; do
+for lock in Cargo.lock; do
     : > "$EVENTS"
     export FAIL_METADATA="$lock"
     reject release-push-check "failed $lock resolution"
@@ -133,26 +131,16 @@ for lock in Cargo.lock testing/Cargo.lock; do
         echo 'error: push check inspected tags after failed locked resolution' >&2
         exit 1
     fi
-    if [[ "$lock" == Cargo.lock ]] && grep -Fqx \
-        'cargo metadata --manifest-path testing/Cargo.toml --locked --offline --format-version 1' "$EVENTS"; then
-        echo 'error: locked resolution continued after root workspace failure' >&2
-        exit 1
-    fi
 done
 unset FAIL_METADATA
-for command in 'sort --workspace --check' 'sort --workspace --check testing'; do
+for command in 'sort --workspace --check'; do
     : > "$EVENTS"
     export FAIL_SORT="$command"
     reject release-push-check "$command failure"
     grep -Fq 'fixture manifest ordering failure' "$fixture/output"
-    # Sorting failure stops before either lock resolver or tag lookup.
+    # Sorting failure stops before locked resolution or tag lookup.
     if grep -Eq '^cargo metadata |^git cat-file ' "$EVENTS"; then
         echo 'error: committed check continued after manifest ordering failure' >&2
-        exit 1
-    fi
-    if [[ "$command" == 'sort --workspace --check' ]] && grep -Fqx \
-        'cargo sort --workspace --check testing' "$EVENTS"; then
-        echo 'error: manifest ordering continued after root workspace failure' >&2
         exit 1
     fi
 done

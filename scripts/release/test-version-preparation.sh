@@ -29,8 +29,10 @@ echo "${FIXTURE_RELEASE_IMPACT:-crate}"
 EOF
 cat > "${temporary_root}/Cargo.toml" <<'EOF'
 [workspace]
-members = ["crates/ic-timers"]
+members = ["crates/ic-timers", "testing/probe"]
 resolver = "3"
+[workspace.dependencies]
+ic-timers = { path = "crates/ic-timers" }
 [workspace.dependencies.fixture]
 version = "0.1.0"
 [workspace.package]
@@ -43,18 +45,13 @@ version.workspace = true
 edition = "2024"
 EOF
 printf '%s\n' 'pub fn fixture() {}' > "${temporary_root}/crates/ic-timers/src/lib.rs"
-cat > "${temporary_root}/testing/Cargo.toml" <<'EOF'
-[workspace]
-members = ["probe"]
-resolver = "3"
-EOF
 cat > "${temporary_root}/testing/probe/Cargo.toml" <<'EOF'
 [package]
 name = "probe"
-version = "0.0.0"
+version.workspace = true
 edition = "2024"
 [dependencies]
-ic-timers = { path = "../../crates/ic-timers" }
+ic-timers.workspace = true
 EOF
 printf '%s\n' 'pub fn fixture() {}' > "${temporary_root}/testing/probe/src/lib.rs"
 cat > "${temporary_root}/CHANGELOG.md" <<'EOF'
@@ -80,10 +77,9 @@ printf '%s\n' 'release-verify:' $'\t@touch unexpected-gate' $'\t@exit 1' \
 printf '%s\n' 'Unrelated work must survive preparation.' > "${temporary_root}/unrelated.txt"
 cd "${temporary_root}"
 cargo generate-lockfile --offline --quiet
-cargo generate-lockfile --manifest-path testing/Cargo.toml --offline --quiet
 
 # Preflight validates metadata without running deployment tests or changing it.
-metadata_files=(Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md \
+metadata_files=(Cargo.toml Cargo.lock CHANGELOG.md README.md \
     docs/status/current.md unrelated.txt)
 chmod 0640 CHANGELOG.md
 
@@ -384,7 +380,7 @@ rm original-changelog.md candidate-changelog.md overrides.mk
 mv scripts/release/preparation-bump-version.sh scripts/release/bump-version.sh
 mv preparation-only.mk Makefile
 
-# Inject failures after each independently mutating lock update and check.
+# Inject failures after the mutating lock update and metadata check.
 mkdir -p bin
 IC_TIMERS_FIXTURE_CARGO="$(command -v cargo)"
 export IC_TIMERS_FIXTURE_CARGO
@@ -393,15 +389,10 @@ cat > bin/cargo <<'EOF'
 set -euo pipefail
 case "$*" in
     'metadata --manifest-path Cargo.toml --locked --offline --format-version 1') stage=root-metadata ;;
-    'metadata --manifest-path testing/Cargo.toml --locked --offline --format-version 1') stage=testing-metadata ;;
     *) stage=other ;;
 esac
 if [[ "${FIXTURE_FAIL_STAGE:-}" == "${stage}" ]]; then
     echo "injected ${stage} failure" >&2
-    exit 1
-fi
-if [[ "${FIXTURE_FAIL_STAGE:-}" == interrupt && "${stage}" == testing-update ]]; then
-    kill -TERM "${PPID}"
     exit 1
 fi
 exec "${IC_TIMERS_FIXTURE_CARGO}" "$@"
@@ -411,12 +402,12 @@ cp scripts/release/update-local-lock.sh scripts/release/original-update-local-lo
 cat > scripts/release/update-local-lock.sh <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-case "$1" in Cargo.lock) stage=root-update ;; testing/Cargo.lock) stage=testing-update ;; *) exit 2 ;; esac
+case "$1" in Cargo.lock) stage=root-update ;; *) exit 2 ;; esac
 if [[ "${FIXTURE_FAIL_STAGE:-}" == "$stage" ]]; then
     echo "injected ${stage} failure" >&2
     exit 1
 fi
-if [[ "${FIXTURE_FAIL_STAGE:-}" == interrupt && "$stage" == testing-update ]]; then
+if [[ "${FIXTURE_FAIL_STAGE:-}" == interrupt && "$stage" == root-update ]]; then
     kill -TERM "$PPID"; exit 1
 fi
 bash scripts/release/original-update-local-lock.sh "$@"
@@ -430,7 +421,7 @@ if [[ "${FIXTURE_FAIL_STAGE:-}" == readme-update && "${1:-}" == --update ]]; the
 fi
 bash scripts/release/original-readme-version.sh "$@"
 EOF
-for stage in readme-update root-update testing-update root-metadata testing-metadata interrupt; do
+for stage in readme-update root-update root-metadata interrupt; do
     if output="$(PATH="${temporary_root}/bin:${PATH}" FIXTURE_FAIL_STAGE="${stage}" \
         bash scripts/release/bump-version.sh patch 2>&1)"; then
         echo "error: version preparation accepted injected ${stage} failure" >&2
@@ -514,7 +505,7 @@ for target in version release-stage; do
 done
 mv valid-stage-manifest.toml Cargo.toml
 make --no-print-directory release-stage >/dev/null
-expected_staged=(CHANGELOG.md Cargo.lock Cargo.toml README.md testing/Cargo.lock)
+expected_staged=(CHANGELOG.md Cargo.lock Cargo.toml README.md)
 git diff --cached --name-only > staged-paths
 printf '%s\n' "${expected_staged[@]}" > expected-staged-paths
 if ! cmp -s expected-staged-paths staged-paths; then

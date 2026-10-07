@@ -1,6 +1,6 @@
 # Shared Tooling adoption
 
-IC Timers prepares Shared Tooling 0.1.15 at reviewed committed revision
+IC Timers adopted Shared Tooling 0.1.15 in released 0.14.8 at reviewed committed revision
 [`bfb50bd0884b5e6c5ee9592056531c6108f96d73`](https://github.com/dragginzgame/shared-tooling/tree/bfb50bd0884b5e6c5ee9592056531c6108f96d73).
 The [baseline snapshot](../.shared-tooling.snapshot) records 33 exact files,
 including common Make commands and LOC reporters/fixtures alongside governance,
@@ -15,12 +15,38 @@ snapshot; the replaced nested copies are deleted, retaining one implementation.
 
 [AGENTS.md](../AGENTS.md) owns the product overlay and approved command-authority
 exceptions. Tests, builds, lint and all release effects remain maintainer-owned.
-The independent root/testing workspaces, both lockfiles and audited PocketIC
+The earlier adoption preserved the independent root/testing workspaces, both
+lockfiles and audited PocketIC
 admission remain local. Optional helpers described in shared guides are reference
 material until a separate caller adoption. Refresh through the upstream
 [distribution workflow](consuming-snapshots.md) from a clean reviewed checkout;
 CI/release validation uses these offline manifests, never a mutable sibling.
 The former document-only copy under `docs/shared-tooling/` remains retired.
+
+## Root dependency catalog consolidation
+
+On 2026-10-07 the maintainer requested every dependency in the main Cargo
+catalog, superseding the prior two-workspace exception. All four maintained
+packages now inherit root dependency selections and share one lockfile.
+The root default member and explicit library commands keep host Testkit outside
+canister builds; probe optimization settings move to the root `timer-probe`
+profile. Release mutation/staging, metadata/index/fetch and hook fixtures now
+select the sole graph. No shared snapshot payload is patched by this change.
+
+Clean committed Shared Tooling 0.1.18 is
+`a3430b34b32a60f3b245a2b4f7e2f5321556fe56`, matching remote main at inspection.
+Its LOC fixture and logger argument corrections address the reviewed upstream
+issues; the standard dependency-inheritance rules are unchanged. This task
+inspected the new source without adopting it. The three local snapshots remain
+at 0.1.15. Exact-source [upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37604299590)
+passed Linux, lint/security and both native macOS jobs. Consumer adoption remains
+separate. The next canonical selector cleanup remains in
+[#24](https://github.com/dragginzgame/ic-timers/issues/24).
+
+Current preparation evidence is complete locked offline Cargo metadata and
+source/syntax/inheritance inspection. Tests, builds, lint, formatting and the
+complete native/PocketIC release gate remain maintainer-owned and unexecuted
+for this worktree. No runtime API, provider pin or measurement guarantee changed.
 
 ## Shared Tooling 0.1.15 common tool commands
 

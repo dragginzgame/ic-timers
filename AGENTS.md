@@ -57,17 +57,19 @@ This file is normative for automated contributors.
 
 - Make changes only in this repository unless the maintainer explicitly names
   another exact target and authorizes mutation there.
-- Retain the maintainer-approved independent workspace boundary required by
-  the two-lockfile release workflow: `Cargo.toml` owns library dependencies and
-  `testing/Cargo.toml` owns
-  unpublished host/probe dependencies. This preserves separate lockfiles,
-  Wasm profiles and release qualification without pulling host tooling into
-  the publishable workspace. Members inherit from their respective root.
-  Both roots are virtual workspaces under the [workspace layout rule](rules/rust-workspaces.md):
-  `crates/ic-timers` belongs to the publishable root;
-  `testing/crates/ic-timers-pocketic`, `testing/crates/ic-timers-runtime-probe`
-  and `testing/crates/ic-timers-size-probe` belong to the independent testing root.
-  The complete release gate qualifies both graphs and the native/PocketIC probes.
+- The maintainer requested one root dependency catalog on 2026-10-07,
+  superseding the former independent testing-workspace exception. `Cargo.toml`
+  owns all four maintained packages and every direct dependency; all member
+  dependency tables use `workspace = true`. There is one selected `Cargo.lock`.
+  Retain the previously approved probe locations under `testing/crates/`;
+  those directories no longer introduce a workspace or dependency catalog.
+- Keep `ic-timers` as the default member and select it explicitly in library
+  validation, docs, MSRV and Wasm commands. Probes remain unpublished, inherit
+  the root package version, retain their Rust-only lint selection, and use the
+  root `timer-probe` profile for their prior Wasm optimization settings. The
+  complete release gate still qualifies probe lint, watchdog/recovery and
+  policy cohorts. Release preparation updates every local member in the one
+  lockfile; do not retain a second manifest, lock or compatibility path.
 
 ## Status
 
@@ -134,13 +136,13 @@ This file is normative for automated contributors.
   empty notes, or a missing chosen version must not block deployment; ambiguous
   release selection is resolved during preparation. The user runs `release-verify`
   as part of deployment; it must retain the normal CI,
-  MSRV, nested-probe lint, watchdog PocketIC, and policy-cohort gates; it fails
+  MSRV, probe lint, watchdog PocketIC, and policy-cohort gates; it fails
   closed unless `POCKET_IC_BIN` matches the exact audited PocketIC version and
   hash. When no override is supplied, provision that pinned artifact in the
   ignored repository tool cache automatically; never weaken validation or
-  overwrite an explicit override. After version mutation, update both root and
-  `testing/` lockfiles and verify both with cheap locked metadata checks. The
-  user stages both. Do not require the maintainer to edit a changelog heading
+  overwrite an explicit override. After version mutation, update every local member in the root lockfile
+  and verify the complete graph with a cheap locked metadata check. The user
+  stages the root lockfile. Do not require the maintainer to edit a changelog heading
   by hand, prepare a test binary manually, or remember a separate evidence command.
 - A pre-bump check may warn about free-form release prose that is likely to
   become stale, but it must remain advisory and run before version mutation.

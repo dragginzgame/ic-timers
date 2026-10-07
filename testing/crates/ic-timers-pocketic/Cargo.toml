@@ -3,7 +3,7 @@ name = "ic-timers-pocketic"
 rust-version.workspace = true
 edition.workspace = true
 version.workspace = true
-publish.workspace = true
+publish = false
 license.workspace = true
 
 [dependencies]
@@ -11,5 +11,5 @@ candid.workspace = true
 ic-testkit.workspace = true
 serde = { workspace = true, features = ["derive"] }
 
-[lints]
-workspace = true
+[lints.rust]
+unsafe_code = "forbid"

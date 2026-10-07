@@ -9,7 +9,6 @@ check_metadata() {
     version="$(bash "$script_dir/workspace-version.sh")" || return
     [[ "$version" == "${RELEASE_VERSION:?}" ]] || return
     cargo sort --workspace --check || return
-    cargo sort --workspace --check testing || return
     bash "$script_dir/readme-version.sh" --check || return
     bash "$script_dir/check-lockfiles.sh" || return
     awk -v heading="## [$RELEASE_VERSION] - ${RELEASE_DATE:?}" \
@@ -25,7 +24,7 @@ admit_release_paths() {
     git diff --no-renames --name-only -z -- >> "$paths" || return
     git ls-files --others --exclude-standard -z >> "$paths" || return
     while IFS= read -r -d '' path; do
-        case "$path" in Cargo.toml|Cargo.lock|testing/Cargo.lock|CHANGELOG.md|README.md) ;;
+        case "$path" in Cargo.toml|Cargo.lock|CHANGELOG.md|README.md) ;;
             *) printf 'uncommitted non-release path: %q\n' "$path" >&2; exit 1 ;;
         esac
     done < "$paths"
@@ -45,7 +44,7 @@ case "${1:-}" in
         ;;
     commit-check)
         admit_release_paths
-        git ls-files --error-unmatch -- Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md > /dev/null
+        git ls-files --error-unmatch -- Cargo.toml Cargo.lock CHANGELOG.md README.md > /dev/null
         git diff --quiet --
         check_metadata
         ;;

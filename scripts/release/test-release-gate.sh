@@ -90,9 +90,8 @@ if [[ "${FIXTURE_FAIL_FETCH:-}" == "${3:-}" ]]; then
 fi
 EOF
 chmod +x bin/cargo
-fetch_calls=('fetch --manifest-path Cargo.toml --locked'
-    'fetch --manifest-path testing/Cargo.toml --locked')
-for failed_manifest in '' Cargo.toml testing/Cargo.toml; do
+fetch_calls=('fetch --manifest-path Cargo.toml --locked')
+for failed_manifest in '' Cargo.toml; do
     if PATH="${fixture_root}/bin:${PATH}" FIXTURE_FAIL_FETCH="${failed_manifest}" \
         make --no-print-directory fetch >fetch-output 2>&1; then
         if [[ -n "${failed_manifest}" ]]; then
@@ -120,10 +119,10 @@ done
 # failures at either command stop the owning target.
 for target in test msrv; do
     case "${target}" in
-        test) calls=('test --workspace --all-targets --all-features --locked'
-            'test --workspace --doc --all-features --locked') ;;
-        msrv) calls=('+1.88.0 check --workspace --all-targets --all-features --locked'
-            '+1.88.0 test --workspace --doc --all-features --locked') ;;
+        test) calls=('test -p ic-timers --all-targets --all-features --locked'
+            'test -p ic-timers --doc --all-features --locked') ;;
+        msrv) calls=('+1.88.0 check -p ic-timers --all-targets --all-features --locked'
+            '+1.88.0 test -p ic-timers --doc --all-features --locked') ;;
     esac
     for failed_call in '' "${calls[@]}"; do
         : > api-test-events

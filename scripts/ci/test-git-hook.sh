@@ -29,25 +29,36 @@ cp "${repository_root}/tool-versions.env" tool-versions.env
 cp -p "${repository_root}/.shared-tooling/helpers/scripts/ci/check-format-tools.sh" \
     .shared-tooling/helpers/scripts/ci/
 cp -p "${repository_root}/scripts/ci/check-make-execution.sh" scripts/ci/
-mkdir -p src testing/src
-for workspace in . testing; do
-    cat > "${workspace}/Cargo.toml" <<'EOF'
+# The fixture overlays both members into one root-owned workspace, including
+# removals from a pre-consolidation source commit without creating a commit.
+rm -f testing/Cargo.toml testing/Cargo.lock
+git rm -q --cached --ignore-unmatch -- testing/Cargo.toml testing/Cargo.lock
+mkdir -p crates/hook-fixture/src testing/crates/hook-probe/src
+cat > Cargo.toml <<'EOF'
 [workspace]
-members = []
-
-[package]
-name = "hook-fixture"
+members = ["crates/hook-fixture", "testing/crates/hook-probe"]
+resolver = "3"
+[workspace.package]
 version = "0.0.0"
 edition = "2024"
 EOF
-    printf 'pub fn fixture( ){}\n' > "${workspace}/src/lib.rs"
+for member in crates/hook-fixture testing/crates/hook-probe; do
+    cat > "${member}/Cargo.toml" <<EOF
+[package]
+name = "$(basename "$member")"
+version.workspace = true
+edition.workspace = true
+EOF
+    printf 'pub fn fixture( ){}\n' > "${member}/src/lib.rs"
 done
-git add Makefile make/tools.mk tool-versions.env Cargo.toml src/lib.rs testing/Cargo.toml testing/src/lib.rs \
+git add Makefile make/tools.mk tool-versions.env Cargo.toml \
+    crates/hook-fixture testing/crates/hook-probe \
     .shared-tooling/helpers/scripts/ci/check-format-tools.sh scripts/ci/check-make-execution.sh
 printf 'unrelated working edit\n' >> README.md
 cp README.md "${temporary_root}/unrelated-readme"
 
-working_files=(Cargo.toml testing/Cargo.toml src/lib.rs testing/src/lib.rs README.md)
+working_files=(Cargo.toml crates/hook-fixture/Cargo.toml testing/crates/hook-probe/Cargo.toml
+    crates/hook-fixture/src/lib.rs testing/crates/hook-probe/src/lib.rs README.md)
 capture_before_hook() {
     local path
     for path in "${working_files[@]}"; do
@@ -85,7 +96,7 @@ for variable in "${mode_variables[@]}"; do
     done
 done
 
-# The actual consumer fmt target formats and refreshes both workspace selections,
+# The actual consumer fmt target formats and refreshes both root workspace members,
 # preserving unrelated edits and requiring no dependencies, builds or network.
 if ! CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 bash "${repository_root}/.githooks/pre-commit" \
     > "${temporary_root}/format.log" 2>&1; then
@@ -93,7 +104,7 @@ if ! CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 bash "${repository_root}/.gith
     exit 1
 fi
 cat "${temporary_root}/format.log"
-for path in src/lib.rs testing/src/lib.rs; do
+for path in crates/hook-fixture/src/lib.rs testing/crates/hook-probe/src/lib.rs; do
     formatted="$(git show ":${path}")"
     test "${formatted}" = 'pub fn fixture() {}'
 done
@@ -105,19 +116,19 @@ fi
 cat "${temporary_root}/fmt-check.log"
 
 # Partial staging must reject before formatting or refreshing the real index.
-printf 'pub fn fixture() {}\n// unstaged edit\n' > testing/src/lib.rs
+printf 'pub fn fixture() {}\n// unstaged edit\n' > testing/crates/hook-probe/src/lib.rs
 capture_before_hook
 if bash "${repository_root}/.githooks/pre-commit" > "${temporary_root}/partial-staging.log" 2>&1; then
-    echo 'error: commit hook accepted partially staged nested Rust' >&2
+    echo 'error: commit hook accepted partially staged probe Rust' >&2
     exit 1
 fi
 assert_unchanged
-git checkout-index -f -- testing/src/lib.rs
+git checkout-index -f -- testing/crates/hook-probe/src/lib.rs
 
 # A failed consumer formatter must not copy or stage even its earlier changes.
-printf 'pub fn fixture( ){}\n' > testing/src/lib.rs
-git add testing/src/lib.rs
-printf 'fmt:\n\t@printf "pub fn fixture() {}\\n" > testing/src/lib.rs\n\t@exit 1\n' > Makefile
+printf 'pub fn fixture( ){}\n' > testing/crates/hook-probe/src/lib.rs
+git add testing/crates/hook-probe/src/lib.rs
+printf 'fmt:\n\t@printf "pub fn fixture() {}\\n" > testing/crates/hook-probe/src/lib.rs\n\t@exit 1\n' > Makefile
 git add Makefile
 capture_before_hook
 if bash "${repository_root}/.githooks/pre-commit" > "${temporary_root}/failed-formatter.log" 2>&1; then

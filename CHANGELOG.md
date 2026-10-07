@@ -2,6 +2,18 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.9]
+
+### Development
+
+- Consolidate library and unpublished probe dependencies in the root Cargo
+  catalog and lockfile; every member inherits dependencies with `workspace = true`.
+  Retire the independent testing manifest/lock and update release, formatting
+  and fixture owners for the single graph. Keep library-only default builds and
+  preserve probe optimization settings in the `timer-probe` profile.
+- Resolve the current Testkit 0.20 selection and ic-metrics 0.2.7 together.
+  Preserve the audited PocketIC 16.0.0 gate and the complete probe qualification.
+
 ## [0.14.8] - 2026-10-07
 
 ### Development

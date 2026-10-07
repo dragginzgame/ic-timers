@@ -19,15 +19,15 @@ git ls-files --others --exclude-standard -z >> "${worktree_paths}"
 unstaged=false
 while IFS= read -r -d '' path; do
     if [[ "${before_bump}" == true ]]; then
-        # These are exactly the five outputs selected by make release-stage.
+        # These are exactly the four outputs selected by make release-stage.
         case "${path}" in
-            Cargo.toml | Cargo.lock | testing/Cargo.lock | CHANGELOG.md | README.md) continue ;;
+            Cargo.toml | Cargo.lock | CHANGELOG.md | README.md) continue ;;
         esac
     fi
     if [[ "${unstaged}" == false ]]; then
         if [[ "${before_bump}" == true ]]; then
             echo 'error: stage or commit implementation changes before starting the release gate' >&2
-            echo 'release-stage selects only Cargo.toml, Cargo.lock, testing/Cargo.lock, CHANGELOG.md and README.md' >&2
+            echo 'release-stage selects only Cargo.toml, Cargo.lock, CHANGELOG.md and README.md' >&2
         else
             echo "error: commit or stage all release changes before creating v${version}" >&2
         fi

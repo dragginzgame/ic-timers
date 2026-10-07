@@ -212,7 +212,7 @@ fn cohort_wasm(cohort: &str) -> Vec<u8> {
         .expect("IC_TIMERS_COHORT_ROOT must name the cohort target root");
     let path = root
         .join(format!("cohort-{cohort}"))
-        .join("wasm32-unknown-unknown/release/ic_timers_size_probe.wasm");
+        .join("wasm32-unknown-unknown/timer-probe/ic_timers_size_probe.wasm");
     fs::read(&path).unwrap_or_else(|error| panic!("read {}: {error}", path.display()))
 }
 

@@ -20,13 +20,13 @@ REPOSITORY_TARGETS := actions-check shell-check release-check provider-check fmt
 help:
 	@echo "Available commands:"
 	@echo ""
-	@echo "  fmt / fmt-check     Sort manifests and format or check Rust in both workspaces"
+	@echo "  fmt / fmt-check     Sort manifests and format or check Rust for all workspace members"
 	@echo "  check / clippy      Compile all targets and lint with warnings denied"
 	@echo "  docs-check          Build public API docs with warnings denied"
 	@echo "  test                Run workspace unit and API documentation tests"
 	@echo "  wasm-check          Compile the library for wasm32-unknown-unknown"
 	@echo "  package             Verify the publishable crate package"
-	@echo "  fetch               Download locked dependencies for both workspaces"
+	@echo "  fetch               Download locked dependencies for the root workspace"
 	@echo "  pocketic-watchdog   Build and run the focused watchdog canister evidence"
 	@echo "  pocketic-cohorts    Build and run comparable timer policy cohorts"
 	@echo "  pocketic-check      Install or verify the audited PocketIC evidence binary"
@@ -58,7 +58,6 @@ version:
 # Prepare every target's locked sources before offline metadata validation.
 fetch:
 	cargo fetch --manifest-path Cargo.toml --locked
-	cargo fetch --manifest-path testing/Cargo.toml --locked
 
 format-tools-check:
 	@set -e; . ./tool-versions.env; \
@@ -66,47 +65,43 @@ format-tools-check:
 
 fmt: format-tools-check
 	cargo sort --workspace
-	cargo sort --workspace testing
 	cargo fmt --all
-	cargo fmt --manifest-path testing/Cargo.toml --all
 
 fmt-check: format-tools-check
 	cargo sort --workspace --check
-	cargo sort --workspace --check testing
 	cargo fmt --all -- --check
-	cargo fmt --manifest-path testing/Cargo.toml --all -- --check
 
 check:
-	cargo check --workspace --all-targets --all-features --locked
+	cargo check -p ic-timers --all-targets --all-features --locked
 
 clippy:
-	cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+	cargo clippy -p ic-timers --all-targets --all-features --locked -- -D warnings
 
 docs-check:
-	RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps --locked
+	RUSTDOCFLAGS="-D warnings" cargo doc -p ic-timers --all-features --no-deps --locked
 
 test:
-	cargo test --workspace --all-targets --all-features --locked
-	cargo test --workspace --doc --all-features --locked
+	cargo test -p ic-timers --all-targets --all-features --locked
+	cargo test -p ic-timers --doc --all-features --locked
 
 wasm-check:
-	cargo check --workspace --all-features --locked --target wasm32-unknown-unknown
+	cargo check -p ic-timers --all-features --locked --target wasm32-unknown-unknown
 
 msrv:
-	cargo +$(MSRV) check --workspace --all-targets --all-features --locked
-	cargo +$(MSRV) test --workspace --doc --all-features --locked
+	cargo +$(MSRV) check -p ic-timers --all-targets --all-features --locked
+	cargo +$(MSRV) test -p ic-timers --doc --all-features --locked
 
 testing-check:
 	+$(MAKE) --no-print-directory fmt-check
-	cargo +$(MSRV) clippy --manifest-path testing/Cargo.toml \
+	cargo +$(MSRV) clippy \
 		-p ic-timers-runtime-probe -p ic-timers-pocketic --all-targets --locked -- -D warnings
-	cargo +$(MSRV) clippy --manifest-path testing/Cargo.toml \
+	cargo +$(MSRV) clippy \
 		-p ic-timers-size-probe --no-default-features --features baseline --all-targets --locked -- -D warnings
-	cargo +$(MSRV) clippy --manifest-path testing/Cargo.toml \
+	cargo +$(MSRV) clippy \
 		-p ic-timers-size-probe --no-default-features --features once --all-targets --locked -- -D warnings
-	cargo +$(MSRV) clippy --manifest-path testing/Cargo.toml \
+	cargo +$(MSRV) clippy \
 		-p ic-timers-size-probe --no-default-features --features after-completion --all-targets --locked -- -D warnings
-	cargo +$(MSRV) clippy --manifest-path testing/Cargo.toml \
+	cargo +$(MSRV) clippy \
 		-p ic-timers-size-probe --no-default-features --features watchdog --all-targets --locked -- -D warnings
 
 package:
@@ -118,32 +113,33 @@ pocketic-check:
 		bash scripts/ci/check-pocketic.sh
 
 pocketic-watchdog: pocketic-check
-	cargo +$(MSRV) build --manifest-path testing/Cargo.toml -p ic-timers-runtime-probe \
-		--release --target wasm32-unknown-unknown --locked
+	CARGO_TARGET_DIR="$(CURDIR)/testing/target" \
+		cargo +$(MSRV) build -p ic-timers-runtime-probe \
+		--profile timer-probe --target wasm32-unknown-unknown --locked
 	POCKET_IC_BIN="$(POCKET_IC_BIN)" \
-		IC_TIMERS_PROBE_WASM="$(CURDIR)/testing/target/wasm32-unknown-unknown/release/ic_timers_runtime_probe.wasm" \
-		cargo +$(MSRV) test --manifest-path testing/Cargo.toml -p ic-timers-pocketic --locked tests::
+		IC_TIMERS_PROBE_WASM="$(CURDIR)/testing/target/wasm32-unknown-unknown/timer-probe/ic_timers_runtime_probe.wasm" \
+		cargo +$(MSRV) test -p ic-timers-pocketic --locked tests::
 
 pocketic-cohorts: pocketic-check
 	CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-baseline" \
-		cargo +$(MSRV) build --manifest-path testing/Cargo.toml -p ic-timers-size-probe \
-		--release --target wasm32-unknown-unknown --locked
+		cargo +$(MSRV) build -p ic-timers-size-probe \
+		--profile timer-probe --target wasm32-unknown-unknown --locked
 	CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-once" \
-		cargo +$(MSRV) build --manifest-path testing/Cargo.toml -p ic-timers-size-probe \
-		--release --target wasm32-unknown-unknown --locked --no-default-features --features once
+		cargo +$(MSRV) build -p ic-timers-size-probe \
+		--profile timer-probe --target wasm32-unknown-unknown --locked --no-default-features --features once
 	CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-after-completion" \
-		cargo +$(MSRV) build --manifest-path testing/Cargo.toml -p ic-timers-size-probe \
-		--release --target wasm32-unknown-unknown --locked --no-default-features --features after-completion
+		cargo +$(MSRV) build -p ic-timers-size-probe \
+		--profile timer-probe --target wasm32-unknown-unknown --locked --no-default-features --features after-completion
 	CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-watchdog" \
-		cargo +$(MSRV) build --manifest-path testing/Cargo.toml -p ic-timers-size-probe \
-		--release --target wasm32-unknown-unknown --locked --no-default-features --features watchdog
+		cargo +$(MSRV) build -p ic-timers-size-probe \
+		--profile timer-probe --target wasm32-unknown-unknown --locked --no-default-features --features watchdog
 	POCKET_IC_BIN="$(POCKET_IC_BIN)" \
 		IC_TIMERS_COHORT_ROOT="$(CURDIR)/testing/target" \
-		cargo +$(MSRV) test --manifest-path testing/Cargo.toml -p ic-timers-pocketic --locked \
+		cargo +$(MSRV) test -p ic-timers-pocketic --locked \
 			comparable_policy_cohorts_report_size_and_instruction_subjects -- --nocapture
 
 # Keep the established gate entry point; the shared owner also checks Cargo
-# declarations and the tracked lockfile of each independent workspace.
+# declarations and the tracked root lockfile for all maintained members.
 actions-check: host-tools-check
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/check-dependency-pins.sh \
 		--consumer "$(CURDIR)" --cargo-inheritance
@@ -260,7 +256,7 @@ release-x:
 
 release-stage:
 	@set -e; bash scripts/release/workspace-version.sh >/dev/null; \
-		git add Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md
+		git add Cargo.toml Cargo.lock CHANGELOG.md README.md
 
 release-commit:
 	@bash scripts/release/commit-release.sh
@@ -303,7 +299,7 @@ release-commit-check:
 release-committed-check:
 	@bash scripts/release/adapter.sh check-committed
 release-files:
-	@printf '%s\0' Cargo.toml Cargo.lock testing/Cargo.lock CHANGELOG.md README.md
+	@printf '%s\0' Cargo.toml Cargo.lock CHANGELOG.md README.md
 release-tagged-check release-push-check:
 	@bash scripts/release/adapter.sh check-committed
 	@bash scripts/release/check-tag-at-head.sh "$(RELEASE_COMMIT)" "$(RELEASE_VERSION)"

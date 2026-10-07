@@ -403,14 +403,14 @@ operational measurements.
 | `make fmt` / `make fmt-check` | Sort manifests and format or check Rust in the root and `testing/` workspaces |
 | `make ci` | Run the normal warning-denied checks, native tests, Wasm build, and package checks |
 | `make msrv` | Check the workspace with Rust 1.88.0 |
-| `make testing-check` | Check both workspaces' formatting and lint supported nested probes with Rust 1.88.0 |
+| `make testing-check` | Check workspace formatting and lint supported unpublished probes with Rust 1.88.0 |
 | `make repository-check` | Validate repository-only documentation, evidence, or tooling work |
 | `make pocketic-watchdog` | Run the focused real-canister watchdog recovery matrix |
 | `make pocketic-cohorts` | Compare real-canister policy cohorts and measurements |
 | `make release-impact` | Classify changes as crate-impacting, repository-only, or absent |
 
 Normal development and hosted CI use Rust 1.99.0. Hosted CI also lints every
-supported nested probe configuration with both Rust 1.99.0 and Rust 1.88.0.
+supported probe configuration with both Rust 1.99.0 and Rust 1.88.0.
 Prepare the complete pinned host bundle through `make update-dev` or `make install-host-tools`
 before validation. `make actions-check` verifies the bundle offline and delegates
 Actions and Cargo declaration checks to the reviewed shared parser; it never
@@ -419,7 +419,7 @@ Both `fmt` and `fmt-check` first require the exact cargo-sort pin and prepared
 rustfmt for the selected toolchain; missing tools require explicit setup.
 To run the development-toolchain probe checks locally, use
 `make testing-check MSRV=1.99.0`. The host-side real-canister suites use exact
-`ic-testkit` 0.17.3 and the pinned PocketIC 16.0.0 server on Linux x86_64 or
+`ic-testkit` 0.20.0 and the pinned PocketIC 16.0.0 server on Linux x86_64 or
 macOS Intel/Apple Silicon. The first run downloads it into the ignored
 `target/tools` cache; later runs verify its version and SHA-256. Set
 `POCKET_IC_BIN=/path/to/pocket-ic` only for an explicitly managed binary. Testkit
