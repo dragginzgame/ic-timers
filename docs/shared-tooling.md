@@ -15,9 +15,9 @@ snapshot; the replaced nested copies are deleted, retaining one implementation.
 
 [AGENTS.md](../AGENTS.md) owns the product overlay and approved command-authority
 exceptions. Tests, builds, lint and all release effects remain maintainer-owned.
-The earlier adoption preserved the independent root/testing workspaces, both
-lockfiles and audited PocketIC
-admission remain local. Optional helpers described in shared guides are reference
+The earlier adoption preserved the independent root/testing workspaces and both
+lockfiles. The subsequent root consolidation supersedes that layout; audited
+PocketIC admission remains local. Optional helpers described in shared guides are reference
 material until a separate caller adoption. Refresh through the upstream
 [distribution workflow](consuming-snapshots.md) from a clean reviewed checkout;
 CI/release validation uses these offline manifests, never a mutable sibling.

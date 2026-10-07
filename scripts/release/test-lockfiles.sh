@@ -72,20 +72,26 @@ for failed_manifest in Cargo.toml; do
 done
 rm bin/cargo original-root.lock
 
-for lockfile in Cargo.lock; do
-    cp "${lockfile}" original.lock
-    perl -pi -e 's/^version = "0\.1\.0"$/version = "0.0.0"/' "${lockfile}"
-    cp "${lockfile}" stale.lock
+# A stale unpublished member is as invalid as a stale library record. Locked
+# metadata must inspect the complete graph even though the library is default.
+for package in ic-timers probe; do
+    cp Cargo.lock original.lock
+    IC_TIMERS_FIXTURE_PACKAGE="${package}" perl -0pi -e '
+        my $name = $ENV{IC_TIMERS_FIXTURE_PACKAGE};
+        s/(\[\[package\]\]\nname = "\Q$name\E"\nversion = ")[^"]+("\n)/${1}999.0.0$2/
+            or die "fixture package missing: $name\n";
+    ' Cargo.lock
+    cp Cargo.lock stale.lock
     if output="$(bash "${checker}" 2>&1)"; then
-        echo "error: accepted stale path-package version in ${lockfile}" >&2
+        echo "error: accepted stale ${package} version in the root lockfile" >&2
         exit 1
     fi
     if [[ "${output}" != *'--locked'* ]]; then
         echo "error: lockfile rejection did not report locked resolution: ${output}" >&2
         exit 1
     fi
-    cmp "${lockfile}" stale.lock
-    mv original.lock "${lockfile}"
+    cmp Cargo.lock stale.lock
+    mv original.lock Cargo.lock
 done
 bash "${checker}"
 

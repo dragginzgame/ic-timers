@@ -42,6 +42,15 @@ versions now inherit 0.14.8; the library/root release version is not bumped.
 Runtime/callback source and public API are unchanged. No new Wasm, instruction
 or heap measurement is claimed for this graph.
 
+The maintainer committed the consolidation at
+`007dbe30d5e3bf64f3434d55b34cd1da5c0e08e7`; its
+[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37606855402)
+passed Linux, MSRV and both native macOS gates. This is untagged preparation,
+not a 0.14.9 release. Subsequent worktree changes add stale-probe lock rejection
+coverage and correct current documentation/command descriptions. A separate
+external lockfile refresh appeared after that commit and is preserved; the
+passing committed-source CI does not qualify that refresh or the new fixture.
+
 Complete locked offline root metadata resolves all four members, one timer
 package and the sole metrics selection. Source inheritance, shell syntax and diff
 inspection are preparation evidence. No tests, builds, lint, formatter, tool

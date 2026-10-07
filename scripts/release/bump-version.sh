@@ -141,7 +141,7 @@ IC_TIMERS_RELEASE_PREVIOUS="${previous_version}" \
 
 bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh" set "${previous_version}" "${new_version}"
 bash scripts/release/readme-version.sh --update
-# Preserve the tested dependency selection; update only this local package.
+# Preserve external dependency selections; update every local workspace member.
 bash scripts/release/update-local-lock.sh Cargo.lock "$previous_version" "$new_version"
 
 # Version mutation must leave the complete root workspace graph coherent.

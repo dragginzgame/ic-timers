@@ -392,17 +392,23 @@ operational measurements.
 
 ## Development and evidence
 
+The root `Cargo.toml` owns all dependencies, including Testkit, for the library
+and three unpublished probes. Every member uses `workspace = true` and shares
+the root `Cargo.lock`. Ordinary Cargo commands default to the library; the probe
+targets select their packages explicitly and preserve their Wasm settings through
+the `timer-probe` profile.
+
 | Command | Purpose |
 | --- | --- |
 | `make update-dev` | Install the pinned toolchain, components, host and IC tools, Wasm target, and formatting hook |
 | `make install-host-tools` / `make host-tools-check` | Install pinned jq/yq/ripgrep/cloc or verify the complete bundle offline |
 | `make install-ic-tools` / `make ic-tools-check` | Install the pinned six-tool IC bundle or verify it offline |
 | `make install-tools` / `make tools-check` | Prepare or verify both host and IC bundles |
-| `make cloc` | Report Rust LOC/test counts for the publishable root workspace |
+| `make cloc` | Report Rust LOC/test counts for all root workspace members |
 | `make cloc-tooling` | Inventory sibling CI/tooling (`CLOC_PARENT=/path/to/projects`) |
-| `make fmt` / `make fmt-check` | Sort manifests and format or check Rust in the root and `testing/` workspaces |
+| `make fmt` / `make fmt-check` | Sort manifests and format or check Rust for all workspace members |
 | `make ci` | Run the normal warning-denied checks, native tests, Wasm build, and package checks |
-| `make msrv` | Check the workspace with Rust 1.88.0 |
+| `make msrv` | Check the library and its doctests with Rust 1.88.0 |
 | `make testing-check` | Check workspace formatting and lint supported unpublished probes with Rust 1.88.0 |
 | `make repository-check` | Validate repository-only documentation, evidence, or tooling work |
 | `make pocketic-watchdog` | Run the focused real-canister watchdog recovery matrix |
@@ -418,7 +424,7 @@ downloads tools. See the [setup and pin boundaries](docs/releasing.md#structured
 Both `fmt` and `fmt-check` first require the exact cargo-sort pin and prepared
 rustfmt for the selected toolchain; missing tools require explicit setup.
 To run the development-toolchain probe checks locally, use
-`make testing-check MSRV=1.99.0`. The host-side real-canister suites use exact
+`make testing-check MSRV=1.99.0`. The host-side real-canister suites currently resolve
 `ic-testkit` 0.20.0 and the pinned PocketIC 16.0.0 server on Linux x86_64 or
 macOS Intel/Apple Silicon. The first run downloads it into the ignored
 `target/tools` cache; later runs verify its version and SHA-256. Set

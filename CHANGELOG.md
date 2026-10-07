@@ -11,6 +11,7 @@ All notable changes to this project are recorded here.
   Retire the independent testing manifest/lock and update release, formatting
   and fixture owners for the single graph. Keep library-only default builds and
   preserve probe optimization settings in the `timer-probe` profile.
+  Reject stale library or probe identities in the shared lockfile.
 - Resolve the current Testkit 0.20 selection and ic-metrics 0.2.7 together.
   Preserve the audited PocketIC 16.0.0 gate and the complete probe qualification.
 

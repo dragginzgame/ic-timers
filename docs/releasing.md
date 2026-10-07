@@ -355,7 +355,7 @@ with `make release-push`. These phase targets do not repeat deployment tests;
 the completed pre-bump gate remains the evidence for the prepared code.
 
 `make fmt` and `make fmt-check` sort manifests with cargo-sort 2.1.4 before
-formatting/checking Rust in both the root and `testing/` workspaces. The exact
+formatting/checking Rust for every member of the single root workspace. The exact
 tool pin lives in `tool-versions.env`; `make update-dev` installs it with
 `--version` and `--locked`, and hosted jobs prepare it before gates. Hooks and
 format checks never install tools. Prepared standard-release metadata is checked
@@ -363,7 +363,7 @@ for manifest ordering before staging, so a commit hook does not repair the
 runner's saved payload. `testing-check` uses the same formatting gate.
 
 The vendored formatting hook exports the index to disposable scratch, formats
-both workspaces, then copies/stages only the fully staged selection. Partial
+all root workspace members, then copies/stages only the fully staged selection. Partial
 staging, formatter failure or concurrent edits reject without discarding working
 changes. Unselected and unrelated edits remain untouched. `make install-hooks`
 is explicit per-clone activation; the installer refuses conflicting hook paths.
@@ -385,6 +385,12 @@ passed. This qualifies the released two-workspace tooling source, not the curren
 single-workspace/Testkit dependency preparation. Green jobs do not prove the
 failure-only artifact-upload acceptance in issue #23.
 
+The maintainer subsequently committed the single-root consolidation at
+`007dbe30d5e3bf64f3434d55b34cd1da5c0e08e7`. Its
+[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37606855402)
+passed Linux, MSRV and both complete native macOS gates. That source is untagged
+0.14.9 preparation. Later fixture changes and the external lockfile refresh
+remain outside this qualification; normal green CI still does not qualify #23.
 
 macOS host workflows are required by the
 [adopted engineering baseline](../DRAGGINZGAME.md#host-support).
@@ -394,8 +400,8 @@ continues to target Wasm on the Internet Computer.
 | Host | Current workflow configuration and evidence scope |
 | --- | --- |
 | Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The release gate pins the audited PocketIC 16.0.0 Linux x86_64 artifact. Recorded results remain scoped to their original subjects. |
-| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The complete gate passed for released 0.14.7 at `a30bfe0`; newer .8 worktree changes remain unqualified. The historical 0.14.1 missing-`rg` failure is recorded below. |
-| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The complete gate passed for released 0.14.7 at `a30bfe0`, including runtime/cohort subjects; newer .8 worktree changes remain unqualified. Historical failures retain their original scope below. |
+| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.8 and the subsequent committed consolidation at `007dbe3`; later worktree changes remain unqualified. The historical 0.14.1 missing-`rg` failure is recorded below. |
+| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.8 and the subsequent committed consolidation at `007dbe3`, including runtime/cohort subjects; later worktree changes remain unqualified. Historical failures retain their original scope below. |
 
 Inspection on 2026-10-06 of the 0.13.1 source at
 `54bbcfc4985d4657578150cbe7112795297115fd` found both native macOS jobs in
@@ -621,7 +627,7 @@ were reviewed; the changed fixtures have not been executed. This removes one
 known Bash 3.2 obstacle without establishing native macOS qualification.
 
 The preparation fixture uses the same direct record comparison for phase order
-and the five staged metadata paths. It captures Git output with an ordinary
+and the four staged metadata paths. It captures Git output with an ordinary
 command before comparing, retaining failure propagation without an intermediate
 array or process substitution. Empty-index and no-tag assertions also capture
 Git output before testing it, so producer failures cannot satisfy those assertions.
@@ -1039,7 +1045,7 @@ retains the complete release gate despite having no runtime changes.
 
 The three standard SemVer entry points use the [common release contract](releases.md)
 with explicit `RELEASE_REMOTE=origin` and `RELEASE_BRANCH=main`. The complete local
-release gate is unchanged. Consumer adapters retain the five metadata outputs,
+release gate is unchanged. Consumer adapters select the four metadata outputs,
 README projection and the complete root graph. Publishing stays separate.
 Normal targets select unfinished preparation intent before another increment.
 The 22-file snapshot is exported from committed Shared Tooling revision
@@ -1081,7 +1087,7 @@ before cache fetching. The requested common guidance is owned by
 [Shared Tooling #6](https://github.com/dragginzgame/shared-tooling/issues/6), without
 unlocking release fetches or changing release phase order.
 The final commit adapter checks the entire index, requires
-all five outputs to be tracked and the worktree to match the index, then applies
+all four outputs to be tracked and the worktree to match the index, then applies
 the existing metadata checks. Staged implementation changes hidden by restoring
 only the working file cannot pass either admission boundary.
 
@@ -1119,7 +1125,7 @@ publication, deployment and cleanup remain separate.
 
 `test-committed-release.sh` exercises the actual local Make callbacks and metadata
 owners with Git/Cargo command stubs: selected metadata despite newer HEAD,
-both locked workspace reads, corruption of all five metadata outputs, tag
+the complete locked root graph, corruption of all four metadata outputs, tag
 conflicts, archive failure before/after output, failed resolution/manifest sorting,
 missing selection and temporary-copy cleanup. The real-Git tag fixture now
 checks an earlier selected commit separately from HEAD. The shared runner fixture
