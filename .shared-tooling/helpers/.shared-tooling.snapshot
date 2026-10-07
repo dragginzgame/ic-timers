@@ -1,7 +1,7 @@
 # Shared Tooling snapshot v1
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	25e7ce83149e081e4dcc52c55c33724e44153f2a
+revision	bfb50bd0884b5e6c5ee9592056531c6108f96d73
 file	4c981184847462ab3c01cac087e28309f8e054253fd95c7bbe56f643877aa708	x	scripts/ci/verify-file-checksum.sh
 file	b6764190803118331d7441233bcd6a3031c99c0c5219cc4a5c29dfb1a1040e41	x	scripts/ci/verify-shared-tooling-snapshot.sh
 file	4d875dd6b8822f68ae86a357cde9af67b33302331a11333e31941eb1c41a6929	x	scripts/ci/check-dependency-pins.sh
@@ -11,10 +11,6 @@ file	40f31a19d6115411ebffe7c26e3ed30b8af7eead10dd4830de8d5a9312291222	x	scripts/
 file	1719211830ee32ef422e12e226179ccf37c1b6a9e2c9a41bb2b71766cad52c3e	x	scripts/ci/test-cargo-metadata.sh
 file	236f9b2d7fe391a73d03cfe355c0d26fa73de8db1553c7e670f7b19aeb65d086	x	scripts/ci/rewrite-local-lock-versions.pl
 file	d4b498337bfd681466e7b541cb2783779aad2a8b326e927450d98f3b570fb5c6	x	scripts/ci/test-local-lock-versions.pl
-file	7a78004b2fa56448ffa8a4fc9aac8e7e9343a0243bf857a3db908fb2f59cfb4f	x	scripts/dev/install-ic-tools.sh
-file	0d4a45581e26987baaaa91cd49748e3b7b3ffa76b01f32d1db84560bd5baa68a	x	scripts/ci/test-ic-tools.sh
-file	22bf8001f496799c0e26795479b9e313fe3ceddec2e47b8444f8af8e7bc32bae	x	scripts/ci/verify-evidence-checksums.sh
-file	43e2b571a909c2d63b2e3b11d208744995997575b34f0c1fbe5ea3104d40bcca	x	scripts/ci/test-evidence-checksums.sh
 file	a52db278800a9f02d85a6b8a780a9b1eed860c49d5442cef9db1f7f9d7ddee0a	x	scripts/ci/check-format-tools.sh
 file	bf3ac5d22e63798ffe67539b138d277cc3364a4665babff5b494b210b1e140ce	x	scripts/ci/test-format-tools.sh
 file	d7b179f9ceaec6e11c690c975b61f91bedc80526415f71571615064db14f0c9c	x	scripts/ci/check-release-tag.sh

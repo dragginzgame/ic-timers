@@ -358,8 +358,8 @@ continues to target Wasm on the Internet Computer.
 | Host | Current workflow configuration and evidence scope |
 | --- | --- |
 | Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The release gate pins the audited PocketIC 16.0.0 Linux x86_64 artifact. Recorded results remain scoped to their original subjects. |
-| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The complete gate passed for 0.14.0 at `902323a`; 0.14.1 failed at missing fixture prerequisite `rg`. Its setup repair needs fresh qualification. |
-| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The complete gate passed for 0.14.0 at `902323a`, including the 0.2 metrics graph and runtime/cohort subjects; 0.14.1 failed at missing `rg`. Its setup repair needs fresh qualification. |
+| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The complete gate passed for released 0.14.7 at `a30bfe0`; newer .8 worktree changes remain unqualified. The historical 0.14.1 missing-`rg` failure is recorded below. |
+| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The complete gate passed for released 0.14.7 at `a30bfe0`, including runtime/cohort subjects; newer .8 worktree changes remain unqualified. Historical failures retain their original scope below. |
 
 Inspection on 2026-10-06 of the 0.13.1 source at
 `54bbcfc4985d4657578150cbe7112795297115fd` found both native macOS jobs in
@@ -527,12 +527,17 @@ the latest inspected complete consumer release. Make/CI workspace roots, package
 selectors, `testing/target` artifacts and the exact PocketIC gate remain.
 The preserved root-lock ic-metrics update is qualified with this release.
 
-Prepared 0.14.7 adopts Shared Tooling 0.1.14 and the shared Make execution guard.
+Released 0.14.7 adopts Shared Tooling 0.1.14 and the shared Make execution guard.
 Upstream Linux and both macOS jobs passed at the exact exported revision;
 consumer preparation checks cover snapshot integrity, source/mode comparison,
 shell syntax, documentation and diff inspection. No contributor tests, builds,
-lint or formatter ran. Fresh complete consumer qualification, including native
-macOS, remains required; 0.14.6 evidence does not qualify this worktree. See the
+lint or formatter ran. At released `a30bfe01d9ce82ba691f5ddd1980f9a4b7c0454a`,
+[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37592893527) passed
+Linux/MSRV and both complete native macOS gates.
+Matching [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37592893540)
+passed. The logs record Make admission, gate, hook and collector fixtures passing
+on Linux and both macOS hosts; #20 closes with this complete source-bound
+qualification. New .8 edits retain their own pending qualification. See the
 [Make admission owner](shared-tooling.md#shared-tooling-0114-make-admission).
 
 Version preparation uses Bash, Perl, Git, Cargo and the explicitly installed
@@ -638,8 +643,18 @@ its archive may be absent or incomplete. Hosted job logs remain available too.
 The maintained `release-check` gate selects
 [collector fixtures](../scripts/ci/test-failure-evidence.sh) for contents, identity,
 mode preservation, symlink handling, exclusions, empty payloads, rejected inputs
-and archive failure propagation. Preparation inspected source, shell/YAML syntax
-and the pinned action; those fixtures have not run. Closing
+and archive failure propagation. These released fixtures passed on Linux and
+both native macOS hosts at 0.14.7 `a30bfe01d9ce82ba691f5ddd1980f9a4b7c0454a`;
+see the [host record](#host-support).
+
+The prepared .8 follow-up preserves failed committed-release, staging/index,
+lockfile and repository-check scratch under TMPDIR, prints its location and
+retains the original failure status. Successful runs still clean up. Its collector
+fixture drives each actual producer through early injected tool failure, checks
+status/input preservation, then compares those inputs after collection/extraction.
+Those paths select substitutes before builds or real Git writes. These new cases
+have not executed during contributor preparation; .7 does not qualify them.
+Closing
 [#23](https://github.com/dragginzgame/ic-timers/issues/23) requires native Linux
 and both macOS fixture qualification plus downloadable evidence from
 maintainer-controlled early-installer and late-check failures on the declared
@@ -675,49 +690,48 @@ Cargo before projecting TOML; version mutation remains consumer-owned. Parser
 setup is therefore required before `make version` and release preflight too.
 
 Before local validation, run `make update-dev` for complete development setup,
-or explicitly prepare only the host parsers:
+or explicitly prepare the complete pinned host bundle:
 
 ```text
 make install-host-tools
 make host-tools-check
 ```
 
-The shared installer selects jq 1.8.2 and Mike Farah yq 4.47.2 from the single
-parser pin owner, `ci/tool-versions.env`. It verifies both downloaded payloads
-before executing either, checks exact versions, activates the pair together and
-retains previous/failed candidates under ignored `.tools/`. `actions-check`
-verifies the active pair offline before reading declarations; absent or changed
-tools require explicit setup. Make and the repository fixture select
-`.tools/host/bin`, with an explicit yq path. CI performs setup in each applicable
-job before its gates. No system jq/yq selection is introduced. PocketIC keeps its
-separate exact audited admission owner.
+The root [common Make include](../make/tools.mk) selects jq 1.8.2, Mike Farah yq
+4.47.2, ripgrep 15.2.0 with PCRE2 and cloc 2.10 from the single
+[host pin owner](../ci/tool-versions.env). The shared installer authenticates all
+selected payloads before executing any, checks versions, and activates the bundle
+together. Previous/failed candidates remain under ignored `.tools/`.
+`actions-check` depends on this offline bundle check before reading declarations;
+absent or changed tools require explicit setup. Existing parser-only bundles must
+be explicitly refreshed with `make install-host-tools` once.
 
-The 0.14.4 tooling refresh adopts Shared Tooling 0.1.11's failed-version-producer
-refusal and retained host-fixture evidence. jq/yq pins and these no-flag setup/check
-calls remain unchanged. The optional shared `--with-ripgrep` interface is not
-selected here; system ripgrep remains an explicit bootstrap prerequisite. The
-[refresh owner](shared-tooling.md#shared-tooling-0111-refresh) distinguishes shared
-guide examples from these consumer commands and records pending qualification.
+Make, `update-dev` and hosted CI use the same common setup/check targets and
+checkout-local PATH. No separate system jq/yq/ripgrep/cloc installation is
+required. The repository fixture still supplies an explicit local yq path.
+PocketIC keeps its separate exact audited admission owner. Follow the
+[bootstrap prerequisites](local-setup.md#bootstrap-prerequisites) for Linux and
+macOS and prepare this repository's Rust toolchains/cargo-sort separately.
+The reviewed installer itself requires no sudo.
 
-Use the [bootstrap prerequisites](local-setup.md#bootstrap-prerequisites)
-for Linux Mint/Ubuntu and macOS, plus this repository's Rust toolchains,
-cargo-sort and ripgrep for shared fixtures. Setup requires no sudo. Native
-Linux x86_64 and macOS 15 Intel/Apple Silicon qualification of this consumer
-adoption remains pending; upstream fixtures do not qualify these new callers.
+`make cloc` reports only the publishable root Cargo workspace; the independent
+`testing/` workspace is excluded. The shared reporter resolves a path beneath
+this checkout back to its Git root, so `CLOC_ROOT=testing` does not select the
+probe workspace. `make cloc-tooling CLOC_PARENT=/path/to/projects` inventories
+sibling CI/tooling with snapshot ownership and source hashes, without executing
+consumer code. Counts do not establish instruction or Wasm savings.
 
-IC Timers still selects the two-parser host installer without `--with-ripgrep`.
-The shared 0.1.12 bootstrap examples now rely on pinned local ripgrep; for our
-current callers, additionally prepare system ripgrep with
-`sudo apt-get install -y ripgrep` on Linux Mint/Ubuntu or `brew install ripgrep`
-on macOS. CI already does
-this explicitly. No additional setup or download runs during ordinary checks.
+The [0.1.15 adoption owner](shared-tooling.md#shared-tooling-0115-common-tool-commands)
+records source inspection and pending Linux/native macOS consumer qualification.
+No install, test/build/lint or formatter runs during contributor preparation.
+Ordinary checks never download tools.
 
 ### Pinned IC tool setup
 
 `make install-ic-tools` explicitly prepares Quill 0.5.4, ICP CLI 1.6.0, didc
 0.6.2, ic-wasm 0.11.1, PocketIC 16.0.0 and wasm-opt 132 from
 [`ci/ic-tools.tsv`](../ci/ic-tools.tsv). `make ic-tools-check` verifies the bundle
-offline. `make install-tools` / `make tools-check` operate on both the parser
+offline. `make install-tools` / `make tools-check` operate on both the host
 and IC bundles. `update-dev` and CI use explicit setup; ordinary checks never
 invoke these installers without `--check`. Make prepends `.tools/host/bin` and
 `.tools/ic/bin` to PATH. Bootstrap also needs tar with xz support for IC assets.

@@ -1,19 +1,17 @@
 # Shared Tooling adoption
 
-IC Timers adopts Shared Tooling 0.1.14 at reviewed committed revision
-[`25e7ce83149e081e4dcc52c55c33724e44153f2a`](https://github.com/dragginzgame/shared-tooling/tree/25e7ce83149e081e4dcc52c55c33724e44153f2a).
-The [baseline snapshot](../.shared-tooling.snapshot) records twenty-seven exact
-files, including the paired baseline/maintenance rule, release and validation
-runners, checksum owner and linked guides. The supplemental
-[audit snapshot](../.shared-tooling-audits.snapshot) records nineteen files:
-the six unchanged audit methods, provenance/setup guidance, pin catalogs and
-host-parser installer/fixtures. Its overlapping principles and integrity helpers
-are identical to the baseline's records. The seventeen-file
-[helper snapshot](../.shared-tooling/helpers/.shared-tooling.snapshot) records
-Cargo/checksum helpers, IC setup, formatter prerequisites and annotated-tag
-admission and standard-release command checks at the same revision. Its separate
-directory retains existing helper paths. Optional helpers require an explicit
-caller adoption; the new command checker is selected directly in `release-check`.
+IC Timers prepares Shared Tooling 0.1.15 at reviewed committed revision
+[`bfb50bd0884b5e6c5ee9592056531c6108f96d73`](https://github.com/dragginzgame/shared-tooling/tree/bfb50bd0884b5e6c5ee9592056531c6108f96d73).
+The [baseline snapshot](../.shared-tooling.snapshot) records 33 exact files,
+including common Make commands and LOC reporters/fixtures alongside governance,
+release and validation owners. The supplemental
+[audit/setup snapshot](../.shared-tooling-audits.snapshot) records 23 files,
+including the unchanged audit methods, setup guides/pins, and host/IC installers
+and fixtures. Its overlapping integrity helpers match the baseline. The 13-file
+[helper snapshot](../.shared-tooling/helpers/.shared-tooling.snapshot) retains
+Cargo readers/checks/rewrites, formatter prerequisites and tag/release admission.
+All three snapshots use the same revision. IC setup moved to the root setup
+snapshot; the replaced nested copies are deleted, retaining one implementation.
 
 [AGENTS.md](../AGENTS.md) owns the product overlay and approved command-authority
 exceptions. Tests, builds, lint and all release effects remain maintainer-owned.
@@ -23,6 +21,64 @@ material until a separate caller adoption. Refresh through the upstream
 [distribution workflow](consuming-snapshots.md) from a clean reviewed checkout;
 CI/release validation uses these offline manifests, never a mutable sibling.
 The former document-only copy under `docs/shared-tooling/` remains retired.
+
+## Shared Tooling 0.1.15 common tool commands
+
+Prepared undated 0.14.8 adopts clean detached exports of committed
+`bfb50bd0884b5e6c5ee9592056531c6108f96d73`, with 33/23/13 files in the baseline,
+audit/setup and helper snapshots. Exact shared bytes and executable modes are
+retained. No sibling files change and no snapshot payload is patched.
+
+The root Makefile includes [make/tools.mk](../make/tools.mk) once. It replaces
+six copied setup/check recipes and supplies the checkout-local PATH, `cloc` and
+`cloc-tooling`. Both setup and offline checks select jq 1.8.2, yq 4.47.2,
+ripgrep 15.2.0 with PCRE2, and cloc 2.10 using the reviewed
+[pin catalog](../ci/tool-versions.env). Only cloc is a new pin. IC pins and the
+separate exact audited PocketIC admission remain unchanged. Existing two-parser
+bundles need explicit `make install-host-tools`; ordinary checks remain offline
+and fail closed. No tool installation ran during preparation.
+
+`actions-check` depends on the common `host-tools-check`; `update-dev` and all
+hosted jobs select `install-tools`/`tools-check`. Duplicate apt/Homebrew ripgrep
+installation is removed. Standard-release checking exports the common include,
+as do isolated repository, hook, exact-release, committed-release and gate
+fixtures. Hook copyback uses an index containing the actual include. The release
+gate selects unchanged upstream common-command, host/IC and LOC fixtures; these
+are substitute/native-tool qualification, not release or IC recovery execution.
+
+The common LOC report covers the publishable root Cargo workspace. The separate
+`testing/` workspace is not included in its counts; passing `CLOC_ROOT=testing`
+still resolves the containing Git root in the shared reporter.
+[Shared Tooling #41](https://github.com/dragginzgame/shared-tooling/issues/41) owns
+explicit independent-workspace selection; this is not a release blocker. No composed
+runtime/test total is claimed. The sibling tooling inventory reads working files
+and snapshot hashes/modes without executing consumer scripts, Make or Cargo.
+Shared/local counts are discovery evidence, not justification to remove distinct
+product owners.
+
+At inspection, exact-source
+[upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37593142226)
+passed Linux, lint/security and both native macOS jobs.
+The continued .8 batch retains failed local committed-release, index/staging,
+lockfile and repository-check scratch for #23's existing collector, rather than
+removing diagnostic inputs unconditionally. EXIT handlers preserve original
+status, print retained paths and still remove successful scratch. The collector
+fixture now injects early failures through those actual scripts and compares
+retained bytes after archive/extraction. No builds or real Git writes occur on
+those substituted paths. These new cases have not run during preparation.
+
+Consumer qualification for this new source remains pending. Preparation performs
+integrity, source/mode comparison, shell/Perl/YAML syntax, reference and diff
+inspection only. No tests, builds, lint, formatter or release execution ran.
+Runtime/probe source, manifests and both lockfiles are preserved. This is
+repository-only work with no measured Wasm, instruction or heap delta.
+
+[#24](https://github.com/dragginzgame/ic-timers/issues/24) remains blocked by
+[Shared Tooling #38](https://github.com/dragginzgame/shared-tooling/issues/38).
+The committed shared selector still misses draft headings with trailing spaces
+or tabs. Keep the existing consumer finalizer until a reviewed committed owner
+fix supports consolidation; its preservation/whitespace cases are already
+maintained. Do not patch the shared AWK or add another selector.
 
 ## Shared Tooling 0.1.14 Make admission
 
@@ -115,6 +171,18 @@ evidence is recorded in that issue; availability is no longer the reason for
 deferral. The [measurement owner](design/callback-delivery-ownership.md#histogram-evaluation)
 records the decision and criteria for reopening. No runtime measurement or
 dependency update is made.
+
+The maintainer reports the batch live at released
+`a30bfe01d9ce82ba691f5ddd1980f9a4b7c0454a` (0.14.7).
+Matching [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37592893540)
+passed; its Linux log records shared runner, local gate, hook and collector
+fixtures passing. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37592893527)
+passed Linux/MSRV and both complete native macOS gates. Logs from all three hosts
+record shared runner, local gate, hook and collector fixtures passing. #20 closes
+with this complete consumer qualification. Failure-only
+archive/upload steps were skipped in passing jobs, so #23's actual hosted
+failure-artifact obligation remains unqualified. These results do not qualify
+the subsequent 0.1.15 adoption worktree. No contributor validation ran.
 
 ## Shared Tooling 0.1.13 workspace adoption
 

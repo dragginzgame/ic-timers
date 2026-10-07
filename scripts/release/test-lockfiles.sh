@@ -5,8 +5,10 @@ repository_root="$(git rev-parse --show-toplevel)"
 export PATH="${repository_root}/.tools/host/bin:${PATH}"
 export YQ="${repository_root}/.tools/host/bin/yq"
 checker="${repository_root}/scripts/release/check-lockfiles.sh"
-temporary_root="$(mktemp -d)"
-trap 'rm -rf -- "${temporary_root}"' EXIT
+temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/timer-lockfile-test.XXXXXX")"
+trap 'status=$?; if [[ "$status" == 0 ]]; then rm -rf -- "${temporary_root}";
+    else printf "Failed lockfile fixture retained: %s\n" "${temporary_root}" >&2;
+    fi; exit "$status"' EXIT
 mkdir -p "${temporary_root}"/{crates/ic-timers/src,testing/probe/src}
 cd "${temporary_root}"
 cat > Cargo.toml <<'EOF'

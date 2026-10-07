@@ -67,6 +67,8 @@ trap 'if [[ $? == 0 ]]; then rm -rf -- "${temporary_root}"; else printf "Failed 
 mkdir "${temporary_root}/workspace"
 ln -s workspace "${temporary_root}/workspace-alias"
 cp "${makefile}" "${temporary_root}/workspace/Makefile"
+mkdir -p "${temporary_root}/workspace/make"
+cp "${repository_root}/make/tools.mk" "${temporary_root}/workspace/make/"
 cd "${temporary_root}/workspace-alias"
 fixture_root="$(pwd -P)"
 git init -q

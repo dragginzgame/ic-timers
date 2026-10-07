@@ -1,6 +1,6 @@
 .PHONY: \
 	actions-check build bump-x check ci clean clippy docs-check ensure-clean fetch fmt fmt-check format-tools-check help \
-	install-hooks install-host-tools host-tools-check install-tools tools-check install-ic-tools ic-tools-check major minor msrv package patch pocketic-cohorts pocketic-watchdog publish release-check release-commit \
+	install-hooks major minor msrv package patch pocketic-cohorts pocketic-watchdog publish release-check release-commit \
 	pocketic-check provider-check release-major release-minor release-patch release-push release-stage \
 	release-impact release-tag-check release-verify release-x repository-check shell-check test testing-check update-dev \
 	version wasm-check
@@ -11,7 +11,7 @@ POCKET_IC_VERSION := 16.0.0
 POCKET_IC_BIN_ORIGIN := $(origin POCKET_IC_BIN)
 POCKET_IC_BIN ?= $(CURDIR)/target/tools/pocket-ic/$(POCKET_IC_VERSION)/pocket-ic
 POCKET_IC_AUTO_INSTALL := $(if $(filter undefined,$(POCKET_IC_BIN_ORIGIN)),1,0)
-export PATH := $(CURDIR)/.tools/host/bin:$(CURDIR)/.tools/ic/bin:$(PATH)
+include make/tools.mk
 
 CI_TARGETS := actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package
 RELEASE_TARGETS := fetch pocketic-check ci msrv testing-check pocketic-watchdog pocketic-cohorts
@@ -37,11 +37,13 @@ help:
 	@echo "  repository-check    Validate a non-published repository-only update"
 	@echo "  publish             Publish the clean, tagged release to crates.io"
 	@echo "  actions-check       Check parsed Actions and dependency pin declarations"
-	@echo "  install-host-tools  Explicitly install the reviewed jq/yq parser pair"
-	@echo "  host-tools-check    Verify the installed parser pair offline"
+	@echo "  install-host-tools  Install pinned jq/yq/ripgrep/cloc host tools"
+	@echo "  host-tools-check    Verify the complete host bundle offline"
 	@echo "  install-ic-tools    Explicitly install the reviewed six-tool IC bundle"
 	@echo "  ic-tools-check      Verify the installed IC bundle offline"
 	@echo "  install-tools / tools-check  Prepare or verify both tool bundles"
+	@echo "  cloc                Report root-workspace Rust LOC and test counts"
+	@echo "  cloc-tooling        Inventory sibling CI/tooling (CLOC_PARENT=/path/to/projects)"
 	@echo "  shell-check         Check repository shell-script syntax"
 	@echo "  msrv                Check with the minimum supported Rust version"
 	@echo "  ci                  Run the local CI gate"
@@ -140,30 +142,9 @@ pocketic-cohorts: pocketic-check
 		cargo +$(MSRV) test --manifest-path testing/Cargo.toml -p ic-timers-pocketic --locked \
 			comparable_policy_cohorts_report_size_and_instruction_subjects -- --nocapture
 
-install-host-tools:
-	bash scripts/dev/install-host-tools.sh
-
-host-tools-check:
-	bash scripts/dev/install-host-tools.sh --check
-
-install-ic-tools:
-	bash .shared-tooling/helpers/scripts/dev/install-ic-tools.sh --consumer "$(CURDIR)"
-
-ic-tools-check:
-	bash .shared-tooling/helpers/scripts/dev/install-ic-tools.sh --consumer "$(CURDIR)" --check
-
-install-tools:
-	bash scripts/dev/install-host-tools.sh
-	bash .shared-tooling/helpers/scripts/dev/install-ic-tools.sh --consumer "$(CURDIR)"
-
-tools-check:
-	bash scripts/dev/install-host-tools.sh --check
-	bash .shared-tooling/helpers/scripts/dev/install-ic-tools.sh --consumer "$(CURDIR)" --check
-
 # Keep the established gate entry point; the shared owner also checks Cargo
 # declarations and the tracked lockfile of each independent workspace.
-actions-check:
-	bash scripts/dev/install-host-tools.sh --check
+actions-check: host-tools-check
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/check-dependency-pins.sh \
 		--consumer "$(CURDIR)" --cargo-inheritance
 
@@ -180,15 +161,18 @@ release-check:
 		--consumer "$(CURDIR)/.shared-tooling/helpers"
 	bash scripts/ci/test-shared-snapshots.sh
 	bash scripts/ci/test-host-tools.sh
+	bash scripts/ci/test-tool-commands.sh
+	bash scripts/ci/test-cloc.sh
+	bash scripts/ci/test-cloc-tooling.sh
 	bash scripts/ci/test-failure-evidence.sh
 	bash .shared-tooling/helpers/scripts/ci/test-format-tools.sh
-	bash .shared-tooling/helpers/scripts/ci/test-ic-tools.sh
-	bash .shared-tooling/helpers/scripts/ci/test-evidence-checksums.sh
+	bash scripts/ci/test-ic-tools.sh
+	bash scripts/ci/test-evidence-checksums.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/test-dependency-pins.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/test-cargo-metadata.sh
 	perl .shared-tooling/helpers/scripts/ci/test-local-lock-versions.pl
 	bash scripts/ci/test-release-runner.sh
-	bash .shared-tooling/helpers/scripts/ci/check-release-commands.sh "$(CURDIR)" tool-versions.env
+	bash .shared-tooling/helpers/scripts/ci/check-release-commands.sh "$(CURDIR)" tool-versions.env make/tools.mk
 	bash scripts/release/test-committed-release.sh
 	bash scripts/release/test-release-index.sh
 	bash scripts/release/test-finalize-changelog.sh

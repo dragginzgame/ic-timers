@@ -2,6 +2,21 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.8]
+
+### Development
+
+- Adopt Shared Tooling 0.1.15 and its common Make setup/check/LOC commands.
+  Prepare and verify pinned jq, yq, ripgrep with PCRE2 and cloc together;
+  CI uses that bundle instead of separately installing system ripgrep.
+  Consolidate host/IC setup under the root snapshot, remove copied Make
+  recipes and preserve the audited PocketIC release gate. This is
+  repository-only work; timer behavior and dependency selections are unchanged.
+- Retain failed committed-release, staging/index, lockfile and repository-check
+  fixtures for CI artifact collection instead of deleting their diagnostic
+  inputs. Preserve original failure status and clean up successful runs
+  ([#23](https://github.com/dragginzgame/ic-timers/issues/23)).
+
 ## [0.14.7] - 2026-10-07
 
 ### Development

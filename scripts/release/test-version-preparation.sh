@@ -255,6 +255,8 @@ fi
 # test-commit-release exercises the actual local worktree admission.
 cp Makefile preparation-only.mk
 cp "${repository_root}/Makefile" Makefile
+mkdir -p make
+cp "${repository_root}/make/tools.mk" make/
 mv scripts/release/bump-version.sh scripts/release/preparation-bump-version.sh
 cat > scripts/release/bump-version.sh <<'EOF'
 #!/usr/bin/env bash

@@ -9,7 +9,11 @@ export PATH="$root/.tools/host/bin:$PATH"
 export YQ="$root/.tools/host/bin/yq"
 export RELEASE_INDEX_REAL_CARGO="$(command -v cargo)"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/release-index-check.XXXXXX")"
-trap 'status=$?; if [[ "$status" != 0 && -f "$fixture/output" ]]; then cat "$fixture/output" >&2; fi; rm -rf -- "$fixture"; exit "$status"' EXIT
+trap 'status=$?; if [[ "$status" == 0 ]]; then rm -rf -- "$fixture";
+    else
+        if [[ -f "$fixture/output" ]]; then cat "$fixture/output" >&2 || :; fi
+        printf "Failed release-index fixture retained: %s\n" "$fixture" >&2;
+    fi; exit "$status"' EXIT
 git clone -q --no-local --depth 1 "$root" "$fixture/repo"
 mkdir "$fixture/bin" "$fixture/tmp"
 export FETCH_EVENTS="$fixture/fetch-events"

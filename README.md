@@ -395,9 +395,11 @@ operational measurements.
 | Command | Purpose |
 | --- | --- |
 | `make update-dev` | Install the pinned toolchain, components, host and IC tools, Wasm target, and formatting hook |
-| `make install-host-tools` / `make host-tools-check` | Install the pinned jq/yq pair or verify it offline |
+| `make install-host-tools` / `make host-tools-check` | Install pinned jq/yq/ripgrep/cloc or verify the complete bundle offline |
 | `make install-ic-tools` / `make ic-tools-check` | Install the pinned six-tool IC bundle or verify it offline |
 | `make install-tools` / `make tools-check` | Prepare or verify both host and IC bundles |
+| `make cloc` | Report Rust LOC/test counts for the publishable root workspace |
+| `make cloc-tooling` | Inventory sibling CI/tooling (`CLOC_PARENT=/path/to/projects`) |
 | `make fmt` / `make fmt-check` | Sort manifests and format or check Rust in the root and `testing/` workspaces |
 | `make ci` | Run the normal warning-denied checks, native tests, Wasm build, and package checks |
 | `make msrv` | Check the workspace with Rust 1.88.0 |
@@ -409,8 +411,8 @@ operational measurements.
 
 Normal development and hosted CI use Rust 1.99.0. Hosted CI also lints every
 supported nested probe configuration with both Rust 1.99.0 and Rust 1.88.0.
-Prepare host parsers through `make update-dev` or `make install-host-tools`
-before validation. `make actions-check` verifies them offline and delegates
+Prepare the complete pinned host bundle through `make update-dev` or `make install-host-tools`
+before validation. `make actions-check` verifies the bundle offline and delegates
 Actions and Cargo declaration checks to the reviewed shared parser; it never
 downloads tools. See the [setup and pin boundaries](docs/releasing.md#structured-dependency-checks-and-host-parsers).
 Both `fmt` and `fmt-check` first require the exact cargo-sort pin and prepared

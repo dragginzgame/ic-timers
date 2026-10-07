@@ -8,10 +8,16 @@ export PATH="$root/.tools/host/bin:$PATH"
 export YQ="$root/.tools/host/bin/yq"
 export COMMITTED_RELEASE_REAL_CARGO="$(command -v cargo)"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/committed-release-check.XXXXXX")"
-trap 'status=$?; if [[ "$status" != 0 && -f "$fixture/output" ]]; then cat "$fixture/output" >&2; fi; rm -rf -- "$fixture"; exit "$status"' EXIT
+trap 'status=$?; if [[ "$status" == 0 ]]; then rm -rf -- "$fixture";
+    else
+        if [[ -f "$fixture/output" ]]; then cat "$fixture/output" >&2 || :; fi
+        printf "Failed committed-release fixture retained: %s\n" "$fixture" >&2;
+    fi; exit "$status"' EXIT
 mkdir -p "$fixture/current/scripts" "$fixture/current/.shared-tooling/helpers/scripts/ci" \
     "$fixture/selected/testing" "$fixture/bin" "$fixture/tmp"
 cp "$root/Makefile" "$fixture/current/"
+mkdir -p "$fixture/current/make"
+cp "$root/make/tools.mk" "$fixture/current/make/"
 cp -R "$root/scripts/release" "$fixture/current/scripts/"
 cp "$root/.shared-tooling/helpers/scripts/ci/read-cargo-workspace-version.sh" \
     "$root/.shared-tooling/helpers/scripts/ci/check-release-tag.sh" \

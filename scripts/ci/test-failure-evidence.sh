@@ -83,4 +83,49 @@ printf 'identity.txt\n' > "$fixture/expected-empty-entries"
 cmp "$fixture/expected-empty-entries" "$fixture/empty-entries"
 if bash "$root/scripts/ci/collect-failure-evidence.sh" unexpected > "$fixture/invalid-input.log" 2>&1; then exit 1; fi
 if env -u RUNNER_TEMP bash "$root/scripts/ci/collect-failure-evidence.sh" > "$fixture/missing-input.log" 2>&1; then exit 1; fi
-echo 'CI failure evidence selection, metadata, modes and empty-input checks passed'
+# Drive the actual local fixtures to an early tool failure. A retained input
+# and the original status must survive their EXIT handlers; no builds or real
+# Git writes are selected by these substitute tools.
+mkdir -p "$fixture/retention-bin"
+export RETENTION_REAL_GIT="$(command -v git)"
+cat > "$fixture/retention-bin/tool-stub" <<'STUB'
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${0##*/}" == git && "${1:-}" != init && "${1:-}" != clone ]]; then
+    exec "$RETENTION_REAL_GIT" "$@"
+fi
+for path in "$TMPDIR"/*; do
+    [[ -d "$path" ]] || continue
+    printf 'retained injected input\n' > "$path/injected-input"
+done
+echo 'injected fixture tool failure' >&2
+exit 23
+STUB
+chmod +x "$fixture/retention-bin/tool-stub"
+for tool in git cargo cp; do ln -s tool-stub "$fixture/retention-bin/$tool"; done
+retained_inputs=()
+for script in scripts/release/test-committed-release.sh scripts/release/test-release-index.sh \
+    scripts/release/test-lockfiles.sh scripts/ci/test-repository-checks.sh; do
+    name="${script##*/}"
+    scratch="$RUNNER_TEMP/ic-timers-fixtures/retention cases/$name"
+    mkdir -p "$scratch"
+    status=0
+    TMPDIR="$scratch" PATH="$fixture/retention-bin:$PATH" bash "$root/$script" \
+        > "$fixture/$name-retention.log" 2>&1 || status=$?
+    test "$status" -eq 23
+    retained=("$scratch"/*)
+    test "${#retained[@]}" -eq 1
+    test -d "${retained[0]}"
+    grep -Fxq 'retained injected input' "${retained[0]}/injected-input"
+    retained_inputs+=("${retained[0]}/injected-input")
+    grep -Fq 'fixture retained:' "$fixture/$name-retention.log"
+    grep -Fq 'injected fixture tool failure' "$fixture/$name-retention.log"
+done
+# Archive the actual retained inputs through the unchanged collector.
+bash "$root/scripts/ci/collect-failure-evidence.sh" > "$fixture/retained-collection.log" 2>&1
+mkdir "$fixture/retained-extracted"
+tar -xzpf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" -C "$fixture/retained-extracted"
+for input in "${retained_inputs[@]}"; do
+    cmp "$input" "$fixture/retained-extracted/${input#"$RUNNER_TEMP/"}"
+done
+echo 'CI failure evidence selection, metadata, modes, empty-input and local retention checks passed'

@@ -22,6 +22,8 @@ git update-ref HEAD "${source_commit}"
 git read-tree HEAD
 git checkout-index --all
 cp "${repository_root}/Makefile" Makefile
+mkdir -p make
+cp "${repository_root}/make/tools.mk" make/
 cp "${repository_root}/tool-versions.env" tool-versions.env
 # The current fmt prerequisite must also exist in the fixture's exact index.
 cp -p "${repository_root}/.shared-tooling/helpers/scripts/ci/check-format-tools.sh" \
@@ -40,7 +42,7 @@ edition = "2024"
 EOF
     printf 'pub fn fixture( ){}\n' > "${workspace}/src/lib.rs"
 done
-git add Makefile tool-versions.env Cargo.toml src/lib.rs testing/Cargo.toml testing/src/lib.rs \
+git add Makefile make/tools.mk tool-versions.env Cargo.toml src/lib.rs testing/Cargo.toml testing/src/lib.rs \
     .shared-tooling/helpers/scripts/ci/check-format-tools.sh scripts/ci/check-make-execution.sh
 printf 'unrelated working edit\n' >> README.md
 cp README.md "${temporary_root}/unrelated-readme"

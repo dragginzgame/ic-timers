@@ -2,12 +2,16 @@
 set -euo pipefail
 
 repository_root="$(git rev-parse --show-toplevel)"
-temporary_root="$(mktemp -d)"
-trap 'rm -rf -- "${temporary_root}"' EXIT
+temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/timer-repository-check-test.XXXXXX")"
+trap 'status=$?; if [[ "$status" == 0 ]]; then rm -rf -- "${temporary_root}";
+    else printf "Failed repository-check fixture retained: %s\n" "${temporary_root}" >&2;
+    fi; exit "$status"' EXIT
 
 git init -q "${temporary_root}"
 mkdir -p "${temporary_root}"/{.githooks,scripts/{ci,dev,release},.shared-tooling/helpers/scripts/{ci,dev},crates/ic-timers/src}
 cp "${repository_root}/Makefile" "${temporary_root}/Makefile"
+mkdir -p "${temporary_root}/make"
+cp "${repository_root}/make/tools.mk" "${temporary_root}/make/"
 cp "${repository_root}/scripts/ci/check-provider-boundary.sh" "${temporary_root}/scripts/ci/"
 cp "${repository_root}/.shared-tooling/helpers/scripts/ci/check-dependency-pins.sh" \
     "${repository_root}/.shared-tooling/helpers/scripts/ci/dependency-pins.jq" \
@@ -90,7 +94,7 @@ printf '%s\n' "${CLASSIFICATION:-repository}"
 EOF
 cat > overrides.mk <<'EOF'
 # The shared formatter fixture owns tool admission; this fixture owns ordering.
-format-tools-check:
+format-tools-check host-tools-check:
 	@:
 actions-check shell-check release-check provider-check fmt-check:
 	@printf '%s\n' '$@' >> checks-ran
