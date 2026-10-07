@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-expected_version="pocket-ic-server 16.0.0"
+repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+pins="${repository_root}/ci/ic-tools.tsv"
 pocket_ic_bin="${POCKET_IC_BIN:-}"
 auto_install="${POCKET_IC_AUTO_INSTALL:-0}"
 
@@ -18,17 +19,17 @@ host_arch="$(uname -m)"
 case "${host_os}/${host_arch}" in
     Linux/x86_64)
         asset="pocket-ic-x86_64-linux.gz"
-        expected_archive_sha256="268ba79ec7fe9a563a575adf4983c69627093cce2711d142e476cdc7ad04249e"
+        host_platform=linux-x86_64
         expected_sha256="69e324bdb68d32d878b7a9504b1379f08f8d1921272bacb065b0fabb3d0f3792"
         ;;
     Darwin/x86_64)
         asset="pocket-ic-x86_64-darwin.gz"
-        expected_archive_sha256="9710b9c4ac4eaa7eb10bddaa2aba80560a59362610f1bcd8c6e23be82a39c327"
+        host_platform=darwin-x86_64
         expected_sha256="b8233ebee53452db7465b43e7b2ff80f2e1445dc148eb2b4b237493d8d15ec66"
         ;;
     Darwin/arm64)
         asset="pocket-ic-arm64-darwin.gz"
-        expected_archive_sha256="41cf77e24effc381e21f5e07e908ed078783646e6de05ed52fd6973221f07e64"
+        host_platform=darwin-arm64
         expected_sha256="781f643d4b16105e7544ca810a972f99c0ef1919016c680faa93f10909a14496"
         ;;
     *)
@@ -36,49 +37,18 @@ case "${host_os}/${host_arch}" in
         exit 1
         ;;
 esac
-expected_url="https://github.com/dfinity/pocketic/releases/download/16.0.0/${asset}"
+# The shared matrix owns archive identities; the consumer still owns audited
+# extracted-binary digests and single-artifact provisioning for release evidence.
+server_version="$(awk -v tool=pocket-ic \
+    -f "${repository_root}/scripts/ci/ic-tool-pins.awk" "${pins}")"
+expected_version="pocket-ic-server ${server_version}"
+expected_archive_sha256="$(awk -F '\t' -v host="${host_platform}" \
+    '$1 == "pocket-ic" && $3 == host { print $4 }' "${pins}")"
+expected_url="https://github.com/dfinity/pocketic/releases/download/${server_version}/${asset}"
+checker="${repository_root}/scripts/ci/check-pocketic-binary.sh"
+checksum="${repository_root}/scripts/ci/verify-file-checksum.sh"
 
-sha256() {
-    # Core Perl Digest::SHA avoids a GNU sha256sum dependency on macOS.
-    perl -MDigest::SHA -e '
-        open my $input, "<:raw", $ARGV[0] or die "$ARGV[0]: $!\n";
-        print Digest::SHA->new(256)->addfile($input)->hexdigest, "\n";
-    ' "${1}"
-}
-
-verify_binary() {
-    local candidate="${1}"
-    if [[ ! -f "${candidate}" ]]; then
-        echo "error: PocketIC binary is not a regular file: ${candidate}" >&2
-        return 1
-    fi
-    if [[ ! -x "${candidate}" ]]; then
-        echo "error: PocketIC binary is not executable: ${candidate}" >&2
-        return 1
-    fi
-    local actual_sha256='<unavailable>' actual_version='<not executed: hash mismatch>'
-    if actual_sha256="$(sha256 "${candidate}")"; then
-        if [[ "${actual_sha256}" == "${expected_sha256}" ]]; then
-            if actual_version="$("${candidate}" --version 2>/dev/null)"; then
-                if [[ "${actual_version}" == "${expected_version}" ]]; then
-                    return 0
-                fi
-            else
-                actual_version='<unavailable>'
-            fi
-        fi
-    else
-        actual_sha256='<unavailable>'
-    fi
-    echo "error: PocketIC evidence binary does not match the audited artifact" >&2
-    echo "expected version: ${expected_version}" >&2
-    echo "actual version:   ${actual_version:-<unavailable>}" >&2
-    echo "expected SHA-256: ${expected_sha256}" >&2
-    echo "actual SHA-256:   ${actual_sha256}" >&2
-    return 1
-}
-
-if verification_error="$(verify_binary "${pocket_ic_bin}" 2>&1)"; then
+if verification_error="$(bash "${checker}" "${server_version}" "${expected_sha256}" "${pocket_ic_bin}" 2>&1)"; then
     echo "PocketIC evidence binary verified: ${expected_version} (${expected_sha256})"
     exit 0
 fi
@@ -106,19 +76,13 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "Installing audited PocketIC 16.0.0 into ${pocket_ic_bin}"
+echo "Installing audited PocketIC ${server_version} into ${pocket_ic_bin}"
 curl --fail --location --silent --show-error --output "${archive}" "${expected_url}"
-actual_archive_sha256="$(sha256 "${archive}")"
-if [[ "${actual_archive_sha256}" != "${expected_archive_sha256}" ]]; then
-    echo "error: downloaded PocketIC archive does not match the audited artifact" >&2
-    echo "expected SHA-256: ${expected_archive_sha256}" >&2
-    echo "actual SHA-256:   ${actual_archive_sha256}" >&2
-    exit 1
-fi
+bash "${checksum}" sha256 "${expected_archive_sha256}" "${archive}"
 gzip --decompress --stdout "${archive}" > "${binary}"
 chmod 0755 "${binary}"
 
-if ! verify_binary "${binary}"; then
+if ! bash "${checker}" "${server_version}" "${expected_sha256}" "${binary}"; then
     echo "error: downloaded PocketIC artifact failed verification" >&2
     exit 1
 fi

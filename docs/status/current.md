@@ -12,64 +12,52 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Current tooling batch
 
-The maintainer reports **0.14.10 live** at
-`479c4b8c8b6412babf7c98ea17c948eacdaeadc3`. Cargo, local lock identities and
-finalized notes identify that release. [Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37617070319)
-passed. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37617070245)
-passed Linux/MSRV; both native macOS jobs were running at inspection.
-The preceding 0.14.9 native jobs were cancelled; that release did not complete
-all-host qualification. Latest complete released all-host evidence remains
-0.14.8, with separate untagged consolidation qualification at `007dbe3`.
-See the [host owner](../releasing.md#host-support). Registry publication was
-not independently checked; normal green CI does not prove #23's hosted uploads.
+Local release metadata/tag and successful hosted jobs identify **0.14.11** at
+`eab55f8c20f7b144551f86885aefc7dbaa9fd4ea`.
+[Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37631528673)
+passed Linux, MSRV and both complete native macOS gates;
+[tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37631528851)
+passed. The prior 0.14.10 matrix also completed successfully. Registry publication
+was not independently checked. Green jobs do not prove #23's failure-only uploads.
+See the [host evidence owner](../releasing.md#host-support).
 
-Released 0.14.10 adopts Shared Tooling 0.1.18
-`a3430b34b32a60f3b245a2b4f7e2f5321556fe56`, with 33/26/13 exact snapshot files,
-and scopes `make build` to the library. The sole root workspace/catalog/lock,
-private provider and complete audited PocketIC gate remain.
+The compatible repository-only **0.14.12** draft adopts clean local committed
+Shared Tooling 0.1.19 `a06e4719e3839b8eefcfb88ec8923aa88eb63ccc` through
+33/30/13 exact snapshot exports. Newer dirty sibling policy work is excluded;
+GitHub main still identifies 0.1.18 with no exact 0.1.19 hosted run at inspection.
+This is committed-source preparation, not upstream publication/native qualification.
+The [adoption owner](../shared-tooling.md#shared-tooling-0119-consolidation)
+records callers, removals and remaining qualification.
 
-The compatible, repository-only **0.14.11** draft adds byte-exact consumer
-finalization fixtures for dated/imported undated history with missing terminal
-newlines or trailing whitespace, with and without pending notes. Both check-only
-preservation and full prepared output are compared without normalizing history.
-These prepare #24's retained contract; the private selector is not replaced yet.
-Only script syntax and diff inspection were performed; fixture execution remains
-maintainer-owned. Cargo versions and the incoming metrics lock edit are unchanged.
-
-A read-only check found upstream remote main and committed sibling HEAD still
-at that same 0.1.18 source. Dirty 0.1.19 work now includes Rust-tool path admission,
-changelog dated-heading/EOF preservation and PocketIC admission/alignment helpers,
-plus disk-space checks. These are not committed or adopted consumer fixes.
-Keep exports untouched until a reviewed committed source and scoped native
-qualification are available; do not patch shared files or create local guards.
-The [adoption owner](../shared-tooling.md#shared-tooling-0118-refresh) retains
-released source and preparation scope.
-
-The useful next batch is one reviewed shared refresh, then bounded consumer
-consolidation under the existing GitHub owners:
+The current batch implements bounded consumer cleanup under existing issues:
 - [#28](https://github.com/dragginzgame/ic-timers/issues/28): adopt the committed
-  Rust-install route repair; aggregate setup remains unchanged unless separately
-  justified. Upstream owner is Shared Tooling #54.
-- [#24](https://github.com/dragginzgame/ic-timers/issues/24): replace the local
-  selector only once the canonical dated-heading/history contract covers the
-  consumer's retained check/write/mode/failure cases. Upstream owner is #55.
-- [#25](https://github.com/dragginzgame/ic-timers/issues/25): adopt committed
-  PocketIC admission/alignment owners without losing single-artifact automatic
-  provisioning, exact external binary pins or explicit-override refusal.
-  The new draft retains the archive matrix and accepts caller-owned binary hashes;
-  it does not yet justify deleting all local provisioning/pin obligations.
-- [#23](https://github.com/dragginzgame/ic-timers/issues/23): maintainer-owned
-  controlled early/late hosted failures must prove downloadable artifacts while
-  preserving gate failure. Ordinary passing jobs do not close it.
+  Rust-install path/receipt admission repair, with no local guard or aggregate
+  Rust-install expansion. Upstream owner is Shared Tooling #54.
+- [#24](https://github.com/dragginzgame/ic-timers/issues/24): replace the private
+  selector with the canonical AWK owner. Keep local check/write, version boundary,
+  mode, reader/producer-failure and atomic-output admission. The isolated version
+  fixture now copies the selector; byte-exact history cases remain selected.
+- [#25](https://github.com/dragginzgame/ic-timers/issues/25): share matrix, checksum
+  and binary admission; check locked client/server alignment before provisioning.
+  Retain the single-artifact automatic cache, exact extracted-binary hashes and
+  explicit-override refusal. Remove only duplicate `sha256`/`verify_binary` owners.
+- [#23](https://github.com/dragginzgame/ic-timers/issues/23): still needs
+  maintainer-controlled early/late hosted failures with downloadable artifacts
+  and the original gate failure. No failure workflow was triggered.
 
-No open issue establishes a missing timer-runtime feature. Avoid inventing API
-work or a runtime release solely for tooling cleanup. The contributor did not
-run tests, builds, lint, installation, release commands or failing workflows.
+Keep all four issues open pending their stated evidence. Syntax, exact exports,
+diffs and full locked offline metadata are preparation only; tests/builds/lint,
+fixture execution, installation and releases remain maintainer-owned. Cargo
+versions stay 0.14.11. Timer runtime/public API and the private provider are unchanged.
+No issue establishes a missing runtime feature; do not manufacture API work.
 
-An incoming root-lock edit now selects ic-metrics 0.2.8 and is preserved.
-Its arithmetic source is unchanged from 0.2.7; Testkit remains 0.20.0. Full locked
-offline metadata resolves all four 0.14.10 members without changing the lock.
-This is graph-consistency evidence, not new runtime/native qualification.
+The incoming Testkit 0.21.1 lock edit is preserved. Published sibling tags identify
+that compatible patch and metrics 0.2.8. The graph already selects metrics 0.2.8
+and split Host packages 0.4.2; Testkit's new patch changes host qualification,
+not its production startup implementation. No dirty metrics/Host source is adopted
+and no direct Host dependency is added. Full locked offline metadata resolves all
+four maintained packages without changing the lock; this is graph consistency,
+not qualification of the new consumer worktree.
 
 ## Released 0.14.5 tooling
 
@@ -162,10 +150,10 @@ the [source-bound host record](../releasing.md#host-support).
   The maintainer's bump finalizes and dates it; a dated section alone does not prove
   tagging, publication or deployment.
 - Released Cargo/lock, finalized changelog and tag identify
-  `479c4b8c8b6412babf7c98ea17c948eacdaeadc3` (0.14.10). Tag truth and Linux/MSRV
-  passed; native macOS was running at inspection. Exact-source evidence belongs
-  in the [host record](../releasing.md#host-support). The incoming metrics lock
-  change is outside that source's hosted qualification.
+  `eab55f8c20f7b144551f86885aefc7dbaa9fd4ea` (0.14.11). Tag truth and the complete
+  Linux/MSRV/native macOS matrix passed. Exact-source evidence belongs
+  in the [host record](../releasing.md#host-support). The incoming Testkit lock
+  change and current tooling edits are outside that source's hosted qualification.
 - During the 2026-10-07 evidence review, an external root-lock edit selected
   ic-metrics 0.2.3 while the independent testing lock still selected 0.2.0.
   That edit was preserved during preparation and is now committed in 0.14.6;
@@ -558,7 +546,7 @@ are recorded in the [0.10.12 note](../changelog/0.10.12.md).
 
 ## Evidence
 
-Current complete released qualification is 0.14.8 at `7194dcd`, as
+Current complete released qualification is 0.14.11 at `eab55f8`, as
 recorded in Release state above; subsequent worktree edits remain unqualified.
 The following earlier inspections retain their historical source scope.
 
@@ -671,11 +659,8 @@ verification is scoped in the [0.10.21 note](../changelog/0.10.21.md).
 
 ## Next action
 
-Finish 0.14.10's native hosted qualification. Keep the new finalization fixtures
-in the same 0.14.11 draft; their execution remains maintainer-owned.
-After the upstream fixes are
-committed/reviewed, refresh their exact source together and implement only the
-bounded consumer cleanup owned by #28/#24/#25. Keep #23 open for controlled
-hosted-failure evidence. Do not copy dirty source, invent timer API work, mutate
-release identities, or weaken the PocketIC gate. Routine inspection alone does
-not create a release draft.
+The maintainer runs the normal complete native/PocketIC gate for the 0.14.12
+worktree. Record its exact-source evidence before closing #28/#24/#25. Keep #23
+open for controlled hosted-failure artifacts. Recheck upstream 0.1.19 publication
+and native CI separately; do not adopt dirty subsequent policy, mutate release
+identities, invent timer API work or weaken the PocketIC gate.

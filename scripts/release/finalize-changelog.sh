@@ -32,80 +32,39 @@ cleanup() {
 }
 trap cleanup EXIT
 
-IC_TIMERS_RELEASE_VERSION="${version}" \
-IC_TIMERS_RELEASE_DATE="${release_date}" \
-IC_TIMERS_RELEASE_PREVIOUS="${previous_version}" \
-perl -0 -e '
-    use strict;
-    use warnings;
-
-    my $path = shift @ARGV;
-    my $text = "# Changelog\n\n";
-    if (-e $path) {
-        open my $input, "<", $path or die "$path: $!\n";
-        local $/;
-        $text = <$input>;
-        close $input or die "$path: $!\n";
-    }
-    my $version = $ENV{IC_TIMERS_RELEASE_VERSION};
-    my $date = $ENV{IC_TIMERS_RELEASE_DATE};
-    my $previous = $ENV{IC_TIMERS_RELEASE_PREVIOUS};
-    # Canonical components compare by length then text, never floating point.
-    my $older = sub {
-        my ($left, $right) = @_;
-        my @left = split /\./, $left;
-        my @right = split /\./, $right;
+# Validate the caller's version boundary independently of draft selection.
+# Compare canonical decimal components without floating-point or Bash overflow.
+if [[ -n "${previous_version}" ]]; then
+    perl -e '
+        my ($previous, $version) = @ARGV;
+        my @previous = split /\./, $previous;
+        my @version = split /\./, $version;
         for my $index (0 .. 2) {
-            next if $left[$index] eq $right[$index];
-            return length($left[$index]) < length($right[$index])
-                if length($left[$index]) != length($right[$index]);
-            return $left[$index] lt $right[$index];
+            next if $previous[$index] eq $version[$index];
+            my $increasing = length($previous[$index]) != length($version[$index])
+                ? length($previous[$index]) < length($version[$index])
+                : $previous[$index] lt $version[$index];
+            exit 0 if $increasing;
+            last;
         }
-        return 0;
-    };
-    die "error: previous version must precede the release target\n"
-        if length($previous) && !$older->($previous, $version);
-    # The explicit bump owns the version. Select one current draft, whether
-    # versionless or already named; history is never used as pending notes.
-    die "error: changelog already finalized ## [$version]\n"
-        if $text =~ /^## \[\Q$version\E\][ \t]+-[ \t]+\d{4}-\d{2}-\d{2}[ \t]*$/m;
-    my $number = qr/(?:0|[1-9][0-9]*)/;
-    my @drafts;
-    while ($text =~ /^## \[(Draft|$number\.$number\.$number)\][ \t]*(?:\n|\z)(.*?)(?=^## |\z)/msg) {
-        my $draft = [$-[0], $+[0] - $-[0], $1, $2];
-        # The bump owns the previous identity. Imported undated notes at or
-        # below it stay historical; only newer numbered sections are pending.
-        next if length($previous) && $draft->[2] ne "Draft" &&
-            !$older->($previous, $draft->[2]);
-        push @drafts, $draft;
-    }
-    die "error: changelog has multiple undated release candidates; choose one\n"
-        if @drafts > 1;
-    my $notes = "";
-    if (@drafts) {
-        my ($start, $length, $label, $body) = @{$drafts[0]};
-        die "error: named draft $label conflicts with requested release $version\n"
-            if $label ne "Draft" && $label ne $version;
-        $notes = $body;
-        substr($text, $start, $length, "");
-    }
-    # Empty/missing drafts are presentation gaps, not evidence of no changes.
-    # The release-impact classifier owns rejection of an unchanged subject.
-    $notes =~ s/\A\s+|\s+\z//g;
-    warn "warning: no release notes selected; preparing an empty $version section\n"
-        unless length $notes;
-    my $release = "## [$version] - $date\n\n";
-    $release .= "$notes\n\n" if length $notes;
-    my $position = $text =~ /^## /mg ? $-[0] : length $text;
-    if ($position > 0 && substr($text, 0, $position) !~ /\n\n\z/) {
-        my $separator = substr($text, 0, $position) =~ /\n\z/ ? "\n" : "\n\n";
-        substr($text, $position, 0, $separator);
-        $position += length $separator;
-    }
-    substr($text, $position, 0, $release);
-    print $text or die "error: cannot write prepared changelog: $!\n";
-    close STDOUT or die "error: cannot flush prepared changelog: $!\n";
-' "${changelog}" > "${temporary}"
+        die "error: previous version must precede the release target\n";
+    ' "${previous_version}" "${version}"
+fi
+
+repository_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+# The shared selector owns candidate classification and retained bytes. The
+# caller owns missing-file presentation, status admission and atomic output.
+# pipefail prevents a failed reader's partial output from becoming a candidate.
+(
+    if [[ -e "${changelog}" ]]; then
+        cat -- "${changelog}"
+    else
+        printf '# Changelog\n\n'
+    fi
+) | awk -v version="${version}" -v previous="${previous_version}" \
+    -v date="${release_date}" \
+    -f "${repository_root}/scripts/ci/finalize-release-changelog.awk" \
+    > "${temporary}"
 
 if [[ "${check_only}" == true ]]; then
     exit 0

@@ -8,9 +8,8 @@ trap 'rm -rf -- "${temporary_root}"' EXIT
 mkdir -p "${temporary_root}"/{bin,cache}
 export IC_TIMERS_FIXTURE_LOG="${temporary_root}/events"
 export IC_TIMERS_FIXTURE_ARCHIVE="${temporary_root}/download.gz"
-IC_TIMERS_FIXTURE_PERL="$(command -v perl)"
 IC_TIMERS_FIXTURE_GZIP="$(command -v gzip)"
-export IC_TIMERS_FIXTURE_PERL IC_TIMERS_FIXTURE_GZIP
+export IC_TIMERS_FIXTURE_GZIP
 cat > "${temporary_root}/candidate" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' execute >> "${IC_TIMERS_FIXTURE_LOG}"
@@ -26,21 +25,21 @@ cp "${temporary_root}/candidate" "${temporary_root}/cached-candidate"
 printf '%s\n' '# Existing cache sentinel.' >> "${temporary_root}/cached-candidate"
 chmod 0750 "${temporary_root}/cached-candidate"
 gzip -c "${temporary_root}/candidate" > "${IC_TIMERS_FIXTURE_ARCHIVE}"
-cat > "${temporary_root}/bin/perl" <<'EOF'
+cat > "${temporary_root}/bin/sha256sum" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-if [[ "${1:-}" != -MDigest::SHA ]]; then
-    exec "${IC_TIMERS_FIXTURE_PERL}" "$@"
+# The canonical checksum owner hashes stdin and admits a checksum record. This
+# substitute controls digest/status only; it never replaces the admission owner.
+cat > "${IC_TIMERS_FIXTURE_LOG}.checksum-input"
+if cmp -s "${IC_TIMERS_FIXTURE_LOG}.checksum-input" "${IC_TIMERS_FIXTURE_ARCHIVE}"; then
+    stage=archive; digest="${IC_TIMERS_FIXTURE_ARCHIVE_SHA}"; valid="${FIXTURE_ARCHIVE_HASH_OK:-1}"
+else
+    stage=binary; digest="${IC_TIMERS_FIXTURE_BINARY_SHA}"; valid="${FIXTURE_BINARY_HASH_OK:-0}"
 fi
-cat "${4}" >/dev/null
-case "${4}" in
-    *.gz) stage=archive; digest="${IC_TIMERS_FIXTURE_ARCHIVE_SHA}"; valid="${FIXTURE_ARCHIVE_HASH_OK:-1}" ;;
-    *) stage=binary; digest="${IC_TIMERS_FIXTURE_BINARY_SHA}"; valid="${FIXTURE_BINARY_HASH_OK:-0}" ;;
-esac
 printf '%s\n' "${stage}-hash" >> "${IC_TIMERS_FIXTURE_LOG}"
 if [[ "${valid}" != 1 ]]; then digest="$(printf '%064d' 0)"; fi
 # Plausible output from a failed producer must still reject the artifact.
-printf '%s\n' "${digest}"
+printf '%s  -\n' "${digest}"
 if [[ "${FIXTURE_HASH_FAIL:-}" == "${stage}" ]]; then exit 1; fi
 EOF
 cat > "${temporary_root}/bin/curl" <<'EOF'
@@ -180,12 +179,12 @@ for host in x86_64-linux x86_64-darwin arm64-darwin; do
             exit 1
         fi
         expect_events binary-hash execute
-        if [[ "${result}" == wrong-version && "${output}" != *'actual version:   wrong version'* ]]; then
-            echo 'error: rejection did not report the observed version' >&2
+        if [[ "${result}" == wrong-version && "${output}" != *'PocketIC version mismatch'* ]]; then
+            echo 'error: rejection did not identify a version mismatch' >&2
             exit 1
         fi
-        if [[ "${result}" == old-server-version && "${output}" != *'actual version:   pocket-ic-server 15.0.0'* ]]; then
-            echo 'error: rejection did not report the old server version' >&2
+        if [[ "${result}" == old-server-version && "${output}" != *'PocketIC version mismatch'* ]]; then
+            echo 'error: rejection did not identify the old server version mismatch' >&2
             exit 1
         fi
     done

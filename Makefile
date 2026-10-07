@@ -108,6 +108,7 @@ package:
 	cargo package --locked --offline --allow-dirty -p ic-timers
 
 pocketic-check:
+	bash scripts/ci/check-pocketic-alignment.sh --manifest Cargo.toml --pins ci/ic-tools.tsv
 	POCKET_IC_BIN="$(POCKET_IC_BIN)" \
 		POCKET_IC_AUTO_INSTALL="$(POCKET_IC_AUTO_INSTALL)" \
 		bash scripts/ci/check-pocketic.sh
@@ -164,6 +165,7 @@ release-check:
 	bash scripts/ci/test-failure-evidence.sh
 	bash .shared-tooling/helpers/scripts/ci/test-format-tools.sh
 	bash scripts/ci/test-ic-tools.sh
+	bash scripts/ci/test-pocketic-checks.sh
 	bash scripts/ci/test-evidence-checksums.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/test-dependency-pins.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/test-cargo-metadata.sh

@@ -157,6 +157,12 @@ cat > scripts/ci/check-pocketic.sh <<'EOF'
 printf '%s\n%s\n' "${POCKET_IC_BIN}" "${POCKET_IC_AUTO_INSTALL}" > provisioning
 if [[ -z "${POCKET_IC_BIN}" ]]; then exit 2; fi
 EOF
+cat > scripts/ci/check-pocketic-alignment.sh <<'EOF'
+#!/usr/bin/env bash
+[[ "$*" == '--manifest Cargo.toml --pins ci/ic-tools.tsv' ]] || exit 2
+printf '%s\n' alignment > alignment
+exit "${FIXTURE_ALIGNMENT_STATUS:-0}"
+EOF
 default_binary="${fixture_root}/target/tools/pocket-ic/16.0.0/pocket-ic"
 for source in default environment command-line same-as-default empty; do
     case "${source}" in
@@ -186,6 +192,14 @@ for source in default environment command-line same-as-default empty; do
         exit 1
     fi
 done
+rm provisioning alignment
+if FIXTURE_ALIGNMENT_STATUS=1 make --no-print-directory pocketic-check > alignment-output 2>&1; then
+    echo 'error: failed PocketIC client alignment was accepted' >&2
+    exit 1
+fi
+test -f alignment
+test ! -e provisioning
+env -u POCKET_IC_BIN make --no-print-directory pocketic-check >/dev/null
 rm provisioning
 cat > overrides.mk <<'EOF'
 # Keep this orchestration fixture independent of prepared formatter tools.

@@ -2,6 +2,25 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.12]
+
+### Development
+
+- Adopt committed Shared Tooling 0.1.19, including Rust-tool path admission
+  repairs and complete failed-batch logs
+  ([#28](https://github.com/dragginzgame/ic-timers/issues/28)).
+- Replace the private changelog selector with the shared owner; retain local
+  check-only admission, mode preservation and atomic replacement. Cover failed
+  readers and producers without rewriting original notes
+  ([#24](https://github.com/dragginzgame/ic-timers/issues/24)).
+- Read PocketIC archive pins from the shared matrix and reuse canonical checksum
+  and binary verification. Check locked client/server alignment before admission
+  or provisioning; preserve automatic single-artifact installation and strict
+  explicit overrides ([#25](https://github.com/dragginzgame/ic-timers/issues/25)).
+- Select the compatible Testkit 0.21.1 host-qualification patch in the sole
+  root lockfile; keep all member dependency declarations inherited from the
+  root catalog.
+
 ## [0.14.11] - 2026-10-07
 
 ### Development

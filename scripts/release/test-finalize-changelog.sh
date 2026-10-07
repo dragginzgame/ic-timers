@@ -165,26 +165,32 @@ for date in 2026-08-01 2026-08-02; do
     cmp "${temporary_root}/original.md" "${temporary_root}/CHANGELOG.md"
 done
 
-# A failed candidate producer may print plausible bytes. Status owns
+# Failed readers and candidate producers may print plausible bytes. Status owns
 # admission, and failure must preserve the complete original changelog.
 mkdir "${temporary_root}/bin"
 printf '# Changelog\n\n## [Draft]\n\n- Pending notes.\n' > "${temporary_root}/CHANGELOG.md"
 cp "${temporary_root}/CHANGELOG.md" "${temporary_root}/original.md"
-printf '%s\n' '#!/usr/bin/env bash' \
-    "printf '# Changelog\\n\\n## [0.1.1] - 2026-08-02\\n\\n- Partial notes.\\n'" \
-    'exit 1' > "${temporary_root}/bin/perl"
-chmod +x "${temporary_root}/bin/perl"
-for operation in check prepare; do
-    arguments=(0.1.1 2026-08-02 "${temporary_root}/CHANGELOG.md")
-    if [[ "${operation}" == check ]]; then arguments=(--check "${arguments[@]}"); fi
-    if PATH="${temporary_root}/bin:${PATH}" bash "${finalizer}" \
-        "${arguments[@]}" >/dev/null 2>&1; then
-        echo "error: ${operation} accepted failed candidate output" >&2
-        exit 1
-    fi
-    cmp "${temporary_root}/original.md" "${temporary_root}/CHANGELOG.md"
+for producer in awk cat; do
+    emitted_heading='## [0.1.1] - 2026-08-02'
+    # Reader output must be admissible to the real selector, so only the
+    # reader's failure status prevents replacement in this case.
+    if [[ "${producer}" == cat ]]; then emitted_heading='## [Draft]'; fi
+    printf '%s\n' '#!/usr/bin/env bash' \
+        "printf '# Changelog\\n\\n${emitted_heading}\\n\\n- Partial notes.\\n'" \
+        'exit 1' > "${temporary_root}/bin/${producer}"
+    chmod +x "${temporary_root}/bin/${producer}"
+    for operation in check prepare; do
+        arguments=(0.1.1 2026-08-02 "${temporary_root}/CHANGELOG.md")
+        if [[ "${operation}" == check ]]; then arguments=(--check "${arguments[@]}"); fi
+        if PATH="${temporary_root}/bin:${PATH}" bash "${finalizer}" \
+            "${arguments[@]}" >/dev/null 2>&1; then
+            echo "error: ${operation} accepted failed ${producer} output" >&2
+            exit 1
+        fi
+        cmp "${temporary_root}/original.md" "${temporary_root}/CHANGELOG.md"
+    done
+    rm "${temporary_root}/bin/${producer}"
 done
-rm "${temporary_root}/bin/perl"
 
 # A chosen minor line cannot silently become a patch through its bump command.
 printf '# Changelog\n\n## [0.2.0]\n\n- Public contract change.\n' > "${temporary_root}/CHANGELOG.md"

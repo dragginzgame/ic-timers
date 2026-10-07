@@ -127,6 +127,10 @@ components compare by length and text without floating-point conversion.
 Same-date finalization is still refused. See the
 [finalizer review](shared-tooling.md#changelog-finalizer-review-and-history-fix)
 for the ownership and fixture scope.
+The 0.14.12 draft delegates selection and pending-body formatting to the shared
+AWK owner, preserving historical bytes. The local wrapper owns reader/selector
+status, check-only admission, modes and atomic output; its isolated fixtures
+include the canonical selector explicitly.
 It cannot silently select among batches, override a chosen minor boundary or
 relabel published history. It also rejects a requested version that is not a strict
 canonical-SemVer increase, an existing exact release tag, or a subject with no
@@ -377,10 +381,18 @@ review without running build, lint or test suites.
 
 ### Host support
 
+Released 0.14.11 is `eab55f8c20f7b144551f86885aefc7dbaa9fd4ea`.
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37631528851)
+passed. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37631528673)
+passed Linux, MSRV and both complete native macOS gates, including the released
+byte-exact consumer finalization fixtures. This does not qualify the 0.14.12
+canonical-selector/PocketIC consolidation or incoming Testkit 0.21.1 lock edit.
+No contributor validation ran for the new worktree.
+
 Released 0.14.10 is `479c4b8c8b6412babf7c98ea17c948eacdaeadc3`.
 [Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37617070319)
 passed. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37617070245)
-passed Linux/MSRV; both native macOS jobs were running at inspection. The preceding
+passed Linux/MSRV and subsequently both complete native macOS jobs. The preceding
 0.14.9 macOS jobs were subsequently cancelled, so its previously pending result
 never became complete native qualification. Neither release qualifies later
 dirty lockfile changes or uncommitted Shared Tooling repairs. Earlier source-bound
@@ -416,8 +428,8 @@ continues to target Wasm on the Internet Computer.
 | Host | Current workflow configuration and evidence scope |
 | --- | --- |
 | Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The release gate pins the audited PocketIC 16.0.0 Linux x86_64 artifact. Recorded results remain scoped to their original subjects. |
-| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.8 and the subsequent committed consolidation at `007dbe3`; later worktree changes remain unqualified. The historical 0.14.1 missing-`rg` failure is recorded below. |
-| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.8 and the subsequent committed consolidation at `007dbe3`, including runtime/cohort subjects; later worktree changes remain unqualified. Historical failures retain their original scope below. |
+| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.11; later worktree changes remain unqualified. The historical 0.14.1 missing-`rg` failure is recorded below. |
+| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.11, including runtime/cohort subjects; later worktree changes remain unqualified. Historical failures retain their original scope below. |
 
 Inspection on 2026-10-06 of the 0.13.1 source at
 `54bbcfc4985d4657578150cbe7112795297115fd` found both native macOS jobs in
@@ -864,6 +876,16 @@ native macOS qualification.
 | `pocket-ic-x86_64-linux.gz` | `268ba79ec7fe9a563a575adf4983c69627093cce2711d142e476cdc7ad04249e` | `69e324bdb68d32d878b7a9504b1379f08f8d1921272bacb065b0fabb3d0f3792` |
 | `pocket-ic-x86_64-darwin.gz` | `9710b9c4ac4eaa7eb10bddaa2aba80560a59362610f1bcd8c6e23be82a39c327` | `b8233ebee53452db7465b43e7b2ff80f2e1445dc148eb2b4b237493d8d15ec66` |
 | `pocket-ic-arm64-darwin.gz` | `41cf77e24effc381e21f5e07e908ed078783646e6de05ed52fd6973221f07e64` | `781f643d4b16105e7544ca810a972f99c0ef1919016c680faa93f10909a14496` |
+
+The 0.14.12 draft reads server/archive identity from the reviewed
+[`ci/ic-tools.tsv`](../ci/ic-tools.tsv) matrix through canonical admission.
+The table above records provenance; it is not another executable archive catalog.
+Extracted-binary digests remain consumer-owned in
+[`check-pocketic.sh`](../scripts/ci/check-pocketic.sh). Canonical checksum and
+binary helpers authenticate them before execution. The Make gate first checks
+the sole root lock's exact PocketIC client/server alignment using prepared
+locked offline Cargo metadata and jq, without fetching or updating dependencies.
+The default cache path retains the current audited artifact's 16.0.0 label.
 
 Automatic provisioning downloads over HTTPS into an adjacent temporary directory,
 checks the archive digest before `gzip`, checks the decompressed binary digest

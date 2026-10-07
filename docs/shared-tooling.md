@@ -1,21 +1,71 @@
 # Shared Tooling adoption
 
-IC Timers adopted Shared Tooling 0.1.18 in released 0.14.10 from reviewed committed revision
-[`a3430b34b32a60f3b245a2b4f7e2f5321556fe56`](https://github.com/dragginzgame/shared-tooling/tree/a3430b34b32a60f3b245a2b4f7e2f5321556fe56).
+The compatible repository-only **0.14.12** draft adopts reviewed local committed
+Shared Tooling 0.1.19
+[`a06e4719e3839b8eefcfb88ec8923aa88eb63ccc`](https://github.com/dragginzgame/shared-tooling/tree/a06e4719e3839b8eefcfb88ec8923aa88eb63ccc).
 The [baseline snapshot](../.shared-tooling.snapshot),
 [audit/setup snapshot](../.shared-tooling-audits.snapshot) and
 [helper snapshot](../.shared-tooling/helpers/.shared-tooling.snapshot) select
-33/26/13 files at that same revision. All overlapping records agree. A clean
-checkout under contributor-owned scratch supplied canonical exports; the dirty
-sibling's unpublished 0.1.19 work was excluded. The nested helper bundle was
-exported into an isolated temporary consumer and copied with exact bytes/modes.
-No sibling files, staged paths, Cargo identities or dependency locks were changed.
+33/30/13 exact files at that same revision. A clean detached scratch clone
+supplies every export; newer dirty sibling governance work is excluded. The
+nested bundle is exported through its own isolated temporary consumer.
+No sibling, staged path, Cargo version or dependency lock was changed.
 
-[AGENTS.md](../AGENTS.md) retains product scope and approved command-authority
-exceptions. The root workspace catalog, private timer provider, host/IC pins,
-normal setup and complete audited PocketIC gate remain unchanged. Optional
-shared helpers do not enter aggregate setup or validation merely by being
-exported. Tests, builds, lint and release effects remain maintainer-owned.
+[AGENTS.md](../AGENTS.md) retains the product overlay and approved command
+exceptions. Timer runtime, the root catalog, library-only default builds,
+private provider and audited PocketIC artifact remain. Optional Rust tooling
+is still separate from aggregate setup; the disk-space helper is not adopted
+without a consumer capacity requirement.
+
+## Shared Tooling 0.1.19 consolidation
+
+The committed Rust-install repair admits directories, executable leaves and
+Cargo receipts before probes or installation, and rechecks after Cargo returns.
+This prepares [#28](https://github.com/dragginzgame/ic-timers/issues/28) without
+running an installation or adding a local guard. The refreshed validation owner
+retains unique combined failed-batch logs and `latest-combined.log`; its existing
+per-target logs remain. The failure collector already archives their owning
+validation directory, so it needs no second concatenation path.
+
+The local changelog wrapper delegates selection to the canonical AWK owner.
+It still validates the requested/previous version boundary, supplies missing-file
+presentation, rejects unsafe output types, admits successful reader/selector
+status, preserves file modes and replaces output atomically. The pending body's
+formatting follows the shared selector rather than a second local normalizer;
+historical notes retain exact bytes. The version-preparation fixture explicitly
+copies this new dependency. Failed-reader and failed-selector cases exercise
+original-file preservation, alongside the released 0.14.11 EOF/history cases.
+This prepares [#24](https://github.com/dragginzgame/ic-timers/issues/24).
+
+The IC installer and consumer PocketIC provisioner share matrix admission through
+`ic-tool-pins.awk`. The provisioner projects the version/archive digest from that
+matrix, delegates checksum and executable admission to shared owners, and retains
+its reviewed extracted-binary hashes, host selection, adjacent temporary download,
+archive-before-decompression ordering and atomic single-artifact cache replacement.
+The Make gate checks full locked offline client/server alignment before admission
+or provisioning. Explicit overrides are never replaced. Its isolated fixture
+proves that alignment failure prevents provisioning; the artifact fixture still
+checks all three hosts' pins, ordering and cache preservation through controlled
+hash/download substitutes. The shared PocketIC fixture is explicitly selected in
+`release-check`. This prepares [#25](https://github.com/dragginzgame/ic-timers/issues/25).
+
+Removed named functions are `sha256` and `verify_binary` from
+[`check-pocketic.sh`](../scripts/ci/check-pocketic.sh), replaced by the canonical
+checksum and PocketIC binary owners. The anonymous Perl draft-selection engine
+is also removed; mode and scalar version-boundary checks remain in the wrapper.
+No timer API or runtime source changes. Testkit 0.21.1 is an incoming compatible
+lock selection and is preserved; ic-metrics remains 0.2.8 and the split Host
+packages remain 0.4.2. Their unpublished sibling work is excluded.
+
+Preparation is exact source/mode/snapshot, shell/embedded-Perl syntax, documentation,
+diff and full locked offline metadata inspection only. No fixtures, tests, builds,
+lint, formatter, installation or release commands were run. At inspection GitHub
+main still identifies 0.1.18 and has no exact 0.1.19 hosted run; this is a local
+committed-source adoption, not upstream publication or native qualification.
+The current consumer worktree likewise needs its maintainer-operated native gate.
+Keep #28/#24/#25 open until their consumer qualification is recorded, and #23
+open for controlled hosted-failure artifact evidence. Earlier evidence below
+retains its original source scope.
 
 ## Shared Tooling 0.1.18 refresh
 
@@ -58,7 +108,7 @@ passed; [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/3761707
 passed Linux/MSRV with both native macOS jobs running at inspection. Those results
 do not qualify the subsequently edited dependency lock or future shared repairs.
 
-The private changelog selector is deliberately retained. Source inspection found
+At the 0.1.18 refresh, the private changelog selector was deliberately retained. Source inspection found
 remaining dated-heading and historical EOF preservation gaps in the shared
 helper, reported in [Shared Tooling #55](https://github.com/dragginzgame/shared-tooling/issues/55).
 [IC Timers #24](https://github.com/dragginzgame/ic-timers/issues/24) stays open;
@@ -66,7 +116,7 @@ the trailing-heading-whitespace fix is accepted, but replacing the engine now
 would weaken maintained refusal/preservation behavior. This refresh alone does
 not close the selector, PocketIC pin or hosted-failure artifact obligations.
 
-The compatible repository-only 0.14.11 draft prepares the consumer-side history
+Released repository-only 0.14.11 prepared the consumer-side history
 contract with byte-exact comparisons in
 [`test-finalize-changelog.sh`](../scripts/release/test-finalize-changelog.sh).
 Dated and imported undated historical sections retain their final bytes with
