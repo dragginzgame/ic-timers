@@ -14,6 +14,8 @@ All notable changes to this project are recorded here.
   repository-only work; timer behavior and dependency selections are unchanged.
 - Remove the retired nested installer directory from shell syntax checks;
   repository fixtures keep it absent so a stale wildcard cannot pass unnoticed.
+- Record and substitute host-tool admission in release-gate fixtures, checking
+  that its failure stops later checks and retaining per-scenario Make output.
 - Retain failed committed-release, staging/index, lockfile and repository-check
   fixtures for CI artifact collection instead of deleting their diagnostic
   inputs. Preserve original failure status and clean up successful runs

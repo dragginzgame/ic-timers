@@ -191,14 +191,16 @@ cat > overrides.mk <<'EOF'
 # Keep this orchestration fixture independent of prepared formatter tools.
 format-tools-check:
 	@:
-fetch actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package pocketic-check msrv testing-check pocketic-watchdog pocketic-cohorts:
+fetch host-tools-check actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package pocketic-check msrv testing-check pocketic-watchdog pocketic-cohorts:
 	@printf '%s\n' '$@' >> checks-ran
 	@if [ '$@' = '$(FAIL_TARGET)' ]; then echo 'failed $@' >&2; exit 1; fi
 EOF
 printf '\ninclude overrides.mk\n' >> Makefile
 fixture_make=(make --no-print-directory -f Makefile
     'MAKE=make --no-print-directory -f Makefile')
-ci_targets=(actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package)
+# actions-check retains its real host-tools-check prerequisite when its recipe
+# is overridden. Record that admission before the action/dependency leaf.
+ci_targets=(host-tools-check actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package)
 release_targets=(fetch pocketic-check "${ci_targets[@]}" msrv testing-check
     pocketic-check pocketic-watchdog pocketic-check pocketic-cohorts)
 for gate in ci release-verify pocketic-watchdog pocketic-cohorts; do
@@ -207,7 +209,11 @@ for gate in ci release-verify pocketic-watchdog pocketic-cohorts; do
         release-verify) expected=("${release_targets[@]}") ;;
         *) expected=(pocketic-check "${gate}") ;;
     esac
-    "${fixture_make[@]}" "${gate}" >/dev/null 2>&1
+    if ! "${fixture_make[@]}" "${gate}" > "$gate-output" 2>&1; then
+        cat "$gate-output" >&2
+        echo "error: ${gate} rejected recorded check success" >&2
+        exit 1
+    fi
     printf '%s\n' "${expected[@]}" > expected-checks
     if ! cmp -s expected-checks checks-ran; then
         cat checks-ran >&2
@@ -216,7 +222,7 @@ for gate in ci release-verify pocketic-watchdog pocketic-cohorts; do
     fi
     rm checks-ran
     for target in "${expected[@]}"; do
-        if "${fixture_make[@]}" "${gate}" "FAIL_TARGET=${target}" >/dev/null 2>&1; then
+        if "${fixture_make[@]}" "${gate}" "FAIL_TARGET=${target}" > "$gate-$target-output" 2>&1; then
             echo "error: ${gate} ignored failed ${target}" >&2
             exit 1
         fi

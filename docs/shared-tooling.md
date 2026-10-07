@@ -67,6 +67,20 @@ so fixture-only files cannot mask the retired path again. Script syntax and
 inventory inspection are preparation evidence; the full gate and updated
 fixture remain maintainer-owned. Original failure logs are retained.
 
+The next maintainer attempt at `f2bdaaf` passed the selected snapshot, shared
+tool/LOC, collector-retention, metadata/index and lockfile fixtures, then stopped
+in `test-release-gate.sh`. Retained scratch `/tmp/tmp.y2Sr9sdTBI` contains the
+actual Makefile/include and leaf overrides, but no host installer or recorded
+leaf events. The override of `actions-check` kept its new `host-tools-check`
+prerequisite, causing real setup verification inside the incomplete fixture.
+The follow-up records/substitutes that prerequisite and puts it before
+`actions-check` in the independent expected order. Existing failure-prefix cases
+therefore include host-admission failure for CI and complete-release dispatch.
+Passing and rejected per-gate Make output is now retained instead of discarded.
+Source/syntax inspection is preparation only; the updated gate fixture has not
+been rerun by the contributor. This does not change production admission or
+qualify the complete `.8` release gate.
+
 At inspection, exact-source
 [upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37593142226)
 passed Linux, lint/security and both native macOS jobs.

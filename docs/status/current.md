@@ -47,6 +47,14 @@ repository fixture. Syntax/inventory inspection is allowed preparation evidence;
 no fixture or full release gate was rerun by the contributor. The user-owned
 gate needs a fresh retry after this repair. See the adoption owner below.
 
+The next maintainer run at `f2bdaaf` passed preceding shared tool/LOC,
+collector-retention and release-metadata fixtures, then failed the release-gate
+fixture. Its recorded leaf overrides omitted the new host-check prerequisite
+of `actions-check`. The follow-up records/substitutes that prerequisite,
+checks its failure prefix in CI/release dispatch and retains scenario output.
+The inspected raw log and scratch remain preserved. Updated fixture execution
+and complete `.8` qualification remain pending and maintainer-owned.
+
 At inspection, exact-source
 [upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37593142226)
 passed Linux, lint/security and both native macOS jobs.
