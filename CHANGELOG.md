@@ -2,6 +2,25 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.10]
+
+### Development
+
+- Adopt Shared Tooling 0.1.18: reject Make options and assignments passed as
+  validation targets, preserve optional complete logs and timing summaries,
+  and fix LOC fixture isolation and build-output exclusion. Keep the single
+  root dependency catalog and complete audited PocketIC release gate
+  ([Shared Tooling #30](https://github.com/dragginzgame/shared-tooling/issues/30),
+  [#37](https://github.com/dragginzgame/shared-tooling/issues/37),
+  [#31](https://github.com/dragginzgame/shared-tooling/issues/31),
+  [#47](https://github.com/dragginzgame/shared-tooling/issues/47),
+  [#50](https://github.com/dragginzgame/shared-tooling/issues/50),
+  [#53](https://github.com/dragginzgame/shared-tooling/issues/53)).
+- Refresh shared audit and setup guidance, including the canister application
+  addendum. Timer behavior and dependency selections are unchanged.
+- Keep `make build` scoped to the library after workspace consolidation;
+  probe cohorts retain separate builds for their mutually exclusive features.
+
 ## [0.14.9] - 2026-10-07
 
 ### Development

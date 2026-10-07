@@ -158,6 +158,7 @@ release-check:
 	bash scripts/ci/test-shared-snapshots.sh
 	bash scripts/ci/test-host-tools.sh
 	bash scripts/ci/test-tool-commands.sh
+	bash scripts/ci/test-rust-tools.sh
 	bash scripts/ci/test-cloc.sh
 	bash scripts/ci/test-cloc-tooling.sh
 	bash scripts/ci/test-failure-evidence.sh
@@ -215,7 +216,7 @@ repository-check:
 		done
 
 build:
-	cargo build --workspace --all-targets --all-features --locked
+	cargo build -p ic-timers --all-targets --all-features --locked
 
 clean:
 	cargo clean

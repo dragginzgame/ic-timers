@@ -4,7 +4,7 @@
 
 Use the [shared code-hygiene method](../../audits/code-hygiene.md) and
 [common audit contract](../../audits/README.md), unchanged from Shared Tooling
-`bfb50bd0884b5e6c5ee9592056531c6108f96d73`. The
+`a3430b34b32a60f3b245a2b4f7e2f5321556fe56`. The
 [audit snapshot](../../.shared-tooling-audits.snapshot) identifies those files;
 [AGENTS.md](../../AGENTS.md) supplies local command authority. This overlay
 selects product scope for a requested review, including a review before a minor
@@ -17,7 +17,12 @@ their colocated tests. Include `testing/crates/ic-timers-runtime-probe`,
 `testing/crates/ic-timers-size-probe` and `testing/crates/ic-timers-pocketic`
 when provider, recovery or measurement assertions are
 in scope. Repository tooling reviews include affected `scripts/`, workflows,
-Make recipes, package inputs and both independent Cargo workspaces.
+Make recipes, package inputs and every member of the single root Cargo workspace.
+
+The [IC canister application addendum](../../audits/ic-canister-applications.md)
+adds boundary questions for the canister probes and source-bound Wasm evidence.
+The library does not own consumer Candid services, stable storage or lifecycle
+registration. This adoption adds no product audit or validation gate.
 
 Retain these local obligations:
 

@@ -12,73 +12,59 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Current tooling batch
 
-The maintainer reports **0.14.8 live** at
-`7194dcdb092a33b90886d46b304545d5c09ca0a6`.
-[Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37601234917)
-passed Linux, MSRV and both complete native macOS gates; matching
-[tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37601234587)
-passed. These results qualify the released source, not the subsequent worktree.
-Registry publication was not independently checked. Released notes are preserved.
+The maintainer reports **0.14.9 live** at
+`7e98cbc969b1e6d6098786a7f36ac3ba66d8165a`. Root Cargo and its sole lockfile
+identify that version for all four members. Released notes are preserved;
+registry publication was not independently checked.
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37614583521)
+passed. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37614583799)
+passed Linux/MSRV; both macOS jobs remained pending at inspection. The latest complete
+released all-host qualification remains 0.14.8, with additional untagged
+consolidation qualification at `007dbe3`. See the [host owner](../releasing.md#host-support).
 
-Prepared one compatible, undated **0.14.9** draft for the maintainer's explicit
-request to centralize every dependency in the main Cargo catalog. The request
-supersedes the independent testing-workspace exception. All four packages now
-belong to the root; every direct dependency and member version inherits there,
-and one root lockfile selects the complete graph. The independent testing
-manifest and lock are removed. Probe directories/publication/lint selection stay
-scoped; the default member and library commands select `ic-timers` explicitly.
-The root `timer-probe` profile preserves former probe optimization settings and
-loaders use its output directory. Release preparation inventories actual Cargo
-members and rewrites all local lock identities; mutation, staging, selected-tree,
-fetch, rollback and hook fixtures now model one graph. See the
-[release owner](../releasing.md#root-workspace-and-dependencies).
+Prepared one compatible, undated **0.14.10** draft. The three snapshots select
+reviewed committed Shared Tooling 0.1.18
+`a3430b34b32a60f3b245a2b4f7e2f5321556fe56`, with 33/26/13 exact files.
+Clean isolated scratch supplied canonical exports; dirty upstream 0.1.19 work
+was excluded. Logger argument admission and optional complete-log/timing retention,
+LOC fixture isolation/output exclusion, hook selection export and audit/setup
+guidance are refreshed. The linked canister application addendum is scoped by
+the local hygiene overlay, not a new product audit or recovery claim.
+The [adoption owner](../shared-tooling.md#shared-tooling-0118-refresh) records
+source, qualification and unresolved boundaries.
 
-The incoming root-lock edit selected ic-metrics 0.2.7 and is preserved in the
-combined graph. During work the root Testkit requirement changed to compatible
-0.20; that selection is preserved, resolving 0.20.0 with Host 0.3.3 transitively.
-PocketIC remains 16.0.0 and its exact thiserror 2.0.18 requirement determines the
-combined selection rather than the former library-only 2.0.21. Probe package
-versions now inherit 0.14.8; the library/root release version is not bumped.
-Runtime/callback source and public API are unchanged. No new Wasm, instruction
-or heap measurement is claimed for this graph.
+A local consolidation omission is corrected: `make build` now selects
+`ic-timers`, avoiding the size probe's mutually exclusive cohort features under
+`--all-features`. The existing command-recording gate fixture includes build
+success/failure propagation. Library runtime/API, dependency selections, provider
+pin and the complete PocketIC qualification remain unchanged. Cargo/lock
+versions remain 0.14.9; no release effects ran.
 
-The maintainer committed the consolidation at
-`007dbe30d5e3bf64f3434d55b34cd1da5c0e08e7`; its
-[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37606855402)
-passed Linux, MSRV and both native macOS gates. This is untagged preparation,
-not a 0.14.9 release. Subsequent worktree changes add stale-probe lock rejection
-coverage and correct current documentation/command descriptions. A separate
-external lockfile refresh appeared after that commit and is preserved; the
-passing committed-source CI does not qualify that refresh or the new fixture.
+The shared Make include exposes optional Rust-set commands, with their exact
+installer/fixture dependencies exported. Established host/IC aggregate setup and
+explicit cargo-sort setup remain unchanged. Its substitute-Cargo fixture is
+selected for the user-operated release checks. No Rust set was installed or added
+to aggregate setup. The unpublished redirected-path fix remains owned by
+[Shared Tooling #54](https://github.com/dragginzgame/shared-tooling/issues/54),
+with consumer adoption in [#28](https://github.com/dragginzgame/ic-timers/issues/28).
+Do not patch the shared installer or copy dirty upstream source.
 
-Complete locked offline root metadata resolves all four members, one timer
-package and the sole metrics selection. Source inheritance, shell syntax and diff
-inspection are preparation evidence. No tests, builds, lint, formatter, tool
-installation or release execution ran for this consolidation. The complete
-user-operated Linux/macOS/PocketIC gate remains required for the new source.
+The local changelog selection engine is retained: shared dated-heading and
+historical EOF preservation gaps are now reported in
+[Shared Tooling #55](https://github.com/dragginzgame/shared-tooling/issues/55).
+[#24](https://github.com/dragginzgame/ic-timers/issues/24) remains open.
+The independent-workspace LOC issue #26 is closed as superseded by the
+maintainer's released single-root workspace decision; no old independent-report
+qualification is claimed. PocketIC pin deduplication and controlled hosted
+failure-artifact evidence remain with their existing GitHub owners.
 
-The three snapshots still select Shared Tooling 0.1.15
-`bfb50bd0884b5e6c5ee9592056531c6108f96d73` (33/23/13 exact files). A read-only
-check found committed 0.1.18 `a3430b34b32a60f3b245a2b4f7e2f5321556fe56`, matching
-remote main, with successful [Linux/macOS upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37604299590).
-Its new logger/LOC corrections are not yet adopted. The dependency/catalog rules
-are unchanged. The [adoption owner](../shared-tooling.md#root-dependency-catalog-consolidation)
-records scope; no sibling checkout or snapshot-owned helper was edited.
-
-ic-metrics 0.2.7 at `09c6786c3b68759ea0ead4d1b987b5a9b472bdbb` is published,
-non-yanked and dependency-free, with successful
-[Linux/macOS/MSRV CI](https://github.com/dragginzgame/ic-metrics/actions/runs/37602306391).
-Its arithmetic source is identical to 0.2.6. Runtime histogram adoption remains
-not planned; application-specific bounds/budgets and reset/attribution belong to
-consumers. Future canonical selector and PocketIC pin work remain in the owning
-[GitHub issues](https://github.com/dragginzgame/ic-timers/issues). Normal passing
-CI does not supply the controlled hosted-failure evidence for #23.
-
-This batch is repository/test-tooling work. Removed files are only the superseded
-`testing/Cargo.toml` and `testing/Cargo.lock`; no named function, method or type
-is removed. The provider's private wrapper and audited PocketIC admission stay
-unchanged. Do not start a second pending release queue or describe this worktree
-as qualified by 0.14.8's CI.
+ic-metrics stays at published 0.2.7 and Testkit at 0.20.0 with Host 0.3.3
+transitively. No evidence justifies another runtime metrics API or direct Host
+dependency. No Wasm, instruction or heap delta is claimed for repository tooling.
+Preparation checks are source/hash/mode/syntax/link/diff inspection and full
+locked offline metadata. Tests, builds, lint, formatting, installation and release
+commands remain maintainer-owned and unexecuted by the contributor. No named
+function, method or type is removed in this batch.
 
 ## Released 0.14.5 tooling
 
@@ -170,13 +156,11 @@ the [source-bound host record](../releasing.md#host-support).
   released batch or, when present, its automatically selected, undated next version.
   The maintainer's bump finalizes and dates it; a dated section alone does not prove
   tagging, publication or deployment.
-- Released Cargo/locks, finalized changelog and tag identify
-  `7194dcdb092a33b90886d46b304545d5c09ca0a6` (0.14.8). Its exact-source
-  [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37601234917)
-  passed Linux/MSRV and both complete native macOS gates; matching
-  [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37601234587)
-  passed. This is the latest complete released qualification in the
-  [host record](../releasing.md#host-support). It does not qualify current .9 edits.
+- Released Cargo/lock, finalized changelog and tag identify
+  `7e98cbc969b1e6d6098786a7f36ac3ba66d8165a` (0.14.9). Tag truth and Linux/MSRV
+  passed; both native macOS jobs remained pending at inspection. Exact-source evidence
+  belongs in the [host record](../releasing.md#host-support). Pending 0.14.10
+  source has no hosted result of its own.
 - During the 2026-10-07 evidence review, an external root-lock edit selected
   ic-metrics 0.2.3 while the independent testing lock still selected 0.2.0.
   That edit was preserved during preparation and is now committed in 0.14.6;
@@ -616,7 +600,7 @@ Later sibling changes were initially dirty and excluded; after they were
 committed at `cb86188`, a separate clean reviewed export adopted them.
 No tests were executed locally during this continuation. Shared Tooling committed
 its newer batch at `a7efade`; upstream Linux regression and lint/security passed,
-while both macOS jobs were queued at inspection. Only its
+while both macOS jobs remained pending at inspection. Only its
 reviewed dependency-preparation section is adopted through an explicit reference;
 the baseline executables and runtime are unchanged. The later clean `a37771f`
 export supplies the audit snapshot only, with linked setup/pinning material
@@ -682,9 +666,9 @@ verification is scoped in the [0.10.21 note](../changelog/0.10.21.md).
 
 ## Next action
 
-Finish maintainer-owned qualification of the prepared single-root graph and its
-one-lock release/formatting fixtures. Keep one undated 0.14.9 section; leave the
-root/library release version and all Git release effects to the maintainer.
-Canonical Shared Tooling 0.1.18 refresh/selector consolidation is separate
-future scope. Do not adopt moving sibling or dirty source, introduce direct
-host dependencies into the publishable timer crate, or weaken the PocketIC gate.
+Qualify the prepared Shared Tooling refresh and library build scope through the
+maintainer-owned normal gate. Keep one undated 0.14.10 section; leave Cargo/lock
+version mutation and all Git release effects to the maintainer. Adopt selector
+and Rust-installer corrections only from reviewed committed upstream source;
+keep their consumer obligations on GitHub. Do not change the timer runtime,
+add a direct Host dependency, restore independent workspaces or weaken PocketIC.

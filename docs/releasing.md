@@ -32,8 +32,8 @@ The current root catalog selects compatible Testkit 0.20, locked to 0.20.0,
 with Host 0.3.3 transitively, and ic-metrics 0.2.7. PocketIC remains the audited
 16.0.0 server. Its client's exact thiserror 2.0.18 requirement determines the
 shared thiserror selection; the old library-only 2.0.21 graph is not retained.
-The root library version remains 0.14.8; unpublished members now inherit that
-identity. This is repository/test dependency preparation, not a released runtime
+All four member versions inherit the root release identity, and release
+preparation updates their local lock records together. This is repository/test dependency preparation, not a released runtime
 or measurement claim. Historical adoption evidence below remains tied to its
 recorded versions, workspace shapes and hosts.
 
@@ -377,6 +377,13 @@ review without running build, lint or test suites.
 
 ### Host support
 
+Released 0.14.9 is `7e98cbc969b1e6d6098786a7f36ac3ba66d8165a`.
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37614583521)
+passed. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37614583799)
+passed Linux/MSRV; both native macOS jobs remained pending at inspection. The later
+Shared Tooling 0.1.18 worktree has no hosted qualification. Earlier source-bound
+evidence follows and must not be relabelled as this release's native result.
+
 Released 0.14.8 is `7194dcdb092a33b90886d46b304545d5c09ca0a6`.
 Its [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37601234917)
 passed Linux, MSRV and both complete native macOS gates; matching
@@ -712,8 +719,8 @@ shared guard requires successful exact cargo-sort 2.1.4 output using the existin
 toolchain. Failed probes reject even if stdout looks correct. They force Cargo
 offline and disable rustup automatic installation; setup remains explicit through
 `make update-dev` or CI. The guard neither formats nor builds. The following
-formatter recipes still cover both independent workspaces with their existing
-options. The hook's isolated index must include the guard along with the current
+formatter recipes cover every member of the single root workspace with their
+existing options. The hook's isolated index must include the guard along with the current
 Makefile and versions file. Fixture wiring and pending native qualification
 belong in the [adoption owner](shared-tooling.md#formatter-prerequisite-adoption).
 
@@ -721,12 +728,12 @@ belong in the [adoption owner](shared-tooling.md#formatter-prerequisite-adoption
 
 `make actions-check` retains the existing gate entry point and delegates to
 the reviewed shared structured checker. It parses workflows, composite actions
-and both independent workspaces' manifests. Git inventory failures, malformed
+and every root workspace member manifest. Git inventory failures, malformed
 metadata and missing or untracked workspace lockfiles fail closed. The checker
 does not resolve dependency versions, install tools or provide runtime evidence.
 The live caller enables `--cargo-inheritance`: member package versions and
 ordinary, development, build and target-specific dependencies must inherit their
-own root. The independent `testing/` workspace retains its own catalog and lock.
+root. The library and probes share that catalog and one lockfile.
 The shared stable version reader validates the selected manifest with offline
 Cargo before projecting TOML; version mutation remains consumer-owned. Parser
 setup is therefore required before `make version` and release preflight too.
@@ -756,15 +763,19 @@ PocketIC keeps its separate exact audited admission owner. Follow the
 macOS and prepare this repository's Rust toolchains/cargo-sort separately.
 The reviewed installer itself requires no sudo.
 
-`make cloc` reports only the publishable root Cargo workspace; the independent
-`testing/` workspace is excluded. The shared reporter resolves a path beneath
-this checkout back to its Git root, so `CLOC_ROOT=testing` does not select the
-probe workspace. `make cloc-tooling CLOC_PARENT=/path/to/projects` inventories
+`make cloc` reports all four members of the root workspace, including the
+unpublished probes. `CLOC_MANIFEST=Cargo.toml` explicitly selects that same graph;
+there is no independent testing manifest. The refreshed reporter isolates its
+fixture workspaces and excludes configured build output, including aliases. `make cloc-tooling CLOC_PARENT=/path/to/projects` inventories
 sibling CI/tooling with snapshot ownership and source hashes, without executing
 consumer code. Counts do not establish instruction or Wasm savings.
 
-The [0.1.15 adoption owner](shared-tooling.md#shared-tooling-0115-common-tool-commands)
+The [0.1.18 adoption owner](shared-tooling.md#shared-tooling-0118-refresh)
 records source inspection and pending Linux/native macOS consumer qualification.
+The shared include's optional Rust-set commands are exported with their helper
+but are not added to aggregate setup. Established explicit cargo-sort setup is
+retained pending the [upstream path repair](https://github.com/dragginzgame/shared-tooling/issues/54)
+and [consumer adoption](https://github.com/dragginzgame/ic-timers/issues/28).
 No install, test/build/lint or formatter runs during contributor preparation.
 Ordinary checks never download tools.
 
