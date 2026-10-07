@@ -1,5 +1,9 @@
 [workspace]
-members = ["pocketic", "runtime-probe", "size-probe"]
+members = [
+    "crates/ic-timers-pocketic",
+    "crates/ic-timers-runtime-probe",
+    "crates/ic-timers-size-probe",
+]
 resolver = "2"
 
 [workspace.package]

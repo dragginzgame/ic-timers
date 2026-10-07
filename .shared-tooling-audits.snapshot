@@ -1,7 +1,7 @@
 # Shared Tooling snapshot v1
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	33c2a6f0018a94915f819ff219e270500ed5b73b
+revision	e378671d90afa237ff63a4b0e3b9551eb2c222b6
 file	b4c691ed78e3122b548566c148f8b8bb74b06ad6ca55092516f8ce271d8b1460	-	audits/README.md
 file	518d890bf485bef06c316b4cf26ac6bf357ed52bcce995e8d9b1232a103d0ea3	-	audits/code-hygiene.md
 file	35fd87d36a09ed0971841abf28535d43470c713a82581c2251b924da1ab8f484	-	audits/flow-convergence-and-duplication.md

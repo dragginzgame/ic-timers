@@ -4,7 +4,7 @@
 
 Use the [shared code-hygiene method](../../audits/code-hygiene.md) and
 [common audit contract](../../audits/README.md), unchanged from Shared Tooling
-`a37771f1b6b5fc9a88ed6ab3b705bdda35cd8fa3`. The
+`e378671d90afa237ff63a4b0e3b9551eb2c222b6`. The
 [audit snapshot](../../.shared-tooling-audits.snapshot) identifies those files;
 [AGENTS.md](../../AGENTS.md) supplies local command authority. This overlay
 selects product scope for a requested review, including a review before a minor
@@ -13,8 +13,9 @@ release or after a substantial API change. It adds no automatic gate or schedule
 ## Product authorities and scope
 
 Trace the affected facade and owners under `crates/ic-timers/src`, including
-their colocated tests. Include `testing/runtime-probe`, `testing/size-probe`
-and `testing/pocketic` when provider, recovery or measurement assertions are
+their colocated tests. Include `testing/crates/ic-timers-runtime-probe`,
+`testing/crates/ic-timers-size-probe` and `testing/crates/ic-timers-pocketic`
+when provider, recovery or measurement assertions are
 in scope. Repository tooling reviews include affected `scripts/`, workflows,
 Make recipes, package inputs and both independent Cargo workspaces.
 

@@ -5,19 +5,19 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `33c2a6f0018a94915f819ff219e270500ed5b73b` (0.1.12). Its provenance and
+  from revision `e378671d90afa237ff63a4b0e3b9551eb2c222b6` (0.1.13). Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
 - Apply the [shared audit methods](audits/README.md) from revision
-  `33c2a6f0018a94915f819ff219e270500ed5b73b`, recorded separately in
+  `e378671d90afa237ff63a4b0e3b9551eb2c222b6`, recorded separately in
   [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). That
   supplemental snapshot also supplies pinned host-parser setup at the same
   reviewed revision. The isolated
   [Cargo/IC helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
   supplies the structured dependency checker, Cargo readers/rewrites, IC
   installer, formatter prerequisite guard, annotated-tag checker and release-command
-  adoption checker from `33c2a6f0018a94915f819ff219e270500ed5b73b`. Apply the
+  adoption checker from `e378671d90afa237ff63a4b0e3b9551eb2c222b6`. Apply the
   [dependency pinning rules](rules/dependency-pinning.md) with the exact local
   [qualification exceptions](docs/releasing.md#dependency-pin-exceptions).
   The [local hygiene overlay](docs/audits/code-hygiene.md) and adoption record scope
@@ -62,6 +62,11 @@ This file is normative for automated contributors.
   unpublished host/probe dependencies. This preserves separate lockfiles,
   Wasm profiles and release qualification without pulling host tooling into
   the publishable workspace. Members inherit from their respective root.
+  Both roots are virtual workspaces under the [workspace layout rule](rules/rust-workspaces.md):
+  `crates/ic-timers` belongs to the publishable root;
+  `testing/crates/ic-timers-pocketic`, `testing/crates/ic-timers-runtime-probe`
+  and `testing/crates/ic-timers-size-probe` belong to the independent testing root.
+  The complete release gate qualifies both graphs and the native/PocketIC probes.
 
 ## Status
 

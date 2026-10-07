@@ -483,11 +483,35 @@ passed Linux checks, MSRV and both complete native macOS release gates. Matching
 [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37505847427) passed
 exact tag/version and main ancestry admission. These results qualify tag-checker
 delegation, the 0.1.11 logger refresh and the repaired restricted-PATH fixture.
-The maintainer-authorized closure of #16 records that evidence. This is the latest
-inspected complete consumer qualification; it does not qualify the new 0.14.5
-worktree. Registry publication was not independently checked. The
-[0.1.12 adoption owner](shared-tooling.md#shared-tooling-0112-adoption) records the
-new source, caller scope and pending native consumer evidence.
+The maintainer-authorized closure of #16 records that evidence. These results
+qualify that release, independently of later source. Registry publication was not
+independently checked.
+
+For release commit `c84d4e4d26f968a9d7f2d37f30f7fed447692c0f` (0.14.5),
+[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37526800896)
+passed Linux checks, MSRV and both complete native macOS release gates. Matching
+[tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37526801007)
+passed exact tag/version and main ancestry admission. All three hosts' logs pass
+the consumer snapshot export/corruption fixture, the shared standard-release
+command checker and release runner command substitutes. Both macOS gates record
+142 native tests, 14 PocketIC runtime subjects, doctests and policy cohorts.
+This is the latest inspected complete consumer qualification; it closes #17/#18
+for the actual adopted 0.1.12 wiring. The
+[adoption owner](shared-tooling.md#shared-tooling-0112-adoption) records its scope
+and the separate unqualified Make-mode boundary reported upstream. Normal hosted
+success does not qualify ignore-errors or non-executing Make modes. Registry
+publication was not independently checked. No new local validation ran during
+the evidence review.
+
+The subsequent undated 0.14.6 preparation adopts Shared Tooling 0.1.13 and moves
+the three host/probe packages under the independent `testing/crates/` root.
+Source-bound upstream Linux/macOS success and cheap consumer locked metadata,
+path/hash and integrity inspection are recorded in the
+[workspace adoption owner](shared-tooling.md#shared-tooling-0113-workspace-adoption).
+The complete native gates still need to qualify the changed consumer source;
+0.14.5 results do not supply that evidence. Make/CI workspace roots, package
+selectors, `testing/target` artifacts and the exact PocketIC gate remain.
+The unrelated root-lock ic-metrics update is also outside 0.14.5 qualification.
 
 Version preparation uses Bash, Perl, Git, Cargo and the explicitly installed
 jq/yq parser pair. It owns regular metadata
@@ -735,7 +759,7 @@ unexecuted and do not supply native host qualification.
 
 ### Testkit harness qualification
 
-The host-only `testing/pocketic` package uses published exact `ic-testkit` 0.17.3,
+The host-only `testing/crates/ic-timers-pocketic` package uses published exact `ic-testkit` 0.17.3,
 whose complete upstream PocketIC types remain available through the shared crate.
 There is no direct `pocket-ic` dependency in this workspace. Locked dependency
 metadata resolves one `ic-testkit` and one PocketIC 16.0.0 package; no declared

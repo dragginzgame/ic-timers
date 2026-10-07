@@ -1,8 +1,8 @@
 # Shared Tooling adoption
 
-IC Timers adopts Shared Tooling 0.1.12 at reviewed committed revision
-[`33c2a6f0018a94915f819ff219e270500ed5b73b`](https://github.com/dragginzgame/shared-tooling/tree/33c2a6f0018a94915f819ff219e270500ed5b73b).
-The [baseline snapshot](../.shared-tooling.snapshot) records twenty-five exact
+IC Timers adopts Shared Tooling 0.1.13 at reviewed committed revision
+[`e378671d90afa237ff63a4b0e3b9551eb2c222b6`](https://github.com/dragginzgame/shared-tooling/tree/e378671d90afa237ff63a4b0e3b9551eb2c222b6).
+The [baseline snapshot](../.shared-tooling.snapshot) records twenty-six exact
 files, including the paired baseline/maintenance rule, release and validation
 runners, checksum owner and linked guides. The supplemental
 [audit snapshot](../.shared-tooling-audits.snapshot) records nineteen files:
@@ -23,6 +23,54 @@ material until a separate caller adoption. Refresh through the upstream
 [distribution workflow](consuming-snapshots.md) from a clean reviewed checkout;
 CI/release validation uses these offline manifests, never a mutable sibling.
 The former document-only copy under `docs/shared-tooling/` remains retired.
+
+## Shared Tooling 0.1.13 workspace adoption
+
+The maintainer authorized [#19](https://github.com/dragginzgame/ic-timers/issues/19)
+after the 0.14.5 evidence review. Exact-source
+[upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37581058940)
+at `e378671` passed Linux portable regression, lint/security and both native
+macOS jobs. The reviewed diff adds the
+[workspace layout rule](../rules/rust-workspaces.md) and links it from the
+baseline, dependency and hook rules and the flat governance export list.
+It changes no shared executable and does not fix the Make-mode boundary in #20.
+
+A clean detached source export supplied all three snapshots at that revision.
+The baseline explicitly adds the new rule, becoming 26 files; the audit/setup
+and nested helper exports retain their 19/17 file sets and unchanged bytes.
+No dirty sibling files were adopted or modified. AGENTS identifies the new
+revision, preserves the maintainer's validation/release exceptions and records
+both independent virtual roots and their package scope.
+
+The publishable library already lives at `crates/ic-timers`. The maintained
+testing packages move as follows, retaining their Cargo package names:
+
+| Previous path | Current path |
+| --- | --- |
+| `testing/pocketic` | `testing/crates/ic-timers-pocketic` |
+| `testing/runtime-probe` | `testing/crates/ic-timers-runtime-probe` |
+| `testing/size-probe` | `testing/crates/ic-timers-size-probe` |
+
+Only testing workspace membership and current owner documentation need path
+changes. Each moved package manifest and Rust file retains its bytes and mode;
+no functions, methods or types are removed. Inherited dependencies still resolve
+from `testing/Cargo.toml`, whose library path is relative to that root and remains
+unchanged. Make and CI select the same workspace roots and Cargo package names.
+The runtime/cohort harnesses load caller-supplied artifact paths, so their
+`testing/target` output locations remain. No build artifacts, frozen reports or
+historical release notes were moved, deleted or rewritten. No alias or duplicate
+package remains at the old maintained source paths.
+
+The undated compatible 0.14.6 draft records this repository-only adoption.
+Both locked offline metadata reads pass and preserve their selected lock graphs;
+all moved files are compared to their previous hashes and source paths are
+inspected through metadata. Three integrity checks and diff checks pass.
+Root Cargo, both lockfiles and runtime source retain their pre-adoption bytes,
+including the unrelated root-lock ic-metrics 0.2.3 edit. This is preparation
+evidence, not native formatting/build/test or IC qualification. #19 stays open
+pending the maintainer's complete gate and matching native-host CI. No new tests,
+builds, lint, formatter, installation or release effects ran. No Wasm or
+instruction delta was measured.
 
 ## Shared Tooling 0.1.12 adoption
 
@@ -109,18 +157,54 @@ Released consumer `49e4e8a25025c6a6329c993ea85255341474682b` (0.14.4) passed
 and [tag identity/main ancestry CI](https://github.com/dragginzgame/ic-timers/actions/runs/37505847427).
 This qualifies the previous tag-checker, logger and restricted-PATH fixture repair.
 With the maintainer's explicit authorization, #16 was closed with that evidence.
-It does not qualify the later 0.14.5 worktree, and registry publication was not
-independently checked.
+That evidence qualifies only 0.14.4; registry publication was not independently
+checked.
 
-The one undated 0.14.5 draft is compatible repository-only work. No named
+The 0.14.5 batch is compatible repository-only work. No named
 function/method/type was removed; the retired fixture had only top-level commands.
-Timer source, Cargo versions, dependencies and both lockfiles are unchanged, so
-there is no downstream Wasm/instruction/heap change. Preparation evidence is exact
+Tooling preparation left timer source, Cargo versions, dependencies and both
+lockfiles unchanged, so the implementation has no downstream Wasm/instruction/heap
+change. Preparation evidence is exact
 export bytes/modes, three integrity manifests, shell syntax, local/exported
 references and diff inspection. No tests, build, lint gate, installation, release
-command, staging, commit, tag, push or publication ran locally. #17/#18 remain
-open pending fresh consumer qualification through the existing complete gate and
-supported native-host CI. The records below retain their historical source scope.
+command, staging, commit, tag, push or publication ran locally during preparation.
+
+The maintainer subsequently released 0.14.5 at
+`c84d4e4d26f968a9d7f2d37f30f7fed447692c0f`.
+[Exact-source main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37526800896)
+passed Linux checks, MSRV and both complete native macOS gates; matching
+[tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37526801007)
+passed tag identity and main ancestry admission. Linux and both macOS logs verify
+the three 25/19/17-file snapshots, pass the actual consumer export/corruption
+fixture, the directly selected shared command checker and the captured-destination
+runner fixtures. Both macOS gates also pass 142 native tests, 14 PocketIC runtime
+subjects, doctests and policy cohorts. #17/#18 were closed with this source-bound
+consumer evidence on 2026-10-07. No contributor checks or release effects were
+executed during that review. Registry publication was not independently checked.
+The records below retain their historical source scope.
+
+### Pending upstream corrections
+
+At the initial inspection the consumer adopted `33c2a6f`. During the 2026-10-07 review, upstream
+committed 0.1.13 at `e378671d90afa237ff63a4b0e3b9551eb2c222b6`; its changes are
+workspace governance only and do not correct the Make-mode finding below.
+[Shared Tooling #30](https://github.com/dragginzgame/shared-tooling/issues/30)
+demonstrates inherited Make modes accepting failed or unexecuted validation and
+formatting. Source inspection confirms the consumer uses the affected release
+runner, validation logger and formatting hook; normal-environment hosted success
+does not qualify these modes. [Consumer #20](https://github.com/dragginzgame/ic-timers/issues/20)
+owns adoption after a reviewed committed upstream correction, including assessment
+of the local `release-x` path. Until corrected, ignore-errors, dry-run, touch and
+query invocations must not be treated as validation or release qualification.
+This is a tooling trust-boundary finding, not a demonstrated timer runtime defect.
+No local reproduction or vendored patch was made.
+
+[Shared Tooling #34](https://github.com/dragginzgame/shared-tooling/issues/34)
+adds a virtual-root and `crates/<package-name>/` layout rule in that new revision.
+Its CI was in progress at the initial inspection. The subsequent all-host pass
+and authorized consumer preparation belong in the
+[0.1.13 adoption record](#shared-tooling-0113-workspace-adoption) above.
+GitHub remains the active follow-up owner for both changes.
 
 ## Shared Tooling 0.1.11 refresh
 

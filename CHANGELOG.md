@@ -2,6 +2,17 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.6]
+
+### Development
+
+- Adopt Shared Tooling 0.1.13 and place the three testing packages under their
+  independent workspace's `crates/` directory, preserving package identities,
+  both lockfiles and the complete release gate
+  ([#19](https://github.com/dragginzgame/ic-timers/issues/19)).
+  This is repository-only work; timer behavior and dependency selections are unchanged
+  by the layout adoption.
+
 ## [0.14.5] - 2026-10-06
 
 ### Development
