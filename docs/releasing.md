@@ -377,6 +377,15 @@ review without running build, lint or test suites.
 
 ### Host support
 
+Released 0.14.10 is `479c4b8c8b6412babf7c98ea17c948eacdaeadc3`.
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37617070319)
+passed. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37617070245)
+passed Linux/MSRV; both native macOS jobs were running at inspection. The preceding
+0.14.9 macOS jobs were subsequently cancelled, so its previously pending result
+never became complete native qualification. Neither release qualifies later
+dirty lockfile changes or uncommitted Shared Tooling repairs. Earlier source-bound
+records follow; normal green CI does not prove #23's hosted-failure artifacts.
+
 Released 0.14.9 is `7e98cbc969b1e6d6098786a7f36ac3ba66d8165a`.
 [Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37614583521)
 passed. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37614583799)

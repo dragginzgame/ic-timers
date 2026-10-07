@@ -1,6 +1,6 @@
 # Shared Tooling adoption
 
-IC Timers prepares Shared Tooling 0.1.18 from reviewed committed revision
+IC Timers adopted Shared Tooling 0.1.18 in released 0.14.10 from reviewed committed revision
 [`a3430b34b32a60f3b245a2b4f7e2f5321556fe56`](https://github.com/dragginzgame/shared-tooling/tree/a3430b34b32a60f3b245a2b4f7e2f5321556fe56).
 The [baseline snapshot](../.shared-tooling.snapshot),
 [audit/setup snapshot](../.shared-tooling-audits.snapshot) and
@@ -51,7 +51,12 @@ consumer's normal native qualification, not a patched installer or local guard.
 passed Linux portable/lint and both native macOS gates. Consumer preparation
 checks hashes/modes, syntax, links, metadata and diffs only; no tests, builds,
 lint, formatter, installation or release commands ran. Consumer qualification
-remains separate and user-owned.
+remains separate and user-owned. The maintainer subsequently released this
+batch at `479c4b8c8b6412babf7c98ea17c948eacdaeadc3` (0.14.10).
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37617070319)
+passed; [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37617070245)
+passed Linux/MSRV with both native macOS jobs running at inspection. Those results
+do not qualify the subsequently edited dependency lock or future shared repairs.
 
 The private changelog selector is deliberately retained. Source inspection found
 remaining dated-heading and historical EOF preservation gaps in the shared
@@ -60,6 +65,16 @@ helper, reported in [Shared Tooling #55](https://github.com/dragginzgame/shared-
 the trailing-heading-whitespace fix is accepted, but replacing the engine now
 would weaken maintained refusal/preservation behavior. This refresh alone does
 not close the selector, PocketIC pin or hosted-failure artifact obligations.
+
+The compatible repository-only 0.14.11 draft prepares the consumer-side history
+contract with byte-exact comparisons in
+[`test-finalize-changelog.sh`](../scripts/release/test-finalize-changelog.sh).
+Dated and imported undated historical sections retain their final bytes with
+no terminal newline, one newline or trailing blank/whitespace lines. Cases
+with and without pending notes check both read-only admission and full output;
+no history extraction normalizes away the EOF defect. Bash syntax and diff
+inspection are preparation evidence only; fixtures were not executed. The
+canonical cut still waits for committed, reviewed Shared Tooling source.
 
 ## Root dependency catalog consolidation
 

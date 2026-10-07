@@ -812,9 +812,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-artifacts"
-version = "0.3.3"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5042523db74e4ddced46afe71cb4ce1784866de09e9e1c5c397ac9103df6051c"
+checksum = "ee6abc9a474494be8eccc6552605974cf23d04c905ff6d691f039f539484ec3b"
 dependencies = [
  "flate2",
  "sha2",
@@ -824,9 +824,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-fs"
-version = "0.3.3"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f840a2a3db8922b0e0b1559d16fe54511809cac5c246427937fb3d8ca690569e"
+checksum = "d6e2c9497e4c4a97caa1df401f7f42e71367c99c831c9dffeb266f0f42453fdb"
 dependencies = [
  "ic-host-artifacts",
  "rustix",
@@ -834,9 +834,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-process"
-version = "0.3.3"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2b687189ccf57435614cbcbdf09e60866eadcf4becfc0c459e07e4549db33f13"
+checksum = "b8365ce90de2e3c2fc6a55159c0912e7a0608275e830d56f206f078fb255939e"
 dependencies = [
  "ic-host-artifacts",
  "ic-host-fs",
@@ -845,9 +845,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-tools"
-version = "0.3.3"
+version = "0.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ddad8025b267157fadbd7ec29372719f68491f7b9ab6b3c6e97c6d4b985a13d"
+checksum = "1192bd4fdfc7836ebf2b20e6437953585e53653224b09243bc1ea1df79da601e"
 dependencies = [
  "ic-host-artifacts",
  "ic-host-fs",
@@ -869,15 +869,15 @@ dependencies = [
 
 [[package]]
 name = "ic-metrics"
-version = "0.2.7"
+version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9b54584cd8658046ca874ec9d67ba7fb7a5028e11467da1cce1a0bf62e6495cd"
+checksum = "2ff922721253a9e6d921203809d99e871128edfc5b0613661c64d094d58343d6"
 
 [[package]]
 name = "ic-testkit"
-version = "0.20.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98d12baac58866f7012572b08d834a3b3ccfc3d6adf378883d1502a8386ab565"
+checksum = "78c939aca7c6d95a426d2053448488940e1e63e53242475a795785606bba834a"
 dependencies = [
  "candid",
  "fs2",

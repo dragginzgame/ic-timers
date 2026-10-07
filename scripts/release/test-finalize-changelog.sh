@@ -91,6 +91,35 @@ for label in Draft 0.1.1 absent; do
     cmp "${temporary_root}/expected.md" "${temporary_root}/CHANGELOG.md"
 done
 
+# Historical bytes must survive finalization without adding a terminal newline
+# or normalizing whitespace. Compare whole files: extracting lines or trimming
+# the suffix would hide the shared selector's former EOF preservation failure.
+for history_heading in '## [0.1.0] - 2026-08-01' '## [0.1.0]'; do
+    for ending in absent newline whitespace; do
+        printf '%s  \t\n\n- Published behavior.  \t' "${history_heading}" \
+            > "${temporary_root}/byte-history.md"
+        case "${ending}" in
+            newline) printf '\n' >> "${temporary_root}/byte-history.md" ;;
+            whitespace) printf '\n\n \t\n' >> "${temporary_root}/byte-history.md" ;;
+        esac
+        for label in Draft absent; do
+            printf '# Changelog\n\n' > "${temporary_root}/CHANGELOG.md"
+            printf '# Changelog\n\n## [0.1.1] - 2026-08-02\n\n' > "${temporary_root}/expected.md"
+            if [[ "${label}" == Draft ]]; then
+                printf '## [Draft]\n\n- Pending notes.\n\n' >> "${temporary_root}/CHANGELOG.md"
+                printf '%s\n\n' '- Pending notes.' >> "${temporary_root}/expected.md"
+            fi
+            cat "${temporary_root}/byte-history.md" >> "${temporary_root}/CHANGELOG.md"
+            cat "${temporary_root}/byte-history.md" >> "${temporary_root}/expected.md"
+            cp "${temporary_root}/CHANGELOG.md" "${temporary_root}/original.md"
+            finalize_fixture --check 0.1.1 2026-08-02 "${temporary_root}/CHANGELOG.md"
+            cmp "${temporary_root}/original.md" "${temporary_root}/CHANGELOG.md"
+            finalize_fixture 0.1.1 2026-08-02 "${temporary_root}/CHANGELOG.md"
+            cmp "${temporary_root}/expected.md" "${temporary_root}/CHANGELOG.md"
+        done
+    done
+done
+
 # Comparison must not lose precision above the exact floating-point range.
 # These adjacent components are also within Cargo SemVer's u64 range.
 previous=0.9007199254740992.0

@@ -12,59 +12,64 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Current tooling batch
 
-The maintainer reports **0.14.9 live** at
-`7e98cbc969b1e6d6098786a7f36ac3ba66d8165a`. Root Cargo and its sole lockfile
-identify that version for all four members. Released notes are preserved;
-registry publication was not independently checked.
-[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37614583521)
-passed. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37614583799)
-passed Linux/MSRV; both macOS jobs remained pending at inspection. The latest complete
-released all-host qualification remains 0.14.8, with additional untagged
-consolidation qualification at `007dbe3`. See the [host owner](../releasing.md#host-support).
+The maintainer reports **0.14.10 live** at
+`479c4b8c8b6412babf7c98ea17c948eacdaeadc3`. Cargo, local lock identities and
+finalized notes identify that release. [Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37617070319)
+passed. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37617070245)
+passed Linux/MSRV; both native macOS jobs were running at inspection.
+The preceding 0.14.9 native jobs were cancelled; that release did not complete
+all-host qualification. Latest complete released all-host evidence remains
+0.14.8, with separate untagged consolidation qualification at `007dbe3`.
+See the [host owner](../releasing.md#host-support). Registry publication was
+not independently checked; normal green CI does not prove #23's hosted uploads.
 
-Prepared one compatible, undated **0.14.10** draft. The three snapshots select
-reviewed committed Shared Tooling 0.1.18
-`a3430b34b32a60f3b245a2b4f7e2f5321556fe56`, with 33/26/13 exact files.
-Clean isolated scratch supplied canonical exports; dirty upstream 0.1.19 work
-was excluded. Logger argument admission and optional complete-log/timing retention,
-LOC fixture isolation/output exclusion, hook selection export and audit/setup
-guidance are refreshed. The linked canister application addendum is scoped by
-the local hygiene overlay, not a new product audit or recovery claim.
-The [adoption owner](../shared-tooling.md#shared-tooling-0118-refresh) records
-source, qualification and unresolved boundaries.
+Released 0.14.10 adopts Shared Tooling 0.1.18
+`a3430b34b32a60f3b245a2b4f7e2f5321556fe56`, with 33/26/13 exact snapshot files,
+and scopes `make build` to the library. The sole root workspace/catalog/lock,
+private provider and complete audited PocketIC gate remain.
 
-A local consolidation omission is corrected: `make build` now selects
-`ic-timers`, avoiding the size probe's mutually exclusive cohort features under
-`--all-features`. The existing command-recording gate fixture includes build
-success/failure propagation. Library runtime/API, dependency selections, provider
-pin and the complete PocketIC qualification remain unchanged. Cargo/lock
-versions remain 0.14.9; no release effects ran.
+The compatible, repository-only **0.14.11** draft adds byte-exact consumer
+finalization fixtures for dated/imported undated history with missing terminal
+newlines or trailing whitespace, with and without pending notes. Both check-only
+preservation and full prepared output are compared without normalizing history.
+These prepare #24's retained contract; the private selector is not replaced yet.
+Only script syntax and diff inspection were performed; fixture execution remains
+maintainer-owned. Cargo versions and the incoming metrics lock edit are unchanged.
 
-The shared Make include exposes optional Rust-set commands, with their exact
-installer/fixture dependencies exported. Established host/IC aggregate setup and
-explicit cargo-sort setup remain unchanged. Its substitute-Cargo fixture is
-selected for the user-operated release checks. No Rust set was installed or added
-to aggregate setup. The unpublished redirected-path fix remains owned by
-[Shared Tooling #54](https://github.com/dragginzgame/shared-tooling/issues/54),
-with consumer adoption in [#28](https://github.com/dragginzgame/ic-timers/issues/28).
-Do not patch the shared installer or copy dirty upstream source.
+A read-only check found upstream remote main and committed sibling HEAD still
+at that same 0.1.18 source. Dirty 0.1.19 work now includes Rust-tool path admission,
+changelog dated-heading/EOF preservation and PocketIC admission/alignment helpers,
+plus disk-space checks. These are not committed or adopted consumer fixes.
+Keep exports untouched until a reviewed committed source and scoped native
+qualification are available; do not patch shared files or create local guards.
+The [adoption owner](../shared-tooling.md#shared-tooling-0118-refresh) retains
+released source and preparation scope.
 
-The local changelog selection engine is retained: shared dated-heading and
-historical EOF preservation gaps are now reported in
-[Shared Tooling #55](https://github.com/dragginzgame/shared-tooling/issues/55).
-[#24](https://github.com/dragginzgame/ic-timers/issues/24) remains open.
-The independent-workspace LOC issue #26 is closed as superseded by the
-maintainer's released single-root workspace decision; no old independent-report
-qualification is claimed. PocketIC pin deduplication and controlled hosted
-failure-artifact evidence remain with their existing GitHub owners.
+The useful next batch is one reviewed shared refresh, then bounded consumer
+consolidation under the existing GitHub owners:
+- [#28](https://github.com/dragginzgame/ic-timers/issues/28): adopt the committed
+  Rust-install route repair; aggregate setup remains unchanged unless separately
+  justified. Upstream owner is Shared Tooling #54.
+- [#24](https://github.com/dragginzgame/ic-timers/issues/24): replace the local
+  selector only once the canonical dated-heading/history contract covers the
+  consumer's retained check/write/mode/failure cases. Upstream owner is #55.
+- [#25](https://github.com/dragginzgame/ic-timers/issues/25): adopt committed
+  PocketIC admission/alignment owners without losing single-artifact automatic
+  provisioning, exact external binary pins or explicit-override refusal.
+  The new draft retains the archive matrix and accepts caller-owned binary hashes;
+  it does not yet justify deleting all local provisioning/pin obligations.
+- [#23](https://github.com/dragginzgame/ic-timers/issues/23): maintainer-owned
+  controlled early/late hosted failures must prove downloadable artifacts while
+  preserving gate failure. Ordinary passing jobs do not close it.
 
-ic-metrics stays at published 0.2.7 and Testkit at 0.20.0 with Host 0.3.3
-transitively. No evidence justifies another runtime metrics API or direct Host
-dependency. No Wasm, instruction or heap delta is claimed for repository tooling.
-Preparation checks are source/hash/mode/syntax/link/diff inspection and full
-locked offline metadata. Tests, builds, lint, formatting, installation and release
-commands remain maintainer-owned and unexecuted by the contributor. No named
-function, method or type is removed in this batch.
+No open issue establishes a missing timer-runtime feature. Avoid inventing API
+work or a runtime release solely for tooling cleanup. The contributor did not
+run tests, builds, lint, installation, release commands or failing workflows.
+
+An incoming root-lock edit now selects ic-metrics 0.2.8 and is preserved.
+Its arithmetic source is unchanged from 0.2.7; Testkit remains 0.20.0. Full locked
+offline metadata resolves all four 0.14.10 members without changing the lock.
+This is graph-consistency evidence, not new runtime/native qualification.
 
 ## Released 0.14.5 tooling
 
@@ -157,10 +162,10 @@ the [source-bound host record](../releasing.md#host-support).
   The maintainer's bump finalizes and dates it; a dated section alone does not prove
   tagging, publication or deployment.
 - Released Cargo/lock, finalized changelog and tag identify
-  `7e98cbc969b1e6d6098786a7f36ac3ba66d8165a` (0.14.9). Tag truth and Linux/MSRV
-  passed; both native macOS jobs remained pending at inspection. Exact-source evidence
-  belongs in the [host record](../releasing.md#host-support). Pending 0.14.10
-  source has no hosted result of its own.
+  `479c4b8c8b6412babf7c98ea17c948eacdaeadc3` (0.14.10). Tag truth and Linux/MSRV
+  passed; native macOS was running at inspection. Exact-source evidence belongs
+  in the [host record](../releasing.md#host-support). The incoming metrics lock
+  change is outside that source's hosted qualification.
 - During the 2026-10-07 evidence review, an external root-lock edit selected
   ic-metrics 0.2.3 while the independent testing lock still selected 0.2.0.
   That edit was preserved during preparation and is now committed in 0.14.6;
@@ -666,9 +671,11 @@ verification is scoped in the [0.10.21 note](../changelog/0.10.21.md).
 
 ## Next action
 
-Qualify the prepared Shared Tooling refresh and library build scope through the
-maintainer-owned normal gate. Keep one undated 0.14.10 section; leave Cargo/lock
-version mutation and all Git release effects to the maintainer. Adopt selector
-and Rust-installer corrections only from reviewed committed upstream source;
-keep their consumer obligations on GitHub. Do not change the timer runtime,
-add a direct Host dependency, restore independent workspaces or weaken PocketIC.
+Finish 0.14.10's native hosted qualification. Keep the new finalization fixtures
+in the same 0.14.11 draft; their execution remains maintainer-owned.
+After the upstream fixes are
+committed/reviewed, refresh their exact source together and implement only the
+bounded consumer cleanup owned by #28/#24/#25. Keep #23 open for controlled
+hosted-failure evidence. Do not copy dirty source, invent timer API work, mutate
+release identities, or weaken the PocketIC gate. Routine inspection alone does
+not create a release draft.

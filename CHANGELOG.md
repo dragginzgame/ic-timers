@@ -2,6 +2,15 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.11]
+
+### Development
+
+- Add byte-exact changelog finalization coverage for historical notes with no
+  terminal newline or retained trailing whitespace, including imported undated
+  history and releases with no pending notes. Prepare the consumer contract for
+  shared-selector adoption ([#24](https://github.com/dragginzgame/ic-timers/issues/24)).
+
 ## [0.14.10] - 2026-10-07
 
 ### Development
