@@ -26,6 +26,11 @@ jobs:
     steps:
       # actions/checkout v6
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Prepare failure evidence scratch
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          mkdir -p "$RUNNER_TEMP/ic-timers-fixtures"
+          printf 'TMPDIR=%s/ic-timers-fixtures\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Prepare regression fixture prerequisites
         run: |
           sudo apt-get update
@@ -53,6 +58,26 @@ jobs:
         run: |
           bash scripts/ci/test-repository-checks.sh
           make msrv testing-check
+      - name: Archive failure evidence
+        if: ${{ failure() }}
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          if ! bash scripts/ci/collect-failure-evidence.sh > "$RUNNER_TEMP/ic-timers-collection.log" 2>&1; then
+            cat "$RUNNER_TEMP/ic-timers-collection.log" >&2
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/ic-timers-collection.log"
+      - name: Upload failure evidence
+        if: ${{ failure() }}
+        # actions/upload-artifact v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ic-timers-failure-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/ic-timers-failure-evidence.tar.gz
+            ${{ runner.temp }}/ic-timers-collection.log
+          compression-level: 0
+          if-no-files-found: warn
 
   checks:
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
@@ -62,6 +87,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           clean: true
+      - name: Prepare failure evidence scratch
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          mkdir -p "$RUNNER_TEMP/ic-timers-fixtures"
+          printf 'TMPDIR=%s/ic-timers-fixtures\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Prepare regression fixture prerequisites
         run: |
           sudo apt-get update
@@ -90,6 +120,26 @@ jobs:
         run: make ci
       - name: Lint nested probes with internal toolchain
         run: make testing-check MSRV="$IC_TIMERS_INTERNAL_TOOLCHAIN"
+      - name: Archive failure evidence
+        if: ${{ failure() }}
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          if ! bash scripts/ci/collect-failure-evidence.sh > "$RUNNER_TEMP/ic-timers-collection.log" 2>&1; then
+            cat "$RUNNER_TEMP/ic-timers-collection.log" >&2
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/ic-timers-collection.log"
+      - name: Upload failure evidence
+        if: ${{ failure() }}
+        # actions/upload-artifact v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ic-timers-failure-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/ic-timers-failure-evidence.tar.gz
+            ${{ runner.temp }}/ic-timers-collection.log
+          compression-level: 0
+          if-no-files-found: warn
 
   macos:
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
@@ -105,6 +155,11 @@ jobs:
     steps:
       # actions/checkout v6
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Prepare failure evidence scratch
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          mkdir -p "$RUNNER_TEMP/ic-timers-fixtures"
+          printf 'TMPDIR=%s/ic-timers-fixtures\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Select native Bash and verify the declared host
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         env:
@@ -154,6 +209,26 @@ jobs:
       - name: Run the complete native release gate
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: make release-verify
+      - name: Archive failure evidence
+        if: ${{ failure() }}
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          if ! bash scripts/ci/collect-failure-evidence.sh > "$RUNNER_TEMP/ic-timers-collection.log" 2>&1; then
+            cat "$RUNNER_TEMP/ic-timers-collection.log" >&2
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/ic-timers-collection.log"
+      - name: Upload failure evidence
+        if: ${{ failure() }}
+        # actions/upload-artifact v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ic-timers-failure-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/ic-timers-failure-evidence.tar.gz
+            ${{ runner.temp }}/ic-timers-collection.log
+          compression-level: 0
+          if-no-files-found: warn
 
   # PR/main owns full validation. A tag at the same main commit only rechecks
   # package metadata and tag identity, avoiding duplicate Rust builds while still
@@ -166,6 +241,11 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           fetch-depth: 0
+      - name: Prepare failure evidence scratch
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          mkdir -p "$RUNNER_TEMP/ic-timers-fixtures"
+          printf 'TMPDIR=%s/ic-timers-fixtures\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - name: Prepare regression fixture prerequisites
         run: |
           sudo apt-get update
@@ -198,3 +278,23 @@ jobs:
           source tool-versions.env
           cargo install cargo-sort --version "$IC_TIMERS_CARGO_SORT_VERSION" --locked
           make release-check
+      - name: Archive failure evidence
+        if: ${{ failure() }}
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          if ! bash scripts/ci/collect-failure-evidence.sh > "$RUNNER_TEMP/ic-timers-collection.log" 2>&1; then
+            cat "$RUNNER_TEMP/ic-timers-collection.log" >&2
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/ic-timers-collection.log"
+      - name: Upload failure evidence
+        if: ${{ failure() }}
+        # actions/upload-artifact v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: ic-timers-failure-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/ic-timers-failure-evidence.tar.gz
+            ${{ runner.temp }}/ic-timers-collection.log
+          compression-level: 0
+          if-no-files-found: warn

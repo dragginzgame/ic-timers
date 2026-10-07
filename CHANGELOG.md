@@ -2,6 +2,21 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.7]
+
+### Development
+
+- Adopt Shared Tooling 0.1.14: reject Make modes that skip execution or mask
+  failures before release, validation and pre-commit formatting. Protect the
+  local exact-version release path and cover isolated fixture exports
+  ([#20](https://github.com/dragginzgame/ic-timers/issues/20)).
+  Check that each failed exact-release phase stops the sequence, and retain
+  failed hook/version fixtures with scenario logs for diagnosis.
+  This is repository-only work; timer behavior and dependency selections are unchanged.
+- Upload failed CI fixture, validation and installer evidence after every job's
+  checks, preserving file modes and source/host identity
+  ([#23](https://github.com/dragginzgame/ic-timers/issues/23)).
+
 ## [0.14.6] - 2026-10-07
 
 ### Development

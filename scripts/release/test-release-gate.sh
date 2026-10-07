@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # This independent fixture owns its Make selections and logger checkout.
-unset MAKEFLAGS MFLAGS MAKEOVERRIDES
+unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
 unset VALIDATION_REPOSITORY_ROOT VALIDATION_RUNNER_SNAPSHOT_PATH
 
 repository_root="$(git rev-parse --show-toplevel)"
@@ -148,7 +148,8 @@ done
 
 # Exercise the actual recipe and Make variable origins without provisioning.
 mkdir -p scripts/ci
-cp "$repository_root/scripts/ci/run-validation-targets.sh" scripts/ci/
+cp "$repository_root/scripts/ci/run-validation-targets.sh" \
+    "$repository_root/scripts/ci/check-make-execution.sh" scripts/ci/
 cat > scripts/ci/check-pocketic.sh <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n%s\n' "${POCKET_IC_BIN}" "${POCKET_IC_AUTO_INSTALL}" > provisioning
@@ -246,9 +247,9 @@ cmp retained-fetch-log "${failure_logs[0]}"
 
 # The canonical logger's optional ripgrep branch must also work on stock hosts.
 mkdir -p stock-bin
-# Make can execute simple recipes directly, so echo needs an external binary.
+# Make can execute simple recipes directly, so printf/echo need external binaries.
 # type -P resolves executables even when Bash supplies a builtin of the same name.
-for tool in bash make git cp mktemp rm mkdir date tee sed grep awk tail dirname echo; do
+for tool in bash sh make git cp mktemp rm mkdir date tee sed grep awk tail dirname echo printf; do
     ln -s "$(type -P "$tool")" "stock-bin/$tool"
 done
 if PATH="$fixture_root/stock-bin" "${fixture_make[@]}" release-verify \
@@ -270,7 +271,27 @@ logging-fail:
 	@exit 7
 logging-parent:
 	+bash child/scripts/ci/run-validation-targets.sh child-gate
+logging-mode-probe:
+	@touch unexpected-logger-dispatch
 EOF
+# Reject non-executing/failure-masking modes before dispatch.
+# GNU Make 3.81 on macOS ignores GNUMAKEFLAGS; 4.0 introduced it.
+mode_variables=(MAKEFLAGS)
+make_version="$(make --version)"
+case "$make_version" in 'GNU Make 3.'*) ;; *) mode_variables+=(GNUMAKEFLAGS) ;; esac
+for variable in "${mode_variables[@]}"; do
+    for flags in i n q t v --ignore-errors --dry-run --question --touch --version; do
+        mode_output="${variable}-${flags}.log"
+        if env "$variable=$flags" bash scripts/ci/run-validation-targets.sh logging-mode-probe \
+            > "${mode_output}" 2>&1; then
+            cat "${mode_output}" >&2
+            echo "error: logger accepted $variable=$flags" >&2
+            exit 1
+        fi
+        grep -Fq 'requires recipe execution and failure propagation' "${mode_output}"
+        test ! -e unexpected-logger-dispatch
+    done
+done
 for backend in prepared stock; do
     logger_path="$PATH"
     if [[ "$backend" == stock ]]; then logger_path="$fixture_root/stock-bin"; fi
@@ -296,7 +317,8 @@ done
 
 # A child logger must select its own checkout while retaining release identity.
 mkdir -p child/scripts/ci
-cp "$repository_root/scripts/ci/run-validation-targets.sh" child/scripts/ci/
+cp "$repository_root/scripts/ci/run-validation-targets.sh" \
+    "$repository_root/scripts/ci/check-make-execution.sh" child/scripts/ci/
 cat > child/Makefile <<'EOF'
 child-gate:
 	@test "$(RELEASE_VERSION)" = 9.8.7
@@ -304,9 +326,10 @@ child-gate:
 	@test "$$VALIDATION_RUNNER_DEPTH" = 2
 	@echo child-checkout-marker
 EOF
-"${fixture_make[@]}" release-verify RELEASE_TARGETS=logging-parent \
+"${fixture_make[@]}" -j2 release-verify RELEASE_TARGETS=logging-parent \
     RELEASE_VERSION=9.8.7 RELEASE_COMMIT=fixture-selected-commit \
     > nested-logging-output 2>&1
 grep -Fq child-checkout-marker nested-logging-output
+if grep -Fq 'jobserver unavailable' nested-logging-output; then exit 1; fi
 
 echo "Release gate execution checks passed"

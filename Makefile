@@ -180,6 +180,7 @@ release-check:
 		--consumer "$(CURDIR)/.shared-tooling/helpers"
 	bash scripts/ci/test-shared-snapshots.sh
 	bash scripts/ci/test-host-tools.sh
+	bash scripts/ci/test-failure-evidence.sh
 	bash .shared-tooling/helpers/scripts/ci/test-format-tools.sh
 	bash .shared-tooling/helpers/scripts/ci/test-ic-tools.sh
 	bash .shared-tooling/helpers/scripts/ci/test-evidence-checksums.sh
@@ -262,14 +263,16 @@ bump-x:
 	bash scripts/release/bump-version.sh "$(VERSION)"
 
 release-x:
-	@if [ -z "$(VERSION)" ]; then echo "error: VERSION=x.y.z is required" >&2; exit 2; fi
-	bash scripts/release/bump-version.sh --check "$(VERSION)"
-	bash scripts/release/commit-release.sh --check-before-bump
-	+$(MAKE) --no-print-directory release-verify
-	+$(MAKE) --no-print-directory bump-x VERSION="$(VERSION)"
-	+$(MAKE) --no-print-directory release-stage
-	+$(MAKE) --no-print-directory release-commit
-	+$(MAKE) --no-print-directory release-push
+	+@set -e; \
+		bash scripts/ci/check-make-execution.sh; \
+		if [ -z "$(VERSION)" ]; then echo "error: VERSION=x.y.z is required" >&2; exit 2; fi; \
+		bash scripts/release/bump-version.sh --check "$(VERSION)"; \
+		bash scripts/release/commit-release.sh --check-before-bump; \
+		$(MAKE) --no-print-directory release-verify; \
+		$(MAKE) --no-print-directory bump-x VERSION="$(VERSION)"; \
+		$(MAKE) --no-print-directory release-stage; \
+		$(MAKE) --no-print-directory release-commit; \
+		$(MAKE) --no-print-directory release-push
 
 release-stage:
 	@set -e; bash scripts/release/workspace-version.sh >/dev/null; \

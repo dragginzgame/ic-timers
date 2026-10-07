@@ -1,8 +1,8 @@
 # Shared Tooling adoption
 
-IC Timers adopts Shared Tooling 0.1.13 at reviewed committed revision
-[`e378671d90afa237ff63a4b0e3b9551eb2c222b6`](https://github.com/dragginzgame/shared-tooling/tree/e378671d90afa237ff63a4b0e3b9551eb2c222b6).
-The [baseline snapshot](../.shared-tooling.snapshot) records twenty-six exact
+IC Timers adopts Shared Tooling 0.1.14 at reviewed committed revision
+[`25e7ce83149e081e4dcc52c55c33724e44153f2a`](https://github.com/dragginzgame/shared-tooling/tree/25e7ce83149e081e4dcc52c55c33724e44153f2a).
+The [baseline snapshot](../.shared-tooling.snapshot) records twenty-seven exact
 files, including the paired baseline/maintenance rule, release and validation
 runners, checksum owner and linked guides. The supplemental
 [audit snapshot](../.shared-tooling-audits.snapshot) records nineteen files:
@@ -23,6 +23,98 @@ material until a separate caller adoption. Refresh through the upstream
 [distribution workflow](consuming-snapshots.md) from a clean reviewed checkout;
 CI/release validation uses these offline manifests, never a mutable sibling.
 The former document-only copy under `docs/shared-tooling/` remains retired.
+
+## Shared Tooling 0.1.14 Make admission
+
+The maintainer authorized [#20](https://github.com/dragginzgame/ic-timers/issues/20)
+after released 0.14.6. Clean detached exports of committed
+`25e7ce83149e081e4dcc52c55c33724e44153f2a` refresh the baseline, audit/setup and
+helper manifests together: 27/19/17 files. Shared source bytes and executable
+modes are retained; dirty sibling work is excluded. Exact-source
+[upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37586649650)
+passed Linux, lint/security and both native macOS jobs.
+
+The baseline explicitly adds the canonical
+[Make execution guard](../scripts/ci/check-make-execution.sh). The release runner,
+validation logger and selected-index formatting hook invoke it before their
+protected effects. It exercises an isolated recipe's execution and failure
+propagation through actual GNU Make, clearing only that probe's `MAKEFILES`;
+it does not parse version-dependent flag spelling or change caller variables.
+Ignore-errors, dry-run, question, touch and version-only modes cannot qualify
+those entrypoints. Ordinary release selections and jobserver controls remain
+inherited. The logger copies its guard into its temporary source snapshot.
+
+The local `release-x` recipe uses the same guard before preflight or mutation.
+Its complete sequence runs in one recursive shell recipe with `set -e`, so a
+failed guard cannot fall through to later phases when outer Make ignores errors.
+The recursive recipe is entered under dry-run, question and touch modes solely
+to perform admission. Outer `make -i` can still report success after ignoring
+that shell's error; rejection prevents effects, not GNU Make's own exit policy.
+Version-only outer Make executes no recipe. Exact-version release ordering and
+its existing manual interruption recovery remain unchanged.
+
+Consumer logger fixtures export the guard beside both root and child loggers;
+the restricted PATH supplies real Make plus external `printf` and `echo`.
+Hook fixtures include the guard in their isolated index. Negative cases cover
+compact and long modes inherited through `MAKEFLAGS` and, on Make 4+, `GNUMAKEFLAGS`, checking
+no leaf release phases, callback-target dispatch, formatting or index refresh.
+Normal nested logger coverage retains release identity and exercises `-j2`.
+GNU Make 3.81 on macOS ignores `GNUMAKEFLAGS`; that variable was introduced in
+[GNU Make 4.0](https://sourceware.org/pipermail/cygwin-announce/2013-October/005192.html).
+Those additional cases are selected only for versions that support it.
+Shared runner fixtures retain their canonical real-Make admission and substituted
+release effects. No parallel local flag parser or patched snapshot is introduced.
+
+The local exact-release fixture also injects bump, stage, commit and push failures
+after validation. It compares the executed phase prefix and requires failure
+propagation, with recording leaves that perform no real release effects.
+Version-preparation and hook fixtures retain failed scratch directories and
+print their paths, while successful runs remove them. Each Make-mode scenario
+has its own log; exact-release phase cases retain their Make output, and normal
+hook formatting/check failures print and retain theirs. This supplies local
+failure diagnostics, not durable hosted artifact storage. These added cases
+have not been executed during contributor preparation.
+
+The workspace rule now also permits application-owned packages under `apps/`;
+our existing independent `crates/` roots need no further move. IC Host Tooling
+package attribution is corrected in shared guidance without changing tool pins.
+The upstream sibling-cloc changes are outside our adopted helper set and add no
+local command. Product validation, both workspace graphs and the exact audited
+PocketIC gate remain unchanged.
+
+Compatible draft 0.14.7 contains this repository-only batch. Preparation uses
+snapshot integrity, exact export/mode comparison, shell syntax, documentation
+and diff inspection. Runtime, probe source, Cargo manifests and both lockfiles
+are preserved. Tests, builds, lint, formatter and release execution remain
+maintainer-owned and have not run for this draft. #20 remains open until complete
+consumer qualification, including native macOS, binds to the prepared source.
+No Wasm, instruction or heap delta is measured or claimed.
+
+The maintainer subsequently authorized the consumer-owned
+[#23 CI evidence collection](https://github.com/dragginzgame/ic-timers/issues/23).
+Final failure-only steps in each job archive job-owned scratch, raw validation
+failures and rejected installer candidates through a small local collector.
+The reviewed official uploader 7.0.1 is pinned in the workflow; tar preserves
+modes and records symlinks without following them, excluding fixture Git metadata.
+The complete release gate selects its native archive fixtures. This does not
+patch the shared logger, installer or snapshots. Shell/YAML syntax and source
+inspection are preparation only; fixtures and controlled hosted failures remain
+maintainer-owned. #20/#23 stay open for their respective qualification evidence.
+The [release owner](releasing.md#ci-failure-evidence) records exact scope and limits.
+
+Read-only metrics review identifies committed 0.2.4 at
+[`21e980b3ed4f1a8d9b6203079ef1e457a3fea588`](https://github.com/dragginzgame/ic-metrics/tree/21e980b3ed4f1a8d9b6203079ef1e457a3fea588),
+with passing [upstream CI](https://github.com/dragginzgame/ic-metrics/actions/runs/37587072330).
+It adds fixed caller-bound histograms; the summary implementation consumed here
+is unchanged. The new dirty 0.2.5 draft is Make tooling work and is not adopted
+as dependency source. Neither current dependency graph is updated. Histogram
+evaluation [#22](https://github.com/dragginzgame/ic-timers/issues/22) concludes
+that no histogram belongs in this release: no production workload, useful bounds
+or acceptable recording-cost budget is established. The upstream publication
+evidence is recorded in that issue; availability is no longer the reason for
+deferral. The [measurement owner](design/callback-delivery-ownership.md#histogram-evaluation)
+records the decision and criteria for reopening. No runtime measurement or
+dependency update is made.
 
 ## Shared Tooling 0.1.13 workspace adoption
 
@@ -61,16 +153,32 @@ The runtime/cohort harnesses load caller-supplied artifact paths, so their
 historical release notes were moved, deleted or rewritten. No alias or duplicate
 package remains at the old maintained source paths.
 
-The undated compatible 0.14.6 draft records this repository-only adoption.
+The compatible 0.14.6 batch records this repository-only adoption.
 Both locked offline metadata reads pass and preserve their selected lock graphs;
 all moved files are compared to their previous hashes and source paths are
 inspected through metadata. Three integrity checks and diff checks pass.
 Root Cargo, both lockfiles and runtime source retain their pre-adoption bytes,
 including the unrelated root-lock ic-metrics 0.2.3 edit. This is preparation
-evidence, not native formatting/build/test or IC qualification. #19 stays open
-pending the maintainer's complete gate and matching native-host CI. No new tests,
+evidence, not native formatting/build/test or IC qualification. At preparation,
+#19 stayed open pending complete native-host qualification. No new tests,
 builds, lint, formatter, installation or release effects ran. No Wasm or
 instruction delta was measured.
+
+The maintainer subsequently released 0.14.6 at
+`0c90c391dff5960a7502fc15a0718b03631f2515` and reports publication live.
+[Exact-source main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37584151377)
+passed Linux checks, MSRV and both complete native macOS gates. Matching [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37584150869)
+passed exact identity/main ancestry admission. #19 was closed with this
+source-bound complete qualification. These are hosted results, not new contributor tests;
+registry publication was not independently checked. The released root/testing
+locks select ic-metrics 0.2.3/0.2.0 respectively; the external root-lock edit was
+preserved throughout preparation, separately from the layout implementation.
+
+The initial read-only inspection identified the then-dirty Make guard dependency
+and recorded the required logger, exact-release and hook fixture propagation in
+[#20](https://github.com/dragginzgame/ic-timers/issues/20). That release adopted
+no dirty helper or entrypoint. The subsequent committed adoption is recorded
+[above](#shared-tooling-0114-make-admission).
 
 ## Shared Tooling 0.1.12 adoption
 

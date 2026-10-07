@@ -271,3 +271,45 @@ registry 0.2.0 graph therefore shows zero observed delta in these maintained
 subjects after consumer ownership of the counter reader. This is a same-host,
 source-bound result, not a universal size/cost guarantee or qualification for
 the subsequent structured-checker adoption.
+
+## Histogram evaluation
+
+The maintainer requested working through
+[#22](https://github.com/dragginzgame/ic-timers/issues/22) after the upstream
+histogram primitive became available. Evaluation at released 0.14.6
+`0c90c391dff5960a7502fc15a0718b03631f2515`, with repository-only 0.14.7 preparation,
+concludes **no histogram adoption**. The issue closes as not planned, with no
+runtime, public snapshot or dependency change. The current root/testing locks
+select ic-metrics 0.2.3/0.2.0 independently. Upstream publication/identity
+evidence for 0.2.4 is linked in the issue; primitive availability is resolved.
+
+Actual maintained consumers in the size/runtime probes and PocketIC subjects
+project sample counts and totals through the existing work summary. They are
+scheduler qualification workloads, not a production distribution requirement;
+they establish neither useful application bounds nor an acceptable heap and
+recording-cost budget. No repeated histogram/percentile accumulator is being
+removed or replaced. Additional diagnostics alone do not justify growing every
+registration and copied inventory snapshot.
+
+`TimerPerformance::record_work` remains the owning sample boundary. A future
+histogram must replace that role's summary internally and project the existing
+summary from it, rather than keeping two aggregates. Its field payload adds
+approximately `16*N + 8` bytes per timer: eight bounds add 136 bytes, or 1.36 MB
+over 10,000 retained declarations, before layout/allocation and snapshot-copy
+effects. Recording adds at most N bound comparisons and a saturating bucket
+update. These are source estimates, not Wasm, heap or instruction measurements.
+
+The runtime finishes the accepted callback-envelope interval before registry
+recording; unchanged reported work instructions cannot qualify bucket overhead.
+The population contains retained, normally completed accepted envelopes. Traps,
+missing/superseded claims and terminal remove-on-stop declarations do not produce
+retained samples; these are not all attempted jobs or exclusive application cost.
+Existing summary counters are sufficient for the maintained contracts.
+
+Reopen for a named application's distribution question, caller-selected useful
+bounds and a storage/recording budget. Qualification must include actual IC
+recording cost and raw Wasm with identical source/lock/workload inputs, plus
+native boundary/saturation and claim/reset/removal tests. Native fake timings
+and callback totals alone cannot establish that cost. No such measurement or
+test ran during this evaluation. Keep this research outside the 0.14.7 tooling
+release; do not add arbitrary buckets, a second registry or instrumentation modes.

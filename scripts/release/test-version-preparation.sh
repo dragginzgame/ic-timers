@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
 repository_root="$(git rev-parse --show-toplevel)"
 export PATH="${repository_root}/.tools/host/bin:${PATH}"
 export YQ="${repository_root}/.tools/host/bin/yq"
-temporary_root="$(mktemp -d)"
-trap 'rm -rf -- "${temporary_root}"' EXIT
+temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/timer-version-test.XXXXXX")"
+trap 'if [[ $? == 0 ]]; then rm -rf -- "${temporary_root}"; else printf "Failed version-preparation fixture retained: %s\n" "${temporary_root}" >&2; fi' EXIT
 git init -q "${temporary_root}"
 mkdir -p "${temporary_root}"/{scripts/release,scripts/ci,.shared-tooling/helpers/scripts/ci,docs/status,docs/changelog,crates/ic-timers/src,testing/probe/src}
 for script in bump-version finalize-changelog \
     warn-release-prose check-bump-impact check-lockfiles workspace-version readme-version update-local-lock; do
     cp "${repository_root}/scripts/release/${script}.sh" "${temporary_root}/scripts/release/"
 done
-cp "${repository_root}/scripts/ci/next-release-version.sh" "${temporary_root}/scripts/ci/"
+cp "${repository_root}/scripts/ci/next-release-version.sh" \
+    "${repository_root}/scripts/ci/check-make-execution.sh" "${temporary_root}/scripts/ci/"
 cp "${repository_root}/.shared-tooling/helpers/scripts/ci/read-cargo-workspace-version.sh" \
     "${repository_root}/.shared-tooling/helpers/scripts/ci/rewrite-local-lock-versions.pl" \
     "${temporary_root}/.shared-tooling/helpers/scripts/ci/"
@@ -272,8 +274,10 @@ release-verify:
 	@if [ '$(FAIL_GATE)' = 1 ]; then exit 1; fi
 patch minor major bump-x:
 	@printf 'bump %s\n' '$(if $(filter bump-x,$@),$(VERSION),$@)' >> release-events
+	@if [ '$(FAIL_PHASE)' = '$@' ]; then exit 9; fi
 release-stage release-commit release-push:
 	@printf '%s\n' '$@' >> release-events
+	@if [ '$(FAIL_PHASE)' = '$@' ]; then exit 9; fi
 ensure-clean release-tag-check:
 	@:
 EOF
@@ -287,8 +291,10 @@ for target in release-x; do
         release-x) requested=0.4.2; candidate=0.4.2 ;;
     esac
     cp original-changelog.md candidate-changelog.md
-    for scenario in empty-notes failed-worktree failed-gate success repeat-success; do
+    for scenario in empty-notes failed-worktree failed-gate failed-bump failed-stage \
+        failed-commit failed-push success repeat-success; do
         cp candidate-changelog.md CHANGELOG.md
+        fail_phase=''
         case "${scenario}" in
             empty-notes)
                 perl -pi -e 's/^- Fix terminal cleanup\.$//' CHANGELOG.md
@@ -296,6 +302,21 @@ for target in release-x; do
                     release-stage release-commit release-push) ;;
             failed-worktree) expected=("preflight --check ${requested}" worktree) ;;
             failed-gate) expected=("preflight --check ${requested}" worktree gate) ;;
+            failed-bump)
+                fail_phase=bump-x
+                expected=("preflight --check ${requested}" worktree gate "bump ${requested}") ;;
+            failed-stage)
+                fail_phase=release-stage
+                expected=("preflight --check ${requested}" worktree gate "bump ${requested}"
+                    release-stage) ;;
+            failed-commit)
+                fail_phase=release-commit
+                expected=("preflight --check ${requested}" worktree gate "bump ${requested}"
+                    release-stage release-commit) ;;
+            failed-push)
+                fail_phase=release-push
+                expected=("preflight --check ${requested}" worktree gate "bump ${requested}"
+                    release-stage release-commit release-push) ;;
             *) expected=("preflight --check ${requested}" worktree gate "bump ${requested}"
                 release-stage release-commit release-push) ;;
         esac
@@ -304,12 +325,15 @@ for target in release-x; do
         fail_worktree=0
         if [[ "${scenario}" == failed-worktree ]]; then fail_worktree=1; fi
         if FIXTURE_FAIL_WORKTREE="${fail_worktree}" "${fixture_make[@]}" "${target}" \
-            "VERSION=${candidate}" "FAIL_GATE=${fail_gate}" >/dev/null 2>&1; then
-            if [[ "${scenario}" == failed-gate || "${scenario}" == failed-worktree ]]; then
+            "VERSION=${candidate}" "FAIL_GATE=${fail_gate}" "FAIL_PHASE=${fail_phase}" \
+            > "${target}-${scenario}.log" 2>&1; then
+            if [[ "${scenario}" == failed-* ]]; then
+                cat "${target}-${scenario}.log" >&2
                 echo "error: ${target} accepted ${scenario}" >&2
                 exit 1
             fi
-        elif [[ "${scenario}" != failed-gate && "${scenario}" != failed-worktree ]]; then
+        elif [[ "${scenario}" != failed-* ]]; then
+            cat "${target}-${scenario}.log" >&2
             echo "error: ${target} rejected valid preflight" >&2
             exit 1
         fi
@@ -324,11 +348,36 @@ for target in release-x; do
         assert_metadata_unchanged original-files
     done
 done
-if "${fixture_make[@]}" release-x VERSION= >/dev/null 2>&1; then
+if "${fixture_make[@]}" release-x VERSION= > release-x-empty-version.log 2>&1; then
     echo 'error: exact release accepted an empty target' >&2
     exit 1
 fi
 test ! -f release-events
+# Actual Make dispatch must stop before every leaf phase and metadata mutation.
+# Outer Make -i may itself return success after ignoring the guard's error;
+# version-only Make never dispatches the recipe. Neither may produce effects.
+# GNU Make 3.81 on macOS ignores GNUMAKEFLAGS; 4.0 introduced it.
+mode_variables=(MAKEFLAGS)
+make_version="$(make --version)"
+case "$make_version" in 'GNU Make 3.'*) ;; *) mode_variables+=(GNUMAKEFLAGS) ;; esac
+for variable in "${mode_variables[@]}"; do
+    for flags in i n q t v --ignore-errors --dry-run --question --touch --version; do
+        mode_status=0
+        mode_output="${variable}-${flags}.log"
+        env "$variable=$flags" "${fixture_make[@]}" release-x VERSION=0.4.2 \
+            > "${mode_output}" 2>&1 || mode_status=$?
+        case "$flags" in
+            v|--version) ;;
+            *) grep -Fq 'requires recipe execution and failure propagation' "${mode_output}" ;;
+        esac
+        case "$flags" in
+            i|--ignore-errors|v|--version) ;;
+            *) test "$mode_status" -ne 0 ;;
+        esac
+        test ! -f release-events
+        assert_metadata_unchanged original-files
+    done
+done
 rm original-changelog.md candidate-changelog.md overrides.mk
 mv scripts/release/preparation-bump-version.sh scripts/release/bump-version.sh
 mv preparation-only.mk Makefile

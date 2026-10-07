@@ -293,7 +293,17 @@ advances the patch version; rerunning an unfinished patch release recovers it. F
 example, with Cargo at 0.8.2 and a current draft, stage and commit the code-bearing
 changes, then run `make release-patch` to validate, bump and release 0.8.3. The bump
 itself also supports a dirty worktree without a preparatory commit. An exact
-`release-x` target must be a strict version increase.
+`release-x` target must be a strict version increase. Standard releases, exact
+releases, validation logging and pre-commit formatting require executing Make
+modes that propagate failures. The shared admission probe rejects ignore-errors,
+dry-run, question, touch and version-only controls before protected effects.
+Use ordinary Make modes for those commands. Outer Make with ignore-errors can
+still mask a rejected recipe's exit status; it cannot admit later release phases.
+Release selections and normal parallel-job controls remain inherited.
+Hook and version-preparation regressions print their retained scratch paths on
+failure, including per-scenario Make output and before/after fixture state.
+Successful fixture runs remove their scratch directories. Exact-release failure
+cases use recording phase substitutes; they do not commit, tag or push.
 Release metadata and both lockfiles are checked before the release commit;
 unstaged and untracked work is rejected before committing or tagging.
 
@@ -495,23 +505,35 @@ passed exact tag/version and main ancestry admission. All three hosts' logs pass
 the consumer snapshot export/corruption fixture, the shared standard-release
 command checker and release runner command substitutes. Both macOS gates record
 142 native tests, 14 PocketIC runtime subjects, doctests and policy cohorts.
-This is the latest inspected complete consumer qualification; it closes #17/#18
-for the actual adopted 0.1.12 wiring. The
+This completed consumer qualification closed #17/#18 for the actual adopted
+0.1.12 wiring. The
 [adoption owner](shared-tooling.md#shared-tooling-0112-adoption) records its scope
 and the separate unqualified Make-mode boundary reported upstream. Normal hosted
 success does not qualify ignore-errors or non-executing Make modes. Registry
 publication was not independently checked. No new local validation ran during
 the evidence review.
 
-The subsequent undated 0.14.6 preparation adopts Shared Tooling 0.1.13 and moves
+Released 0.14.6 adopts Shared Tooling 0.1.13 and moves
 the three host/probe packages under the independent `testing/crates/` root.
 Source-bound upstream Linux/macOS success and cheap consumer locked metadata,
 path/hash and integrity inspection are recorded in the
 [workspace adoption owner](shared-tooling.md#shared-tooling-0113-workspace-adoption).
-The complete native gates still need to qualify the changed consumer source;
-0.14.5 results do not supply that evidence. Make/CI workspace roots, package
+At `0c90c391dff5960a7502fc15a0718b03631f2515`,
+[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37584151377)
+passed Linux, MSRV and both complete native macOS gates.
+Matching [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37584150869)
+passed. #19 was closed with this source-bound complete qualification; this is
+the latest inspected complete consumer release. Make/CI workspace roots, package
 selectors, `testing/target` artifacts and the exact PocketIC gate remain.
-The unrelated root-lock ic-metrics update is also outside 0.14.5 qualification.
+The preserved root-lock ic-metrics update is qualified with this release.
+
+Prepared 0.14.7 adopts Shared Tooling 0.1.14 and the shared Make execution guard.
+Upstream Linux and both macOS jobs passed at the exact exported revision;
+consumer preparation checks cover snapshot integrity, source/mode comparison,
+shell syntax, documentation and diff inspection. No contributor tests, builds,
+lint or formatter ran. Fresh complete consumer qualification, including native
+macOS, remains required; 0.14.6 evidence does not qualify this worktree. See the
+[Make admission owner](shared-tooling.md#shared-tooling-0114-make-admission).
 
 Version preparation uses Bash, Perl, Git, Cargo and the explicitly installed
 jq/yq parser pair. It owns regular metadata
@@ -585,6 +607,45 @@ as ordinary commands before empty-result assertions. This tightens the fixture's
 producer-failure handling without changing the audited version, digest, binary
 verification or override ownership. Source and shell syntax were reviewed;
 the changed fixture has not been executed.
+
+### CI failure evidence
+
+All four CI jobs prepare a dedicated `$RUNNER_TEMP/ic-timers-fixtures` directory
+after checkout and set subsequent steps' `TMPDIR` to it. Each job ends with
+failure-only archive and upload steps, after installation and its final check;
+the macOS matrix retains separate Intel and Apple Silicon artifacts. Earlier
+failure status is never turned into success by collection.
+
+[The collector](../scripts/ci/collect-failure-evidence.sh) selects that scratch
+tree, `.git/release-state/validation-failures`, `target/validation-failures` and
+failed `.tools/host-set.*` / `.tools/ic-set.*` installer candidates. It excludes
+fixture `.git` entries and does not select the checkout's installed tool trees
+or general build caches. Tar records symlinks without following them and
+preserves modes, including the metadata modes used by release regressions.
+`identity.txt` records actual checkout and event SHAs, job, host, run and attempt.
+If no diagnostic payload exists yet, the archive still records that identity.
+
+The official upload action is pinned to 7.0.1 at
+[`043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`](https://github.com/actions/upload-artifact/tree/043fb46d1a93c77aae656e7c1c64a875d1fc6a0a).
+Its [documented permission behavior](https://github.com/actions/upload-artifact/blob/043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/README.md#permission-loss)
+requires tar for mode preservation. The uploader selects only the tar archive
+and collection log, with a unique source/job/OS/architecture/attempt name and
+the repository's normal retention period. Download the artifact from the failed
+run and extract its `ic-timers-failure-evidence.tar.gz` with `tar -xzpf` in a
+scratch directory. A collection failure prints and uploads its diagnostic log;
+its archive may be absent or incomplete. Hosted job logs remain available too.
+
+The maintained `release-check` gate selects
+[collector fixtures](../scripts/ci/test-failure-evidence.sh) for contents, identity,
+mode preservation, symlink handling, exclusions, empty payloads, rejected inputs
+and archive failure propagation. Preparation inspected source, shell/YAML syntax
+and the pinned action; those fixtures have not run. Closing
+[#23](https://github.com/dragginzgame/ic-timers/issues/23) requires native Linux
+and both macOS fixture qualification plus downloadable evidence from
+maintainer-controlled early-installer and late-check failures on the declared
+hosts, preserving the failing job result. Normal green CI does not prove upload
+execution. Contributor preparation dispatches no failing workflow or release.
+Force-terminated runners cannot guarantee collection.
 
 ### Formatter prerequisites
 

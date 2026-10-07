@@ -12,38 +12,83 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Current tooling batch
 
-The undated compatible 0.14.6 draft prepares
-[#19](https://github.com/dragginzgame/ic-timers/issues/19): adopt clean committed
-Shared Tooling 0.1.13 at `e378671d90afa237ff63a4b0e3b9551eb2c222b6` and put the
-three testing packages under `testing/crates/<existing-package-name>/`.
-All three snapshots record that revision, with 26/19/17 declared files. The
-baseline adds the workspace layout rule; audit/setup and helper bytes remain.
-Exact-source [upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37581058940)
-passed Linux, lint/security and both native macOS jobs. No sibling file changed.
+Prepared compatible, undated **0.14.7** for
+[#20](https://github.com/dragginzgame/ic-timers/issues/20): adopt committed
+Shared Tooling 0.1.14 at `25e7ce83149e081e4dcc52c55c33724e44153f2a` across all three
+snapshots, with 27/19/17 files. Exact-source
+[upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37586649650)
+passed Linux, lint/security and both native macOS jobs. Exported bytes/modes are
+retained; dirty sibling changes are excluded and no sibling files are modified.
 
-Both roots remain virtual and independent, with their existing locks, profiles,
-dependency catalogs and package identities. Moved manifests and Rust files retain
-their bytes/modes. Make/CI select the same root manifests and package names;
-harness artifacts remain under `testing/target` via explicit environment inputs.
-Current owner documentation uses the new package paths; historical evidence
-retains its old paths. No duplicate source tree, alias or named-symbol deletion
-is introduced. No Cargo version or lockfile mutation was performed.
+The shared Make guard precedes release-runner, logger and hook effects and is
+included in source snapshots and consumer fixture exports. Local `release-x`
+uses it first in one recursive `set -e` shell sequence, preventing later phases
+under inherited ignore-errors or non-executing modes. Outer Make -i can still
+ignore that recipe's status; no release effects are admitted. Version-only outer
+Make dispatches nothing. Fixture coverage checks inherited short/long modes,
+index/metadata preservation, restricted PATH and nested `-j2` release selections.
+There is no local mode parser or patched shared source.
 
-Preparation passes both locked offline metadata reads, package/source path and
-hash inspection, all three snapshot integrity checks and diff inspection.
-Native formatting, tests/builds/lint and PocketIC/cohort qualification remain
-maintainer-owned and have not run for this worktree. #19 stays open pending that
-evidence; previous released CI does not qualify the move. This is repository-only
-compatible work with no public timer API/semantic change and no measured Wasm or
-instruction delta. Keep the one 0.14.6 draft undated; release execution is user-owned.
+The continued .7 batch adds local exact-release bump/stage/commit/push failure
+cases, checking that only the phase prefix executes and the failure propagates.
+Hook and version-preparation fixtures now retain failed scratch directories and
+print their paths; successful runs still clean up. Separate scenario logs retain
+Make admission and exact-release output, and normal formatter failures also print
+their captured output. These are prepared fixtures, not new executed evidence.
+No new committed upstream revision was available at the follow-up re-check;
+dirty Shared Tooling/metrics maintenance remains excluded.
 
-[#20](https://github.com/dragginzgame/ic-timers/issues/20) remains upstream-blocked:
-[Shared Tooling #30](https://github.com/dragginzgame/shared-tooling/issues/30)
-has no committed Make execution-mode correction. Shared Tooling 0.1.13 changes
-governance only. The consumer release runner, logger and hook remain unchanged;
-use ordinary executing Make modes for qualification until the fix is adopted.
-No vendored patch or parallel local mode parser was added. GitHub owns follow-up.
-See the [adoption owner](../shared-tooling.md#shared-tooling-0113-workspace-adoption).
+The maintainer authorized working through #20/#22/#23. The #20 implementation
+is complete in this draft; source-bound consumer qualification remains pending.
+[#23](https://github.com/dragginzgame/ic-timers/issues/23) now has final failure
+collection/upload steps in all four workflow jobs, including both macOS matrix
+hosts. Job-owned TMPDIR collects fixture scratch; a local collector archives
+that tree, raw validation failures and failed host/IC installer candidates,
+preserving modes and symlinks without fixture Git metadata. It does not select
+the checkout's installed tools or build caches. Artifacts identify source, job,
+host and attempt, using the reviewed
+official upload action 7.0.1 at `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`.
+The maintained release gate selects collector fixtures for contents, modes,
+identity, symlinks, exclusions, empty inputs and archive failure propagation.
+No fixtures or controlled failing hosted runs have executed during preparation;
+#23 stays open for native and hosted artifact qualification. See
+[CI failure evidence](../releasing.md#ci-failure-evidence).
+
+Preparation checks snapshot integrity, exact export bytes/modes, shell syntax,
+documentation and diff whitespace. Tests, builds, lint, formatter and deployment
+validation remain maintainer-owned and have not run for this draft. #20 remains
+open pending complete source-bound consumer qualification. This is repository-only
+work; runtime/probe source, Cargo versions, dependency selections, both lockfiles,
+public API and the audited PocketIC gate remain unchanged. No functions, methods
+or types are removed. No Wasm/instruction/heap savings are claimed.
+See the [adoption owner](../shared-tooling.md#shared-tooling-0114-make-admission).
+
+Released 0.14.6 at `0c90c391dff5960a7502fc15a0718b03631f2515` adopted Shared Tooling
+0.1.13 and moved the three testing packages under their independent `crates/`
+root, preserving package identities and both lock graphs. Its
+[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37584151377)
+passed Linux, MSRV and both complete native macOS gates; matching
+[tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37584150869) passed.
+#19 was closed with this complete qualification. The maintainer reports it live;
+registry publication was not independently checked. Released changelog history
+is preserved.
+
+Read-only review of ic-metrics identifies committed release 0.2.4 at
+`21e980b3ed4f1a8d9b6203079ef1e457a3fea588` and passing
+[upstream CI](https://github.com/dragginzgame/ic-metrics/actions/runs/37587072330).
+It adds bounded histograms without changing our existing summary implementation.
+The dirty next 0.2.5 draft is tooling-only and excluded. Root/testing locks still
+select 0.2.3/0.2.0. [#22](https://github.com/dragginzgame/ic-timers/issues/22) records
+work-histogram cost and retained-sample bias: histogram storage would replace the
+summary internally and its recording cost lies outside our current instruction
+envelope. The maintainer-authorized evaluation concludes without adopting
+histograms; #22 closes as not planned. Current probes use summary samples/totals
+and do not establish production histogram bounds or an acceptable per-timer
+recording/storage budget. Upstream publication evidence is now recorded in #22;
+availability is not a blocker. Reopen only for a named application need and cost
+qualification. The
+[measurement owner](../design/callback-delivery-ownership.md#histogram-evaluation)
+records the decision. No dependency update or runtime instrumentation ran.
 
 ## Released 0.14.5 tooling
 
@@ -136,19 +181,20 @@ the [source-bound host record](../releasing.md#host-support).
   The maintainer's bump finalizes and dates it; a dated section alone does not prove
   tagging, publication or deployment.
 - Cargo, both local-package lock entries, finalized changelog and tag identify
-  release commit `c84d4e4d26f968a9d7f2d37f30f7fed447692c0f` (0.14.5).
-  Its [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37526800896)
-  passed Linux, MSRV and both complete native macOS gates; matching
-  [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37526801007) passed.
-  This is the latest inspected complete consumer qualification; it does not
-  qualify subsequent edits. Registry publication was not independently
-  checked. Earlier 0.14.2–0.14.4 results and prior failures retain their exact
+  release commit `0c90c391dff5960a7502fc15a0718b03631f2515` (0.14.6).
+  Its [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37584151377)
+  passed Linux, MSRV and both complete native macOS gates.
+  Matching [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37584150869)
+  passed. This is the latest inspected complete consumer qualification; it does
+  not qualify the later 0.14.7 worktree. Registry publication was not
+  independently checked. Earlier results and prior failures retain their exact
   source scope in the [host record](../releasing.md#host-support).
 - During the 2026-10-07 evidence review, an external root-lock edit selected
   ic-metrics 0.2.3 while the independent testing lock still selected 0.2.0.
-  That edit was preserved without modification or qualification; released
-  0.14.5 CI does not qualify the new dependency selection. Reinspect actual
-  working files before continuing dependency work.
+  That edit was preserved during preparation and is now committed in 0.14.6;
+  its complete hosted qualification remains separate from the subsequent
+  tooling worktree. The independently selected graphs remain distinct; no contributor
+  dependency update ran during the layout or evidence review.
 - Released 0.13.3 covers a compatible callback-capture destruction fix
   and removal of handle detachment/reinstallation for rejected/coalesced public
   requests. API, snapshots, recurrence, generations and dependencies are unchanged.
