@@ -1,6 +1,6 @@
 # Shared Tooling adoption
 
-The compatible repository-only **0.14.12** draft adopts reviewed local committed
+Released compatible repository-only **0.14.12** adopts reviewed committed
 Shared Tooling 0.1.19
 [`a06e4719e3839b8eefcfb88ec8923aa88eb63ccc`](https://github.com/dragginzgame/shared-tooling/tree/a06e4719e3839b8eefcfb88ec8923aa88eb63ccc).
 The [baseline snapshot](../.shared-tooling.snapshot),
@@ -59,13 +59,41 @@ packages remain 0.4.2. Their unpublished sibling work is excluded.
 
 Preparation is exact source/mode/snapshot, shell/embedded-Perl syntax, documentation,
 diff and full locked offline metadata inspection only. No fixtures, tests, builds,
-lint, formatter, installation or release commands were run. At inspection GitHub
-main still identifies 0.1.18 and has no exact 0.1.19 hosted run; this is a local
-committed-source adoption, not upstream publication or native qualification.
-The current consumer worktree likewise needs its maintainer-operated native gate.
-Keep #28/#24/#25 open until their consumer qualification is recorded, and #23
-open for controlled hosted-failure artifact evidence. Earlier evidence below
+lint, formatter, installation or release commands were run. At preparation GitHub
+main still identified 0.1.18 with no exact 0.1.19 run. Upstream main now includes
+that committed source through 0.1.20 `3ecc48e`;
+[its native CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37641211708)
+now passes all three declared hosts. That supplies upstream qualification;
+later governance changes are not adopted in this snapshot, and the consumer's
+Intel evidence remains separate.
+The maintainer released the consumer batch at `72e8f5d` (0.14.12).
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37639154601)
+passed; [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37639154602)
+passed Linux/MSRV and Apple Silicon. Intel macOS failed without executing steps
+and supplied no artifact or native qualification. Keep #28/#24/#25 open for that
+remaining native evidence, and #23 open for controlled hosted-failure artifacts.
+The 0.14.13 manual driver is documented with the
+[existing evidence owner](releasing.md#ci-failure-evidence). Earlier evidence below
 retains its original source scope.
+
+The .13 follow-up reuses the download action pin from committed 0.1.20 for a
+manual-only consumer verification matrix, while keeping the existing collector
+and uploader. It verifies actual downloaded tar entries against known scenario
+bytes, modes, status and exact original job/run/source identity. Upstream upload
+proof cannot substitute for these six consumer observations. No shared snapshot
+bytes or baseline authority change is needed for this local qualification repair.
+
+The 2026-10-07 continuation reviewed committed Shared Tooling 0.1.21
+`45e34e92b43edb9543d5b7212774f87f8334079f` and
+[its pending native run](https://github.com/dragginzgame/shared-tooling/actions/runs/37652236506).
+It adds explicit PR-gated delivery for protected release branches; the common
+direct flow remains the default. IC Timers' main branch is unprotected and no
+local issue requires that mode. Keep the current snapshot rather than copying
+an unqualified merged-source release flow or selecting PR delivery implicitly.
+An eventual reviewed refresh must reconcile contribution policy with the approved
+local command exceptions and keep all three snapshot revisions aligned; refreshing
+the runner alone does not adopt PR delivery. No new common-helper repair is needed
+for #24/#25/#28, which are awaiting consumer Intel evidence.
 
 ## Shared Tooling 0.1.18 refresh
 

@@ -128,4 +128,58 @@ tar -xzpf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" -C "$fixture/retained
 for input in "${retained_inputs[@]}"; do
     cmp "$input" "$fixture/retained-extracted/${input#"$RUNNER_TEMP/"}"
 done
-echo 'CI failure evidence selection, metadata, modes, empty-input and local retention checks passed'
+
+# Exercise the manual qualification driver in the isolated checkout, with fake
+# CI identity, a substitute download and a failing scratch Make recipe. This
+# proves local retained bytes/status; it does not dispatch or qualify uploads.
+mkdir -p "$GITHUB_WORKSPACE/scripts/ci" "$GITHUB_WORKSPACE/scripts/dev" "$GITHUB_WORKSPACE/ci"
+for script in qualify-failure-evidence run-validation-targets check-make-execution verify-file-checksum; do
+    cp "$root/scripts/ci/$script.sh" "$GITHUB_WORKSPACE/scripts/ci/"
+done
+cp "$root/scripts/dev/install-host-tools.sh" "$GITHUB_WORKSPACE/scripts/dev/"
+cp "$root/ci/tool-versions.env" "$GITHUB_WORKSPACE/ci/"
+status=0
+GITHUB_ACTIONS=true GITHUB_EVENT_NAME=workflow_dispatch \
+    bash "$GITHUB_WORKSPACE/scripts/ci/qualify-failure-evidence.sh" unknown \
+    > "$fixture/invalid-qualification.log" 2>&1 || status=$?
+test "$status" -eq 2
+status=0
+GITHUB_ACTIONS=true GITHUB_EVENT_NAME=push \
+    bash "$GITHUB_WORKSPACE/scripts/ci/qualify-failure-evidence.sh" early \
+    > "$fixture/nonmanual-qualification.log" 2>&1 || status=$?
+test "$status" -eq 2
+for stage in early late; do
+    status=0
+    GITHUB_ACTIONS=true GITHUB_EVENT_NAME=workflow_dispatch \
+        bash "$GITHUB_WORKSPACE/scripts/ci/qualify-failure-evidence.sh" "$stage" \
+        > "$fixture/$stage-qualification.log" 2>&1 || status=$?
+    expected=22
+    if [[ "$stage" == late ]]; then expected=2; fi
+    if [[ "$status" != "$expected" ]]; then
+        cat "$fixture/$stage-qualification.log" >&2
+        exit 1
+    fi
+    scenarios=("$RUNNER_TEMP/ic-timers-fixtures/hosted-${stage}."*)
+    test "${#scenarios[@]}" -eq 1
+    scenario="${scenarios[0]}"
+    printf 'stage=%s\nstatus=%s\nexpected=%s\n' "$stage" "$expected" "$expected" > "$fixture/expected-status"
+    cmp "$fixture/expected-status" "$scenario/status.txt"
+    cmp "$scenario/before.txt" "$scenario/after.txt"
+    if [[ "$stage" == early ]]; then
+        candidates=("$scenario/consumer/.tools/host-set."*)
+        test "${#candidates[@]}" -eq 1
+        grep -Fxq 'controlled rejected download bytes' "${candidates[0]}/bin/jq"
+    else
+        grep -Fxq 'error: controlled late validation failure' \
+            "$GITHUB_WORKSPACE/target/validation-failures/latest-combined.log"
+    fi
+done
+bash "$root/scripts/ci/collect-failure-evidence.sh" > "$fixture/qualification-collection.log" 2>&1
+mkdir "$fixture/qualification-extracted"
+tar -xzpf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" -C "$fixture/qualification-extracted"
+for scenario in "$RUNNER_TEMP/ic-timers-fixtures"/hosted-*; do
+    for file in before.txt after.txt scenario.log status.txt; do
+        cmp "$scenario/$file" "$fixture/qualification-extracted/${scenario#"$RUNNER_TEMP/"}/$file"
+    done
+done
+echo 'CI failure evidence selection, metadata, modes, empty-input, retention and qualification-driver checks passed'

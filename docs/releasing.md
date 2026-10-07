@@ -381,6 +381,15 @@ review without running build, lint or test suites.
 
 ### Host support
 
+Released 0.14.12 is `72e8f5d9769d00fbe165b16cd6eb2d81cf1b0a67`.
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37639154601)
+passed. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37639154602)
+passed Linux checks, MSRV and the complete Apple Silicon gate. Intel macOS failed
+runner acquisition after five attempts, without executing any job steps or
+producing an artifact; this supplies no Intel
+source qualification or evidence of a fixture defect. #24/#25/#28 retain their
+native qualification requirement. The new 0.14.13 driver is outside that source.
+
 Released 0.14.11 is `eab55f8c20f7b144551f86885aefc7dbaa9fd4ea`.
 [Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37631528851)
 passed. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37631528673)
@@ -685,7 +694,7 @@ the changed fixture has not been executed.
 
 ### CI failure evidence
 
-All four CI jobs prepare a dedicated `$RUNNER_TEMP/ic-timers-fixtures` directory
+All four validation/tag jobs prepare a dedicated `$RUNNER_TEMP/ic-timers-fixtures` directory
 after checkout and set subsequent steps' `TMPDIR` to it. Each job ends with
 failure-only archive and upload steps, after installation and its final check;
 the macOS matrix retains separate Intel and Apple Silicon artifacts. Earlier
@@ -731,6 +740,80 @@ maintainer-controlled early-installer and late-check failures on the declared
 hosts, preserving the failing job result. Normal green CI does not prove upload
 execution. Contributor preparation dispatches no failing workflow or release.
 Force-terminated runners cannot guarantee collection.
+
+The compatible repository-only 0.14.13 draft adds an explicit manual qualification
+path to the same CI workflow. After the maintainer commits and pushes it, choose
+**CI → Run workflow → failure_stage: early**, then repeat with **late** at the
+same source ref. [GitHub's manual input contract](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onworkflow_dispatchinputs)
+requires the workflow on the default branch. The equivalent maintainer commands
+are:
+
+```sh
+gh workflow run ci.yml --repo dragginzgame/ic-timers --ref main -f failure_stage=early
+gh workflow run ci.yml --repo dragginzgame/ic-timers --ref main -f failure_stage=late
+```
+
+Each dispatch selects Linux checks and both native macOS jobs. Early qualification
+runs before Rust/tool setup; it calls the real host installer in a fresh scratch
+consumer with a curl substitute that retains partial download bytes and exits
+22. Late qualification runs only after Linux's final nested lint or macOS's
+complete release gate succeeds; it calls the real logger against a failing
+scratch Make recipe, preserving Make status 2 and raw/combined failure logs.
+This proves workflow retention ordering with controlled substitutes, not a real
+network outage or a canister failure. The original jobs stay failed; the driver never
+uses `continue-on-error`. Existing final failure-only collector/upload steps own
+the artifacts. Manual dispatches have separate concurrency groups by stage and
+do not cancel normal source qualification. PR/main gates retain their normal
+scope; manual evidence runs skip the duplicate MSRV/tag jobs.
+
+The [driver](../scripts/ci/qualify-failure-evidence.sh) retains
+`ic-timers-fixtures/hosted-<stage>.<suffix>/` with `before.txt`, `after.txt`,
+`scenario.log` and `status.txt`. Review each downloaded archive's identity against
+its actual source, job, host, run and attempt; compare before/after bytes and 0640
+modes, and require the selected stage and expected status in `status.txt`. Early
+artifacts must include the real retained `consumer/.tools/host-set.*/bin/jq`
+candidate containing the controlled rejected bytes. Late artifacts must include
+the controlled error in `target/validation-failures/latest-combined.log` and its
+raw per-target log. A generic setup/runner failure or missing controlled marker
+does not qualify the scenario. Record both run links and all six host/stage
+artifact observations on #23 before closing it.
+
+The manual-only `failure-evidence` matrix downloads those three artifacts through
+the exact-pinned download action adopted by Shared Tooling 0.1.20. It checks
+the [archive verifier](../scripts/ci/verify_failure_evidence.py)'s rejection
+fixtures, then verifies the downloaded tar without extracting it. Identity must
+match the selected source, original job/host, run and attempt. Known input bytes,
+0640 modes, controlled status, partial installer bytes or raw/combined logger
+output must all be present. Duplicate/unsafe archive paths and substituted links
+cannot stand in for required regular evidence files. Python 3 from the Ubuntu
+runner is used only in this manual verification job; it adds no developer,
+macOS, library or release-gate prerequisite.
+
+Require all three verification jobs to pass while the original three jobs fail
+at the selected injection. A missing artifact, source mismatch or unrelated
+setup failure cannot qualify the run. Early and late dispatches together supply
+six host/stage observations; keep their run links on #23. Rerunning only a
+verification job cannot qualify artifacts from another attempt: rerun the
+complete selected manual dispatch when retrying this evidence.
+
+The existing collector fixture now exercises both driver stages in an isolated
+checkout with fake CI identity, rejects invalid/nonmanual calls, and compares
+retained inputs/logs after archive extraction. This is prepared local coverage;
+neither those new fixtures nor the hosted dispatches ran during preparation.
+
+Released #24/#25/#28 require Intel evidence for the already implemented 0.14.12
+source, rather than another code repair. The maintainer can use the failed main
+run's **Re-run failed jobs** action, or:
+
+```sh
+gh run rerun 37639154602 --repo dragginzgame/ic-timers --failed
+```
+
+That reuses the original committed source and its lock selection. Inspect the
+actual executed Intel gate before closing the three issues. A subsequent complete
+native run can instead qualify a committed descendant with these implementations
+unchanged; bind that evidence to its own source and selected dependency graph.
+Neither path is executed during contributor preparation.
 
 ### Formatter prerequisites
 

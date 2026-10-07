@@ -2,6 +2,24 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.13]
+
+### Development
+
+- Add manual early/late failure qualification to the existing Linux and native
+  macOS CI jobs, using the maintained installer/logger and normal artifact
+  collector. Download and check each host's source identity, controlled failure,
+  retained bytes and file modes. Retain original failed-job status; keep normal
+  PR/main gates and release commands unchanged
+  ([#23](https://github.com/dragginzgame/ic-timers/issues/23)).
+- Select compatible IC Host 0.4.6 through Testkit in the root lockfile, including
+  the [macOS compilation repair](https://github.com/dragginzgame/ic-host-tooling/issues/18);
+  retain the [native filename qualification](https://github.com/dragginzgame/ic-host-tooling/issues/19)
+  and keep Host outside the timer library graph. Preserve the incoming Metrics 0.2.9
+  selection, which changes upstream tooling/evidence rather than library behavior.
+- Select the compatible Testkit 0.21.2 documentation and host-qualification patch
+  through the existing root dependency catalog.
+
 ## [0.14.12] - 2026-10-07
 
 ### Development

@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && format('evidence-{0}', inputs.failure_stage) || 'validation' }}
   cancel-in-progress: true
 
 on:
@@ -18,10 +18,20 @@ on:
     tags:
       - 'v*'
   pull_request:
+  workflow_dispatch:
+    inputs:
+      failure_stage:
+        description: 'Qualify failure artifacts (the selected jobs intentionally fail)'
+        required: true
+        type: choice
+        default: early
+        options:
+          - early
+          - late
 
 jobs:
   msrv:
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: ubuntu-latest
     steps:
       # actions/checkout v6
@@ -75,7 +85,7 @@ jobs:
           if-no-files-found: warn
 
   checks:
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       # actions/checkout v6
@@ -87,6 +97,10 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/ic-timers-fixtures"
           printf 'TMPDIR=%s/ic-timers-fixtures\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Qualify early failure evidence
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.failure_stage == 'early' }}
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: bash scripts/ci/qualify-failure-evidence.sh early
       # dtolnay/rust-toolchain v1
       - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067
         with:
@@ -110,6 +124,10 @@ jobs:
         run: make ci
       - name: Lint unpublished probes with internal toolchain
         run: make testing-check MSRV="$IC_TIMERS_INTERNAL_TOOLCHAIN"
+      - name: Qualify late failure evidence
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.failure_stage == 'late' }}
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: bash scripts/ci/qualify-failure-evidence.sh late
       - name: Archive failure evidence
         if: ${{ failure() }}
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
@@ -132,7 +150,7 @@ jobs:
           if-no-files-found: warn
 
   macos:
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
     strategy:
       fail-fast: false
       matrix:
@@ -164,6 +182,10 @@ jobs:
           [[ "${BASH_VERSINFO[0]}.${BASH_VERSINFO[1]}" == 3.2 ]]
           # Every env-bash wrapper and Make recipe exercises Apple's Bash 3.2.
           echo /bin >> "$GITHUB_PATH"
+      - name: Qualify early failure evidence
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.failure_stage == 'early' }}
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: bash scripts/ci/qualify-failure-evidence.sh early
       # dtolnay/rust-toolchain v1
       - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067
         with:
@@ -194,6 +216,10 @@ jobs:
       - name: Run the complete native release gate
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: make release-verify
+      - name: Qualify late failure evidence
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.failure_stage == 'late' }}
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: bash scripts/ci/qualify-failure-evidence.sh late
       - name: Archive failure evidence
         if: ${{ failure() }}
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
@@ -215,11 +241,56 @@ jobs:
           compression-level: 0
           if-no-files-found: warn
 
+  # Inspect bytes downloaded from the existing failure uploader. The original
+  # jobs retain their failure; this separate manual-only job supplies acceptance
+  # evidence and refuses setup outages, stale identities and missing payloads.
+  failure-evidence:
+    if: ${{ always() && !cancelled() && github.event_name == 'workflow_dispatch' }}
+    needs: [checks, macos]
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - job: checks
+            os: Linux
+            arch: X64
+          - job: macos
+            os: macOS
+            arch: X64
+          - job: macos
+            os: macOS
+            arch: ARM64
+    steps:
+      - name: Require the original job to remain failed
+        env:
+          ORIGINAL_RESULT: ${{ needs[matrix.job].result }}
+        run: test "$ORIGINAL_RESULT" = failure
+      # actions/checkout v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Check evidence rejection cases
+        run: python3 scripts/ci/test_failure_evidence.py
+      - name: Download the original failed-job artifact
+        # actions/download-artifact v8, as qualified by Shared Tooling 0.1.20
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: ic-timers-failure-${{ matrix.job }}-${{ matrix.os }}-${{ matrix.arch }}-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/downloaded-failure-evidence
+      - name: Verify downloaded source identity, status, bytes and modes
+        env:
+          FAILURE_STAGE: ${{ inputs.failure_stage }}
+          ORIGINAL_JOB: ${{ matrix.job }}
+          ORIGINAL_HOST: ${{ matrix.os }}/${{ matrix.arch }}
+        run: |
+          python3 scripts/ci/verify_failure_evidence.py \
+            "$RUNNER_TEMP/downloaded-failure-evidence/ic-timers-failure-evidence.tar.gz" \
+            "$FAILURE_STAGE" "$ORIGINAL_JOB" "$ORIGINAL_HOST"
+
   # PR/main owns full validation. A tag at the same main commit only rechecks
   # package metadata and tag identity, avoiding duplicate Rust builds while still
   # rejecting an independently pushed tag from an unmerged commit.
   tag-truth:
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       # actions/checkout v6
