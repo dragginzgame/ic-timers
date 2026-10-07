@@ -150,7 +150,7 @@ actions-check: host-tools-check
 
 shell-check:
 	@set -e; for script in .githooks/pre-commit scripts/ci/*.sh scripts/dev/*.sh scripts/release/*.sh \
-		.shared-tooling/helpers/scripts/ci/*.sh .shared-tooling/helpers/scripts/dev/*.sh; do \
+		.shared-tooling/helpers/scripts/ci/*.sh; do \
 		bash -n "$$script"; \
 	done
 

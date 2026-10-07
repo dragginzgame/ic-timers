@@ -8,7 +8,7 @@ trap 'status=$?; if [[ "$status" == 0 ]]; then rm -rf -- "${temporary_root}";
     fi; exit "$status"' EXIT
 
 git init -q "${temporary_root}"
-mkdir -p "${temporary_root}"/{.githooks,scripts/{ci,dev,release},.shared-tooling/helpers/scripts/{ci,dev},crates/ic-timers/src}
+mkdir -p "${temporary_root}"/{.githooks,scripts/{ci,dev,release},.shared-tooling/helpers/scripts/ci,crates/ic-timers/src}
 cp "${repository_root}/Makefile" "${temporary_root}/Makefile"
 mkdir -p "${temporary_root}/make"
 cp "${repository_root}/make/tools.mk" "${temporary_root}/make/"
@@ -20,8 +20,7 @@ export PATH="${repository_root}/.tools/host/bin:${PATH}"
 export YQ="${repository_root}/.tools/host/bin/yq"
 cd "${temporary_root}"
 
-for script in .githooks/pre-commit scripts/ci/valid.sh scripts/dev/valid.sh scripts/release/valid.sh \
-    .shared-tooling/helpers/scripts/dev/valid.sh; do
+for script in .githooks/pre-commit scripts/ci/valid.sh scripts/dev/valid.sh scripts/release/valid.sh; do
     printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "${script}"
 done
 
@@ -39,9 +38,12 @@ expect_failure() {
     fi
 }
 
+# The retired nested dev directory must remain absent: an obsolete Make glob
+# would otherwise be masked by fixture-only files instead of failing here.
+test ! -e .shared-tooling/helpers/scripts/dev
 make --no-print-directory shell-check >/dev/null
 for directory in scripts/ci scripts/dev scripts/release \
-    .shared-tooling/helpers/scripts/ci .shared-tooling/helpers/scripts/dev; do
+    .shared-tooling/helpers/scripts/ci; do
     broken="${directory}/broken.sh"
     printf '%s\n' 'if then' > "${broken}"
     expect_failure "${broken}" make --no-print-directory shell-check

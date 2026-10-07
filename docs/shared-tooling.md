@@ -56,6 +56,17 @@ and snapshot hashes/modes without executing consumer scripts, Make or Cargo.
 Shared/local counts are discovery evidence, not justification to remove distinct
 product owners.
 
+The maintainer's local validation of committed `.8` preparation at `fb86e29`
+first stopped on the old parser-only host bundle. Explicit pinned host setup
+then completed, preserving the prior bundle. The retry passed host verification
+and dependency admission but failed `shell-check`: the local Makefile still
+selected the now-removed nested `scripts/dev/*.sh` glob. The follow-up removes
+that obsolete inventory entry. The repository fixture keeps that directory
+absent and still injects syntax failures into every current script directory,
+so fixture-only files cannot mask the retired path again. Script syntax and
+inventory inspection are preparation evidence; the full gate and updated
+fixture remain maintainer-owned. Original failure logs are retained.
+
 At inspection, exact-source
 [upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37593142226)
 passed Linux, lint/security and both native macOS jobs.

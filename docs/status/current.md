@@ -38,6 +38,15 @@ now drives those actual fixtures to early injected tool failures and compares
 retained input bytes after archiving. These new cases have not run; they add no
 builds or real Git writes to the injected paths.
 
+The maintainer committed preparation at `fb86e29`. Local release validation
+initially stopped on the old parser-only host bundle; explicit pinned setup
+completed and preserved the prior bundle. The retry passed host/dependency
+admission, then failed an obsolete nested `scripts/dev/*.sh` shell-check glob.
+The current follow-up removes it and keeps that directory absent in the
+repository fixture. Syntax/inventory inspection is allowed preparation evidence;
+no fixture or full release gate was rerun by the contributor. The user-owned
+gate needs a fresh retry after this repair. See the adoption owner below.
+
 At inspection, exact-source
 [upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37593142226)
 passed Linux, lint/security and both native macOS jobs.
