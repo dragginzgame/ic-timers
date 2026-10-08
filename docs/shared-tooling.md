@@ -1,6 +1,6 @@
 # Shared Tooling adoption
 
-The compatible repository-only **0.14.14** draft prepares reviewed committed
+Released compatible repository-only **0.14.14** adopts reviewed committed
 Shared Tooling 0.1.23
 [`0ba0ad00ed94848e54ecc82629b6b7873b7284c0`](https://github.com/dragginzgame/shared-tooling/tree/0ba0ad00ed94848e54ecc82629b6b7873b7284c0).
 The [baseline snapshot](../.shared-tooling.snapshot),
@@ -9,8 +9,8 @@ The [baseline snapshot](../.shared-tooling.snapshot),
 35/30/13 exact files at that same revision. A clean detached scratch clone
 supplies every export; moving sibling work is excluded. The
 nested bundle is exported through its own isolated temporary consumer.
-No sibling, staged path, Cargo version or incoming dependency lock was changed
-by this refresh. Released 0.14.12 adopted the preceding 0.1.19 snapshot;
+During contributor preparation, no sibling, staged path, Cargo version or
+incoming dependency lock was changed by this refresh. Released 0.14.12 adopted the preceding 0.1.19 snapshot;
 its historical evidence remains scoped below.
 
 [AGENTS.md](../AGENTS.md) retains the product overlay and approved command
@@ -20,6 +20,16 @@ included without selecting that workflow. Timer runtime, the root catalog, libra
 private provider and audited PocketIC artifact remain. Optional Rust tooling
 is still separate from aggregate setup; the disk-space helper is not adopted
 without a consumer capacity requirement.
+
+The maintainer released the batch at
+`6fc76e9ffaabad575fe5f044029e6fdd063e4e32`. Its
+[main run](https://github.com/dragginzgame/ic-timers/actions/runs/37750074305)
+passes Linux and MSRV; both complete native macOS gates are running at review.
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37750074677)
+passes. Keep #29 open until the actual native consumer observations
+pass. The released graph selects Metrics 0.2.10 and Testkit 0.21.3; the incoming
+Metrics 0.2.11 lock selection is separate and does not inherit that run's
+qualification. #23's six hosted failure artifacts remain unobserved.
 
 ## Shared Tooling 0.1.23 preparation
 

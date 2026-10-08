@@ -460,6 +460,16 @@ continues to target Wasm on the Internet Computer.
 | macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.13. The historical 0.14.1 missing-`rg` failure is recorded below. |
 | macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.13. Historical failures retain their original scope below. |
 
+Released 0.14.14 is `6fc76e9ffaabad575fe5f044029e6fdd063e4e32`.
+[Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37750074305)
+passes Linux and MSRV; both complete native macOS gates are running at this
+inspection. [Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37750074677)
+passes. Its root lock selects Testkit 0.21.3, Metrics 0.2.10, Host 0.4.6
+and PocketIC 16.0.0; all four local packages are 0.14.14. Keep #29 open for
+source-bound native acceptance of the released Shared Tooling 0.1.23 adoption.
+The incoming Metrics 0.2.11 selection is a separate graph; no hosted result
+for 0.14.14 is relabelled as its execution evidence.
+
 Released 0.14.13 is `0b12c8a6dbe5f359f5499df67313ffa5c02af446`.
 [Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37655294418)
 passes. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37655294064)
@@ -478,7 +488,7 @@ Testkit 0.21.2 `2db7b4f6b616b484408695656e26207628d74c5f` now has passing
 Those results qualify upstream; they do not substitute for this consumer's
 separate source-specific native and artifact observations.
 
-The incoming working-tree lock selects Testkit 0.21.3 and compatible
+Preparation for subsequently released 0.14.14 selected Testkit 0.21.3 and compatible
 `serde_spanned`/TOML-family patches. Committed Testkit 0.21.3
 `a8e83a1940e5f44927c6df95b5d1269a3ac699bc` passes its exact-source
 [main native, MSRV and PocketIC-concurrency gates](https://github.com/dragginzgame/ic-testkit/actions/runs/37661836622)
@@ -487,13 +497,13 @@ Review against 0.21.2 finds no change to production library implementation or
 the `pic` startup APIs used by this harness: the sole library source change
 removes duplicated `cfg(test)` cache-path cases. Full root
 `cargo metadata --manifest-path Cargo.toml --locked --offline --format-version 1`
-passes without rewriting the incoming lock. All four local packages remain
-0.14.13 and inherit their dependency declarations; Host stays outside the timer
-library graph. This selection is recorded in the undated 0.14.14 draft and has
-not yet executed this consumer's native or PocketIC gates. The released 0.14.13
-run qualifies its own Testkit 0.21.2 graph, not this new working-tree selection.
+passed without rewriting the incoming lock. During contributor preparation all
+four local packages remained 0.14.13 and inherited their dependency declarations;
+Host stayed outside the timer library graph. The finalized 0.14.14 notes record
+the selection, with subsequent consumer execution scoped above. The earlier
+0.14.13 run qualifies its own Testkit 0.21.2 graph.
 
-The same incoming lock now selects Metrics 0.2.10. Committed upstream
+The released 0.14.14 lock selects Metrics 0.2.10. Committed upstream
 `90262c3b086ee39016a6f36902a610a78a139301` passes
 [its source-bound CI](https://github.com/dragginzgame/ic-metrics/actions/runs/37745384375).
 Its library source is byte-equivalent to 0.2.9; the patch adopts upstream
@@ -502,6 +512,27 @@ work is excluded. Full locked offline metadata passes with this selection and
 does not rewrite the lockfile. Its actual consumer native and PocketIC execution
 remains part of the user-operated gate for the new graph, separately from the
 released 0.14.13 graph and the Shared Tooling source/export checks.
+
+The incoming lock now selects Metrics 0.2.11, committed upstream
+`69b110b8fbefdac4773eac7631796f9dcb3f41a0`. Review against 0.2.10 finds no
+library source change; the patch adopts the same Shared Tooling 0.1.23 release
+repair and records upstream evidence. Its
+[owner run](https://github.com/dragginzgame/ic-metrics/actions/runs/37748731541)
+passes Linux, MSRV and Apple Silicon, with Intel running at review. Full root
+locked offline metadata passes without rewriting this incoming lock: all four
+local members stay 0.14.14, declarations inherit the root catalog, and Host
+remains outside the timer library graph. The undated 0.14.15 notes record this
+repository-only selection, which has no consumer native/PocketIC execution yet.
+It can be bundled with future code work rather than requiring another tag alone.
+
+Host 0.5.1 `81f9809861159def2fd0987fcb7961cda4afd969` is committed; its
+[exact-source CI](https://github.com/dragginzgame/ic-host-tooling/actions/runs/37750135927)
+passes Linux, MSRV and both native macOS gates. Testkit 0.22's adoption of the 0.5 child owner and
+public artifact hard cut is still dirty and unpublished. Our maintained harness
+uses `pic` managed startup, not artifact cache/fingerprint APIs. Admit the
+canonical Testkit release after its own native qualification instead of adding
+a direct Host dependency or incompatible Cargo patch; owning work remains in
+[Testkit #25](https://github.com/dragginzgame/ic-testkit/issues/25).
 
 Inspection on 2026-10-06 of the 0.13.1 source at
 `54bbcfc4985d4657578150cbe7112795297115fd` found both native macOS jobs in

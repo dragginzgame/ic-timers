@@ -869,9 +869,9 @@ dependencies = [
 
 [[package]]
 name = "ic-metrics"
-version = "0.2.10"
+version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e2eaa37874c60628dd5610305baafd278bb6479724cc22d7f2b556ca1f7d4ee"
+checksum = "dc75470aa6335a0b1f3dbefd30229e0ac10713f21193f21af3c03987afdfa0c9"
 
 [[package]]
 name = "ic-testkit"

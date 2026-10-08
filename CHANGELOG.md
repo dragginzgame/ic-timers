@@ -2,6 +2,14 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.15]
+
+### Development
+
+- Preserve the incoming compatible Metrics 0.2.11 root lock selection. Its
+  changes affect upstream release tooling and evidence; the metrics library
+  implementation and timer APIs are unchanged.
+
 ## [0.14.14] - 2026-10-08
 
 ### Development
