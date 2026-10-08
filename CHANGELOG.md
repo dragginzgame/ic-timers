@@ -2,6 +2,19 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.16]
+
+### Development
+
+- Select Testkit 0.22 and IC Host 0.5.2 through the root dependency catalog.
+  The existing PocketIC harness now uses the shared child-process owner;
+  timer APIs, runtime behavior and the audited PocketIC version are unchanged
+  ([upstream #25](https://github.com/dragginzgame/ic-testkit/issues/25)).
+- Record the consumer audit of Shared Tooling and IC Host, including measured
+  failure-artifact overhead and archive-adapter requirements. Implementations
+  and reviewed snapshots remain unchanged
+  ([upstream #66](https://github.com/dragginzgame/shared-tooling/issues/66)).
+
 ## [0.14.15] - 2026-10-08
 
 ### Development

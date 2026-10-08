@@ -24,12 +24,24 @@ without a consumer capacity requirement.
 The maintainer released the batch at
 `6fc76e9ffaabad575fe5f044029e6fdd063e4e32`. Its
 [main run](https://github.com/dragginzgame/ic-timers/actions/runs/37750074305)
-passes Linux and MSRV; both complete native macOS gates are running at review.
+passed Linux, MSRV and Apple Silicon; Intel was cancelled before complete
+acceptance.
 [Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37750074677)
-passes. Keep #29 open until the actual native consumer observations
-pass. The released graph selects Metrics 0.2.10 and Testkit 0.21.3; the incoming
-Metrics 0.2.11 lock selection is separate and does not inherit that run's
-qualification. #23's six hosted failure artifacts remain unobserved.
+passed. Subsequent released **0.14.15**
+`ae26b854a1a473c5d2d153705c2d13570f378d38` preserves every selected snapshot,
+Make adapter and fixture. Its
+[main run](https://github.com/dragginzgame/ic-timers/actions/runs/37752855158)
+passed Linux, MSRV and both complete native macOS gates; matching
+[tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37752855388)
+passed. This supplies actual consumer acceptance and closes
+[#29](https://github.com/dragginzgame/ic-timers/issues/29#issuecomment-6056613195).
+That graph selects Metrics 0.2.11, Testkit 0.21.3 and Host 0.4.6; the incoming
+Testkit 0.22 / Host 0.5.1 adoption requires its own consumer gate. Separate
+explicitly authorized early/late runs now qualify all six hosted failure
+artifacts at released 0.14.15 and close
+[#23](https://github.com/dragginzgame/ic-timers/issues/23#issuecomment-6057617574);
+see the [evidence owner](releasing.md#hosted-qualification-at-01415). The active
+installed-tool overcollection finding remains separate on #30.
 
 ## Shared Tooling 0.1.23 preparation
 
@@ -55,9 +67,10 @@ checks, shell syntax and diff checks are preparation evidence. No tests, builds,
 lint, version bump, staging, commit, tag, push or publication ran. Upstream
 0.1.23 Linux, lint/security and both native macOS gates now pass in
 [the exact-source run](https://github.com/dragginzgame/shared-tooling/actions/runs/37746567888).
-Consumer acceptance remains tracked by
+Consumer acceptance is now recorded on
 [#29](https://github.com/dragginzgame/ic-timers/issues/29), separately from the
-hosted failure-artifact observations in #23. No function, method or type was
+subsequently completed hosted failure-artifact observations in #23. No function,
+method or type was
 removed by this refresh; timer Wasm/instruction changes from the tooling refresh
 are not expected.
 
