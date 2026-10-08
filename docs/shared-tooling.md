@@ -1,5 +1,64 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.1.28 adoption
+
+The compatible **0.14.20** draft selects committed
+[`1872ed2c20f6c70689bb2249050b1d673c60bfa0`](https://github.com/dragginzgame/shared-tooling/tree/1872ed2c20f6c70689bb2249050b1d673c60bfa0)
+(0.1.28) through all three exports: **50 baseline / 33 audit-setup / 13 helper**
+files. [#31](https://github.com/dragginzgame/ic-timers/issues/31) owns consumer
+adoption. An isolated clean detached clone supplies exact committed bytes and
+modes. The root exports use the canonical refresh helper; the nested bundle
+uses its established isolated temporary consumer because it is not a checkout
+root. Its 13 payloads are unchanged; only its source record advances. An initial
+direct nested refresh refused that boundary without changing the helper bundle.
+The sibling's later dirty policy, release-source and dependency-checker edits
+are excluded. No shared payload is patched locally.
+
+The host/IC installers now preserve literal active-link bytes before managed
+name admission. Existing fixtures cover one/two trailing newlines, refusal before
+execution/downloads and preservation of the original link
+([Shared #75](https://github.com/dragginzgame/shared-tooling/issues/75)). The
+consumer's existing `release-check` still invokes the canonical runner fixture,
+which now simulates Git effects and permits only inert native hashing. Actual
+scratch-Git tracking/race cases remain in the separate Shared owner suite, which
+is neither copied nor selected here
+([Shared #70](https://github.com/dragginzgame/shared-tooling/issues/70)). Those
+scenarios moved upstream; no named function, method or type is removed here.
+
+The refreshed baseline/audit catalog references the new `tasks/` procedures,
+prompt and optional scheduler guidance, so their complete linked closure is
+included. Copying the coordinator and sample units starts no agent and installs
+no service or timer. The local validation, contribution and release exceptions
+apply to every task. New MSRV guidance retains the current 1.88.0 floor: the
+selected normal `ic-cdk` dependency also declares 1.88.0, and our minimum lane
+already selects that compiler explicitly. The production Wasm memory intrinsic
+uses its equivalent `std::arch` path under the refreshed Rust hygiene rule;
+there is no timer semantic or public API change.
+
+The maintainer reports released **0.14.19** live at `e637224`; its selected graph
+is Testkit 0.25.1 / Host 0.8.2 / Metrics 0.2.14 / PocketIC 16.1.0. The refresh
+preserves the root manifest, caller host pins and the consumer-owned IC matrix.
+During preparation an external lock edit advanced only Testkit to 0.25.2, with
+its new registry checksum. That edit is retained; this contributor changed no
+Cargo or lockfile bytes. The initial cheap locked/offline metadata inspection
+completed for the released graph. A current-graph recheck failed because registry
+Testkit 0.25.2 is not cached; no online retry or dependency preparation ran.
+The strict PocketIC admission, full release targets, original failure collector
+and full tool-bundle retention remain. No measured or expected production
+Wasm/instruction/heap improvement is claimed for this batch.
+
+Exact-source [upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37799837183)
+passes Linux and Apple Silicon portable regression plus lint/security; Intel is
+queued at inspection. This is incomplete native qualification and does not prove
+consumer behavior. Source/export/mode/overlap inspection, all three snapshot
+integrity checks, Bash syntax, 395 local references across 49 document selections,
+manifest/IC pin preservation, published changelog preservation and diff checks
+pass. The later metadata cache failure remains a separate limitation. No local
+tests, builds, lint, installation, scheduler,
+version mutation or Git delivery ran. Native consumer qualification remains
+with the complete user-operated gate. [#30](https://github.com/dragginzgame/ic-timers/issues/30)
+retains the separate archive/compact acceptance scope.
+
 ## Consumer-owned PocketIC 16.1.0 matrix
 
 The 0.14.19 admission repair transfers the existing `ci/ic-tools.tsv` out of the

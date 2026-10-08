@@ -28,19 +28,25 @@ loaders select the resulting `timer-probe` output directory. The root ordinary
 release profile is unchanged. Dependency resolution now uses root resolver 3;
 fresh measurements and native qualification are required for the combined graph.
 
-The incoming root catalog selects compatible Testkit 0.24, locked to 0.24.0,
-with all four Host crates at 0.7.1 transitively, and ic-metrics 0.2.13. The prepared PocketIC client/server pair now selects
+Released 0.14.19's root catalog selects compatible Testkit 0.25, locked to 0.25.1,
+with all four Host crates at 0.8.2 transitively, and ic-metrics 0.2.14. The PocketIC client/server pair selects
 16.1.0; prior runtime evidence remains bound to its earlier pair. Its client's exact thiserror 2.0.18 requirement determines the
 shared thiserror selection; the old library-only 2.0.21 graph is not retained.
 All four member versions inherit the root release identity, and release
-preparation updates their local lock records together. This is repository/test dependency preparation, not a released runtime
-or measurement claim. Historical adoption evidence below remains tied to its
+preparation updates their local lock records together. Publication reported by
+the maintainer does not establish complete native or measurement qualification.
+Historical adoption evidence below remains tied to its
 recorded versions, workspace shapes and hosts.
 
-The [Testkit adoption](#testkit-024-selection) and
-[Shared Tooling preparation](shared-tooling.md#shared-tooling-0127-committed-follow-up)
-record current source and qualification gaps. These repository/test-only changes
-select the compatible 0.14.19 draft; Cargo package versions remain 0.14.18.
+The [host record](#host-support) and
+[Shared Tooling adoption](shared-tooling.md#shared-tooling-0128-adoption)
+record current source and qualification gaps. The compatible 0.14.20 draft
+prepares tooling changes; Cargo package versions remain 0.14.19. No dependency
+or lockfile change is performed by that adoption. A concurrent external lock edit
+selects Testkit 0.25.2 and is retained. The contributor's current-graph locked
+metadata recheck fails offline because that registry package is not cached; no
+online retry ran. The ordinary user-operated fetch phase prepares the selected
+lock before validation.
 
 ## Pre-1.0 compatibility
 
@@ -462,9 +468,18 @@ continues to target Wasm on the Internet Computer.
 
 | Host | Current workflow configuration and evidence scope |
 | --- | --- |
-| Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The release gate pins the audited PocketIC 16.0.0 Linux x86_64 artifact. Recorded results remain scoped to their original subjects. |
+| Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The release gate pins the audited PocketIC 16.1.0 Linux x86_64 artifact. Recorded results remain scoped to their original subjects. |
 | macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.15. The historical 0.14.1 missing-`rg` failure is recorded below. |
 | macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.15. Historical failures retain their original scope below. |
+
+Released **0.14.19** is `e637224e018afd758175e21de3afe3b95fa1a9ed`;
+the maintainer reports it live. Matching [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37803792774)
+passes. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37803792258)
+passes Linux checks/probe lint and explicit MSRV. Intel is running and Apple
+Silicon is queued at inspection, so complete native acceptance is pending. The
+selected graph is Testkit 0.25.1 / Host 0.8.2 / Metrics 0.2.14 / PocketIC 16.1.0.
+The pending 0.14.20 tooling adoption requires its own source-bound qualification;
+it does not relabel these results or qualify compact evidence collection.
 
 Released **0.14.18** is `c8d670d1e3181bebb1e67fcfc3eed0dcde0bddd2`.
 [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37790176635)

@@ -12,53 +12,47 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Current release and remaining acceptance
 
-Released **0.14.18** is `c8d670d1e3181bebb1e67fcfc3eed0dcde0bddd2`, tag
-`v0.14.18`; the maintainer reports it live. Its
-[tag run](https://github.com/dragginzgame/ic-timers/actions/runs/37790175542)
-passes. Exact-source [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37790176635)
-passes Linux CI/probe lint and MSRV; Apple Silicon is running and Intel is queued
-at inspection. This is not complete native acceptance. The released graph selects
-Testkit 0.24.0 / Host 0.7.1 / Metrics 0.2.13 and PocketIC 16.0.0. The release
-includes the real-owner CDPATH/newline evidence-path regression and reviewed
-b866 Shared Tooling exports; contributor preparation did not execute local tests.
+Released **0.14.19** is `e637224e018afd758175e21de3afe3b95fa1a9ed`, tag
+`v0.14.19`; the maintainer reports it live. Matching
+[tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37803792774)
+passes. Exact-source [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37803792258)
+passes Linux checks/probe lint and MSRV; Intel is running and Apple Silicon is
+queued at inspection. This is incomplete native acceptance. The released lock
+selects Testkit 0.25.1 / Host 0.8.2 / Metrics 0.2.14 / PocketIC 16.1.0. It includes
+db039 tooling and the matching 16.1.0 server matrix. The
+[host record](../releasing.md#host-support) owns qualification; prior 16.0.0
+receipts do not qualify this pair.
 
-The undated **0.14.19** draft now selects Shared Tooling's committed 0.1.27
-follow-up `db039347d2372b877c1c46dcdd2b5c3aa9412009` through all three exact
-**36/33/13** exports. Installers preserve physical consumer/pin operands, existing
-fixtures check relative consumer paths under CDPATH, and fixture companion
-metadata now refuses incomplete snapshots. The roster was already complete.
-The sibling's dirty 0.1.28 source is excluded. Source/export/mode/overlap,
-integrity, syntax and diff checks are preparation evidence only. No named
-function/method/type is removed; no timer runtime code changes. The
-[adoption owner](../shared-tooling.md#shared-tooling-0127-committed-follow-up)
-records scope. This repository-only follow-up has no expected timer
-Wasm/instruction/heap effect and can remain bundled with later useful work.
+The undated compatible **0.14.20** draft now implements
+[#31](https://github.com/dragginzgame/ic-timers/issues/31) through committed Shared
+Tooling 0.1.28 `1872ed2c20f6c70689bb2249050b1d673c60bfa0`, with exact
+**50/33/13** exports. The host/IC installers reject malformed literal active links
+before probes/downloads. The existing consumer runner fixture is simulation-only;
+native tracking/race cases remain in the complete upstream owner suite. Linked
+maintenance procedures and optional coordinator/sample units are included without
+starting an agent or installing a schedule. Local command exceptions remain.
+The [adoption owner](../shared-tooling.md#shared-tooling-0128-adoption) records
+source, scope and preparation evidence; later dirty sibling work is excluded.
 
-[Upstream db039 CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37787910279)
-passes Linux portable/native full-and-compact archive round trips and final
-pin/receipt/candidate/four-log verification, plus lint/security. Intel is running
-and Apple Silicon is queued. This supersedes b866's stale producer-log oracle
-failure for corrected source only. Ordinary Timers CI retains its existing
-collector and full tool bundles; no compact savings are claimed before complete
-host qualification. [Shared #75](https://github.com/dragginzgame/shared-tooling/issues/75)
-separately owns malformed active-link admission. No shared payload is locally
-patched, and no new CI retention option is introduced.
+The Rust floor remains 1.88.0, also required by the selected normal `ic-cdk`
+dependency; the minimum CI lane already selects it explicitly. The production
+memory intrinsic uses the equivalent `std::arch` path under the refreshed hygiene
+rule. No public timer contract or expected Wasm/instruction/heap cost changes.
+The root manifest and consumer-owned IC matrix are preserved. An external lock
+edit during preparation selects Testkit 0.25.2; no contributor dependency update
+ran. The initial released-graph metadata check passed, but the current locked
+recheck cannot complete offline because Testkit 0.25.2 is not cached. No online
+retry ran; the normal user-operated fetch phase prepares that selected graph.
+Strict PocketIC
+admission, automatic pinned provisioning, full user-operated release validation,
+the original collector and full tool-bundle retention remain.
 
-The maintainer kept the incoming PocketIC client **16.1.0**. A subsequent release
-attempt failed the old **16.0.0** server alignment, as expected. The current draft
-now prepares the matching **16.1.0** server matrix, host-specific binary digests,
-default cache path and independent admission fixtures. All three official gzip
-archives match published hash/size; decompressed binary hashes and architecture
-headers were inspected without executing them. The [dependency owner](../releasing.md#incoming-pocketic-lock-alignment)
-and [artifact provenance](../releasing.md#pocketic-artifact-pins) record scope.
-The existing IC matrix is consumer-owned and excluded from the audit export;
-all shared code remains exact reviewed bytes. The actual cheap locked/offline
-alignment helper now reports **16.1.0**; snapshot/syntax/diff checks pass. No
-Cargo/lock edit, test/build/lint,
-installation or binary execution ran. Exact admission remains required; fresh
-native runtime/watchdog/cohort qualification belongs to the user-operated gate.
-Prior 16.0.0 acceptance does not qualify this pair. There is no compatibility
-fallback, override weakening or alternate matrix.
+Exact-source [upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37799837183)
+passes Linux and Apple Silicon portable regression plus lint/security; Intel is
+queued at inspection. This is not complete native qualification or consumer
+execution evidence. Source/export/mode/overlap, snapshot integrity, syntax,
+document references, initial cheap locked/offline metadata and diff checks are preparation
+only. No local tests/builds/lint, installation, scheduler or release execution ran.
 
 The already-authorized frozen **v0.14.17**, attempt 1 observations remain at
 `031e6c67dccdd043ff11e20d9978359a4ec6afc8`:
@@ -75,7 +69,8 @@ records IDs and the distinction between hosted/local verification. These qualify
 main run now passes all three hosts and MSRV, separately from those observations.
 
 Local [#30](https://github.com/dragginzgame/ic-timers/issues/30) remains open for
-adapter/compact acceptance. Closed #23's six original 0.14.15 observations and
+adapter/compact acceptance; #31 remains open for the prepared refresh's native
+consumer acceptance. Closed #23's six original 0.14.15 observations and
 #24/#25/#28/#29 retain their own recorded scopes. No new timer feature requirement
 emerged. Apart from the previously authorized frozen hosted observations and
 artifact verification, tests/builds/lint and release execution remain user-owned.
@@ -172,10 +167,10 @@ the [source-bound host record](../releasing.md#host-support).
   The maintainer's bump finalizes and dates it; a dated section alone does not prove
   tagging, publication or deployment.
 - Released Cargo/lock, finalized changelog and tag identify
-  `031e6c67dccdd043ff11e20d9978359a4ec6afc8` (0.14.17). Tag truth, Linux CI and
-  MSRV pass; both complete native macOS jobs are queued at inspection. The incoming
-  Testkit 0.24 / Host 0.7 graph and local path repair are separate preparation.
-  Closed #23's six observations remain at 0.14.15; the new 0.14.17 observations
+  `e637224e018afd758175e21de3afe3b95fa1a9ed` (0.14.19). Tag truth, Linux checks
+  and MSRV pass; complete native macOS acceptance is pending as recorded above.
+  Shared 0.1.28 is separate 0.14.20 preparation, with package identity unchanged.
+  Closed #23's six observations remain at 0.14.15; the frozen 0.14.17 observations
   use their own exact runs. Evidence belongs in the
   [host record](../releasing.md#host-support).
 - During the 2026-10-07 evidence review, an external root-lock edit selected
@@ -570,9 +565,8 @@ are recorded in the [0.10.12 note](../changelog/0.10.12.md).
 
 ## Evidence
 
-Current complete released qualification is 0.14.15 at `ae26b85`, as
-recorded in Release state above; the incoming Testkit 0.22 graph remains
-unqualified in this consumer.
+The complete normal-gate record includes 0.14.17 at `031e6c67`, as
+recorded in the host owner; 0.14.19 still needs complete native acceptance.
 The following earlier inspections retain their historical source scope.
 
 At the earlier inspection, release 0.14.2 at `88aedf0` had tag CI and main Linux/MSRV passes,

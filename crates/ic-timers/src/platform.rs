@@ -62,7 +62,7 @@ pub(crate) fn instruction_counter() -> u64 {
 #[cfg(not(test))]
 pub(crate) fn memory_pages() -> MemoryPageExtent {
     #[cfg(target_arch = "wasm32")]
-    let wasm = core::arch::wasm32::memory_size::<0>() as u64;
+    let wasm = std::arch::wasm32::memory_size::<0>() as u64;
     #[cfg(not(target_arch = "wasm32"))]
     let wasm = 0;
 

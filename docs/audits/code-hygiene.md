@@ -3,9 +3,9 @@
 # IC Timers code-hygiene overlay
 
 Use the [shared code-hygiene method](../../audits/code-hygiene.md) and
-[common audit contract](../../audits/README.md), unchanged from Shared Tooling
-`0ba0ad00ed94848e54ecc82629b6b7873b7284c0`. The method bytes are unchanged
-from the preceding reviewed snapshot. The
+[common audit contract](../../audits/README.md) from reviewed Shared Tooling
+`1872ed2c20f6c70689bb2249050b1d673c60bfa0`. The code-hygiene method bytes are
+unchanged; the common contract now links the maintenance catalog. The
 [audit snapshot](../../.shared-tooling-audits.snapshot) identifies those files;
 [AGENTS.md](../../AGENTS.md) supplies local command authority. This overlay
 selects product scope for a requested review, including a review before a minor

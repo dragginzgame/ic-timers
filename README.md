@@ -398,6 +398,10 @@ the root `Cargo.lock`. Ordinary Cargo commands default to the library; the probe
 targets select their packages explicitly and preserve their Wasm settings through
 the `timer-probe` profile.
 
+The reviewed [maintenance catalog](tasks/README.md) supplies named inspection
+procedures. It enables no schedule; local validation and release authority
+remain defined in [AGENTS.md](AGENTS.md).
+
 | Command | Purpose |
 | --- | --- |
 | `make update-dev` | Install the pinned toolchain, components, host and IC tools, Wasm target, and formatting hook |
@@ -425,7 +429,7 @@ Both `fmt` and `fmt-check` first require the exact cargo-sort pin and prepared
 rustfmt for the selected toolchain; missing tools require explicit setup.
 To run the development-toolchain probe checks locally, use
 `make testing-check MSRV=1.99.0`. The host-side real-canister suites currently resolve
-`ic-testkit` 0.24.0 and the pinned PocketIC 16.1.0 server on Linux x86_64 or
+`ic-testkit` 0.25.2 and the pinned PocketIC 16.1.0 server on Linux x86_64 or
 macOS Intel/Apple Silicon. The first run downloads it into the ignored
 `target/tools` cache; later runs verify its version and SHA-256. Set
 `POCKET_IC_BIN=/path/to/pocket-ic` only for an explicitly managed binary. Testkit

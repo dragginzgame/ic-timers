@@ -2,6 +2,20 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.20]
+
+### Development
+
+- Refresh Shared Tooling to reviewed 0.1.28: reject malformed active tool links
+  before execution or downloads and keep consumer release-runner fixtures
+  simulation-only. Include the maintenance catalog without activating scheduled
+  work; preserve the consumer-owned PocketIC pins and complete release gate
+  ([#31](https://github.com/dragginzgame/ic-timers/issues/31),
+  [shared #75](https://github.com/dragginzgame/shared-tooling/issues/75),
+  [shared #70](https://github.com/dragginzgame/shared-tooling/issues/70)).
+- Retain the incoming Testkit 0.25.2 lock selection through the root catalog;
+  the maintained PocketIC adapter and timer public APIs are unchanged.
+
 ## [0.14.19] - 2026-10-08
 
 ### Development
