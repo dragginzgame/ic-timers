@@ -1,17 +1,17 @@
 # Shared Tooling snapshot v1
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	75a8a60f49cec11d3f6aecab5c977029c42cc549
+revision	b866d41041a1986eeec95bde9af4c6ba0853d2e3
 file	4c981184847462ab3c01cac087e28309f8e054253fd95c7bbe56f643877aa708	x	scripts/ci/verify-file-checksum.sh
-file	b6764190803118331d7441233bcd6a3031c99c0c5219cc4a5c29dfb1a1040e41	x	scripts/ci/verify-shared-tooling-snapshot.sh
-file	5c9c8c8e881d67559b2f2e365be2c17ee36d6280bef82de0b3850a4a00206013	x	scripts/ci/check-dependency-pins.sh
+file	ba5c6b76d15bec4ac226f1ab0732d5087446152d64107993c52642a68d2ff464	x	scripts/ci/verify-shared-tooling-snapshot.sh
+file	ebb3f8d39cf4b4f61fdb145619637da0009e1cebe9e9af9cc9c75439036a1717	x	scripts/ci/check-dependency-pins.sh
 file	43b22d137421962ab6b34634e60d94b8cc6cf5483f9bc55afa8a0d1cd0964a28	-	scripts/ci/dependency-pins.jq
-file	75c53efefe025efb4f817879c802c201ca9d06a2c7ba7aefc25701b9aebf6170	x	scripts/ci/test-dependency-pins.sh
+file	479cec75dff5f81705db3f10d63f494b6eca73d5a0714e648ab3174c645ca93d	x	scripts/ci/test-dependency-pins.sh
 file	40f31a19d6115411ebffe7c26e3ed30b8af7eead10dd4830de8d5a9312291222	x	scripts/ci/read-cargo-workspace-version.sh
-file	1719211830ee32ef422e12e226179ccf37c1b6a9e2c9a41bb2b71766cad52c3e	x	scripts/ci/test-cargo-metadata.sh
+file	740dd07566c83efc8c89f6ec661d1ed95956cf990073387ceb1f4055cae4373b	x	scripts/ci/test-cargo-metadata.sh
 file	236f9b2d7fe391a73d03cfe355c0d26fa73de8db1553c7e670f7b19aeb65d086	x	scripts/ci/rewrite-local-lock-versions.pl
 file	d4b498337bfd681466e7b541cb2783779aad2a8b326e927450d98f3b570fb5c6	x	scripts/ci/test-local-lock-versions.pl
 file	a52db278800a9f02d85a6b8a780a9b1eed860c49d5442cef9db1f7f9d7ddee0a	x	scripts/ci/check-format-tools.sh
-file	bf3ac5d22e63798ffe67539b138d277cc3364a4665babff5b494b210b1e140ce	x	scripts/ci/test-format-tools.sh
+file	3aadaef7cac355bd2bdeab2999729ee7e55fde1048f0f40f0940316fbe9bf338	x	scripts/ci/test-format-tools.sh
 file	d7b179f9ceaec6e11c690c975b61f91bedc80526415f71571615064db14f0c9c	x	scripts/ci/check-release-tag.sh
 file	5dd38585740657f98f655c15c4f617ca05dc4b6304e0925675a44376ec33309b	x	scripts/ci/check-release-commands.sh

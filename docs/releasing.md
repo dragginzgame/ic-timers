@@ -28,8 +28,8 @@ loaders select the resulting `timer-probe` output directory. The root ordinary
 release profile is unchanged. Dependency resolution now uses root resolver 3;
 fresh measurements and native qualification are required for the combined graph.
 
-The incoming root catalog selects compatible Testkit 0.23, locked to 0.23.0,
-with all four Host crates at 0.6.0 transitively, and ic-metrics 0.2.11. PocketIC remains the audited
+The incoming root catalog selects compatible Testkit 0.24, locked to 0.24.0,
+with all four Host crates at 0.7.1 transitively, and ic-metrics 0.2.13. PocketIC remains the audited
 16.0.0 server. Its client's exact thiserror 2.0.18 requirement determines the
 shared thiserror selection; the old library-only 2.0.21 graph is not retained.
 All four member versions inherit the root release identity, and release
@@ -37,10 +37,10 @@ preparation updates their local lock records together. This is repository/test d
 or measurement claim. Historical adoption evidence below remains tied to its
 recorded versions, workspace shapes and hosts.
 
-The [Testkit adoption](#testkit-023-adoption) and
-[Shared Tooling preparation](shared-tooling.md#shared-tooling-0126-preparation)
+The [Testkit adoption](#testkit-024-selection) and
+[Shared Tooling preparation](shared-tooling.md#shared-tooling-0127-preparation)
 record current source and qualification gaps. These repository/test-only changes
-select the compatible 0.14.17 draft; Cargo package versions remain 0.14.16.
+select the compatible 0.14.18 draft; Cargo package versions remain 0.14.17.
 
 ## Pre-1.0 compatibility
 
@@ -539,6 +539,22 @@ and evidence, not metrics library implementation.
 Host 0.5.1 `81f9809861159def2fd0987fcb7961cda4afd969` is committed; its
 [exact-source CI](https://github.com/dragginzgame/ic-host-tooling/actions/runs/37750135927)
 passed Linux, MSRV and both native macOS gates.
+
+### Testkit 0.24 selection
+
+During the 0.14.18 path repair, a concurrent root catalog/lock update selected
+registry Testkit 0.24.0; the current incoming lock selects all four Host crates at
+0.7.1 and Metrics 0.2.13. Those edits are preserved; this contributor ran no update
+or fetch. Registry Rust files for Host 0.7.1 match 0.7.0, and Metrics 0.2.13 match
+0.2.12; these latest patches have no Rust source delta. Cheap full locked offline metadata
+passes, and the selected registry Rust source matches Testkit's released owning
+checkout `e7a9c6c`. The harness has no `artifacts::read_wasm` call or exhaustive
+Host process-error matches, so neither upstream public cut needs an adapter here.
+The root catalog remains the only direct-dependency owner; Host/Testkit stay
+outside the timer library graph. Timer runtime/API, audited PocketIC 16.0.0 and
+expected production Wasm/instruction cost are unchanged. This selection requires
+its own full user-operated consumer gate; the frozen 0.14.17 observations below
+execute Testkit 0.23 / Host 0.6 and do not qualify this new graph.
 
 ### Testkit 0.23 adoption
 
@@ -1053,6 +1069,60 @@ mechanics are replaced by their shared owner. No timer runtime/API, provider,
 PocketIC version or release-gate selection changes; expected production
 Wasm/instruction impact is zero. Source, syntax and snapshot checks are
 preparation evidence only.
+
+#### Evidence path repair and 0.14.17 qualification
+
+The compatible **0.14.18** draft repairs consumer-owned evidence bootstrap for
+[#30](https://github.com/dragginzgame/ic-timers/issues/30), following the reviewed
+pattern from [Shared #67](https://github.com/dragginzgame/shared-tooling/issues/67).
+The collector, qualification driver and fixture anchor relative operands before
+physical `cd`. Captured PWD carries a non-newline suffix, so command substitution
+cannot strip legal terminal newline bytes or mix CDPATH diagnostics into a path.
+The driver still rejects a different physical workspace and accepts a matching
+alias. Temporary roots are resolved explicitly; Git object-path capture preserves
+the producer's framing separately. No shared payload is patched or new path API
+introduced. No named function, method or type is removed.
+
+The maintained fixture adds copied consumer scripts under a physical checkout
+ending in a newline, inherited CDPATH, a matching workspace alias, a different
+workspace rejection and a newline-ending runner directory. It drives both stages
+and compares retained status/input/log bytes after actual shared archiving.
+The reviewed [Shared Tooling 0.1.27 refresh](shared-tooling.md#shared-tooling-0127-preparation)
+repairs the canonical bootstrap, so these additional cases now copy the real
+installer/logger and their companions. The temporary path-only substitutes are
+removed. Both normal and newline-ending path cases check the real retained
+candidate bytes, controlled status and late combined log. This coverage does not
+claim that every vendored script works from a newline-ending checkout. Fixture
+execution, Bash 3.2 and native qualification of the local fix remain user-owned;
+preparation ran integrity/source/syntax/diff checks only.
+
+The maintainer's explicit request to do the proposed hosted qualification
+authorized two new frozen-source dispatches at **v0.14.17**,
+`031e6c67dccdd043ff11e20d9978359a4ec6afc8`, attempt 1:
+[early 37776644653](https://github.com/dragginzgame/ic-timers/actions/runs/37776644653)
+and [late 37776654992](https://github.com/dragginzgame/ic-timers/actions/runs/37776654992).
+These execute the released shared archiver and Testkit 0.23 / Host 0.6 graph,
+not the uncommitted path repair or incoming dependencies. Do not redispatch a
+lost reply or relabel old #23 acceptance. Original job failures are intentional;
+acceptance requires each expected failure, successful archive/upload and exact
+downloaded identity/bytes/modes/status.
+
+Both Linux checks jobs reached their selected controlled failure and passed
+archive/upload. Early artifact **11549169587** is 1,342 bytes; late artifact
+**11550069656** is 373,203,770 bytes (GitHub-reported ZIP sizes). Both Linux downloads pass the byte-exact released verifier. The four native
+macOS observations are still queued at this inspection; no complete six-host/stage
+acceptance is claimed. Artifacts, original job logs and the frozen verifier are
+retained under `target/evidence/hosted-failure-artifacts/`. Record subsequent
+terminal outcomes here and on #30 rather than dispatching duplicates.
+
+Full installer retention remains selected. The compact selector under Shared #66
+is committed at 0.1.27 and included solely to satisfy the refreshed host/IC
+fixtures' dependencies. Exact-source upstream Linux portable fixtures pass, but
+the native compact round trip fails at a stale log-path comparison and both macOS
+jobs are queued. The [adoption owner](shared-tooling.md#shared-tooling-0127-preparation)
+records scope; compact selection is not enabled in the consumer collector. No archive-size saving or
+stronger IC recovery guarantee is claimed. The frozen observations do not qualify local
+path changes, unrelated outages or other package identities.
 
 #### Hosted qualification at 0.14.15
 

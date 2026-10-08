@@ -2,6 +2,26 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.18]
+
+### Development
+
+- Preserve evidence collection and qualification paths under inherited `CDPATH`
+  and newline-ending checkout or temporary directories. Keep workspace identity,
+  original failure status and archive retention checks
+  ([#30](https://github.com/dragginzgame/ic-timers/issues/30),
+  [shared #67](https://github.com/dragginzgame/shared-tooling/issues/67)).
+- Refresh Shared Tooling to reviewed 0.1.27 for shell path bootstrap, complete
+  host/IC evidence fixtures and dotted snapshot LOC reporting. Exercise the real
+  installer and logger in the evidence path regression; full archive retention
+  remains selected while compact-policy qualification is pending
+  ([shared #66](https://github.com/dragginzgame/shared-tooling/issues/66),
+  [shared #67](https://github.com/dragginzgame/shared-tooling/issues/67),
+  [shared #69](https://github.com/dragginzgame/shared-tooling/issues/69)).
+- Select Testkit 0.24 through the existing root dependency catalog; preserve the
+  incoming Host 0.7.1 and Metrics 0.2.13 lock selections. The maintained PocketIC
+  harness and timer public APIs are unchanged.
+
 ## [0.14.17] - 2026-10-08
 
 ### Development

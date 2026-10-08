@@ -11,14 +11,25 @@ set -euo pipefail
 }
 : "${GITHUB_WORKSPACE:?qualification requires GITHUB_WORKSPACE}"
 : "${RUNNER_TEMP:?qualification requires RUNNER_TEMP}"
-root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
-[[ "$(cd "$GITHUB_WORKSPACE" && pwd -P)" == "$root" ]] || {
+root="${BASH_SOURCE[0]}"
+[[ "$root" == /* ]] || root="$PWD/$root"
+root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
+root="${root%/.}"
+workspace="$GITHUB_WORKSPACE"
+[[ "$workspace" == /* ]] || workspace="$PWD/$workspace"
+workspace="$(cd -P "$workspace" && printf '%s/.' "$PWD")"
+workspace="${workspace%/.}"
+[[ "$workspace" == "$root" ]] || {
     echo 'qualification must use the selected CI checkout' >&2; exit 2;
 }
 stage="$1"
-mkdir -p "$RUNNER_TEMP/ic-timers-fixtures"
-export TMPDIR="$RUNNER_TEMP/ic-timers-fixtures"
-scenario="$(mktemp -d "$RUNNER_TEMP/ic-timers-fixtures/hosted-${stage}.XXXXXX")"
+temporary="$RUNNER_TEMP"
+[[ "$temporary" == /* ]] || temporary="$PWD/$temporary"
+temporary="$(cd -P "$temporary" && printf '%s/.' "$PWD")"
+temporary="${temporary%/.}"
+mkdir -p "$temporary/ic-timers-fixtures"
+export TMPDIR="$temporary/ic-timers-fixtures"
+scenario="$(mktemp -d "$temporary/ic-timers-fixtures/hosted-${stage}.XXXXXX")"
 printf 'Qualification scenario retained: %s\n' "$scenario"
 mkdir -p "$scenario/consumer" "$scenario/bin"
 printf 'controlled %s input\n' "$stage" > "$scenario/consumer/input.txt"

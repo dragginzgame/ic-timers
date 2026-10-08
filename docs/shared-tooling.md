@@ -1,5 +1,47 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.1.27 preparation
+
+The compatible undated **0.14.18** draft selects reviewed committed source
+[`b866d41041a1986eeec95bde9af4c6ba0853d2e3`](https://github.com/dragginzgame/shared-tooling/tree/b866d41041a1986eeec95bde9af4c6ba0853d2e3)
+(VERSION 0.1.27). A clean detached scratch clone supplies all three exports:
+**36 baseline / 34 audit-setup / 13 helper** files. Overlapping payloads agree.
+The baseline rules and local command-authority exceptions are unchanged. Host/IC
+pins, strict PocketIC admission and the complete user-operated gate remain.
+
+The refresh carries anchored physical shell bootstrap, the dependency checker's
+checkout-root admission, release/validation entrypoint repair and dotted
+`.shared-tooling*.snapshot` LOC recognition. Existing host/IC fixtures now call
+`test-tool-evidence.sh`, which selects the shared selector, neutral archiver and
+actual composite-action collection step. Those four exact files are added to the
+audit export; the archiver already selected in the baseline is recorded identically.
+This is required fixture closure, not adoption of the action in consumer workflows.
+Neither the composite uploader nor compact selection is selected in ordinary
+consumer CI. The local collector retains every selected/unselected tool bundle.
+
+The consumer evidence-path fixture replaces its temporary installer/logger
+substitutes with the repaired real owners and their companions, checking both
+controlled failure statuses and retained download/log bytes. No named function,
+method or type is removed. Public timer behavior and production Wasm, instruction
+and heap costs are unchanged. The incoming Testkit graph remains separately
+owned in the [dependency record](releasing.md#testkit-024-selection).
+
+All three exported integrity checks, source byte/mode/overlap inspection, syntax
+and diff checks are preparation evidence. No tests, builds, lint, installation,
+version mutation or Git delivery ran. Exact-source
+[upstream 0.1.27 CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37778118837)
+passes lint/security and the Linux portable regression set, including the actual
+synthetic selector/action fixtures and path-bootstrap cases. Its Linux native
+compact round trip fails at a stale `portable-regression.log` comparison after
+selection/pin/receipt/candidate assertions: the producer now writes separate
+IC/Rust install/check logs. Both native macOS jobs are queued. This is not complete
+compact-policy acceptance. [Feedback is recorded on Shared #66](https://github.com/dragginzgame/shared-tooling/issues/66#issuecomment-6060214674); compact retention
+remains deferred, with no size or collection-time saving claimed. The
+[consumer evidence owner](releasing.md#evidence-path-repair-and-01417-qualification)
+keeps the already-dispatched frozen 0.14.17 observations separate from this draft.
+Local [#30](https://github.com/dragginzgame/ic-timers/issues/30) remains open through
+adapter acceptance and the compact-selection obligation.
+
 ## Shared Tooling 0.1.26 preparation
 
 The incoming **0.14.17** draft selects reviewed committed source

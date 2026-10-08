@@ -1,20 +1,28 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-root="$(git rev-parse --show-toplevel)"
-fixture="$(mktemp -d "${TMPDIR:-/tmp}/timer-evidence-test.XXXXXX")"
+root="${BASH_SOURCE[0]}"
+[[ "$root" == /* ]] || root="$PWD/$root"
+root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
+root="${root%/.}"
+temporary="${TMPDIR:-/tmp}"
+[[ "$temporary" == /* ]] || temporary="$PWD/$temporary"
+temporary="$(cd -P "$temporary" && printf '%s/.' "$PWD")"
+temporary="${temporary%/.}"
+fixture="$(mktemp -d "$temporary/timer-evidence-test.XXXXXX")"
 trap 'if [[ $? == 0 ]]; then rm -rf "$fixture"; else printf "Failed evidence fixture retained: %s\n" "$fixture" >&2; fi' EXIT
 export GITHUB_WORKSPACE="$fixture/repo" RUNNER_TEMP="$fixture/runner"
 export GITHUB_SHA=fixture-event-sha GITHUB_JOB=fixture-job
 export RUNNER_OS=fixture-os RUNNER_ARCH=fixture-arch GITHUB_RUN_ID=123 GITHUB_RUN_ATTEMPT=2
 mkdir -p "$GITHUB_WORKSPACE" "$RUNNER_TEMP"
 # Read-only reuse of committed objects gives the fixture an actual checkout SHA.
-objects="$(git rev-parse --git-path objects)"
+objects="$(git -C "$root" rev-parse --git-path objects && printf '.')"
+objects="${objects%$'\n'.}"
 case "$objects" in /*) ;; *) objects="$root/$objects" ;; esac
 git init -q "$GITHUB_WORKSPACE"
 mkdir -p "$GITHUB_WORKSPACE/.git/objects/info"
 printf '%s\n' "$objects" > "$GITHUB_WORKSPACE/.git/objects/info/alternates"
-git -C "$GITHUB_WORKSPACE" update-ref HEAD "$(git rev-parse HEAD)"
+git -C "$GITHUB_WORKSPACE" update-ref HEAD "$(git -C "$root" rev-parse HEAD)"
 scratch="$RUNNER_TEMP/ic-timers-fixtures/failed case"
 mkdir -p "$scratch/.git" "$GITHUB_WORKSPACE/.git/release-state/validation-failures" \
     "$GITHUB_WORKSPACE/target/validation-failures" "$GITHUB_WORKSPACE/target/build-cache" \
@@ -65,7 +73,7 @@ perl -e 'for my $pair (0, 2) { my @a=stat $ARGV[$pair]; my @b=stat $ARGV[$pair+1
 perl -e 'my @a=stat $ARGV[0]; my @b=stat $ARGV[1];
     @a && @b && ($a[2]&07777)==($b[2]&07777) or die "archive lost unusual-name mode\n";' \
     "$scratch/$unusual" "$fixture/extracted/ic-timers-fixtures/failed case/$unusual"
-grep -Fxq "checkout_sha=$(git rev-parse HEAD)" "$fixture/extracted/identity.txt"
+grep -Fxq "checkout_sha=$(git -C "$root" rev-parse HEAD)" "$fixture/extracted/identity.txt"
 grep -Fxq 'event_sha=fixture-event-sha' "$fixture/extracted/identity.txt"
 grep -Fxq 'job=fixture-job' "$fixture/extracted/identity.txt"
 grep -Fxq 'host=fixture-os/fixture-arch' "$fixture/extracted/identity.txt"
@@ -207,4 +215,74 @@ for scenario in "$RUNNER_TEMP/ic-timers-fixtures"/hosted-*; do
         cmp "$scenario/$file" "$fixture/qualification-extracted/${scenario#"$RUNNER_TEMP/"}/$file"
     done
 done
+# Bootstrap regression: invoke copied consumer entrypoints by relative name
+# with inherited CDPATH and physical checkout/workspace/temp roots ending in
+# newlines. Select the repaired canonical installer/logger and their companions
+# so these paths exercise the same owners as the normal-path cases above.
+copied="$fixture/"$'copied-checkout\n'
+export RUNNER_TEMP="$fixture/"$'copied-runner\n'
+mkdir -p "$copied/scripts/ci" "$copied/scripts/dev" "$copied/ci" "$RUNNER_TEMP"
+git init -q "$copied"
+mkdir -p "$copied/.git/objects/info"
+printf '%s\n' "$objects" > "$copied/.git/objects/info/alternates"
+git -C "$copied" update-ref HEAD "$(git -C "$root" rev-parse HEAD)"
+for script in collect-failure-evidence qualify-failure-evidence archive-evidence \
+    run-validation-targets check-make-execution verify-file-checksum; do
+    cp "$root/scripts/ci/$script.sh" "$copied/scripts/ci/"
+done
+cp "$root/ci/tool-versions.env" "$copied/ci/"
+cp "$root/scripts/dev/install-host-tools.sh" "$copied/scripts/dev/"
+# The selected workspace alias must compare equal to the physical script root.
+ln -s "$copied" "$fixture/selected-checkout"
+export GITHUB_WORKSPACE="$fixture/selected-checkout" CDPATH="$copied"
+status=0
+(
+    cd -P "$copied"
+    GITHUB_WORKSPACE="$fixture" GITHUB_ACTIONS=true GITHUB_EVENT_NAME=workflow_dispatch \
+        bash scripts/ci/qualify-failure-evidence.sh late
+) > "$fixture/foreign-checkout.log" 2>&1 || status=$?
+test "$status" -eq 2
+grep -Fq 'qualification must use the selected CI checkout' "$fixture/foreign-checkout.log"
+for stage in early late; do
+    status=0
+    (
+        cd -P "$copied"
+        GITHUB_ACTIONS=true GITHUB_EVENT_NAME=workflow_dispatch \
+            bash scripts/ci/qualify-failure-evidence.sh "$stage"
+    ) > "$fixture/$stage-path-qualification.log" 2>&1 || status=$?
+    expected=22
+    [[ "$stage" != late ]] || expected=2
+    if [[ "$status" != "$expected" ]]; then
+        cat "$fixture/$stage-path-qualification.log" >&2
+        exit 1
+    fi
+    scenarios=("$RUNNER_TEMP/ic-timers-fixtures/hosted-${stage}."*)
+    test "${#scenarios[@]}" -eq 1
+    scenario="${scenarios[0]}"
+    printf 'stage=%s\nstatus=%s\nexpected=%s\n' "$stage" "$expected" "$expected" > "$fixture/expected-path-status"
+    cmp "$fixture/expected-path-status" "$scenario/status.txt"
+    if [[ "$stage" == early ]]; then
+        candidates=("$scenario/consumer/.tools/host-set."*)
+        test "${#candidates[@]}" -eq 1
+        grep -Fxq 'controlled rejected download bytes' "${candidates[0]}/bin/jq"
+    else
+        grep -Fxq 'error: controlled late validation failure' \
+            "$copied/target/validation-failures/latest-combined.log"
+    fi
+done
+(
+    cd -P "$copied"
+    bash scripts/ci/collect-failure-evidence.sh
+) > "$fixture/path-collection.log" 2>&1
+mkdir "$fixture/path-extracted"
+tar -xzpf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" -C "$fixture/path-extracted"
+for scenario in "$RUNNER_TEMP/ic-timers-fixtures"/hosted-*; do
+    for file in before.txt after.txt scenario.log status.txt consumer/input.txt; do
+        cmp "$scenario/$file" "$fixture/path-extracted/${scenario#"$RUNNER_TEMP/"}/$file"
+    done
+done
+grep -Fxq "checkout_sha=$(git -C "$root" rev-parse HEAD)" "$fixture/path-extracted/identity.txt"
+grep -Fxq 'event_sha=fixture-event-sha' "$fixture/path-extracted/identity.txt"
+cmp "$copied/target/validation-failures/latest.log" \
+    "$fixture/path-extracted/target/validation-failures/latest.log"
 echo 'CI failure evidence selection, metadata, modes, empty-input, retention and qualification-driver checks passed'
