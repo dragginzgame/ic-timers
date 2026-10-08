@@ -1,5 +1,41 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.1.27 committed follow-up
+
+The undated compatible **0.14.19** draft selects reviewed committed follow-up
+[`db039347d2372b877c1c46dcdd2b5c3aa9412009`](https://github.com/dragginzgame/shared-tooling/tree/db039347d2372b877c1c46dcdd2b5c3aa9412009)
+(VERSION remains 0.1.27). All three exports retain **36/34/13** files and matching
+overlaps. A clean detached scratch clone supplies committed bytes; the sibling's
+uncommitted 0.1.28 draft is excluded. Baseline rules, local command exceptions,
+caller pins, exact PocketIC alignment and production timer code are unchanged.
+
+The host/IC/Rust installers now preserve literal physical consumer operands;
+the IC installer also anchors and preserves caller-selected pin paths. Existing
+host/IC fixtures check relative consumer operands under inherited CDPATH. Their
+second-line companion declarations now make incomplete fixture exports refuse
+before replacement; the already-complete consumer roster needs no additions.
+The reviewed helper guide now documents the compact selector's pin/check/race
+contract. No named function, method or type is removed.
+
+The upstream workflow oracle now compares all four actual IC/Rust producer logs.
+Exact-source [run 37787910279](https://github.com/dragginzgame/shared-tooling/actions/runs/37787910279)
+passes Linux portable fixtures, native full/compact upload/download and final
+pin/receipt/candidate/log comparisons, plus lint/security. Intel is running and
+Apple Silicon is queued at inspection. This supersedes b866's stale-log failure
+only for db039; it does not supply complete native acceptance. Ordinary consumer
+CI retains full bundles and its existing collector. No archive savings are claimed.
+[Shared #75](https://github.com/dragginzgame/shared-tooling/issues/75) separately
+owns literal active-link admission; these committed installers still contain the
+reported newline-stripping capture. The selector's literal-byte guard is distinct
+and the finding is not a claim of archive loss. No immutable payload is patched.
+
+Source/export bytes/modes/overlaps, all three integrity checks, syntax and diff
+checks are preparation evidence. No local tests/builds/lint, installation or
+release effects ran. Existing explicitly authorized hosted observations remain
+source-bound in the [evidence owner](releasing.md#evidence-path-repair-and-01417-qualification).
+The snapshot follow-up alone has no expected production Wasm, heap or timer
+instruction delta and does not justify a runtime feature or hard cut.
+
 ## Shared Tooling 0.1.27 preparation
 
 The compatible undated **0.14.18** draft selects reviewed committed source

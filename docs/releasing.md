@@ -38,9 +38,9 @@ or measurement claim. Historical adoption evidence below remains tied to its
 recorded versions, workspace shapes and hosts.
 
 The [Testkit adoption](#testkit-024-selection) and
-[Shared Tooling preparation](shared-tooling.md#shared-tooling-0127-preparation)
+[Shared Tooling preparation](shared-tooling.md#shared-tooling-0127-committed-follow-up)
 record current source and qualification gaps. These repository/test-only changes
-select the compatible 0.14.18 draft; Cargo package versions remain 0.14.17.
+select the compatible 0.14.19 draft; Cargo package versions remain 0.14.18.
 
 ## Pre-1.0 compatibility
 
@@ -466,6 +466,19 @@ continues to target Wasm on the Internet Computer.
 | macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.15. The historical 0.14.1 missing-`rg` failure is recorded below. |
 | macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.15. Historical failures retain their original scope below. |
 
+Released **0.14.18** is `c8d670d1e3181bebb1e67fcfc3eed0dcde0bddd2`.
+[Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37790176635)
+passes Linux CI/probe lint and MSRV; Apple Silicon is running and Intel is queued
+at inspection. Matching [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37790175542)
+passes. This graph selects Testkit 0.24.0 / Host 0.7.1 / Metrics 0.2.13 and
+PocketIC 16.0.0. Released **0.14.17**'s
+[main run](https://github.com/dragginzgame/ic-timers/actions/runs/37774925568)
+now passes Linux, MSRV and both complete native macOS gates at `031e6c67`.
+That supplies complete normal-gate acceptance of its Testkit 0.23 / Host 0.6 /
+Metrics 0.2.12 / PocketIC 16.0.0 graph; separate manual failure transport remains
+scoped in the [evidence owner](#evidence-path-repair-and-01417-qualification).
+Neither source qualifies the incoming PocketIC 16.1.0 client or db039 tooling.
+
 Released **0.14.15** is `ae26b854a1a473c5d2d153705c2d13570f378d38`.
 [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37752855158)
 passed Linux, MSRV and both complete native macOS gates; matching
@@ -539,6 +552,20 @@ and evidence, not metrics library implementation.
 Host 0.5.1 `81f9809861159def2fd0987fcb7961cda4afd969` is committed; its
 [exact-source CI](https://github.com/dragginzgame/ic-host-tooling/actions/runs/37750135927)
 passed Linux, MSRV and both native macOS gates.
+
+### Incoming PocketIC lock alignment
+
+After 0.14.18 release, an external root-lock edit selects PocketIC client 16.1.0
+under Testkit 0.24.0's compatible requirement, with the related base64/wslpath
+changes. This edit is preserved during tooling preparation. The selected audited
+server and artifact matrix remain **16.0.0**. The maintained shared alignment
+checker requires exact client/server identity, so this graph will fail admission;
+a successful Cargo metadata read alone cannot qualify it. Do not weaken the gate
+or relabel frozen 16.0.0 evidence. The maintainer explicitly chose to retain client
+16.1.0 for separate server qualification, rather than restoring the 16.0.0 client.
+Server adoption requires a separately reviewed matrix, extracted-binary digests
+and native runtime qualification; this tooling follow-up performs none of those
+release-evidence changes. The present client/server pair is not release-admissible.
 
 ### Testkit 0.24 selection
 
@@ -1109,17 +1136,27 @@ downloaded identity/bytes/modes/status.
 
 Both Linux checks jobs reached their selected controlled failure and passed
 archive/upload. Early artifact **11549169587** is 1,342 bytes; late artifact
-**11550069656** is 373,203,770 bytes (GitHub-reported ZIP sizes). Both Linux downloads pass the byte-exact released verifier. The four native
-macOS observations are still queued at this inspection; no complete six-host/stage
-acceptance is claimed. Artifacts, original job logs and the frozen verifier are
+**11550069656** is 373,203,770 bytes (GitHub-reported ZIP sizes). Both Linux downloads pass the byte-exact released verifier. The native
+late macOS observations now reach the intended controlled failure after complete
+native release gates, archive/upload successfully, and pass the hosted downloaded
+verifier: Intel artifact **11555254656** (228,372,951-byte ZIP), verifier job
+**113361599275**; Apple Silicon artifact **11556628023** (213,944,791-byte ZIP),
+verifier job **113361599424**. Linux hosted verifier **113361599302** also passes.
+The early Intel job **113309082998** reaches its controlled failure and uploads
+artifact **11553654328** (10,711-byte ZIP); its local download passes the byte-exact
+released verifier. Early Apple Silicon remains queued. These are **five of six**
+source-bound observations, not complete six-host/stage acceptance. The macOS
+late archives were verified by the maintained hosted jobs, not downloaded locally
+again. The tiny early Intel transport, job log and local verifier output join the
+existing retained evidence. Artifacts, original job logs and the frozen verifier are
 retained under `target/evidence/hosted-failure-artifacts/`. Record subsequent
 terminal outcomes here and on #30 rather than dispatching duplicates.
 
 Full installer retention remains selected. The compact selector under Shared #66
 is committed at 0.1.27 and included solely to satisfy the refreshed host/IC
-fixtures' dependencies. Exact-source upstream Linux portable fixtures pass, but
-the native compact round trip fails at a stale log-path comparison and both macOS
-jobs are queued. The [adoption owner](shared-tooling.md#shared-tooling-0127-preparation)
+fixtures' dependencies. The reviewed committed db039 follow-up repairs the stale
+oracle; its Linux native full/compact transport now passes, while Intel is running
+and Apple Silicon is queued. The [adoption owner](shared-tooling.md#shared-tooling-0127-committed-follow-up)
 records scope; compact selection is not enabled in the consumer collector. No archive-size saving or
 stronger IC recovery guarantee is claimed. The frozen observations do not qualify local
 path changes, unrelated outages or other package identities.

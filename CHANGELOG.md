@@ -2,6 +2,22 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.19]
+
+### Development
+
+- Refresh the reviewed Shared Tooling 0.1.27 follow-up for literal consumer/pin
+  paths and explicit installer-fixture dependencies. Keep full evidence retention
+  while native compact-policy acceptance remains pending
+  ([shared #66](https://github.com/dragginzgame/shared-tooling/issues/66),
+  [shared #67](https://github.com/dragginzgame/shared-tooling/issues/67)).
+- Retain the incoming PocketIC 16.1.0 client for separate audited server
+  qualification. Preserve the exact-alignment gate and keep prior 16.0.0 evidence
+  scoped to its original pair.
+- Record completed native late-failure transport and Intel early-failure evidence
+  at frozen 0.14.17, retaining the separate source and acceptance boundaries
+  ([#30](https://github.com/dragginzgame/ic-timers/issues/30)).
+
 ## [0.14.18] - 2026-10-08
 
 ### Development
