@@ -1,5 +1,79 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.1.29 adoption
+
+After pushed 0.14.20 (`40611eff87b3165e58528c597debaa95427cdf5a`), the compatible
+**0.14.21** draft selects committed
+[`1a54fb625d6e47efa64c4384808ecbc87be84e7e`](https://github.com/dragginzgame/shared-tooling/tree/1a54fb625d6e47efa64c4384808ecbc87be84e7e)
+(0.1.29) through **51 baseline / 33 audit-setup / 13 helper** records.
+[#32](https://github.com/dragginzgame/ic-timers/issues/32) owns consumer adoption.
+The three canonical exports come from one clean detached scratch clone; the
+nested bundle uses the existing isolated temporary consumer method. The one
+baseline addition is `scripts/ci/check-release-source.sh`, required by the
+refreshed release guide and now directly selected by the local adapter. Later
+dirty 0.1.30 Cargo-install qualification is excluded. Shared files are unchanged
+committed bytes and executable modes; no shared payload is patched locally.
+
+`scripts/release/adapter.sh` deletes its private **`admit_release_paths`** function
+and delegates both admission calls to the shared owner. Its four literal
+exceptions remain `Cargo.toml`, `Cargo.lock`, `CHANGELOG.md` and `README.md`.
+The helper reports all observed rejected paths with staged/unstaged/untracked
+context, preserves unusual names and uses a read-only Git status observation
+with optional index locks disabled. Git observation failure remains distinct
+from dirty source. The runner's new message describes only initial preflight
+for that attempt; later preparation/reconciliation does not claim that no prior
+validation ran ([Shared #74](https://github.com/dragginzgame/shared-tooling/issues/74)).
+Metadata checks, exact committed-source checks, Git effects, full validation and
+cache preparation remain in their current owners. No wrapper, alternate path
+parser or compatibility checker is retained. This is the only removed named
+function, method or type in this batch.
+
+The existing actual-adapter `test-release-index.sh` fixture now checks combined
+hidden staged, ordinary working and newline-untracked refusal, exact index/file
+byte preservation and refusal before fetch. Fault stubs cover the helper's
+checkout/status observations, including partial output, without relabelling errors
+as dirty source. Existing metadata allowance, prepared-index and cache preparation
+cases remain. These regression changes were inspected and syntax checked; no
+fixture or test execution was performed by the contributor.
+
+The coordinated baseline, audit and maintenance prompt update limits standing
+issue writes to verified `dragginzgame` repositories. Existing contributor test,
+commit and release exceptions remain. Optional npm declarations gain no caller
+or Node prerequisite here; the current Cargo/Action gate keeps its selection.
+The optional terminal issue dashboard and scheduling are not selected. The
+consumer-owned PocketIC 16.1.0 matrix, host pins, full evidence retention and
+complete native release gate are preserved. Production timer source/API and
+Cargo versions are unchanged. The diagnostic cleanup alone has no expected
+timer Wasm/instruction/heap delta and can remain untagged until later code-bearing
+work rather than requiring another release. A later external root-lock edit
+advances only ic-metrics to 0.2.15 and its registry checksum; that incoming
+selection is retained separately and needs fresh dependency qualification.
+
+Exact-source [upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37806453080)
+passes Linux portable regression and lint/security, but both macOS jobs were
+cancelled and the complete run is cancelled. This does not qualify native macOS.
+Pushed Timers 0.14.20 has Linux checks/MSRV and
+[tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37807464542)
+passes; both native gates remain queued in its
+[main run](https://github.com/dragginzgame/ic-timers/actions/runs/37807464532).
+Those results do not qualify this dirty adapter. All three snapshot integrity
+checks, exact source/export bytes/modes/overlaps, selected Bash syntax, 396 local
+references across 49 document selections, locked/offline metadata and diff checks
+pass. The initial Cargo/lock and IC matrix preservation check passed. The later
+external Metrics update is the sole lock difference; the contributor performed
+no dependency update or lock edit. A current-graph locked/offline metadata recheck
+fails because ic-metrics 0.2.15 is not cached; the exact failed output is retained
+in `/tmp/ic-timers-shared029.z2UkaB/metadata-after-metrics.stderr`. No online retry
+or dependency fetch ran. The root manifest, IC matrix, production timer source
+and published changelog history remain unchanged. The adapter's 4 added/17 removed lines yield 13 fewer
+local lines; the shared helper is a 53-line owner, so this is ownership convergence,
+not an overall repository LOC reduction. No local test/build/lint,
+installation, scheduler, version mutation, stage, commit, tag or push ran.
+[#31](https://github.com/dragginzgame/ic-timers/issues/31) retains 0.1.28 native acceptance;
+[#30](https://github.com/dragginzgame/ic-timers/issues/30)
+retains frozen failure transport/compact scope. Neither obligation is relabelled
+by the new draft.
+
 ## Shared Tooling 0.1.28 adoption
 
 The compatible **0.14.20** draft selects committed

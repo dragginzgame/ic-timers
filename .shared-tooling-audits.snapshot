@@ -1,19 +1,19 @@
 # Shared Tooling snapshot v1
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	1872ed2c20f6c70689bb2249050b1d673c60bfa0
-file	fcf7ae7d617d94e2a6c417b1f7b38e5bef15dc378cc53f93bb13d9efce145ca7	-	audits/README.md
+revision	1a54fb625d6e47efa64c4384808ecbc87be84e7e
+file	faa9a62257ecdfd6532ac2225b3fd053012dfe9c35b8bc2ddc95288d8626a518	-	audits/README.md
 file	518d890bf485bef06c316b4cf26ac6bf357ed52bcce995e8d9b1232a103d0ea3	-	audits/code-hygiene.md
 file	35fd87d36a09ed0971841abf28535d43470c713a82581c2251b924da1ab8f484	-	audits/flow-convergence-and-duplication.md
 file	ffdca09602c44c8aff8fc2a17588b20eb6a56e2e71fb6d42ad75087fdd65819b	-	audits/complexity-and-technical-debt.md
 file	1b64cf2ba0393ab329ec29eb05a696d47ef5933f5ab9bff6e1fe4a7e7b294075	-	audits/module-surface-hardening.md
-file	ad0c56d074fb54455932bab7fcff0908dac34f000d2961caeca12616b79b778b	-	audits/module-cleanup.md
-file	3735fcc25b72da7aa564913d0acafedca9a5544fc8c68c50151951c4a76749b7	-	docs/consuming-snapshots.md
+file	8f415bcb0e97fcc0e27519e727e7aefae94686e6e5e3619d24e3df3ace5d7708	-	audits/module-cleanup.md
+file	5cdc1f2e8c2743d659f1374c03c40b2c379ecbf7bd34f6c0a3794c6d7e160c64	-	docs/consuming-snapshots.md
 file	1a0d1d6f2a87a0d77378fdda605f5700cc7e2ca8c8dfac79418248da30b7e657	-	docs/provenance.md
-file	9d1305b03ae2a75972afd1a8f729a7c5e3c63e1cf8468d659c07c3e9afe12e4d	-	docs/ic-tools.md
+file	758cd0977502a54d2ebfb28bb58a5c2ff6691da85f7b5dab0cef4c231ec234d8	-	docs/ic-tools.md
 file	7182b923e6270f7a01b2fa5b2866ec7b829f496ff1ff6a64706c35e006c0bb27	-	docs/local-setup.md
 file	82892e25292fe47c26035a0031aa4ad1996fcf181732163e75039bd657f2f84b	-	ci/tool-versions.env
-file	fda4a696f5c6e288e19aaaf7e89a1ad9ef151c742d54ce1470021079ffb72fb9	-	rules/dependency-pinning.md
+file	f114e128d2d3ab1cd4fae4c8eb89866990063cd5cd4a6dbafde49872f0a02af1	-	rules/dependency-pinning.md
 file	27a04aeee753252b310fef363856edf83577337bfaea1e63a50017460eddde59	-	docs/principles/rust-code-hygiene.md
 file	457fd38e0073c91ba470b918d4facd9faac3c5200ebd38c97e9d6b76acdaea55	-	docs/principles/simplicity-and-maintainability.md
 file	4c981184847462ab3c01cac087e28309f8e054253fd95c7bbe56f643877aa708	x	scripts/ci/verify-file-checksum.sh

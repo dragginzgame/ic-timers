@@ -2,6 +2,19 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.21]
+
+### Development
+
+- Use reviewed Shared Tooling 0.1.29 to report every staged, unstaged and
+  untracked path that prevents release, distinguishing failed Git observations
+  from dirty source. Replace the private checker while preserving metadata
+  allowances; initial preflight failures explain that validation and version
+  preparation have not started for that attempt
+  ([#32](https://github.com/dragginzgame/ic-timers/issues/32),
+  [shared #74](https://github.com/dragginzgame/shared-tooling/issues/74)).
+- Retain the incoming ic-metrics 0.2.15 lock selection through the root catalog.
+
 ## [0.14.20] - 2026-10-08
 
 ### Development

@@ -4,8 +4,9 @@
 
 Use the [shared code-hygiene method](../../audits/code-hygiene.md) and
 [common audit contract](../../audits/README.md) from reviewed Shared Tooling
-`1872ed2c20f6c70689bb2249050b1d673c60bfa0`. The code-hygiene method bytes are
-unchanged; the common contract now links the maintenance catalog. The
+`1a54fb625d6e47efa64c4384808ecbc87be84e7e`. The code-hygiene method bytes are
+unchanged; the common contract links the maintenance catalog and scopes standing
+issue writes to verified `dragginzgame` repositories. The
 [audit snapshot](../../.shared-tooling-audits.snapshot) identifies those files;
 [AGENTS.md](../../AGENTS.md) supplies local command authority. This overlay
 selects product scope for a requested review, including a review before a minor

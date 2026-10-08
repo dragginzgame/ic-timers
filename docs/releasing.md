@@ -28,7 +28,7 @@ loaders select the resulting `timer-probe` output directory. The root ordinary
 release profile is unchanged. Dependency resolution now uses root resolver 3;
 fresh measurements and native qualification are required for the combined graph.
 
-Released 0.14.19's root catalog selects compatible Testkit 0.25, locked to 0.25.1,
+Released 0.14.20's root catalog selects compatible Testkit 0.25, locked to 0.25.2,
 with all four Host crates at 0.8.2 transitively, and ic-metrics 0.2.14. The PocketIC client/server pair selects
 16.1.0; prior runtime evidence remains bound to its earlier pair. Its client's exact thiserror 2.0.18 requirement determines the
 shared thiserror selection; the old library-only 2.0.21 graph is not retained.
@@ -39,14 +39,26 @@ Historical adoption evidence below remains tied to its
 recorded versions, workspace shapes and hosts.
 
 The [host record](#host-support) and
-[Shared Tooling adoption](shared-tooling.md#shared-tooling-0128-adoption)
-record current source and qualification gaps. The compatible 0.14.20 draft
-prepares tooling changes; Cargo package versions remain 0.14.19. No dependency
-or lockfile change is performed by that adoption. A concurrent external lock edit
-selects Testkit 0.25.2 and is retained. The contributor's current-graph locked
-metadata recheck fails offline because that registry package is not cached; no
-online retry ran. The ordinary user-operated fetch phase prepares the selected
-lock before validation.
+[Shared Tooling adoption](shared-tooling.md#shared-tooling-0129-adoption)
+record current source and qualification gaps. The compatible 0.14.21 draft
+prepares repository-only release diagnostics; Cargo package versions remain
+0.14.20. No dependency or lockfile change is performed by that adoption.
+The normal fetch phase continues to prepare the selected lock before validation.
+A concurrent external lock update selects ic-metrics 0.2.15 and is retained.
+The initial released-graph locked/offline metadata check completes; the
+incoming-graph recheck fails because that registry package is not cached. No
+online retry or contributor fetch ran; the normal preflight fetch still owns
+dependency preparation before the complete gate.
+
+Release-source admission delegates to the reviewed shared checker. The adapter
+still permits only `Cargo.toml`, `Cargo.lock`, `CHANGELOG.md` and `README.md`;
+it reports all other staged, unstaged and untracked paths, quoting unusual names.
+Failed Git observations preserve their own error rather than claiming dirty
+source. The runner adds the initial preflight context only before that attempt
+starts validation or version preparation. Later prepared/committed checks retain
+their own phase semantics. No guard repairs files or stages a lock to make release
+proceed. [#32](https://github.com/dragginzgame/ic-timers/issues/32) owns native
+consumer acceptance.
 
 ## Pre-1.0 compatibility
 
@@ -472,13 +484,22 @@ continues to target Wasm on the Internet Computer.
 | macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.15. The historical 0.14.1 missing-`rg` failure is recorded below. |
 | macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.15. Historical failures retain their original scope below. |
 
+Released **0.14.20** is `40611eff87b3165e58528c597debaa95427cdf5a`;
+the maintainer reports it pushed. Matching [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37807464542)
+passes. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37807464532)
+passes Linux checks/probe lint and explicit MSRV; both native macOS gates are
+queued at inspection. Complete native acceptance of the 0.1.28 adoption remains
+[#31](https://github.com/dragginzgame/ic-timers/issues/31)'s scope. The graph is
+Testkit 0.25.2 / Host 0.8.2 / Metrics 0.2.14 / PocketIC 16.1.0. The 0.14.21 draft
+has its own qualification boundary and does not relabel this source's evidence.
+
 Released **0.14.19** is `e637224e018afd758175e21de3afe3b95fa1a9ed`;
 the maintainer reports it live. Matching [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37803792774)
 passes. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37803792258)
 passes Linux checks/probe lint and explicit MSRV. Intel is running and Apple
 Silicon is queued at inspection, so complete native acceptance is pending. The
 selected graph is Testkit 0.25.1 / Host 0.8.2 / Metrics 0.2.14 / PocketIC 16.1.0.
-The pending 0.14.20 tooling adoption requires its own source-bound qualification;
+The subsequent 0.14.20 tooling adoption requires its own source-bound qualification;
 it does not relabel these results or qualify compact evidence collection.
 
 Released **0.14.18** is `c8d670d1e3181bebb1e67fcfc3eed0dcde0bddd2`.

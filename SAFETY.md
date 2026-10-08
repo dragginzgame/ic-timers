@@ -231,7 +231,7 @@ See the [0.11.0 verification scope](docs/changelog/0.11.0.md).
 - Recorded recovery evidence uses PocketIC 15.0.0 and `ic-cdk-timers` 1.0.0.
   The 0.13.2 host harness used `ic-testkit` 0.17.3 with pinned PocketIC 16.0.0;
   its complete release gate passed on native macOS 15 Intel and Apple Silicon.
-  The released 0.14.19 harness selects Testkit 0.25.1 and audited PocketIC 16.1.0
+  The released 0.14.20 harness selects Testkit 0.25.2 and audited PocketIC 16.1.0
   artifact bytes. Complete native qualification of that pair is pending;
   artifact integrity alone does not establish recovery behavior. Source-bound
   qualification is recorded in the release guide; pending changes need fresh evidence. A provider or evidence-binary change requires a renewed source and

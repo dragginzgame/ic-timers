@@ -15,25 +15,11 @@ check_metadata() {
         '$0 == heading { n++ } END { if (n != 1) exit 1 }' CHANGELOG.md
 }
 
-admit_release_paths() {
-    paths="$(mktemp "${TMPDIR:-/tmp}/timers-release-paths.XXXXXX")" || return
-    trap 'rm -f "$paths"' EXIT
-    # Inspect index and worktree independently; a restored working file can
-    # otherwise conceal unrelated staged content from HEAD-to-worktree diff.
-    git diff --cached --no-renames --name-only -z HEAD -- > "$paths" || return
-    git diff --no-renames --name-only -z -- >> "$paths" || return
-    git ls-files --others --exclude-standard -z >> "$paths" || return
-    while IFS= read -r -d '' path; do
-        case "$path" in Cargo.toml|Cargo.lock|CHANGELOG.md|README.md) ;;
-            *) printf 'uncommitted non-release path: %q\n' "$path" >&2; exit 1 ;;
-        esac
-    done < "$paths"
-}
-
 case "${1:-}" in
     preflight)
         [[ "$(bash scripts/release/workspace-version.sh)" == "${RELEASE_PREVIOUS:?}" ]]
-        admit_release_paths
+        bash "$script_dir/../ci/check-release-source.sh" \
+            --allow Cargo.toml --allow Cargo.lock --allow CHANGELOG.md --allow README.md
         IC_TIMERS_RELEASE_DATE="${RELEASE_DATE:?}" bash scripts/release/bump-version.sh --check "${RELEASE_VERSION:?}"
         # Populate the selected caches before the offline checks. Requiring them
         # here would prevent the full gate's fetch target from repairing a cold cache.
@@ -43,7 +29,8 @@ case "${1:-}" in
         check_metadata
         ;;
     commit-check)
-        admit_release_paths
+        bash "$script_dir/../ci/check-release-source.sh" \
+            --allow Cargo.toml --allow Cargo.lock --allow CHANGELOG.md --allow README.md
         git ls-files --error-unmatch -- Cargo.toml Cargo.lock CHANGELOG.md README.md > /dev/null
         git diff --quiet --
         check_metadata

@@ -63,11 +63,29 @@ git show "HEAD:$source_path" > "$source_path"
 # HEAD-to-worktree is clean, while the index still contains an implementation edit.
 git diff --quiet HEAD -- "$source_path"
 staged_tree="$(git write-tree)"
+working_path=crates/ic-timers/src/platform.rs
+printf '\n// working implementation fixture\n' >> "$working_path"
+untracked_path=$'unexpected\nsource.rs'
+printf '%s\n' 'untracked implementation' > "$untracked_path"
+cp .git/index "$fixture/admission-index"
+cp "$source_path" "$fixture/admission-source"
+cp "$working_path" "$fixture/admission-working"
 reject preflight 'hidden staged implementation'
-grep -Fq "$source_path" "$fixture/output"
+for expected in "staged: $source_path" "unstaged: $source_path" "unstaged: $working_path"; do
+    grep -Fq "$expected" "$fixture/output"
+done
+printf '  untracked: %q\n' "$untracked_path" > "$fixture/expected-untracked"
+grep -Fx -f "$fixture/expected-untracked" "$fixture/output" > /dev/null
+[[ ! -s "$FETCH_EVENTS" ]]
+cmp .git/index "$fixture/admission-index"
+cmp "$source_path" "$fixture/admission-source"
+cmp "$working_path" "$fixture/admission-working"
 reject commit-check 'implementation in release index'
+cmp .git/index "$fixture/admission-index"
 [[ "$(git write-tree)" == "$staged_tree" ]]
 git reset -q HEAD -- "$source_path"
+git show "HEAD:$working_path" > "$working_path"
+rm "$untracked_path"
 
 printf '\nPrepared metadata fixture.\n' >> README.md
 git add README.md
@@ -99,13 +117,15 @@ cat >> "$fixture/bin/git" <<'STUB'
 set -euo pipefail
 query=''
 case "${1:-}:${2:-}" in
-    diff:--cached) query=staged ;;
-    diff:--no-renames) query=unstaged ;;
-    ls-files:--others) query=untracked ;;
+    rev-parse:--show-prefix) query=checkout ;;
+    status:--porcelain=v1) query=status ;;
     diff:--quiet) query=index ;;
 esac
 if [[ -n "$query" && "${FAIL_ADMISSION_QUERY:-}" == "$query" ]]; then
-    if [[ "${PARTIAL_ADMISSION_OUTPUT:-0}" == 1 ]]; then printf '%s\0' CHANGELOG.md; fi
+    if [[ "${PARTIAL_ADMISSION_OUTPUT:-0}" == 1 ]]; then
+        if [[ "$query" == status ]]; then printf ' M CHANGELOG.md\0';
+        else printf '%s\n' 'partial-checkout/'; fi
+    fi
     echo "fixture failed $query query" >&2
     exit 128
 fi
@@ -113,11 +133,16 @@ exec "$RELEASE_INDEX_REAL_GIT" "$@"
 STUB
 chmod +x "$fixture/bin/git"
 for operation in preflight commit-check; do
-    for query in staged unstaged untracked; do
+    for query in checkout status; do
         for partial in 0 1; do
             export FAIL_ADMISSION_QUERY="$query" PARTIAL_ADMISSION_OUTPUT="$partial"
             reject "$operation" "failed $query query with partial=$partial"
             grep -Fq "fixture failed $query query" "$fixture/output"
+            grep -Fq 'cannot inspect' "$fixture/output"
+            if grep -Fq 'release source refused' "$fixture/output"; then
+                echo 'error: failed Git observation was reported as dirty source' >&2
+                exit 1
+            fi
             [[ -z "$(ls -A "$fixture/tmp")" ]]
         done
     done
