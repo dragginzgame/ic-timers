@@ -24,7 +24,7 @@ b866 Shared Tooling exports; contributor preparation did not execute local tests
 
 The undated **0.14.19** draft now selects Shared Tooling's committed 0.1.27
 follow-up `db039347d2372b877c1c46dcdd2b5c3aa9412009` through all three exact
-**36/34/13** exports. Installers preserve physical consumer/pin operands, existing
+**36/33/13** exports. Installers preserve physical consumer/pin operands, existing
 fixtures check relative consumer paths under CDPATH, and fixture companion
 metadata now refuses incomplete snapshots. The roster was already complete.
 The sibling's dirty 0.1.28 source is excluded. Source/export/mode/overlap,
@@ -44,13 +44,21 @@ host qualification. [Shared #75](https://github.com/dragginzgame/shared-tooling/
 separately owns malformed active-link admission. No shared payload is locally
 patched, and no new CI retention option is introduced.
 
-An external incoming **Cargo.lock** update now selects PocketIC client **16.1.0**
-while the audited server remains **16.0.0**. It is preserved; no contributor
-update/fetch or gate weakening ran. The exact-alignment checker will reject this
-pair. The maintainer explicitly chose to retain client 16.1.0 for separate server
-qualification. Restoring 16.0.0 is not selected. Moving the server requires
-independent artifact review and native qualification. This graph is not the released graph or the
-frozen evidence graph. See the [dependency owner](../releasing.md#incoming-pocketic-lock-alignment).
+The maintainer kept the incoming PocketIC client **16.1.0**. A subsequent release
+attempt failed the old **16.0.0** server alignment, as expected. The current draft
+now prepares the matching **16.1.0** server matrix, host-specific binary digests,
+default cache path and independent admission fixtures. All three official gzip
+archives match published hash/size; decompressed binary hashes and architecture
+headers were inspected without executing them. The [dependency owner](../releasing.md#incoming-pocketic-lock-alignment)
+and [artifact provenance](../releasing.md#pocketic-artifact-pins) record scope.
+The existing IC matrix is consumer-owned and excluded from the audit export;
+all shared code remains exact reviewed bytes. The actual cheap locked/offline
+alignment helper now reports **16.1.0**; snapshot/syntax/diff checks pass. No
+Cargo/lock edit, test/build/lint,
+installation or binary execution ran. Exact admission remains required; fresh
+native runtime/watchdog/cohort qualification belongs to the user-operated gate.
+Prior 16.0.0 acceptance does not qualify this pair. There is no compatibility
+fallback, override weakening or alternate matrix.
 
 The already-authorized frozen **v0.14.17**, attempt 1 observations remain at
 `031e6c67dccdd043ff11e20d9978359a4ec6afc8`:

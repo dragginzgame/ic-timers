@@ -27,6 +27,10 @@ This file is normative for automated contributors.
   rule are adopted together; all three snapshots use the same reviewed revision.
   Common setup/check/LOC commands come from [make/tools.mk](make/tools.mk);
   Make, update-dev and CI select the complete pinned host bundle.
+  The consumer-owned [IC pin matrix](ci/ic-tools.tsv) selects the product-selected
+  PocketIC pair and is excluded from the immutable audit export. Shared installers
+  still receive that one explicit matrix; the upstream default catalog cannot
+  overwrite local artifact admission during a snapshot refresh.
   Optional helpers described in shared guides do not become local commands
   without a separate caller adoption.
 - Maintainer-approved validation exception: tests, builds, lint gates and

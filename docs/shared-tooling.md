@@ -1,5 +1,27 @@
 # Shared Tooling adoption
 
+## Consumer-owned PocketIC 16.1.0 matrix
+
+The 0.14.19 admission repair transfers the existing `ci/ic-tools.tsv` out of the
+immutable audit/setup export. A fresh scratch consumer selects the same reviewed
+`db039347d2372b877c1c46dcdd2b5c3aa9412009` with the previous roster minus that one
+file through the canonical distribution helper; all remaining payloads compare
+identically before the exported manifest is installed. Counts are now **36/33/13**,
+with unchanged revision and matching overlaps. No manifest digest is hand-edited,
+shared implementation patched, sibling mutated or second matrix introduced.
+
+The local matrix now owns the product-selected PocketIC 16.1.0 archives; all
+other tool records are preserved. Shared setup/admission helpers still receive
+that same explicit matrix. The upstream default guide/fixture may describe a
+16.0.0 synthetic/default set; those immutable bytes do not qualify or select the
+consumer's runtime pair. Binary hashes and the independent host/URL fixture stay
+local. See [artifact provenance and qualification limits](releasing.md#pocketic-artifact-pins).
+
+This ownership change prevents a later snapshot refresh from silently replacing
+product-reviewed pins. The strict PocketIC version/hash and complete native gate
+remain; fresh runtime qualification is pending and no production timer change is
+claimed. No named function, method or type is removed.
+
 ## Shared Tooling 0.1.27 committed follow-up
 
 The undated compatible **0.14.19** draft selects reviewed committed follow-up

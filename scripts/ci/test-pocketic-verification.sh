@@ -14,7 +14,7 @@ cat > "${temporary_root}/candidate" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' execute >> "${IC_TIMERS_FIXTURE_LOG}"
 if [[ "${FIXTURE_VERSION_OK:-1}" == 1 ]]; then
-    echo "${FIXTURE_OBSERVED_VERSION:-pocket-ic-server 16.0.0}"
+    echo "${FIXTURE_OBSERVED_VERSION:-pocket-ic-server 16.1.0}"
 else
     echo 'wrong version'
 fi
@@ -118,18 +118,18 @@ for host in x86_64-linux x86_64-darwin arm64-darwin; do
     case "${host}" in
         x86_64-linux)
             IC_TIMERS_FIXTURE_OS=Linux; IC_TIMERS_FIXTURE_ARCH=x86_64
-            IC_TIMERS_FIXTURE_ARCHIVE_SHA=268ba79ec7fe9a563a575adf4983c69627093cce2711d142e476cdc7ad04249e
-            IC_TIMERS_FIXTURE_BINARY_SHA=69e324bdb68d32d878b7a9504b1379f08f8d1921272bacb065b0fabb3d0f3792 ;;
+            IC_TIMERS_FIXTURE_ARCHIVE_SHA=131219d90dcf9bf6f3ed8ee02d8f55504ea24a6db382f5680675b7bd6b7ed3bf
+            IC_TIMERS_FIXTURE_BINARY_SHA=b44e1eccd66e02328146b3e209e3403e3a3428a25d25555aca2f67500e5ae9db ;;
         x86_64-darwin)
             IC_TIMERS_FIXTURE_OS=Darwin; IC_TIMERS_FIXTURE_ARCH=x86_64
-            IC_TIMERS_FIXTURE_ARCHIVE_SHA=9710b9c4ac4eaa7eb10bddaa2aba80560a59362610f1bcd8c6e23be82a39c327
-            IC_TIMERS_FIXTURE_BINARY_SHA=b8233ebee53452db7465b43e7b2ff80f2e1445dc148eb2b4b237493d8d15ec66 ;;
+            IC_TIMERS_FIXTURE_ARCHIVE_SHA=af9ad2d781530a43556ef2d1c8f93db99a2425c6cabdc78520f61922399ed530
+            IC_TIMERS_FIXTURE_BINARY_SHA=a2ad872a5d84778b25a254c4eb4a8df99917b5792edaa7702d730de2d7de664d ;;
         arm64-darwin)
             IC_TIMERS_FIXTURE_OS=Darwin; IC_TIMERS_FIXTURE_ARCH=arm64
-            IC_TIMERS_FIXTURE_ARCHIVE_SHA=41cf77e24effc381e21f5e07e908ed078783646e6de05ed52fd6973221f07e64
-            IC_TIMERS_FIXTURE_BINARY_SHA=781f643d4b16105e7544ca810a972f99c0ef1919016c680faa93f10909a14496 ;;
+            IC_TIMERS_FIXTURE_ARCHIVE_SHA=9ae843fbb7ae6c6eb30137671c8629a80ef53b3a3652eb85b344847ac39f9fcd
+            IC_TIMERS_FIXTURE_BINARY_SHA=2ffd9d5ae103cbb85289424056e68920459e702bf27317e38003b019a0a959d1 ;;
     esac
-    IC_TIMERS_FIXTURE_URL="https://github.com/dfinity/pocketic/releases/download/16.0.0/pocket-ic-${host}.gz"
+    IC_TIMERS_FIXTURE_URL="https://github.com/dfinity/pocketic/releases/download/16.1.0/pocket-ic-${host}.gz"
     export IC_TIMERS_FIXTURE_OS IC_TIMERS_FIXTURE_ARCH IC_TIMERS_FIXTURE_ARCHIVE_SHA
     export IC_TIMERS_FIXTURE_BINARY_SHA IC_TIMERS_FIXTURE_URL
     cp -p "${temporary_root}/cached-candidate" "${POCKET_IC_BIN}"
@@ -166,10 +166,10 @@ for host in x86_64-linux x86_64-darwin arm64-darwin; do
     expect_events binary-hash execute
     for result in wrong-version old-server-version failed-command; do
         : > "${IC_TIMERS_FIXTURE_LOG}"
-        version_ok=1; version_status=0; observed_version='pocket-ic-server 16.0.0'
+        version_ok=1; version_status=0; observed_version='pocket-ic-server 16.1.0'
         case "${result}" in
             wrong-version) version_ok=0 ;;
-            old-server-version) observed_version='pocket-ic-server 15.0.0' ;;
+            old-server-version) observed_version='pocket-ic-server 16.0.0' ;;
             failed-command) version_status=1 ;;
         esac
         if output="$(FIXTURE_BINARY_HASH_OK=1 FIXTURE_VERSION_OK="${version_ok}" \

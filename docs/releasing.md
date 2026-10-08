@@ -29,8 +29,8 @@ release profile is unchanged. Dependency resolution now uses root resolver 3;
 fresh measurements and native qualification are required for the combined graph.
 
 The incoming root catalog selects compatible Testkit 0.24, locked to 0.24.0,
-with all four Host crates at 0.7.1 transitively, and ic-metrics 0.2.13. PocketIC remains the audited
-16.0.0 server. Its client's exact thiserror 2.0.18 requirement determines the
+with all four Host crates at 0.7.1 transitively, and ic-metrics 0.2.13. The prepared PocketIC client/server pair now selects
+16.1.0; prior runtime evidence remains bound to its earlier pair. Its client's exact thiserror 2.0.18 requirement determines the
 shared thiserror selection; the old library-only 2.0.21 graph is not retained.
 All four member versions inherit the root release identity, and release
 preparation updates their local lock records together. This is repository/test dependency preparation, not a released runtime
@@ -555,17 +555,32 @@ passed Linux, MSRV and both native macOS gates.
 
 ### Incoming PocketIC lock alignment
 
-After 0.14.18 release, an external root-lock edit selects PocketIC client 16.1.0
-under Testkit 0.24.0's compatible requirement, with the related base64/wslpath
-changes. This edit is preserved during tooling preparation. The selected audited
-server and artifact matrix remain **16.0.0**. The maintained shared alignment
-checker requires exact client/server identity, so this graph will fail admission;
-a successful Cargo metadata read alone cannot qualify it. Do not weaken the gate
-or relabel frozen 16.0.0 evidence. The maintainer explicitly chose to retain client
-16.1.0 for separate server qualification, rather than restoring the 16.0.0 client.
-Server adoption requires a separately reviewed matrix, extracted-binary digests
-and native runtime qualification; this tooling follow-up performs none of those
-release-evidence changes. The present client/server pair is not release-admissible.
+After 0.14.18 release, the retained root lock selects PocketIC client 16.1.0
+under Testkit 0.24.0's compatible requirement. The maintainer chose to qualify
+that pair rather than restore client 16.0.0. The first release attempt correctly
+failed exact admission against the old server pin at 16.0.0; its raw failure
+remains in `.git/release-state/validation-failures/20261008T143516Z-2304745-1-pocketic-check.log`.
+
+The 0.14.19 draft now prepares matching 16.1.0 server archives and independently
+computed binary digests for Linux x86_64 and both native macOS architectures.
+The [artifact review](#pocketic-artifact-pins) checks published archive identity
+before decompression and inspects binary headers without execution. The existing
+`ci/ic-tools.tsv` becomes the one consumer-owned matrix, removed from the shared
+audit file roster through a fresh canonical export; installers and admission
+helpers remain exact shared bytes. This keeps product qualification choices
+from being overwritten by a generic snapshot refresh. Other tool pins are unchanged.
+
+Make's default cache now selects `target/tools/pocket-ic/16.1.0/pocket-ic`.
+Automatic provisioning verifies both hashes and exact version; explicit overrides
+remain read-only and must match 16.1.0. The independent consumer fixture updates
+all three expected host hashes/URLs and rejects hash-matching server 16.0.0.
+No lock or Cargo package version is changed by this repair. The actual shared
+alignment helper now reports **16.1.0** using cheap locked/offline metadata.
+This check executes neither server binaries nor canisters. Snapshot integrity,
+Bash syntax, source pin/cache/fixture consistency and diff checks also pass.
+Fresh native startup, watchdog/rollback and policy-cohort execution remains required in the complete
+user-operated release gate; source/hash/metadata inspection cannot supply those
+results. Old 16.0.0 receipts and frozen artifact transport retain their own scope.
 
 ### Testkit 0.24 selection
 
@@ -1292,7 +1307,7 @@ Ordinary checks never download tools.
 ### Pinned IC tool setup
 
 `make install-ic-tools` explicitly prepares Quill 0.5.4, ICP CLI 1.6.0, didc
-0.6.2, ic-wasm 0.11.1, PocketIC 16.0.0 and wasm-opt 132 from
+0.6.2, ic-wasm 0.11.1, PocketIC 16.1.0 and wasm-opt 132 from
 [`ci/ic-tools.tsv`](../ci/ic-tools.tsv). `make ic-tools-check` verifies the bundle
 offline. `make install-tools` / `make tools-check` operate on both the host
 and IC bundles. `update-dev` and CI use explicit setup; ordinary checks never
@@ -1332,7 +1347,8 @@ checker pass. `ic-cdk-timers =1.0.0` fixes provider behavior audited in
 `ic0 =1.2.0` preserves the production platform bindings and counter-1 reader
 reviewed in the [measurement owner](design/callback-delivery-ownership.md#ic-metrics-02-adoption).
 The root catalog retains `ic-cdk =0.20.3` for probe execution/suspension with
-the audited PocketIC 16.0.0 server. Testkit now uses a compatible 0.20 requirement;
+the historically qualified PocketIC 16.0.0 server; the prepared 16.1.0 pair needs
+fresh runtime qualification. Testkit uses a compatible 0.20 requirement;
 its former exact 0.17.3 exception is retired. These are product qualification boundaries, not blanket exact-pin policy.
 
 Each exception matches its declaring root, dependency name and literal version.
@@ -1343,38 +1359,37 @@ ownership are unchanged. No exception permits a floating action or Docker image.
 
 ### PocketIC artifact pins
 
-The verifier selects PocketIC 16.0.0 pins for Linux x86_64, Darwin x86_64 and
-Darwin arm64 using independent OS and architecture queries. Unknown hosts or a
-failed query reject before cache inspection. Explicit overrides use the same
-host-specific binary hash and exact `pocket-ic-server 16.0.0` version check;
-they are never automatically replaced. No caller-supplied digest or version can
-relax these checks.
+The verifier selects PocketIC **16.1.0** for Linux x86_64, Darwin x86_64 and
+Darwin arm64. Independent host queries and exact extracted-binary hashes remain
+required. Explicit overrides must report `pocket-ic-server 16.1.0`; they are never
+replaced automatically. No caller-supplied digest/version relaxes these checks.
 
-The pins below were inspected on 2026-10-05 against the official
-[PocketIC 16.0.0 release](https://github.com/dfinity/pocketic/releases/tag/16.0.0)
-and its [release asset metadata](https://api.github.com/repos/dfinity/pocketic/releases/tags/16.0.0).
-Each downloaded gzip archive matched its published asset SHA-256 before
-decompression. Binary digests were computed from those verified archives, with
-ELF x86_64 and Mach-O x86_64/arm64 headers inspected. None of these binaries was
-executed during this inspection. Exact version checks and maintained PocketIC subjects remain required
-on each native host; artifact integrity does not establish recovery evidence or
-native macOS qualification.
+On 2026-10-08, official [release metadata](https://api.github.com/repos/dfinity/pocketic/releases/tags/16.1.0)
+and the [PocketIC 16.1.0 release](https://github.com/dfinity/pocketic/releases/tag/16.1.0)
+identify source `e9e42a6dd74acb9049017863e944cd5799be5b2b`. Assets **621918359**
+(Linux x86_64), **621918384** (Darwin x86_64) and **621918361** (Darwin arm64)
+were downloaded by exact asset ID. Each gzip matched the published archive hash
+and byte size before decompression. The decompressed files supplied independent
+binary hashes and ELF/Mach-O architecture checks. None was executed. Original
+archives, non-executable decompressed bytes and `review.json` remain under
+`target/evidence/pocketic-16.1.0-artifact-review/`. Artifact integrity does not
+establish runtime recovery, startup/version execution or native macOS acceptance.
+The complete user-operated gate must supply that fresh qualification.
 
 | Release asset | Archive SHA-256 | Binary SHA-256 |
 | --- | --- | --- |
-| `pocket-ic-x86_64-linux.gz` | `268ba79ec7fe9a563a575adf4983c69627093cce2711d142e476cdc7ad04249e` | `69e324bdb68d32d878b7a9504b1379f08f8d1921272bacb065b0fabb3d0f3792` |
-| `pocket-ic-x86_64-darwin.gz` | `9710b9c4ac4eaa7eb10bddaa2aba80560a59362610f1bcd8c6e23be82a39c327` | `b8233ebee53452db7465b43e7b2ff80f2e1445dc148eb2b4b237493d8d15ec66` |
-| `pocket-ic-arm64-darwin.gz` | `41cf77e24effc381e21f5e07e908ed078783646e6de05ed52fd6973221f07e64` | `781f643d4b16105e7544ca810a972f99c0ef1919016c680faa93f10909a14496` |
+| `pocket-ic-x86_64-linux.gz` | `131219d90dcf9bf6f3ed8ee02d8f55504ea24a6db382f5680675b7bd6b7ed3bf` | `b44e1eccd66e02328146b3e209e3403e3a3428a25d25555aca2f67500e5ae9db` |
+| `pocket-ic-x86_64-darwin.gz` | `af9ad2d781530a43556ef2d1c8f93db99a2425c6cabdc78520f61922399ed530` | `a2ad872a5d84778b25a254c4eb4a8df99917b5792edaa7702d730de2d7de664d` |
+| `pocket-ic-arm64-darwin.gz` | `9ae843fbb7ae6c6eb30137671c8629a80ef53b3a3652eb85b344847ac39f9fcd` | `2ffd9d5ae103cbb85289424056e68920459e702bf27317e38003b019a0a959d1` |
 
-The 0.14.12 draft reads server/archive identity from the reviewed
-[`ci/ic-tools.tsv`](../ci/ic-tools.tsv) matrix through canonical admission.
-The table above records provenance; it is not another executable archive catalog.
-Extracted-binary digests remain consumer-owned in
-[`check-pocketic.sh`](../scripts/ci/check-pocketic.sh). Canonical checksum and
-binary helpers authenticate them before execution. The Make gate first checks
-the sole root lock's exact PocketIC client/server alignment using prepared
-locked offline Cargo metadata and jq, without fetching or updating dependencies.
-The default cache path retains the current audited artifact's 16.0.0 label.
+The consumer-owned [`ci/ic-tools.tsv`](../ci/ic-tools.tsv) is the sole executable
+archive/version matrix; the table above records provenance. It is excluded from
+the immutable audit/setup export. Exact extracted-binary digests remain local to
+[`check-pocketic.sh`](../scripts/ci/check-pocketic.sh); generic installers/checkers
+retain their reviewed shared owners. The first Make gate checks the sole root
+lock's exact client/server alignment through locked offline Cargo metadata and
+jq, without fetching or updating dependencies. The default cache is versioned
+16.1.0. Setup and native CI use the same consumer pin matrix.
 
 Automatic provisioning downloads over HTTPS into an adjacent temporary directory,
 checks the archive digest before `gzip`, checks the decompressed binary digest

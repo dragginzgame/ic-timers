@@ -229,10 +229,12 @@ See the [0.11.0 verification scope](docs/changelog/0.11.0.md).
   in that report. This wrapper has no provider-heap compaction authority and
   supplies no global memory cap. See the [pinned provider cancellation source](https://docs.rs/ic-cdk-timers/1.0.0/src/ic_cdk_timers/lib.rs.html#197).
 - Recorded recovery evidence uses PocketIC 15.0.0 and `ic-cdk-timers` 1.0.0.
-  The current host harness uses `ic-testkit` 0.17.3 with pinned PocketIC 16.0.0;
-  the complete 0.13.2 release gate passed on native macOS 15 Intel and Apple
-  Silicon. This source-bound qualification is recorded in the release guide;
-  pending changes need fresh evidence. A provider or evidence-binary change requires a renewed source and
+  The 0.13.2 host harness used `ic-testkit` 0.17.3 with pinned PocketIC 16.0.0;
+  its complete release gate passed on native macOS 15 Intel and Apple Silicon.
+  The current prepared harness selects Testkit 0.24.0 and audited PocketIC 16.1.0
+  artifact bytes. Fresh runtime/native qualification of that pair is pending;
+  artifact integrity alone does not establish recovery behavior. Source-bound
+  qualification is recorded in the release guide; pending changes need fresh evidence. A provider or evidence-binary change requires a renewed source and
   recovery audit; older receipts do not qualify the new harness.
 - The recorded IcyDB and Canic adoption subjects independently supply exact-0.5.0
   shared-registry evidence, recorded separately from this library's
@@ -296,7 +298,7 @@ reset from a genuine lifetime zero.
 ## Evidence maintenance
 
 The recovery suite is deliberately outside the fast default CI gate. Run
-`make pocketic-watchdog` with the pinned PocketIC 16.0.0 binary after changes
+`make pocketic-watchdog` with the pinned PocketIC 16.1.0 binary after changes
 to provider binding, registry transitions, lifecycle reconstruction, or
 watchdog dispatch. Run `make pocketic-cohorts` after changes that can affect
 linked Wasm, instruction cost, or provider-call count. Native mocks remain

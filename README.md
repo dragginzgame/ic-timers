@@ -425,7 +425,7 @@ Both `fmt` and `fmt-check` first require the exact cargo-sort pin and prepared
 rustfmt for the selected toolchain; missing tools require explicit setup.
 To run the development-toolchain probe checks locally, use
 `make testing-check MSRV=1.99.0`. The host-side real-canister suites currently resolve
-`ic-testkit` 0.20.0 and the pinned PocketIC 16.0.0 server on Linux x86_64 or
+`ic-testkit` 0.24.0 and the pinned PocketIC 16.1.0 server on Linux x86_64 or
 macOS Intel/Apple Silicon. The first run downloads it into the ignored
 `target/tools` cache; later runs verify its version and SHA-256. Set
 `POCKET_IC_BIN=/path/to/pocket-ic` only for an explicitly managed binary. Testkit

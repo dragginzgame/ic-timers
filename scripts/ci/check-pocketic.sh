@@ -20,17 +20,17 @@ case "${host_os}/${host_arch}" in
     Linux/x86_64)
         asset="pocket-ic-x86_64-linux.gz"
         host_platform=linux-x86_64
-        expected_sha256="69e324bdb68d32d878b7a9504b1379f08f8d1921272bacb065b0fabb3d0f3792"
+        expected_sha256="b44e1eccd66e02328146b3e209e3403e3a3428a25d25555aca2f67500e5ae9db"
         ;;
     Darwin/x86_64)
         asset="pocket-ic-x86_64-darwin.gz"
         host_platform=darwin-x86_64
-        expected_sha256="b8233ebee53452db7465b43e7b2ff80f2e1445dc148eb2b4b237493d8d15ec66"
+        expected_sha256="a2ad872a5d84778b25a254c4eb4a8df99917b5792edaa7702d730de2d7de664d"
         ;;
     Darwin/arm64)
         asset="pocket-ic-arm64-darwin.gz"
         host_platform=darwin-arm64
-        expected_sha256="781f643d4b16105e7544ca810a972f99c0ef1919016c680faa93f10909a14496"
+        expected_sha256="2ffd9d5ae103cbb85289424056e68920459e702bf27317e38003b019a0a959d1"
         ;;
     *)
         echo "error: no audited PocketIC artifact for ${host_os}/${host_arch}" >&2

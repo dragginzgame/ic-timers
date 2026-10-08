@@ -163,7 +163,7 @@ cat > scripts/ci/check-pocketic-alignment.sh <<'EOF'
 printf '%s\n' alignment > alignment
 exit "${FIXTURE_ALIGNMENT_STATUS:-0}"
 EOF
-default_binary="${fixture_root}/target/tools/pocket-ic/16.0.0/pocket-ic"
+default_binary="${fixture_root}/target/tools/pocket-ic/16.1.0/pocket-ic"
 for source in default environment command-line same-as-default empty; do
     case "${source}" in
         default)

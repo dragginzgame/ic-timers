@@ -12,7 +12,6 @@ file	17da36b641e62f6885877fa0649919b7bb7292ef9b2d46edba11b09a6e1b859b	-	docs/con
 file	1a0d1d6f2a87a0d77378fdda605f5700cc7e2ca8c8dfac79418248da30b7e657	-	docs/provenance.md
 file	ff700a201efff31508d1682e5701b94e41d68f4892307d53b59e37f36e210264	-	docs/ic-tools.md
 file	bb7e91db83eae51bdea679e43038b31fc67984a60e5fbc6e7f0f186d3d1ebb26	-	docs/local-setup.md
-file	5b1ef6bc9e344139f5e171cc1a3783bcee3650275de2f44fe0f8fa10f2bfef87	-	ci/ic-tools.tsv
 file	82892e25292fe47c26035a0031aa4ad1996fcf181732163e75039bd657f2f84b	-	ci/tool-versions.env
 file	fda4a696f5c6e288e19aaaf7e89a1ad9ef151c742d54ce1470021079ffb72fb9	-	rules/dependency-pinning.md
 file	7e5fd8a3c3b1dc5a829a19ad1a4933fdc17792c8e923871da1e9f36586baff41	-	docs/principles/rust-code-hygiene.md
