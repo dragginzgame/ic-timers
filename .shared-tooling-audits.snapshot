@@ -1,14 +1,14 @@
 # Shared Tooling snapshot v1
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	0ba0ad00ed94848e54ecc82629b6b7873b7284c0
+revision	75a8a60f49cec11d3f6aecab5c977029c42cc549
 file	02d18f9bdeeab13244f64c828cfb36c4c07ae079929431c4322011261d3c55e7	-	audits/README.md
 file	518d890bf485bef06c316b4cf26ac6bf357ed52bcce995e8d9b1232a103d0ea3	-	audits/code-hygiene.md
 file	35fd87d36a09ed0971841abf28535d43470c713a82581c2251b924da1ab8f484	-	audits/flow-convergence-and-duplication.md
 file	ffdca09602c44c8aff8fc2a17588b20eb6a56e2e71fb6d42ad75087fdd65819b	-	audits/complexity-and-technical-debt.md
 file	1b64cf2ba0393ab329ec29eb05a696d47ef5933f5ab9bff6e1fe4a7e7b294075	-	audits/module-surface-hardening.md
 file	ad0c56d074fb54455932bab7fcff0908dac34f000d2961caeca12616b79b778b	-	audits/module-cleanup.md
-file	d4213e4025de1822d46834db7ef9360b540cf0a05fa88672ffe08063957758f2	-	docs/consuming-snapshots.md
+file	17da36b641e62f6885877fa0649919b7bb7292ef9b2d46edba11b09a6e1b859b	-	docs/consuming-snapshots.md
 file	1a0d1d6f2a87a0d77378fdda605f5700cc7e2ca8c8dfac79418248da30b7e657	-	docs/provenance.md
 file	ff700a201efff31508d1682e5701b94e41d68f4892307d53b59e37f36e210264	-	docs/ic-tools.md
 file	bb7e91db83eae51bdea679e43038b31fc67984a60e5fbc6e7f0f186d3d1ebb26	-	docs/local-setup.md
@@ -19,16 +19,16 @@ file	7e5fd8a3c3b1dc5a829a19ad1a4933fdc17792c8e923871da1e9f36586baff41	-	docs/pri
 file	457fd38e0073c91ba470b918d4facd9faac3c5200ebd38c97e9d6b76acdaea55	-	docs/principles/simplicity-and-maintainability.md
 file	4c981184847462ab3c01cac087e28309f8e054253fd95c7bbe56f643877aa708	x	scripts/ci/verify-file-checksum.sh
 file	b6764190803118331d7441233bcd6a3031c99c0c5219cc4a5c29dfb1a1040e41	x	scripts/ci/verify-shared-tooling-snapshot.sh
-file	387e5cf6b01b6f3531be5210f742af30e7fba5c08db7c66eb2c95ff4dbfaf003	x	scripts/dev/install-host-tools.sh
+file	098bdcea84e8a3647b9a79a94508550320e5c50508ec2ac32ddd882db1fcc320	x	scripts/dev/install-host-tools.sh
 file	a82ba3f689f17e06506a0ef553ac3ebbba7b38648b247c73bf4d962eaaa6cd3e	x	scripts/ci/test-host-tools.sh
-file	3796d7682643c767df198308854f51aa5c396ab7d0b5d38e1fafe3e3853642f6	x	scripts/dev/install-ic-tools.sh
+file	9ddc7b53043ab551a66c4a8abd4618b1793adc8ca74917258e9e220992ca9fc1	x	scripts/dev/install-ic-tools.sh
 file	0d4a45581e26987baaaa91cd49748e3b7b3ffa76b01f32d1db84560bd5baa68a	x	scripts/ci/test-ic-tools.sh
-file	22bf8001f496799c0e26795479b9e313fe3ceddec2e47b8444f8af8e7bc32bae	x	scripts/ci/verify-evidence-checksums.sh
+file	65c799836b061b091c7b8126fef85359a3d51572f273c37243e774b9629f6f49	x	scripts/ci/verify-evidence-checksums.sh
 file	43e2b571a909c2d63b2e3b11d208744995997575b34f0c1fbe5ea3104d40bcca	x	scripts/ci/test-evidence-checksums.sh
 file	94a934651d5cb0c6f77fa429df277856dbda4c1a7441b2b8563e678c416258f6	-	audits/ic-canister-applications.md
 file	66f23e9de66c63c0e47456bd76dd5898b5965f2b9a831ecbb0e8e530769629d3	x	scripts/dev/install-rust-tools.sh
 file	502d20283b758ad3f72f94118af3d1c8bbb28ed06bfff57ec83b0acbcffc5806	x	scripts/ci/test-rust-tools.sh
 file	49e5c54defd9330aacf2635fd36803f3ea469ea278a2628f63dbd82458dfd5a9	-	scripts/ci/ic-tool-pins.awk
-file	63610b2055ddd3f030c326451c0a00cbd6aacba0bdb0b6e3ffa46f74a2815885	x	scripts/ci/check-pocketic-binary.sh
-file	2cb1fdf2f47c17a14d04cbb1a0e729d116ca934a76725ec2a0c4ef5808a037cf	x	scripts/ci/check-pocketic-alignment.sh
+file	0e0958de338b0c27e3868cf1880a59154f7294acbdaa851959ee3fa5ae1fd214	x	scripts/ci/check-pocketic-binary.sh
+file	7ca1aaea81636421d802cb449a4eac66362ddf5d0ef9c52e1f7997b5afc731bc	x	scripts/ci/check-pocketic-alignment.sh
 file	6340160613224fb257c7b28c20c34e7f22539675368ac8b7655f2c5c57b8582e	x	scripts/ci/test-pocketic-checks.sh

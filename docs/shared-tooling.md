@@ -1,5 +1,48 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.1.26 preparation
+
+The incoming **0.14.17** draft selects reviewed committed source
+[`75a8a60f49cec11d3f6aecab5c977029c42cc549`](https://github.com/dragginzgame/shared-tooling/tree/75a8a60f49cec11d3f6aecab5c977029c42cc549)
+(VERSION 0.1.26). A clean detached scratch clone supplies all three exports.
+The baseline/audit/helper manifests now select **36/30/13** files at that one
+revision; overlapping payloads agree. The single explicit file-set addition is
+`scripts/ci/archive-evidence.sh`. The nested helper export uses an isolated
+temporary consumer. The refresh helper's uncommitted-export admission is used
+only for those exact previously recorded bytes; no sibling files are changed.
+
+The release runner refreshes the configured upstream after confirmed direct
+delivery or completed resume, checking ref type under Git's update lock. The
+committed correction preserves a concurrently installed symbolic ref even if it
+resolves to the captured old OID ([shared #62](https://github.com/dragginzgame/shared-tooling/issues/62)).
+LOC reporting includes `bin/` and explicitly identifies unborn repositories
+([shared #61](https://github.com/dragginzgame/shared-tooling/issues/61)). Companion
+declarations add no implicit file selections. The approved maintainer-owned
+validation/commit/release exceptions, explicit direct delivery, native gates,
+local pins and strict PocketIC admission remain.
+
+The local collector delegates generic tar mechanics to the new shared helper.
+The [consumer contract and qualification](releasing.md#shared-failure-archiver-adoption)
+remain locally owned. No named function, method or type is removed; only the
+collector's inline tar option assembly is replaced. Existing Python verification
+is adjusted in place; no new Python tool or prerequisite is introduced.
+
+All three exported integrity checks pass during preparation. Shell/Perl/Python
+syntax, diff and cheap full locked offline Cargo metadata are the only other
+local checks; no tests, builds, lint, installation, release or Git delivery ran.
+Source-bound upstream archive acceptance at
+[`eeb72e7`](https://github.com/dragginzgame/shared-tooling/actions/runs/37762726615)
+passes all three native hosts. The subsequent 0.1.25 source `672ab4b` passes
+Linux, Apple Silicon and lint/security, but its Intel job was cancelled.
+The exact selected [0.1.26 run](https://github.com/dragginzgame/shared-tooling/actions/runs/37770856593)
+is queued at inspection. Neither earlier archive acceptance nor this source
+review establishes native qualification of the new runner/exporter or this
+consumer adapter. Keep #30 open through consumer acceptance and preserve the
+closed #23 observations at their original source. The upstream/local acceptance
+gaps are explicit; no production timer Wasm/instruction change is expected.
+
+## Released 0.1.23 adoption
+
 Released compatible repository-only **0.14.14** adopts reviewed committed
 Shared Tooling 0.1.23
 [`0ba0ad00ed94848e54ecc82629b6b7873b7284c0`](https://github.com/dragginzgame/shared-tooling/tree/0ba0ad00ed94848e54ecc82629b6b7873b7284c0).

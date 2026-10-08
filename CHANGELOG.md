@@ -2,6 +2,23 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.17]
+
+### Development
+
+- Select Testkit 0.23 and IC Host 0.6 through the root catalog, gaining startup
+  cleanup diagnostics and wrapper-process cleanup without changing timer APIs
+  ([Testkit #30](https://github.com/dragginzgame/ic-testkit/issues/30),
+  [Host #5](https://github.com/dragginzgame/ic-host-tooling/issues/5)).
+- Refresh Shared Tooling to reviewed 0.1.26, including safe local tracking updates
+  after release and expanded tooling reports
+  ([shared #62](https://github.com/dragginzgame/shared-tooling/issues/62),
+  [shared #61](https://github.com/dragginzgame/shared-tooling/issues/61)).
+- Delegate failure archiving to the shared helper; preserve partial archives and
+  reject overwrites, while retaining source/status admission and all selected
+  installer evidence ([#30](https://github.com/dragginzgame/ic-timers/issues/30),
+  [shared #59](https://github.com/dragginzgame/shared-tooling/issues/59)).
+
 ## [0.14.16] - 2026-10-08
 
 ### Development

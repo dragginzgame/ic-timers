@@ -61,6 +61,9 @@ class DownloadedEvidenceTests(unittest.TestCase):
 
                 write(files)
                 verify_archive(archive, stage, identity)
+                write({"./" + name: value for name, value in files.items()})
+                verify_archive(archive, stage, identity)
+                write(files)
                 with self.assertRaises(ValueError):
                     verify_archive(archive, "late" if stage == "early" else "early", identity)
                 for key in identity:
@@ -73,6 +76,11 @@ class DownloadedEvidenceTests(unittest.TestCase):
                     (scenario + "/scenario.log", (b"unrelated setup outage\n", 0o644)),
                     (payload, (b"damaged retained bytes\n", 0o644)),
                     ("../outside", (b"unsafe", 0o644)),
+                    ("./../outside", (b"unsafe", 0o644)),
+                    ("/outside", (b"unsafe", 0o644)),
+                    ("inside/./outside", (b"unsafe", 0o644)),
+                    ("inside//outside", (b"unsafe", 0o644)),
+                    ("././outside", (b"unsafe", 0o644)),
                 ]
                 for name, replacement in mutations:
                     write(dict(files, **{name: replacement}))
@@ -84,6 +92,10 @@ class DownloadedEvidenceTests(unittest.TestCase):
                         verify_archive(archive, stage, identity)
                 duplicate = tarfile.TarInfo("identity.txt")
                 write(files, duplicate)
+                with self.assertRaises(ValueError):
+                    verify_archive(archive, stage, identity)
+                alias_duplicate = tarfile.TarInfo("./identity.txt")
+                write(files, alias_duplicate)
                 with self.assertRaises(ValueError):
                     verify_archive(archive, stage, identity)
                 link = tarfile.TarInfo(scenario + "/after.txt")

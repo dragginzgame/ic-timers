@@ -28,14 +28,19 @@ loaders select the resulting `timer-probe` output directory. The root ordinary
 release profile is unchanged. Dependency resolution now uses root resolver 3;
 fresh measurements and native qualification are required for the combined graph.
 
-The current root catalog selects compatible Testkit 0.20, locked to 0.20.0,
-with Host 0.3.3 transitively, and ic-metrics 0.2.7. PocketIC remains the audited
+The incoming root catalog selects compatible Testkit 0.23, locked to 0.23.0,
+with all four Host crates at 0.6.0 transitively, and ic-metrics 0.2.11. PocketIC remains the audited
 16.0.0 server. Its client's exact thiserror 2.0.18 requirement determines the
 shared thiserror selection; the old library-only 2.0.21 graph is not retained.
 All four member versions inherit the root release identity, and release
 preparation updates their local lock records together. This is repository/test dependency preparation, not a released runtime
 or measurement claim. Historical adoption evidence below remains tied to its
 recorded versions, workspace shapes and hosts.
+
+The [Testkit adoption](#testkit-023-adoption) and
+[Shared Tooling preparation](shared-tooling.md#shared-tooling-0126-preparation)
+record current source and qualification gaps. These repository/test-only changes
+select the compatible 0.14.17 draft; Cargo package versions remain 0.14.16.
 
 ## Pre-1.0 compatibility
 
@@ -535,6 +540,40 @@ Host 0.5.1 `81f9809861159def2fd0987fcb7961cda4afd969` is committed; its
 [exact-source CI](https://github.com/dragginzgame/ic-host-tooling/actions/runs/37750135927)
 passed Linux, MSRV and both native macOS gates.
 
+### Testkit 0.23 adoption
+
+The maintainer reports Testkit 0.23.0 live. The incoming root catalog/lock selects
+that registry version and all four Host crates at 0.6.0; this preparation
+preserves those existing dependency edits. Full locked offline metadata passes
+without rewriting either file. All 38 selected Testkit Rust source files match
+released commit `59b1c1de924116752282eac48c6531dce159ccc9`.
+
+The actual harness calls `spawn`, `start_managed_server`, `url`, `connect` and
+`try_build`, then drops the instance before its server. None of those call
+signatures changed; there are no startup-error variant patterns, Host
+`ExecutionError` literals or direct Host dependencies here. No harness shim or
+second process owner is needed. Host/Testkit remain outside the timer library
+graph, so no production Wasm, heap or timer instruction delta is expected.
+The startup diagnostic changes and version-probe group cleanup stay with
+[Testkit #30](https://github.com/dragginzgame/ic-testkit/issues/30) and
+[Host #5](https://github.com/dragginzgame/ic-host-tooling/issues/5).
+
+Released 0.23.0 expands the existing startup-error enum; it does not include the
+accepted common error record from our handed-off candidate. That candidate is
+still unapplied and unqualified. Applying that public cut after 0.23.0 requires
+a new Testkit minor and fresh notes; do not overwrite finalized 0.23.0 history.
+Our selection consumes only the actual released contract. Server cleanup and
+PocketIC instance Drop remain synchronous and unbounded.
+
+At inspection, Testkit's exact-source
+[main](https://github.com/dragginzgame/ic-testkit/actions/runs/37772507706) and
+[tag](https://github.com/dragginzgame/ic-testkit/actions/runs/37772507963) runs are
+queued. Host 0.6 source `6f066e727c977e0b7ec8d3d77821df8508b95c64` has an
+[in-progress native run](https://github.com/dragginzgame/ic-host-tooling/actions/runs/37769906817).
+Earlier Testkit/Host passes do not qualify this graph. This compatible,
+repository-only 0.14.17 draft keeps the full maintainer-operated native/PocketIC
+gate; no contributor tests, builds, lint or release commands ran.
+
 ### Testkit 0.22 adoption
 
 The maintainer authorized adopting committed Testkit **0.22.0**
@@ -966,6 +1005,54 @@ source as well. The maintained driver/collector fixture now passes all three
 native gates; #23's downloaded early/late failure evidence remains separate and
 was unexecuted at that historical review. No contributor rerun or dispatch was
 performed during that preparation.
+
+#### Shared failure archiver adoption
+
+The 0.14.17 draft prepares
+[#30](https://github.com/dragginzgame/ic-timers/issues/30) through the reviewed
+0.1.26 [snapshot](shared-tooling.md#shared-tooling-0126-preparation).
+`collect-failure-evidence.sh` still owns checkout/event/job/host/run/attempt
+identity and selection: fixture scratch, release-state validation logs, native
+validation logs and all host/IC candidate sets. It passes root/relative-path
+pairs to `archive-evidence.sh`, replacing its inline tar/exclusion assembly.
+The shared helper's payload is unchanged from the all-host-qualified archive
+source `eeb72e7`.
+
+The helper refuses occupied output paths and returns status 1 on an archive
+failure, preserving original inputs and any partial archive. A retry must use
+fresh runner scratch or preserve/relocate the previous archive first; collection
+does not overwrite retained output. Original controlled command status remains
+in the scenario's `status.txt` and job outcome, independently of helper failure.
+The existing workflow output name/upload/download identity is unchanged.
+
+The download verifier admits one conventional `./` prefix before canonical-name
+and duplicate checks. `identity.txt` plus `./identity.txt` is still a duplicate;
+absolute, traversal, empty and internal-dot components remain refused. Both
+released bare-name archives and newly prefixed archives have the same evidence
+identity contract. No additional wire discriminator or alternate verifier exists.
+
+Maintained fixtures now include colon/newline filenames, actual managed relative
+activation symlinks, retained selected/unselected bundles, partial tar failure,
+occupied-output refusal and fresh paths for independent collection attempts.
+The manual verifier adds prefixed acceptance and alias/traversal rejection.
+Those fixtures have not run during preparation. Native Linux/Intel/ARM consumer
+qualification and fresh early/late hosted round trips remain acceptance work;
+the closed #23 observations below retain their original source and scope.
+
+Full installer retention remains the default. The measured >99.99% installed-tool
+overhead is not fixed by this archiver adoption, and no size reduction is claimed.
+[Shared #66](https://github.com/dragginzgame/shared-tooling/issues/66) owns the
+compact-selection policy: exclude a managed active bundle only after successful
+verification bound to that exact selection; retain it on failed verification,
+changed selection or unknown ownership. Host lacks the IC receipt shape, so
+glob-based exclusions would lose useful diagnostics. Keep #30 open until the
+adapter's consumer acceptance and the selection obligation are resolved.
+
+No named function, method or type is deleted by the adapter. Inline archive
+mechanics are replaced by their shared owner. No timer runtime/API, provider,
+PocketIC version or release-gate selection changes; expected production
+Wasm/instruction impact is zero. Source, syntax and snapshot checks are
+preparation evidence only.
 
 #### Hosted qualification at 0.14.15
 

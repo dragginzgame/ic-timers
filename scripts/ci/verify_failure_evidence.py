@@ -14,6 +14,10 @@ def verify_archive(path, stage, identity):
         members = {}
         for member in archive:
             name = member.name.rstrip("/")
+            # The shared tar caller emits one conventional relative prefix.
+            # Normalize it before duplicate admission; aliases must still fail.
+            if name.startswith("./"):
+                name = name[2:]
             if (not name or name.startswith("/")
                     or any(part in ("", ".", "..") for part in name.split("/"))
                     or name in members):
