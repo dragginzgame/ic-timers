@@ -1,21 +1,55 @@
 # Shared Tooling adoption
 
-Released compatible repository-only **0.14.12** adopts reviewed committed
-Shared Tooling 0.1.19
-[`a06e4719e3839b8eefcfb88ec8923aa88eb63ccc`](https://github.com/dragginzgame/shared-tooling/tree/a06e4719e3839b8eefcfb88ec8923aa88eb63ccc).
+The compatible repository-only **0.14.14** draft prepares reviewed committed
+Shared Tooling 0.1.23
+[`0ba0ad00ed94848e54ecc82629b6b7873b7284c0`](https://github.com/dragginzgame/shared-tooling/tree/0ba0ad00ed94848e54ecc82629b6b7873b7284c0).
 The [baseline snapshot](../.shared-tooling.snapshot),
 [audit/setup snapshot](../.shared-tooling-audits.snapshot) and
 [helper snapshot](../.shared-tooling/helpers/.shared-tooling.snapshot) select
-33/30/13 exact files at that same revision. A clean detached scratch clone
-supplies every export; newer dirty sibling governance work is excluded. The
+35/30/13 exact files at that same revision. A clean detached scratch clone
+supplies every export; moving sibling work is excluded. The
 nested bundle is exported through its own isolated temporary consumer.
-No sibling, staged path, Cargo version or dependency lock was changed.
+No sibling, staged path, Cargo version or incoming dependency lock was changed
+by this refresh. Released 0.14.12 adopted the preceding 0.1.19 snapshot;
+its historical evidence remains scoped below.
 
 [AGENTS.md](../AGENTS.md) retains the product overlay and approved command
-exceptions. Timer runtime, the root catalog, library-only default builds,
+exceptions, including maintainer-owned contribution commits. Standard Make
+release commands select direct delivery explicitly; the reviewed PR helper is
+included without selecting that workflow. Timer runtime, the root catalog, library-only default builds,
 private provider and audited PocketIC artifact remain. Optional Rust tooling
 is still separate from aggregate setup; the disk-space helper is not adopted
 without a consumer capacity requirement.
+
+## Shared Tooling 0.1.23 preparation
+
+The maintainer authorized continuation of the reviewed refresh. All three
+manifests now bind 0.1.23; overlapping entries are refreshed together. The
+baseline adds `rules/contributions.md` and `scripts/ci/release-pr.sh`; the
+supplemental file set remains 30 and the nested helper set remains 13 with
+unchanged helper payloads. This is a coherent worktree preparation, not an atomic
+filesystem transaction or a released consumer qualification.
+
+The canonical runner rechecks committed payload, independent index, worktree
+and the exact tag object after the final hook. Completed direct resume verifies
+local annotated-tag identity, the exact remote tag object and release ancestry
+in the observed destination branch without replaying completed release effects.
+Existing adapter/receipt checks and full native release gates remain selected.
+The consumer's committed-release fixture additionally checks that ambient and
+Make-supplied `RELEASE_DELIVERY=pr` cannot redirect any standard release or resume
+command. It substitutes the runner and observes no Git/Cargo effects; it was not
+executed during preparation. The helper does not add PR delivery or merge authority.
+
+Source/export byte and executable-mode inspection, all three snapshot integrity
+checks, shell syntax and diff checks are preparation evidence. No tests, builds,
+lint, version bump, staging, commit, tag, push or publication ran. Upstream
+0.1.23 Linux, lint/security and both native macOS gates now pass in
+[the exact-source run](https://github.com/dragginzgame/shared-tooling/actions/runs/37746567888).
+Consumer acceptance remains tracked by
+[#29](https://github.com/dragginzgame/ic-timers/issues/29), separately from the
+hosted failure-artifact observations in #23. No function, method or type was
+removed by this refresh; timer Wasm/instruction changes from the tooling refresh
+are not expected.
 
 ## Shared Tooling 0.1.19 consolidation
 
@@ -70,8 +104,9 @@ The maintainer released the consumer batch at `72e8f5d` (0.14.12).
 [Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37639154601)
 passed; [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37639154602)
 passed Linux/MSRV and Apple Silicon. Intel macOS failed without executing steps
-and supplied no artifact or native qualification. Keep #28/#24/#25 open for that
-remaining native evidence, and #23 open for controlled hosted-failure artifacts.
+and supplied no artifact or native qualification. The three adoption issues
+remained open at that review; their subsequent acceptance is recorded below.
+#23 remains open for controlled hosted-failure artifacts.
 The 0.14.13 manual driver is documented with the
 [existing evidence owner](releasing.md#ci-failure-evidence). Earlier evidence below
 retains its original source scope.
@@ -93,7 +128,72 @@ an unqualified merged-source release flow or selecting PR delivery implicitly.
 An eventual reviewed refresh must reconcile contribution policy with the approved
 local command exceptions and keep all three snapshot revisions aligned; refreshing
 the runner alone does not adopt PR delivery. No new common-helper repair is needed
-for #24/#25/#28, which are awaiting consumer Intel evidence.
+for #24/#25/#28; their subsequent Intel acceptance is recorded below.
+
+## Consumer adoption qualification
+
+Released 0.14.13 `0b12c8a6dbe5f359f5499df67313ffa5c02af446` now supplies the
+missing [complete Intel native gate](https://github.com/dragginzgame/ic-timers/actions/runs/37655294064/job/112908747235).
+Linux/MSRV and tag truth also pass at that source. Source comparison proves 82
+adoption files unchanged from 0.14.12: all three snapshot manifests and payloads,
+the Make gate, changelog wrapper/bump/preservation fixtures and PocketIC
+provisioner/fixture. Apple Silicon's complete gate passed that unchanged adoption
+at 0.14.12. #24/#25/#28 are closed with these source-bound native observations.
+
+This does not relabel the earlier dependency graph: 0.14.12 selected Testkit
+0.21.1, Host 0.4.2 and Metrics 0.2.8; 0.14.13 selects Testkit 0.21.2, Host 0.4.6
+and Metrics 0.2.9. Both use PocketIC 16.0.0 and the unchanged timer runtime.
+Apple Silicon's own 0.14.13 gate subsequently passed, so the same
+[main run](https://github.com/dragginzgame/ic-timers/actions/runs/37655294064)
+now qualifies the complete released dependency graph on both native hosts.
+#23's manual artifact verification is also separate and has not run at this
+source. No contributor test, build, lint, rerun, dispatch or release executed.
+
+Committed Shared Tooling 0.1.22
+`2687f26317952c43c685f7f799ed09288dc10a67` follows the cancelled 0.1.21 run.
+[Its Linux and both native macOS jobs pass](https://github.com/dragginzgame/shared-tooling/actions/runs/37659875012).
+Its #57 correction affects `test-cloc-siblings.sh`
+and its context fixture, neither of which this consumer selects. The adopted
+`test-cloc-tooling.sh` is unchanged. No snapshot refresh or new release-mode
+adoption is needed to repair a local issue. Keep the 0.1.19 reviewed baseline
+and approved command exceptions.
+
+## Shared Tooling 0.1.23 source review
+
+Review on 2026-10-08 compared the selected 0.1.19 payloads with clean committed
+upstream 0.1.23 `0ba0ad00ed94848e54ecc82629b6b7873b7284c0`. Ten of the 33
+baseline payloads and one supplemental guide differ; all 13 nested-helper
+payloads are unchanged and no selected file disappeared. This is a source
+comparison, not adoption or execution of the new consumer graph.
+
+The [release-integrity repair](https://github.com/dragginzgame/shared-tooling/issues/58)
+applies to the selected direct runner. It now rechecks the committed payload,
+independent index, worktree and exact tag object after the final consumer hook.
+Completed direct resume also verifies the local annotated tag, exact remote tag
+object and release ancestry in the observed destination branch before reporting
+success. The current consumer hooks inspect immutable release metadata and tag
+identity; no incorrect live release was observed. Those hooks do not replace the
+missing completed-resume checks. Consumer adoption and its required proof are
+tracked by [#29](https://github.com/dragginzgame/ic-timers/issues/29).
+
+At review, [the exact-source upstream run](https://github.com/dragginzgame/shared-tooling/actions/runs/37746567888)
+passes Linux portable regression and lint/security; both native macOS jobs are
+running. The proposed refresh keeps all three snapshot identities aligned and
+includes the newly required contribution rule and release helper, with explicit
+maintainer-owned command exceptions. Direct delivery remains the selected policy;
+including the helper does not select PR delivery. No snapshot file, Cargo version
+or release effect was changed during this inspection.
+
+That paragraph records the initial inspection, before the separately authorized
+[preparation](#shared-tooling-0123-preparation) above. It does not describe the
+subsequently refreshed worktree or qualify its new bytes.
+
+The current `test-git-hook.sh` already exercises the actual consumer formatter
+and checks real Rust output, partial staging, unrelated edits and failure
+isolation. The new frontend reference supplies no reason to introduce npm or
+duplicate that Rust qualification. Recent sibling LOC repairs affect unselected
+scripts. Neither improvement is added to the consumer refresh scope. All tests,
+builds, lint and native consumer qualification remain maintainer-owned.
 
 ## Shared Tooling 0.1.18 refresh
 

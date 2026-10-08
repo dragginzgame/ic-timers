@@ -294,6 +294,12 @@ minor`, `make major`, or `make bump-x VERSION=...` when ready to update the
 workspace version and the root lockfile, and `make release-stage` to stage release
 metadata.
 
+The selected shared contract includes the PR helper, but this consumer's standard
+Make recipes bind `RELEASE_DELIVERY=direct`. Ambient environment or Make-variable
+PR selections do not switch the patch/minor/major or resume commands. Adopting PR
+delivery requires separate merged-source adapters and qualification; this refresh
+grants no merge authority or contributor release effects.
+
 Standard commands may be rerun after any interrupted attempt. Before preparation,
 the shared runner starts fresh preflight and complete validation on current
 source; older preparation-free records are preserved as evidence. After
@@ -316,9 +322,23 @@ the local Make fixtures verify direct delegation, selection forwarding and
 selected-commit metadata checks. Explicit resume finishes only its saved release.
 The superseded local retry wrapper and its duplicate fixtures are removed.
 
+The 0.14.14 draft prepares Shared Tooling 0.1.23's
+[release-integrity repair](https://github.com/dragginzgame/shared-tooling/issues/58).
+After the final consumer check, the runner independently rechecks the committed
+payload, index, worktree and exact annotated-tag object before dispatch. Completed
+direct resume observes the exact local/remote tag and destination branch ancestry
+before reporting success, without replaying commits, tags or pushes. Conflicts or
+unavailable observations retain the selected plan and failure evidence. The
+canonical runner fixture owns these refusal and exact-version repair/retry cases;
+the local committed-release fixture checks explicit direct-policy selection as
+well as immutable metadata/receipt binding. Both remain user-operated gates.
+The [adoption owner](shared-tooling.md#shared-tooling-0123-preparation) records
+preparation and upstream/consumer qualification limits; keep
+[#29](https://github.com/dragginzgame/ic-timers/issues/29) open until acceptance.
+
 The user-operated release targets run the complete release gate, update the
-workspace version plus both the root and nested testing lockfiles, commit,
-create an annotated `vX.Y.Z` tag, and push with tags. If the workspace version
+workspace version and all four local member identities in the sole root lockfile,
+commit, create an annotated `vX.Y.Z` tag, and push the branch/tag atomically. If the workspace version
 has no saved unfinished intent, the requested bump runs. A fresh `make release-patch`
 advances the patch version; rerunning an unfinished patch release recovers it. For
 example, with Cargo at 0.8.2 and a current draft, stage and commit the code-bearing
@@ -437,8 +457,51 @@ continues to target Wasm on the Internet Computer.
 | Host | Current workflow configuration and evidence scope |
 | --- | --- |
 | Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The release gate pins the audited PocketIC 16.0.0 Linux x86_64 artifact. Recorded results remain scoped to their original subjects. |
-| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.11; later worktree changes remain unqualified. The historical 0.14.1 missing-`rg` failure is recorded below. |
-| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.11, including runtime/cohort subjects; later worktree changes remain unqualified. Historical failures retain their original scope below. |
+| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.13. The historical 0.14.1 missing-`rg` failure is recorded below. |
+| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.13. Historical failures retain their original scope below. |
+
+Released 0.14.13 is `0b12c8a6dbe5f359f5499df67313ffa5c02af446`.
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37655294418)
+passes. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37655294064)
+passes Linux, MSRV and both complete native macOS gates. The released lock
+contains Testkit 0.21.2, Metrics 0.2.9,
+all four split Host packages at 0.4.6 and PocketIC 16.0.0. The source-bound
+[adoption acceptance](shared-tooling.md#consumer-adoption-qualification)
+closes #24/#25/#28 and records subsequent complete current-release host acceptance.
+#23's original early/late failing jobs and six verified downloads remain required.
+
+Host 0.4.6 `0fb05f9e18f032425188d68e1d69317a0f0127d5`
+[passes all declared native owner gates](https://github.com/dragginzgame/ic-host-tooling/actions/runs/37648086908).
+Testkit 0.21.2 `2db7b4f6b616b484408695656e26207628d74c5f` now has passing
+[main](https://github.com/dragginzgame/ic-testkit/actions/runs/37651807993) and
+[tag](https://github.com/dragginzgame/ic-testkit/actions/runs/37651807716) CI.
+Those results qualify upstream; they do not substitute for this consumer's
+separate source-specific native and artifact observations.
+
+The incoming working-tree lock selects Testkit 0.21.3 and compatible
+`serde_spanned`/TOML-family patches. Committed Testkit 0.21.3
+`a8e83a1940e5f44927c6df95b5d1269a3ac699bc` passes its exact-source
+[main native, MSRV and PocketIC-concurrency gates](https://github.com/dragginzgame/ic-testkit/actions/runs/37661836622)
+and [tag CI](https://github.com/dragginzgame/ic-testkit/actions/runs/37661836641).
+Review against 0.21.2 finds no change to production library implementation or
+the `pic` startup APIs used by this harness: the sole library source change
+removes duplicated `cfg(test)` cache-path cases. Full root
+`cargo metadata --manifest-path Cargo.toml --locked --offline --format-version 1`
+passes without rewriting the incoming lock. All four local packages remain
+0.14.13 and inherit their dependency declarations; Host stays outside the timer
+library graph. This selection is recorded in the undated 0.14.14 draft and has
+not yet executed this consumer's native or PocketIC gates. The released 0.14.13
+run qualifies its own Testkit 0.21.2 graph, not this new working-tree selection.
+
+The same incoming lock now selects Metrics 0.2.10. Committed upstream
+`90262c3b086ee39016a6f36902a610a78a139301` passes
+[its source-bound CI](https://github.com/dragginzgame/ic-metrics/actions/runs/37745384375).
+Its library source is byte-equivalent to 0.2.9; the patch adopts upstream
+contribution/release tooling and updates documentation. Future dirty sibling
+work is excluded. Full locked offline metadata passes with this selection and
+does not rewrite the lockfile. Its actual consumer native and PocketIC execution
+remains part of the user-operated gate for the new graph, separately from the
+released 0.14.13 graph and the Shared Tooling source/export checks.
 
 Inspection on 2026-10-06 of the 0.13.1 source at
 `54bbcfc4985d4657578150cbe7112795297115fd` found both native macOS jobs in
@@ -741,8 +804,8 @@ hosts, preserving the failing job result. Normal green CI does not prove upload
 execution. Contributor preparation dispatches no failing workflow or release.
 Force-terminated runners cannot guarantee collection.
 
-The compatible repository-only 0.14.13 draft adds an explicit manual qualification
-path to the same CI workflow. After the maintainer commits and pushes it, choose
+Released repository-only 0.14.13 adds an explicit manual qualification
+path to the same CI workflow. The workflow is now on main; choose
 **CI → Run workflow → failure_stage: early**, then repeat with **late** at the
 same source ref. [GitHub's manual input contract](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#onworkflow_dispatchinputs)
 requires the workflow on the default branch. The equivalent maintainer commands
@@ -801,19 +864,14 @@ checkout with fake CI identity, rejects invalid/nonmanual calls, and compares
 retained inputs/logs after archive extraction. This is prepared local coverage;
 neither those new fixtures nor the hosted dispatches ran during preparation.
 
-Released #24/#25/#28 require Intel evidence for the already implemented 0.14.12
-source, rather than another code repair. The maintainer can use the failed main
-run's **Re-run failed jobs** action, or:
-
-```sh
-gh run rerun 37639154602 --repo dragginzgame/ic-timers --failed
-```
-
-That reuses the original committed source and its lock selection. Inspect the
-actual executed Intel gate before closing the three issues. A subsequent complete
-native run can instead qualify a committed descendant with these implementations
-unchanged; bind that evidence to its own source and selected dependency graph.
-Neither path is executed during contributor preparation.
+Released #24/#25/#28 are closed after 0.14.13 supplies the missing complete
+Intel gate for the unchanged 0.14.12 adoption. The
+[source-bound acceptance](shared-tooling.md#consumer-adoption-qualification)
+records exact source identity, the 82 unchanged files and each native host's
+actual dependency graph. Apple Silicon subsequently passed at the exact 0.14.13
+source as well. The maintained driver/collector fixture now passes all three
+native gates; #23's downloaded early/late failure evidence remains separate and
+unexecuted. No contributor rerun or dispatch was performed.
 
 ### Formatter prerequisites
 

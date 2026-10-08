@@ -2,6 +2,21 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.14]
+
+### Development
+
+- Adopt Shared Tooling 0.1.23: recheck payload and exact tag identity after final
+  release hooks, and verify published refs on completed release resume. Keep
+  direct delivery explicit and preserve maintainer-owned commands
+  ([#29](https://github.com/dragginzgame/ic-timers/issues/29),
+  [upstream #58](https://github.com/dragginzgame/shared-tooling/issues/58)).
+- Refresh the test-only root lock selection to compatible Testkit 0.21.3 and
+  TOML dependency patches. Keep the existing root dependency catalog and
+  PocketIC harness; timer behavior and public APIs are unchanged.
+- Preserve the incoming Metrics 0.2.10 lock selection; its changes affect
+  upstream tooling and documentation, with unchanged library implementation.
+
 ## [0.14.13] - 2026-10-07
 
 ### Development

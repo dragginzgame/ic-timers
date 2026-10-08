@@ -4,7 +4,8 @@
 
 Use the [shared code-hygiene method](../../audits/code-hygiene.md) and
 [common audit contract](../../audits/README.md), unchanged from Shared Tooling
-`a3430b34b32a60f3b245a2b4f7e2f5321556fe56`. The
+`0ba0ad00ed94848e54ecc82629b6b7873b7284c0`. The method bytes are unchanged
+from the preceding reviewed snapshot. The
 [audit snapshot](../../.shared-tooling-audits.snapshot) identifies those files;
 [AGENTS.md](../../AGENTS.md) supplies local command authority. This overlay
 selects product scope for a requested review, including a review before a minor

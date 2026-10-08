@@ -149,4 +149,26 @@ if "$real_make" --no-print-directory release-committed-check RELEASE_COMMIT= \
     RELEASE_VERSION=0.1.0 RELEASE_DATE=2026-10-06 > "$fixture/output" 2>&1; then exit 1; fi
 # Prepared metadata checks must still inspect the current worktree.
 reject release-prepared-check 'invalid current metadata'
+
+# The consumer selects direct delivery; an ambient or Make-supplied PR mode
+# must not redirect the standard commands into an unadopted release workflow.
+# Substitute only the runner, preserving the actual Make recipes and arguments.
+mkdir -p scripts/ci
+export DELIVERY_EVENTS="$fixture/delivery"
+cat > scripts/ci/run-release.sh <<'STUB'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "${RELEASE_DELIVERY:?}" > "$DELIVERY_EVENTS"
+STUB
+cp "$EVENTS" "$fixture/before-delivery"
+for kind in patch minor major resume; do
+    for selection in environment command-line; do
+        arguments=(--no-print-directory "release-$kind" VERSION=0.1.0)
+        if [[ "$selection" == command-line ]]; then arguments+=(RELEASE_DELIVERY=pr); fi
+        RELEASE_DELIVERY=pr "$real_make" "${arguments[@]}" > "$fixture/output" 2>&1
+        printf 'direct\n' > "$fixture/expected-delivery"
+        cmp "$fixture/expected-delivery" "$DELIVERY_EVENTS"
+        cmp "$fixture/before-delivery" "$EVENTS"
+    done
+done
 echo 'Selected-commit Make metadata checks passed (Git/Cargo stubs; no release effects)'

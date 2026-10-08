@@ -5,18 +5,18 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `a06e4719e3839b8eefcfb88ec8923aa88eb63ccc` (0.1.19). Its provenance and
+  from revision `0ba0ad00ed94848e54ecc82629b6b7873b7284c0` (0.1.23). Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
 - Apply the [shared audit methods](audits/README.md) from revision
-  `a06e4719e3839b8eefcfb88ec8923aa88eb63ccc`, recorded separately in
+  `0ba0ad00ed94848e54ecc82629b6b7873b7284c0`, recorded separately in
   [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). That
   supplemental snapshot also supplies pinned host/IC setup at the same
   reviewed revision. The isolated
   [Cargo helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
   supplies the structured dependency checker, Cargo readers/rewrites, formatter prerequisite guard, annotated-tag checker and release-command
-  adoption checker from `a06e4719e3839b8eefcfb88ec8923aa88eb63ccc`. Apply the
+  adoption checker from `0ba0ad00ed94848e54ecc82629b6b7873b7284c0`. Apply the
   [dependency pinning rules](rules/dependency-pinning.md) with the exact local
   [qualification exceptions](docs/releasing.md#dependency-pin-exceptions).
   The [local hygiene overlay](docs/audits/code-hygiene.md) and adoption record scope
@@ -34,11 +34,18 @@ This file is normative for automated contributors.
   them without an explicit request. Read-only inspection, script syntax, diff,
   documentation and cheap release-metadata checks remain allowed. This preserves
   the maintainer's deployment workflow rather than duplicating its validation.
+- Maintainer-approved contribution exception: all commits remain user-owned,
+  including contribution PR commits. The shared contribution rule does not
+  supersede this established workflow. Prepare local edits and reviewable PR
+  descriptions without committing on the maintainer's behalf.
 - All release execution remains user-owned: version bumps, release commands,
   staging, commits, tags, pushes and publication. An ordinary request to prepare
   a release authorizes changelog preparation only. This is a maintainer-approved
   command-authority exception to the common baseline, preserving the established
   deployment workflow alongside the validation exception above.
+- Standard Make release commands select direct delivery explicitly. The shared
+  PR helper is included with the reviewed release contract, but PR release
+  delivery and merged-source adapters require separate maintainer adoption.
 - macOS host workflows are required by the shared baseline. The local
   [host matrix](docs/releasing.md#host-support) records current qualification
   gaps; Linux evidence does not qualify macOS. A baseline refresh alone does
