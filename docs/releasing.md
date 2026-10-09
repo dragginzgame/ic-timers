@@ -1492,6 +1492,42 @@ qualification belong in the [adoption record](shared-tooling.md#shared-tooling-0
 Ordinary validation never downloads. Setup neither deploys a canister nor selects
 credentials or a network target.
 
+### Testkit 0.27 preparation
+
+After released IC Timers 0.16.0
+`984c2f0a92f7e3ebde604f88895b12fb2b78cb2c`, incoming maintainer edits select
+Testkit 0.27.0 in the sole root catalog/lock. Contributors preserved those edits.
+The undated 0.16.1 notes prepare this repository-only update; production timer
+source, public APIs and canister dependencies are unchanged.
+
+The downloaded registry startup owner and CLI match Testkit's tagged 0.27.0
+source at `f2d9fc6f197bcb9e669a7abaa1135f4cdffdd9ee`. Its startup error is a
+record with `failure()`, bounded `output()` and independent command/server cleanup
+reports. The private [harness](../testing/crates/ic-timers-pocketic/src/harness/mod.rs)
+uses retained spawn/connect/build APIs and `expect`, without matching retired
+error variants. Its error's `Debug` includes the original cause and cleanup/output
+fields; adding downstream error reconstruction would duplicate the owner.
+The CLI adapter already derives its version from the lock. No consumer rewrite,
+old error alias or second CLI selection is needed.
+
+Locked offline metadata on 2026-10-09 resolves one registry Testkit 0.27.0,
+Metrics 0.3.1 and PocketIC 16.1.0, with all four local members still at 0.16.0.
+Registry source comparison and metadata are retained at the directory referenced
+by `/tmp/ic-timers-testkit027-current`; manifest and lock bytes are preserved.
+These are preparation checks, not startup or compilation qualification.
+
+[Released Testkit 0.27 CI](https://github.com/dragginzgame/ic-testkit/actions/runs/37923315911)
+passes Linux portable-host, MSRV and PocketIC concurrency jobs; its Linux complete
+checks remain in progress and macOS gates queued at inspection. The corresponding
+[second run](https://github.com/dragginzgame/ic-testkit/actions/runs/37923315803)
+also has pending complete/native checks. Keep adoption acceptance pending until
+upstream native gates and the selected consumer graph's setup/offline check,
+probe compilation, actual startup/recovery and policy cohorts pass on all three
+hosts. The existing 0.16.0 runs use Testkit 0.26.0 and cannot qualify 0.27.0.
+No duplicate hosted dispatch, new test/build/lint, tool setup or release ran in
+this preparation. No production Wasm, instruction or heap delta is expected
+from this host-only dependency update; none was measured.
+
 ### Dependency pin exceptions
 
 [Exact exception records](../ci/dependency-pinning-exceptions.json) retain three

@@ -12,6 +12,30 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Current release and remaining acceptance
 
+Released **0.16.0** is `984c2f0a92f7e3ebde604f88895b12fb2b78cb2c`.
+The maintainer reports it live. Its [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37923550864)
+passes Linux/MSRV, with both complete macOS gates queued; [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37923551348)
+passes. The released lock selects Metrics **0.3.1**, Testkit **0.26.0**, Host
+**0.9.1** and PocketIC **16.1.0**. Registry Metrics 0.3.1's eight source files
+match 0.3.0 byte for byte. The public summary identity cut is delivered in the
+0.16 minor line; the earlier 0.3.0 preparation below retains its original scope.
+
+Incoming maintainer catalog/lock edits now select Testkit **0.27.0**. Preserve
+those bytes. The undated **0.16.1** notes prepare this repository-only harness/CLI
+update, with [source and qualification scope](../releasing.md#testkit-027-preparation).
+Locked offline metadata passes with one Testkit, Metrics and PocketIC package
+and four local members still at 0.16.0. No harness rewrite is needed; no Cargo
+mutation, test/build/lint, setup or release execution ran during this preparation.
+Testkit's released 0.27 Linux portable/MSRV/concurrency jobs pass, Linux complete
+checks are in progress, and both native macOS matrices remain queued. Adoption
+acceptance is pending; do not infer it from registry availability or metadata.
+
+The existing #30 observations still have early Intel and both late macOS
+producers queued. The existing #34 consumer native acceptance is also pending.
+Do not redispatch observations or close either issue before its required evidence.
+
+Earlier source-bound records follow.
+
 Released **0.15.0** is `1410415d41212385234509524480186074972764`.
 The maintainer reports it live. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37920576526)
 passes Linux/MSRV with both macOS gates queued; [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37920576620)
@@ -729,9 +753,11 @@ verification is scoped in the [0.10.21 note](../changelog/0.10.21.md).
 
 ## Next action
 
-The 0.16.0 draft prepares incoming Metrics 0.3.0's public type cut. The maintainer
-runs the next minor release and its complete gate; contributors do not mutate
-Cargo versions or execute the release. The 0.15.0 hard cut is released; Linux/MSRV
+The 0.16.0 type cut is released. Prepare the incoming Testkit 0.27 graph through
+the 0.16.1 notes, with upstream and consumer native acceptance still pending.
+This is repository-only work; ordinarily bundle it into the next code-bearing
+release rather than tagging solely for documentation or harness maintenance.
+Contributors do not mutate Cargo versions or execute releases. Current Linux/MSRV
 and tag checks pass, while complete native macOS qualification remains pending.
 Maintainer validation must exercise the adapter
 and release-gate/collector fixtures, explicit replacement of an old six-tool

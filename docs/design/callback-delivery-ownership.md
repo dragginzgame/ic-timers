@@ -252,6 +252,15 @@ No measured Wasm or instruction delta is available for this graph; package
 identity and build inputs prevent claiming binary identity from source equality.
 The release adds no runtime mechanism or speculative Metrics API.
 
+The maintainer subsequently released the cut as **0.16.0** at
+`984c2f0a92f7e3ebde604f88895b12fb2b78cb2c`, selecting registry Metrics **0.3.1**.
+Its eight `src` files match tagged 0.3.0 byte for byte, preserving the reviewed
+arithmetic. Exact-source [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37923550864)
+passes Linux/MSRV and [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37923551348)
+passes; both complete native macOS gates remain queued at inspection. No fresh
+cohort measurement is claimed. The earlier 0.3.0 metadata evidence remains
+preparation evidence with its original graph.
+
 ## IC Metrics 0.2 adoption
 
 The maintainer requested registry `ic-metrics 0.2` after publication. The root

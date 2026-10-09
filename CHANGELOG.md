@@ -2,6 +2,16 @@
 
 All notable changes to this project are recorded here.
 
+## [0.16.1]
+
+### Development
+
+- Use the incoming root-catalog Testkit 0.27.0 selection for the private PocketIC
+  harness and server CLI. Startup errors retain the original cause, bounded
+  output and separate command/server cleanup failures. Timer APIs are unchanged;
+  native acceptance remains pending
+  ([qualification owner](docs/releasing.md#testkit-027-preparation)).
+
 ## [0.16.0] - 2026-10-09
 
 ### Breaking
