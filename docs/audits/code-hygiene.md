@@ -4,7 +4,7 @@
 
 Use the [shared code-hygiene method](../../audits/code-hygiene.md) and
 [common audit contract](../../audits/README.md) from reviewed Shared Tooling
-`1a54fb625d6e47efa64c4384808ecbc87be84e7e`. The code-hygiene method bytes are
+`635a39a9dd5f8d021fa9c9196b591e00521a7e02`. The code-hygiene method bytes are
 unchanged; the common contract links the maintenance catalog and scopes standing
 issue writes to verified `dragginzgame` repositories. The
 [audit snapshot](../../.shared-tooling-audits.snapshot) identifies those files;

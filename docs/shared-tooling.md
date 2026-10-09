@@ -1,5 +1,128 @@
 # Shared Tooling adoption
 
+## Shared Tooling committed 0.1.32 follow-up
+
+The compatible **0.14.22** draft now selects reviewed committed Shared
+`635a39a9dd5f8d021fa9c9196b591e00521a7e02` through all three existing
+**51/33/13** exports. The commit is labelled 0.1.32; its `VERSION` remains 0.1.31.
+Remote main matches, and [exact-source CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37893234402)
+passes Linux, Intel, Apple Silicon and lint/security. A clean detached temporary
+clone supplies the canonical exports; dirty sibling dashboard changes are excluded.
+No selected files are added. Consumer IC/host pins, local command exceptions and
+the complete release gate remain; no Cargo-install qualification, dashboard,
+fleet report or scheduled agent gains a local caller.
+
+The installer and its canonical AWK admission now reuse the complete validated
+IC selection across comments and row order, preserving exact original receipt
+bytes and all checksum/version checks ([Shared #79](https://github.com/dragginzgame/shared-tooling/issues/79)).
+The already-pending compact verifier therefore delegates receipt record admission
+to that same AWK owner instead of requiring byte-identical installed/caller pins.
+Caller-pin evidence must still match the selected source exactly. Collector and
+download fixtures cover distinct equivalent receipt provenance plus invalid,
+changed and duplicate selections. This replaces the pending byte comparison;
+there is no second pin schema or receipt rewrite.
+
+Local CI adopts the pushed-source retention from
+[Shared #80](https://github.com/dragginzgame/shared-tooling/issues/80): push groups
+include the SHA, and only superseded PR revisions cancel. Explicit manual
+observations additionally use their run identity, preserving frozen attempts and
+early/late separation. Job contents, permissions, pinned Actions and gates stay
+the same. The refreshed fleet policy keeps inventories in Shared Tooling and
+measurement arithmetic in IC Metrics. The documented eventual PocketIC handoff
+is a prerequisite, not an implemented replacement; current audited admission and
+provisioning remain. Shared #82's alignment path defect is not fixed by this
+revision. The local Make caller now passes explicit absolute manifest/pin paths,
+preventing inherited CDPATH output from corrupting normal-checkout resolution.
+The helper's general relative/newline path repair remains upstream; this caller
+change does not qualify arbitrary newline-ending checkouts or patch the snapshot.
+
+Host review is at released **0.8.5** `1cad3253096b6eb67be5187209e7fb606593c501`;
+[its CI](https://github.com/dragginzgame/ic-host-tooling/actions/runs/37893479726)
+passes. Its Rust implementation is unchanged from 0.8.4. The incoming root lock
+already selects all four 0.8.5 packages through Testkit 0.25.3, so no direct Host
+dependency or private process/lock adapter is added. Managed server ownership
+stays with Testkit; live output observation and artifact lock policy belong there.
+The two trusted local probe-file reads do not establish a new Host requirement;
+an arbitrary byte limit or loader wrapper is deferred without a demonstrated need.
+No sibling files, Cargo manifest or lock are edited by the contributor.
+
+The released 0.14.21 lock actually selects Host 0.8.4, not the stale 0.8.2 handoff
+label; current source-bound host records are corrected. Incoming Metrics/TOML
+and Host selections need their own complete graph qualification. This batch has
+no timer runtime/API change or expected timer Wasm/instruction/heap delta from
+the tooling; source/syntax/metadata inspection does not prove the dirty native
+gate. #30 retains compact consumer acceptance. No named function, method or type
+is deleted. Actual preparation checks pass: all three independent integrity
+checks, exact source bytes/modes/overlaps, selected shell and existing Python
+syntax, workflow YAML parsing, 264 local references/anchors, full locked/offline
+metadata and whitespace checks. Root manifest, incoming lock, caller pins and
+timer source are preserved. Evidence is retained under
+`/tmp/ic-timers-shared032.lQrZvb/`; tests/builds/lint, installer, release and
+workflow execution were not run. Earlier preparation records below keep their
+original scopes.
+
+## Compact consumer evidence preparation
+
+The compatible **0.14.22** draft completes the remaining implementation of
+[#30](https://github.com/dragginzgame/ic-timers/issues/30), using the selector
+already in reviewed Shared 0.1.29. All three snapshots remain at
+`1a54fb625d6e47efa64c4384808ecbc87be84e7e`; their payloads are unchanged.
+The selected `select-tool-evidence.sh` is byte-identical to the owner at
+`db039347d2372b877c1c46dcdd2b5c3aa9412009`, whose
+[complete CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37787910279)
+passes full/compact native upload/download and retained-byte/receipt verification
+on Linux, Intel and Apple Silicon. Shared #66 is closed. This permits consumer
+implementation; it does not qualify the new dirty collector.
+
+The local collector replaces its inline host/IC wildcard selection with a direct
+`select-tool-evidence.sh compact` call and the consumer's two pin files. Selection
+output is captured before reading NUL-delimited root/path pairs, so a producer
+failure aborts collection and retains its partial output and metadata. Fresh
+verification admits omission of that exact active bundle; failed, changed,
+unselected and unmanaged bundles stay full. Pins, check logs and IC receipts are
+archived under `tool-evidence/`. Product identity, fixture/release/validation log
+roots, output refusal, original outcome and upload/download naming remain local.
+The shared composite uploader is still not selected; no snapshot refresh, new
+retention mode or private verifier is added.
+
+The actual collector fixture now creates tiny authenticated host and IC payloads
+for both successful omission and corrupt active-set retention. It checks forwarded
+pins, IC receipts, exact selection identity, original logs and job identity, then
+injects a failed selector with partial output and requires no archive. Existing
+empty/early, newline/CDPATH, mode/symlink, partial-tar and occupied-output cases
+remain. Copied consumer scripts include the selector's installer/checker
+companions. The existing downloaded-archive verifier also requires late
+qualification's compact selections, exact caller pins/IC receipts and absence of
+the verified payloads. Its rejection fixture covers missing/changed evidence and
+retained active payloads; earlier identity/status/mode checks remain. No new Python
+tool or prerequisite is added. These are synthetic fixture inputs, not qualification of the real
+release assets or a compression/time benchmark. No named function, method or type
+is removed; only inline root selection is replaced.
+
+The earlier release obligations are now accepted separately:
+[0.14.20 CI](https://github.com/dragginzgame/ic-timers/actions/runs/37807464532)
+and [0.14.21 CI](https://github.com/dragginzgame/ic-timers/actions/runs/37819730920)
+pass Linux/MSRV and both complete native macOS gates. All three 0.14.21 host logs
+report passing actual release-index, runner and installer/evidence fixtures;
+matching [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37819731178)
+passes. #31/#32 are closed. Earlier cancelled upstream and uncached offline
+observations remain historical. All six frozen 0.14.17 round trips are also
+complete at their [evidence owner](releasing.md#evidence-path-repair-and-01417-qualification).
+
+Consumer compact qualification remains open on #30: user-operated fixture and
+full native gates, then source-bound early/late hosted transport at the eventual
+committed collector and measured actual archive bytes/time. No new dispatch or
+local test/build/lint ran. Production timer source/API, Cargo manifest and IC pins
+are unchanged. A later external lock edit selects Metrics 0.2.16, TOML 1.1.8 and
+toml_parser 1.1.5 (and their checksums); it is preserved separately and requires
+qualification of that graph. No contributor dependency update or lock edit ran.
+The selected graph's cheap full locked/offline metadata inspection completes;
+the JSON is retained at `/tmp/ic-timers-01422-metadata.json`. Preparation syntax,
+documentation references, exact qualified-selector bytes and diff checks remain
+separate from behavior qualification.
+The collector work alone is repository-only, with zero expected timer
+Wasm/instruction/heap delta, and can remain untagged until a code-bearing release.
+
 ## Shared Tooling 0.1.29 adoption
 
 After pushed 0.14.20 (`40611eff87b3165e58528c597debaa95427cdf5a`), the compatible

@@ -108,7 +108,7 @@ package:
 	cargo package --locked --offline --allow-dirty -p ic-timers
 
 pocketic-check:
-	bash scripts/ci/check-pocketic-alignment.sh --manifest Cargo.toml --pins ci/ic-tools.tsv
+	bash scripts/ci/check-pocketic-alignment.sh --manifest "$(CURDIR)/Cargo.toml" --pins "$(CURDIR)/ci/ic-tools.tsv"
 	POCKET_IC_BIN="$(POCKET_IC_BIN)" \
 		POCKET_IC_AUTO_INSTALL="$(POCKET_IC_AUTO_INSTALL)" \
 		bash scripts/ci/check-pocketic.sh

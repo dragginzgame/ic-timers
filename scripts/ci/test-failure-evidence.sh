@@ -81,6 +81,138 @@ grep -Fxq 'run=123' "$fixture/extracted/identity.txt"
 grep -Fxq 'attempt=2' "$fixture/extracted/identity.txt"
 mv "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" "$fixture/initial-evidence.tar.gz"
 
+# Exercise the actual collector, selector and offline installers with tiny
+# authenticated executables. These are fixture bytes, not real tool admission
+# or a compression benchmark. Failed/unselected sets and logs must remain full.
+mkdir -p "$GITHUB_WORKSPACE/ci" "$GITHUB_WORKSPACE/.tools/host-set.active/bin" \
+    "$GITHUB_WORKSPACE/.tools/ic-set.active/bin"
+host_pins="$GITHUB_WORKSPACE/ci/tool-versions.env"
+printf 'export SHARED_TOOLING_JQ_VERSION=1.8.2\nexport SHARED_TOOLING_YQ_VERSION=4.47.2\nexport SHARED_TOOLING_CLOC_VERSION=2.10\nexport SHARED_TOOLING_RIPGREP_VERSION=15.2.0\n' > "$host_pins"
+for tool in jq yq cloc; do
+    case "$tool" in
+        jq) report=jq-1.8.2; key=JQ ;;
+        yq) report='yq (https://github.com/mikefarah/yq/) version v4.47.2'; key=YQ ;;
+        cloc) report=2.10; key=CLOC ;;
+    esac
+    payload="$GITHUB_WORKSPACE/.tools/host-set.active/bin/$tool"
+    printf '#!/bin/sh\nprintf "%%s\\n" "%s"\n' "$report" > "$payload"
+    chmod 0751 "$payload"
+    digest="$(bash "$root/scripts/ci/verify-file-checksum.sh" --print sha256 "$payload")"
+    if [[ "$tool" == cloc ]]; then
+        printf 'export SHARED_TOOLING_CLOC_SHA256=%s\n' "$digest" >> "$host_pins"
+    else
+        for host in LINUX_AMD64 LINUX_ARM64 DARWIN_AMD64 DARWIN_ARM64; do
+            printf 'export SHARED_TOOLING_%s_SHA256_%s=%s\n' "$key" "$host" "$digest" >> "$host_pins"
+        done
+    fi
+done
+case "$(uname -s):$(uname -m)" in
+    Linux:x86_64|Linux:amd64) host=LINUX_AMD64; target=x86_64-unknown-linux-musl; ic_host=linux-x86_64 ;;
+    Darwin:x86_64|Darwin:amd64) host=DARWIN_AMD64; target=x86_64-apple-darwin; ic_host=darwin-x86_64 ;;
+    Darwin:arm64|Darwin:aarch64) host=DARWIN_ARM64; target=aarch64-apple-darwin; ic_host=darwin-arm64 ;;
+    *) echo 'no complete native evidence fixture for this host' >&2; exit 1 ;;
+esac
+cat > "$GITHUB_WORKSPACE/.tools/host-set.active/bin/rg" <<'SCRIPT'
+#!/bin/sh
+case "$1" in
+    --version) echo 'ripgrep 15.2.0' ;;
+    --pcre2-version) echo 'PCRE2 available' ;;
+    *) exit 2 ;;
+esac
+SCRIPT
+chmod 0751 "$GITHUB_WORKSPACE/.tools/host-set.active/bin/rg"
+mkdir "$fixture/ripgrep-15.2.0-$target"
+cp -p "$GITHUB_WORKSPACE/.tools/host-set.active/bin/rg" "$fixture/ripgrep-15.2.0-$target/rg"
+tar -czf "$GITHUB_WORKSPACE/.tools/host-set.active/ripgrep.tar.gz" \
+    -C "$fixture" "ripgrep-15.2.0-$target/rg"
+digest="$(bash "$root/scripts/ci/verify-file-checksum.sh" --print sha256 "$GITHUB_WORKSPACE/.tools/host-set.active/ripgrep.tar.gz")"
+printf 'export SHARED_TOOLING_RIPGREP_SHA256_%s=%s\n' "$host" "$digest" >> "$host_pins"
+cp "$root/ci/ic-tools.tsv" "$GITHUB_WORKSPACE/ci/ic-tools.tsv"
+cp "$GITHUB_WORKSPACE/ci/ic-tools.tsv" "$GITHUB_WORKSPACE/.tools/ic-set.active/pins.tsv"
+printf '%s\n' "$ic_host" > "$GITHUB_WORKSPACE/.tools/ic-set.active/host"
+: > "$GITHUB_WORKSPACE/.tools/ic-set.active/files.sha256"
+while IFS=$'\t' read -r tool version selected_host _; do
+    [[ "$tool" != \#* && "$selected_host" == "$ic_host" ]] || continue
+    report="$tool $version"
+    [[ "$tool" != pocket-ic ]] || report="pocket-ic-server $version"
+    [[ "$tool" != wasm-opt ]] || report="wasm-opt version $version"
+    payload="$GITHUB_WORKSPACE/.tools/ic-set.active/bin/$tool"
+    printf '#!/bin/sh\nprintf "%%s\\n" "%s"\n' "$report" > "$payload"
+    chmod 0751 "$payload"
+    digest="$(bash "$root/scripts/ci/verify-file-checksum.sh" --print sha256 "$payload")"
+    printf '%s  bin/%s\n' "$digest" "$tool" >> "$GITHUB_WORKSPACE/.tools/ic-set.active/files.sha256"
+done < "$GITHUB_WORKSPACE/ci/ic-tools.tsv"
+# Preserve installed provenance while the caller adds notes/reorders the same
+# admitted records. Compaction must retain both distinct inputs without downloads.
+awk '{ rows[NR]=$0 } END { print "# updated caller notes"; for (i=NR; i>0; i--) print rows[i] }' \
+    "$GITHUB_WORKSPACE/ci/ic-tools.tsv" > "$fixture/reordered-caller-pins"
+mv "$fixture/reordered-caller-pins" "$GITHUB_WORKSPACE/ci/ic-tools.tsv"
+if cmp -s "$GITHUB_WORKSPACE/ci/ic-tools.tsv" "$GITHUB_WORKSPACE/.tools/ic-set.active/pins.tsv"; then
+    echo 'fixture needs distinct caller/installed pin provenance' >&2
+    exit 1
+fi
+bash "$root/scripts/ci/collect-failure-evidence.sh" > "$fixture/compact-collection.log" 2>&1
+mkdir "$fixture/compact-extracted"
+tar -xzpf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" -C "$fixture/compact-extracted"
+for kind in host ic; do
+    test ! -e "$fixture/compact-extracted/.tools/$kind-set.active"
+    cmp "$GITHUB_WORKSPACE/.tools/$kind-set.failed/tool" "$fixture/compact-extracted/.tools/$kind-set.failed/tool"
+    test -s "$fixture/compact-extracted/tool-evidence/$kind/check.log"
+    printf '%s\n' "$GITHUB_WORKSPACE/.tools/$kind-set.active" > "$fixture/expected-selection"
+    cmp "$fixture/expected-selection" "$fixture/compact-extracted/tool-evidence/$kind/selection.txt"
+done
+cmp "$host_pins" "$fixture/compact-extracted/tool-evidence/host/caller-pins"
+cmp "$GITHUB_WORKSPACE/ci/ic-tools.tsv" "$fixture/compact-extracted/tool-evidence/ic/caller-pins"
+for receipt in pins.tsv host files.sha256; do
+    cmp "$GITHUB_WORKSPACE/.tools/ic-set.active/$receipt" "$fixture/compact-extracted/tool-evidence/ic/$receipt"
+done
+cmp "$fixture/extracted/identity.txt" "$fixture/compact-extracted/identity.txt"
+cmp "$scratch/scenario.log" "$fixture/compact-extracted/ic-timers-fixtures/failed case/scenario.log"
+cmp "$GITHUB_WORKSPACE/.git/release-state/validation-failures/raw.log" "$fixture/compact-extracted/validation-failures/raw.log"
+mv "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" "$fixture/compact-evidence.tar.gz"
+
+# Prior installation success must not hide an actively corrupted selection.
+printf '\nchanged\n' >> "$GITHUB_WORKSPACE/.tools/host-set.active/bin/yq"
+printf '\nchanged\n' >> "$GITHUB_WORKSPACE/.tools/ic-set.active/bin/quill"
+bash "$root/scripts/ci/collect-failure-evidence.sh" > "$fixture/changed-collection.log" 2>&1
+mkdir "$fixture/changed-extracted"
+tar -xzpf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" -C "$fixture/changed-extracted"
+for path in .tools/host-set.active/bin/yq .tools/ic-set.active/bin/quill \
+    .tools/host-set.failed/tool .tools/ic-set.failed/tool; do
+    cmp "$GITHUB_WORKSPACE/$path" "$fixture/changed-extracted/$path"
+done
+for kind in host ic; do
+    test ! -e "$fixture/changed-extracted/tool-evidence/$kind/selection.txt"
+    grep -Fq 'Full bundle retained:' "$fixture/changed-extracted/tool-evidence/$kind/check.log"
+done
+mv "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" "$fixture/changed-evidence.tar.gz"
+
+# A failed selector must not turn partial NUL output into a smaller archive.
+mkdir "$fixture/selection-bin"
+printf '#!%s\n' "$BASH" > "$fixture/selection-bin/bash"
+cat >> "$fixture/selection-bin/bash" <<'SCRIPT'
+case "${1:-}" in
+    */select-tool-evidence.sh)
+        printf 'partial-selection\0'
+        echo 'injected selection failure' >&2
+        exit 23 ;;
+esac
+exec "$EVIDENCE_REAL_BASH" "$@"
+SCRIPT
+chmod +x "$fixture/selection-bin/bash"
+collection_status=0
+EVIDENCE_REAL_BASH="$BASH" PATH="$fixture/selection-bin:$PATH" \
+    "$BASH" "$root/scripts/ci/collect-failure-evidence.sh" \
+    > "$fixture/failed-selection.log" 2>&1 || collection_status=$?
+test "$collection_status" -eq 23
+test ! -e "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz"
+grep -Fq 'injected selection failure' "$fixture/failed-selection.log"
+retained_selections=("$RUNNER_TEMP"/ic-timers-evidence.*)
+test "${#retained_selections[@]}" -eq 1
+printf 'partial-selection\0' > "$fixture/expected-selection-output"
+cmp "$fixture/expected-selection-output" "${retained_selections[0]}/tool-selections.nul"
+cmp "$fixture/extracted/identity.txt" "${retained_selections[0]}/identity.txt"
+
 # Collection errors must remain failures and leave the diagnostic inputs intact.
 mkdir "$fixture/bin"
 printf '%s\n' '#!/bin/sh' 'printf "partial archive bytes"' \
@@ -227,11 +359,14 @@ mkdir -p "$copied/.git/objects/info"
 printf '%s\n' "$objects" > "$copied/.git/objects/info/alternates"
 git -C "$copied" update-ref HEAD "$(git -C "$root" rev-parse HEAD)"
 for script in collect-failure-evidence qualify-failure-evidence archive-evidence \
-    run-validation-targets check-make-execution verify-file-checksum; do
+    select-tool-evidence run-validation-targets check-make-execution verify-file-checksum \
+    verify-evidence-checksums; do
     cp "$root/scripts/ci/$script.sh" "$copied/scripts/ci/"
 done
 cp "$root/ci/tool-versions.env" "$copied/ci/"
-cp "$root/scripts/dev/install-host-tools.sh" "$copied/scripts/dev/"
+cp "$root/ci/ic-tools.tsv" "$copied/ci/"
+cp "$root/scripts/ci/ic-tool-pins.awk" "$copied/scripts/ci/"
+cp "$root/scripts/dev/install-host-tools.sh" "$root/scripts/dev/install-ic-tools.sh" "$copied/scripts/dev/"
 # The selected workspace alias must compare equal to the physical script root.
 ln -s "$copied" "$fixture/selected-checkout"
 export GITHUB_WORKSPACE="$fixture/selected-checkout" CDPATH="$copied"

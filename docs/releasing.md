@@ -28,8 +28,8 @@ loaders select the resulting `timer-probe` output directory. The root ordinary
 release profile is unchanged. Dependency resolution now uses root resolver 3;
 fresh measurements and native qualification are required for the combined graph.
 
-Released 0.14.20's root catalog selects compatible Testkit 0.25, locked to 0.25.2,
-with all four Host crates at 0.8.2 transitively, and ic-metrics 0.2.14. The PocketIC client/server pair selects
+Released 0.14.21's root catalog selects compatible Testkit 0.25, locked to 0.25.3,
+with all four Host crates at 0.8.4 transitively, and ic-metrics 0.2.15. The PocketIC client/server pair selects
 16.1.0; prior runtime evidence remains bound to its earlier pair. Its client's exact thiserror 2.0.18 requirement determines the
 shared thiserror selection; the old library-only 2.0.21 graph is not retained.
 All four member versions inherit the root release identity, and release
@@ -39,16 +39,16 @@ Historical adoption evidence below remains tied to its
 recorded versions, workspace shapes and hosts.
 
 The [host record](#host-support) and
-[Shared Tooling adoption](shared-tooling.md#shared-tooling-0129-adoption)
-record current source and qualification gaps. The compatible 0.14.21 draft
-prepares repository-only release diagnostics; Cargo package versions remain
-0.14.20. No dependency or lockfile change is performed by that adoption.
-The normal fetch phase continues to prepare the selected lock before validation.
-A concurrent external lock update selects ic-metrics 0.2.15 and is retained.
-The initial released-graph locked/offline metadata check completes; the
-incoming-graph recheck fails because that registry package is not cached. No
-online retry or contributor fetch ran; the normal preflight fetch still owns
-dependency preparation before the complete gate.
+[Shared Tooling adoption](shared-tooling.md#shared-tooling-committed-0132-follow-up)
+record current source and qualification gaps. Released 0.14.21 passes the complete
+hosted native gates and matching tag truth, including its selected Metrics graph.
+The earlier missing-package offline inspection remains historical. The compatible
+0.14.22 draft prepares repository-only compact failure collection, with Cargo
+identity unchanged. Later external lock edits selecting Metrics 0.2.16, TOML 1.1.8
+and toml_parser 1.1.5, plus all four Host crates at 0.8.5, are retained separately;
+that graph needs fresh qualification.
+Normal fetch still prepares the selected lock before validation; no contributor
+dependency update, lock edit, fetch or local qualification ran.
 
 Release-source admission delegates to the reviewed shared checker. The adapter
 still permits only `Cargo.toml`, `Cargo.lock`, `CHANGELOG.md` and `README.md`;
@@ -484,14 +484,25 @@ continues to target Wasm on the Internet Computer.
 | macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.15. The historical 0.14.1 missing-`rg` failure is recorded below. |
 | macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.15. Historical failures retain their original scope below. |
 
+Released **0.14.21** is `5c6b7f45d72f9051b4e155410ec47339885dc4f2`;
+the maintainer reports it pushed. Matching
+[tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37819731178)
+and [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37819730920)
+pass. Linux checks/probe lint, MSRV and both complete native macOS release gates
+qualify Shared 0.1.29's actual consumer release-source adapter and its
+Testkit 0.25.3 / Host 0.8.4 / Metrics 0.2.15 / PocketIC 16.1.0 graph.
+All three host logs report passing release-index, release-runner and installer/
+evidence fixtures. [#32](https://github.com/dragginzgame/ic-timers/issues/32) is
+closed. This does not qualify the new 0.14.22 compact collector or relabel the
+cancelled upstream run; registry publication was not independently checked.
+
 Released **0.14.20** is `40611eff87b3165e58528c597debaa95427cdf5a`;
 the maintainer reports it pushed. Matching [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37807464542)
 passes. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37807464532)
-passes Linux checks/probe lint and explicit MSRV; both native macOS gates are
-queued at inspection. Complete native acceptance of the 0.1.28 adoption remains
-[#31](https://github.com/dragginzgame/ic-timers/issues/31)'s scope. The graph is
-Testkit 0.25.2 / Host 0.8.2 / Metrics 0.2.14 / PocketIC 16.1.0. The 0.14.21 draft
-has its own qualification boundary and does not relabel this source's evidence.
+passes Linux checks/probe lint, explicit MSRV and both complete native macOS
+gates. This completes [#31](https://github.com/dragginzgame/ic-timers/issues/31)'s
+consumer acceptance. Its graph is Testkit 0.25.2 / Host 0.8.2 / Metrics 0.2.14 /
+PocketIC 16.1.0; later results do not relabel this source's evidence.
 
 Released **0.14.19** is `e637224e018afd758175e21de3afe3b95fa1a9ed`;
 the maintainer reports it live. Matching [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37803792774)
@@ -1102,6 +1113,43 @@ performed during that preparation.
 
 #### Shared failure archiver adoption
 
+Current follow-up: all six frozen 0.14.17 hosted observations below are complete,
+and released 0.14.21 passes the collector/path fixtures on all native hosts. The
+compatible **0.14.22** draft now calls the already-vendored shared compact selector
+with `ci/tool-versions.env` and `ci/ic-tools.tsv`. It retains full failed/changed/
+unselected bundles; freshly verified exact active bundles retain their pins,
+check logs, selection identity and IC receipts under `tool-evidence/`. Original
+source/job/run/attempt identity, failure status, raw logs, fixture payloads,
+partial-archive retention and upload/download names remain. A selector failure
+aborts before archiving and retains partial selection output and metadata.
+No executable compatibility path or separate full-mode caller remains locally.
+
+The reviewed committed 0.1.32 follow-up also reuses equivalent validated IC pin
+records across comments/order, preserving original installation receipts. The
+download verifier uses the canonical AWK admission for those receipt records while
+still requiring exact source-selected caller-pin evidence. Changed, malformed
+and duplicate selections fail. Both local collector and downloaded-byte fixtures
+cover distinct caller/installed provenance; no receipt rewrite occurs.
+
+[Shared #66](https://github.com/dragginzgame/shared-tooling/issues/66) has complete
+native compact upload/download acceptance at `db039347d2372b877c1c46dcdd2b5c3aa9412009`;
+the currently selected selector is byte-identical. The actual consumer fixture
+adds tiny authenticated host/IC omission, corrupt-active retention, pins/receipt/
+identity/log comparisons and failed-producer coverage. Existing path, status,
+mode/link and archive-refusal cases remain. The existing downloaded verifier now
+requires late compact selection records, exact caller pins/IC receipts and no
+verified payload; negative fixtures reject missing/changed evidence and retained
+active payloads. These checks qualify the current collector at its own source,
+without relabelling the frozen 0.14.17 observations. No test/build/lint or hosted dispatch
+ran during preparation. #30 remains open for the new collector's complete
+user-operated native gate and source-bound early/late hosted transport, then
+measurement of actual bytes and collection time. Old large-artifact measurements
+prove the opportunity, not this collector's saving. The collector changes no
+timer API or dependency selection; incoming lock edits are separate. No timer
+Wasm/instruction/heap change or new IC recovery guarantee is claimed.
+
+The following records describe the earlier archiver-only preparation.
+
 The 0.14.17 draft prepares
 [#30](https://github.com/dragginzgame/ic-timers/issues/30) through the reviewed
 0.1.26 [snapshot](shared-tooling.md#shared-tooling-0126-preparation).
@@ -1195,22 +1243,29 @@ verifier: Intel artifact **11555254656** (228,372,951-byte ZIP), verifier job
 verifier job **113361599424**. Linux hosted verifier **113361599302** also passes.
 The early Intel job **113309082998** reaches its controlled failure and uploads
 artifact **11553654328** (10,711-byte ZIP); its local download passes the byte-exact
-released verifier. Early Apple Silicon remains queued. These are **five of six**
-source-bound observations, not complete six-host/stage acceptance. The macOS
-late archives were verified by the maintained hosted jobs, not downloaded locally
-again. The tiny early Intel transport, job log and local verifier output join the
-existing retained evidence. Artifacts, original job logs and the frozen verifier are
-retained under `target/evidence/hosted-failure-artifacts/`. Record subsequent
-terminal outcomes here and on #30 rather than dispatching duplicates.
+released verifier. Early Apple Silicon subsequently reached its intended failure
+and uploaded artifact **11557756245** (10,711-byte ZIP,
+`sha256:b30b088be65b1836b7e2ef9a2fd95fa17092b4f5799c188f912f9d58b238be91`).
+All three early hosted verifier jobs **113366289284 / 113366289320 / 113366289845**
+pass, including rejection cases, actual download and exact source/status/bytes/
+modes. The Apple Silicon verifier log explicitly names that artifact and reports
+`Downloaded early failure evidence qualified for macos macOS/ARM64`.
+Both runs remain at attempt 1 with their intentional failed producer outcomes:
+**all six** source-bound host/stage observations are now complete. The macOS
+late and early ARM archives were verified by maintained hosted jobs, without
+another local download. Earlier local Linux/Intel receipts keep their scope.
+Artifacts, original job logs and the frozen verifier remain under
+`target/evidence/hosted-failure-artifacts/`; the final ARM verifier log inspected
+on 2026-10-09 is retained at `/tmp/ic-timers-01417-early-arm-verifier-api.log`.
+No new dispatch, local verifier execution or release operation ran in that review.
 
-Full installer retention remains selected. The compact selector under Shared #66
-is committed at 0.1.27 and included solely to satisfy the refreshed host/IC
-fixtures' dependencies. The reviewed committed db039 follow-up repairs the stale
-oracle; its Linux native full/compact transport now passes, while Intel is running
-and Apple Silicon is queued. The [adoption owner](shared-tooling.md#shared-tooling-0127-committed-follow-up)
-records scope; compact selection is not enabled in the consumer collector. No archive-size saving or
-stronger IC recovery guarantee is claimed. The frozen observations do not qualify local
-path changes, unrelated outages or other package identities.
+At the frozen source, full installer retention remains selected. The compact
+selector's corrected db039 full/compact transport now passes all three native
+hosts; current consumer preparation is recorded in the
+[adoption owner](shared-tooling.md#compact-consumer-evidence-preparation).
+No consumer archive-size saving or stronger IC recovery guarantee is claimed.
+The frozen observations qualify 0.14.17's archiver and original graph, not later
+path changes, compact selection, unrelated outages or other package identities.
 
 #### Hosted qualification at 0.14.15
 

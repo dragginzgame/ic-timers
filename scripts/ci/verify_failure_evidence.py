@@ -3,11 +3,12 @@
 
 import os
 import re
+import subprocess
 import sys
 import tarfile
 
 
-def verify_archive(path, stage, identity):
+def verify_archive(path, stage, identity, tool_pins):
     if stage not in ("early", "late"):
         raise ValueError("expected early or late qualification")
     with tarfile.open(path, "r:gz") as archive:
@@ -67,6 +68,44 @@ def verify_archive(path, stage, identity):
             raw = read(prefix + "latest.log")
             if marker not in raw.splitlines() or raw not in read(prefix + "latest-combined.log"):
                 raise ValueError("raw/combined validation logs were not retained")
+            # Late qualification follows successful complete native setup.
+            # Require compact selection and caller pins in the downloaded bytes;
+            # ordinary failures can still retain actively failed sets in full.
+            for kind in ("host", "ic"):
+                prefix = f"tool-evidence/{kind}/"
+                if read(prefix + "caller-pins") != tool_pins[kind]:
+                    raise ValueError("compact evidence uses different caller pins")
+                if not read(prefix + "check.log"):
+                    raise ValueError("compact evidence lost its fresh check log")
+                selected = re.fullmatch(rb".+/\.tools/(" + kind.encode()
+                                        + rb"-set\.[A-Za-z0-9]+)\n",
+                                        read(prefix + "selection.txt"), re.DOTALL)
+                if selected is None:
+                    raise ValueError("compact evidence lost its managed selection identity")
+                active = ".tools/" + selected[1].decode()
+                if any(name == active or name.startswith(active + "/") for name in members):
+                    raise ValueError("verified active tool payload was not compacted")
+            # The shared installer admits validated records, preserving original
+            # receipt bytes across comment/order-only caller changes. Use that
+            # same parser rather than inventing a second pin admission schema.
+            records = []
+            for pins in (read("tool-evidence/ic/pins.tsv"), tool_pins["ic"]):
+                parsed = subprocess.run(
+                    ["awk", "-v", "records=1", "-f",
+                     os.path.join(os.path.dirname(__file__), "ic-tool-pins.awk")],
+                    input=pins, capture_output=True, check=False,
+                )
+                if parsed.returncode != 0:
+                    raise ValueError("compact IC receipt has an invalid pin selection")
+                records.append(sorted(parsed.stdout.splitlines()))
+            if records[0] != records[1]:
+                raise ValueError("compact IC receipt uses different caller pins")
+            host = {"Linux/X64": b"linux-x86_64\n", "macOS/X64": b"darwin-x86_64\n",
+                    "macOS/ARM64": b"darwin-arm64\n"}.get(identity["host"])
+            if host is None or read("tool-evidence/ic/host") != host:
+                raise ValueError("compact IC receipt identifies a different native host")
+            if not read("tool-evidence/ic/files.sha256"):
+                raise ValueError("compact IC checksum receipt is empty")
 
 
 if __name__ == "__main__":
@@ -81,7 +120,12 @@ if __name__ == "__main__":
         "attempt": os.environ["GITHUB_RUN_ATTEMPT"],
     }
     try:
-        verify_archive(sys.argv[1], sys.argv[2], identity)
+        workspace = os.environ["GITHUB_WORKSPACE"]
+        tool_pins = {}
+        for kind, name in (("host", "tool-versions.env"), ("ic", "ic-tools.tsv")):
+            with open(os.path.join(workspace, "ci", name), "rb") as pins:
+                tool_pins[kind] = pins.read()
+        verify_archive(sys.argv[1], sys.argv[2], identity, tool_pins)
     except (OSError, ValueError, tarfile.TarError) as error:
         sys.exit(f"failure artifact qualification refused: {error}")
     print(f"Downloaded {sys.argv[2]} failure evidence qualified for {sys.argv[3]} {sys.argv[4]}")

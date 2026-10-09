@@ -2,6 +2,28 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.22]
+
+### Development
+
+- Keep failure archives compact by rechecking active host/IC tool bundles with
+  the consumer's pins. Verified bundles retain check logs, pins and IC receipts;
+  failed, changed and unselected bundles retain their full payloads. Preserve
+  original job identity, failure status, fixture bytes and validation logs
+  ([#30](https://github.com/dragginzgame/ic-timers/issues/30),
+  [shared #66](https://github.com/dragginzgame/shared-tooling/issues/66)).
+- Reuse verified IC tool bundles across comment-only and reordered pin catalogs,
+  preserving original installation receipts. Keep compact download verification
+  aligned with the shared pin admission and retain native CI for every pushed
+  commit while cancelling superseded PR runs
+  ([shared #79](https://github.com/dragginzgame/shared-tooling/issues/79),
+  [shared #80](https://github.com/dragginzgame/shared-tooling/issues/80)).
+- Pass explicit absolute manifest/pin paths to PocketIC alignment so inherited
+  `CDPATH` cannot redirect its directory observation
+  ([shared #82](https://github.com/dragginzgame/shared-tooling/issues/82)).
+- Retain incoming lock selections for ic-host 0.8.5, ic-metrics 0.2.16, TOML 1.1.8
+  and its parser 1.1.5 through the existing root dependency catalog and Testkit.
+
 ## [0.14.21] - 2026-10-08
 
 ### Development

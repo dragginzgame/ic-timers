@@ -8,8 +8,10 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'workflow_dispatch' && format('evidence-{0}', inputs.failure_stage) || 'validation' }}
-  cancel-in-progress: true
+  # Preserve native qualification for each pushed source and explicit observation.
+  # Only superseded PR revisions share a cancellation group.
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'pull_request' && 'pr' || github.sha }}-${{ github.event_name == 'workflow_dispatch' && format('evidence-{0}-{1}', inputs.failure_stage, github.run_id) || 'validation' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 on:
   push:

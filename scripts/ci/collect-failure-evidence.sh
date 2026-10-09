@@ -36,13 +36,22 @@ fi
 if [[ -d "$root/.git/release-state/validation-failures" ]]; then
     selections+=("$root/.git/release-state" validation-failures)
 fi
-shopt -s nullglob
-for path in "$root/target/validation-failures" \
-    "$root"/.tools/host-set.* "$root"/.tools/ic-set.*; do
-    [[ -d "$path" ]] || continue
-    selections+=("$root" "${path#"$root/"}")
-done
-# Full installer retention remains deliberate until compact selection can prove
-# successful verification of each exact active bundle (Shared Tooling #66).
+if [[ -d "$root/target/validation-failures" ]]; then
+    selections+=("$root" target/validation-failures)
+fi
+# The shared selector freshly checks the exact managed selections with our pins.
+# Failed, changed and unselected bundles stay full; verified sets retain checks
+# and receipts. Keep selection output on disk so producer failure cannot be lost
+# in a process substitution or mistaken for an empty successful selection.
+mkdir "$metadata/tool-evidence"
+bash "$script_root/scripts/ci/select-tool-evidence.sh" compact "$root" \
+    "$metadata/tool-evidence" "$root/ci/tool-versions.env" "$root/ci/ic-tools.tsv" \
+    > "$metadata/tool-selections.nul"
+while IFS= read -r -d '' selected_root && IFS= read -r -d '' selected_path; do
+    selections+=("$selected_root" "$selected_path")
+done < "$metadata/tool-selections.nul"
+if [[ -d "$metadata/tool-evidence/host" || -d "$metadata/tool-evidence/ic" ]]; then
+    selections+=("$metadata" tool-evidence)
+fi
 bash "$script_root/scripts/ci/archive-evidence.sh" "$archive" "${selections[@]}"
 printf 'CI failure evidence archived at: %s\n' "$archive"
