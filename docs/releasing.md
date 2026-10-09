@@ -1006,7 +1006,7 @@ preserves modes, including the metadata modes used by release regressions.
 `identity.txt` records actual checkout and event SHAs, job, host, run and attempt.
 If no diagnostic payload exists yet, the archive still records that identity.
 
-The pending 0.15.0 collector reports `archive_bytes` (the completed compressed
+The released 0.15.0 collector reports `archive_bytes` (the completed compressed
 tar's byte size) and `archive_seconds` (time spent in the archiver, using Bash's
 whole-second counter) in its collection log. The existing upload includes that
 log, so fresh hosted evidence retains the measurements without another artifact
@@ -1015,7 +1015,7 @@ this is not a subsecond benchmark. Selection/check time, upload/download time an
 the outer artifact ZIP size are separate. Failed archiving emits no completed
 measurements. With the maintainer's explicit #30 instruction, the focused
 collector and downloaded-verifier fixtures passed locally on 2026-10-09. Native
-qualification of this uncommitted measurement addition remains separate from
+qualification of this measurement addition remains separate from
 the frozen 0.14.23 compact round trips [below](#compact-hosted-qualification-at-01423).
 
 The official upload action is pinned to 7.0.1 at
@@ -1181,6 +1181,7 @@ pin/receipt admission. Measurements are separate for the outer ZIP and inner tar
 | --- | --- | ---: | ---: | ---: |
 | Early Linux/X64 | 11606299473 | 1,341 | 872 | 779 |
 | Late Linux/X64 | 11606958330 | 5,118 | 4,649 | 20,555 |
+| Early macOS/ARM64 | 11610964142 | 10,711 | 10,240 | 781 |
 
 The late Linux ZIP is 99.9986% smaller than the previously measured 373,200,529-byte
 0.14.15 ZIP. This is an observed cross-release artifact comparison, not a
@@ -1191,10 +1192,15 @@ logs/pins/receipts and controlled failure evidence remain.
 GitHub's archive-step timestamps fall within one whole-second bucket on Linux
 at both stages. This measures the entire collection step, including selection,
 and gives no subsecond archiver timing. The frozen source has no `archive_seconds`
-output; the pending 0.15.0 instrumentation must receive its own native gate.
+output; the released 0.15.0 instrumentation needs its own complete native gate.
 Local download/unpack/verification timings are separate from hosted collection.
 
-Both macOS hosts at both stages and all hosted download-verification jobs remain pending.
+Early ARM reaches its controlled status 22 and archives/uploads successfully;
+its actual downloaded ZIP passes the frozen-source verifier. ZIP SHA-256 is
+`ac6b1567b831cae7805e351266be2a8ebf07be79682b0b1c8f244033432d2aa8`; inner tar
+SHA-256 is `a364c4887a9b4a03665d33341bdbbc4ef6d4cd853284651ad8d55ad1989c8f27`.
+Early Intel, both late macOS producers and hosted download-verification jobs
+remain pending.
 Keep #30 open until all six original producers reach their selected failure,
 archive/upload succeeds and all six hosted verifiers pass. Retained identities,
 ZIPs, SHA-256 hashes, logs, API step timestamps and measurement reports are under

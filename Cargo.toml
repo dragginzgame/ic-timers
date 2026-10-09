@@ -25,7 +25,7 @@ categories = ["asynchronous", "wasm"]
 candid = "0.10"
 ic-cdk = "=0.20.3"
 ic-cdk-timers = "=1.0.0"
-ic-metrics = "0.2"
+ic-metrics = "0.3"
 ic-testkit = "0.26"
 ic-timers = { path = "crates/ic-timers" }
 ic0 = "=1.2.0"

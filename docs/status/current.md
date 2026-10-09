@@ -12,6 +12,34 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Current release and remaining acceptance
 
+Released **0.15.0** is `1410415d41212385234509524480186074972764`.
+The maintainer reports it live. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37920576526)
+passes Linux/MSRV with both macOS gates queued; [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37920576620)
+passes. [#34](https://github.com/dragginzgame/ic-timers/issues/34) records the
+released Testkit handoff; complete three-host acceptance remains pending. The
+released graph selects Testkit 0.26.0, Host 0.9.1, Metrics 0.2.20 and PocketIC 16.1.0.
+Linux logs prove actual selected CLI/server setup and adapter/release-gate fixtures;
+the Linux CI job does not run the product startup/recovery/cohort subjects. Do not
+count setup alone as Linux product startup acceptance. Both complete macOS jobs
+still await runners.
+
+A later incoming catalog/lock update selects Metrics **0.3.0**. Arithmetic source
+is unchanged from 0.2.20, but the public `MeasurementSummary` has a different Rust
+package identity. Its adoption requires **0.16.0**, not a 0.15 patch. Preserve the
+incoming edits; do not describe them as released or create executable compatibility
+aliases. The undated **0.16.0** changelog now prepares that adoption; its
+[owner](../design/callback-delivery-ownership.md#ic-metrics-03-adoption) records
+registry source equality and the single resolved package identity. Locked offline
+metadata passes with all four local versions still 0.15.0. No Cargo mutation,
+test, build, lint or release execution ran during this preparation.
+
+Shared 0.2.2 `ee48bb37c98c771e77b92fd891f0757d8c1c8b99` changes the standalone CI
+tool installer and its test, which this consumer does not select. There is no
+urgent runtime/helper adoption to justify another tooling-only release. The
+independent cargo-sort consolidation still awaits the original hook tool-root input.
+
+The earlier preparation and 0.14.23 qualification follow with their source scope.
+
 Released **0.14.23** is `10a392f98d42701959d0c1d2deddfbef5c96144a`, tag
 `v0.14.23`, observed in the local release commit and hosted runs.
 [Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37904587019)
@@ -44,8 +72,8 @@ now in the released lock and qualified by matching native main CI. Contributors
 did not mutate that graph. Timer source/API and consumer IC/host
 pins were unchanged by the tooling cleanup.
 
-The maintainer authorized the latest Shared ownership hard cut. The pending
-**0.15.0** draft supersedes 0.14.24; Cargo versions remain 0.14.23. All three
+The maintainer authorized the latest Shared ownership hard cut. Released **0.15.0**
+supersedes the 0.14.24 draft; Cargo versions are now 0.15.0. All three
 snapshots now select committed Shared **0.2.1**
 `06b2e22f6bd213f1a590eb2a8797aee34c42dd69` (VERSION 0.2.1) through **49/30/13**
 exports. Remove shared PocketIC helpers/fixture and matrix rows together; retain
@@ -62,7 +90,8 @@ not archived. The existing #30 size/time output and its tests stay in the one
 draft. Timer API, production Wasm and instructions are unchanged.
 
 Incoming maintainer edits now select Testkit 0.26 in the root catalog and
-Testkit 0.26.0, all four Host 0.9.0 and Metrics 0.2.20 in the lock. Contributors
+Testkit 0.26.0, all four Host 0.9.1 and Metrics 0.3.0 in the current lock.
+The Metrics update is after the 0.15.0 release and still awaits adoption. Contributors
 did not mutate Cargo or update dependencies. The adapter
 reads that sole lock instead of introducing a second CLI version catalog. The
 Shared exception parser fix is adopted exactly; our actual exceptions still
@@ -81,8 +110,9 @@ frozen v0.14.23 in the authorized [early run](https://github.com/dragginzgame/ic
 and [late run](https://github.com/dragginzgame/ic-timers/actions/runs/37912637422),
 both attempt 1. Linux reaches the intended status 22/2, archives/uploads, and
 its actual downloads pass the frozen verifier. Early/late outer ZIPs are
-1,341/5,118 bytes; late inner tar.gz is 4,649 bytes. Both macOS hosts and hosted
-verifiers remain pending: keep the issue open, do not redispatch or count an
+1,341/5,118 bytes; late inner tar.gz is 4,649 bytes. Early ARM also reaches status 22, uploads artifact 11610964142
+(10,711-byte ZIP), and its frozen-source download passes. Early Intel and both
+late macOS producers plus hosted verifiers remain pending: keep the issue open, do not redispatch or count an
 unrelated setup failure. The [evidence owner](../releasing.md#compact-hosted-qualification-at-01423)
 records identity, comparison/time scope and retained files at
 `/tmp/ic-timers-issue30.vdZlUd/`. These runs qualify released compact transport,
@@ -699,7 +729,11 @@ verification is scoped in the [0.10.21 note](../changelog/0.10.21.md).
 
 ## Next action
 
-The 0.15.0 hard cut is prepared. Maintainer validation must exercise the adapter
+The 0.16.0 draft prepares incoming Metrics 0.3.0's public type cut. The maintainer
+runs the next minor release and its complete gate; contributors do not mutate
+Cargo versions or execute the release. The 0.15.0 hard cut is released; Linux/MSRV
+and tag checks pass, while complete native macOS qualification remains pending.
+Maintainer validation must exercise the adapter
 and release-gate/collector fixtures, explicit replacement of an old six-tool
 bundle, Testkit setup/offline admission, and the complete watchdog/recovery and
 cohort gates on Linux, Intel macOS and Apple Silicon. Shared's source CI and
@@ -707,7 +741,8 @@ native production installer qualification remain pending; record actual source
 before claiming acceptance. Cargo/release execution remain maintainer-owned.
 
 Continue the two existing frozen v0.14.23 #30 runs; do not dispatch duplicates.
-Both Linux downloads pass; both macOS stages and hosted verifiers remain pending.
+Both Linux downloads and early ARM pass; early Intel, both late macOS stages
+and hosted verifiers remain pending.
 Those runs qualify their frozen compact collector, not the 0.15.0 owner handoff
 or measurement output. The separate formatter consolidation still needs Shared's
 explicit index-export tool root. Do not add a second server or formatter route.

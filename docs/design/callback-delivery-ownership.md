@@ -218,6 +218,40 @@ larger than AfterCompletion in this build; deleting its distinct prearmed recove
 semantics is not justified by that size difference. No further runtime change
 or performance release is supported by this review.
 
+## IC Metrics 0.3 adoption
+
+The incoming root catalog selects registry `ic-metrics 0.3`; the one root lock
+selects 0.3.0. This adoption is prepared for **0.16.0**. Released 0.15.0 at
+`1410415d41212385234509524480186074972764` still selects Metrics 0.2.20.
+The four local packages remain at 0.15.0 until maintainer-owned version preparation.
+
+The downloaded registry 0.3.0 package's eight `src` files are byte-identical to
+the owner's tagged 0.2.20 and 0.3.0 source trees. Metrics 0.3.0's release commit is
+`070c768de881a6e966b93651e242e16e4f9f1111`. The crate remains dependency-free
+and `no_std`; summary arithmetic, attribution and the consumer-owned instruction
+reader require no implementation changes.
+
+IC Timers publicly re-exports `MeasurementSummary` and returns it from
+`TimerPerformance::scheduler_instructions` and `work_instructions`. Rust treats
+the 0.2 and 0.3 package types as distinct despite identical source. Consumers
+exchanging these values with a direct Metrics dependency must select 0.3 or
+use `ic_timers::MeasurementSummary`. The next minor boundary covers that public
+identity change. There is no old-type alias, dual dependency route or fallback;
+this change introduces no persisted layout or timer lifecycle change.
+
+Locked offline metadata on 2026-10-09 resolves exactly one registry Metrics
+0.3.0 and all four local members through the root graph. Source comparison and
+metadata evidence are retained at `/tmp/ic-timers-metrics03-current`'s referenced
+directory. The checks preserve the incoming manifest and lock bytes. No new
+test, build, lint, PocketIC, cohort or release execution ran for this preparation.
+The maintainer-operated complete release gate must qualify the selected graph;
+0.15.0's hosted results do not qualify Metrics 0.3.0.
+
+Unchanged arithmetic gives no expected algorithmic instruction or heap delta.
+No measured Wasm or instruction delta is available for this graph; package
+identity and build inputs prevent claiming binary identity from source equality.
+The release adds no runtime mechanism or speculative Metrics API.
+
 ## IC Metrics 0.2 adoption
 
 The maintainer requested registry `ic-metrics 0.2` after publication. The root

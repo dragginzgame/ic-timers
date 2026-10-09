@@ -2,6 +2,17 @@
 
 All notable changes to this project are recorded here.
 
+## [0.16.0]
+
+### Breaking
+
+- Adopt registry `ic-metrics 0.3` through the root dependency catalog. The public
+  `MeasurementSummary` now has the 0.3 package identity; consumers exchanging
+  summaries with a direct Metrics dependency must align it to 0.3 or use
+  `ic_timers::MeasurementSummary`. Arithmetic source is unchanged from 0.2.20.
+  No compatibility alias is retained
+  ([adoption evidence](docs/design/callback-delivery-ownership.md#ic-metrics-03-adoption)).
+
 ## [0.15.0] - 2026-10-09
 
 ### Breaking

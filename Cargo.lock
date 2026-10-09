@@ -870,9 +870,9 @@ dependencies = [
 
 [[package]]
 name = "ic-metrics"
-version = "0.2.20"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f78a1d93b280d8580bf3e29a9c15d0537d1a00c93144b0064a7b5ab1bdfe7631"
+checksum = "acce3009a305edc4db9244828e268db7cb89bba21daa28d1ffee4dbba087ed4a"
 
 [[package]]
 name = "ic-testkit"
@@ -2288,9 +2288,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.7.19"
+version = "0.7.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "494815d09bf52b5548659851081238f0ca39ff638363907596da739561c62c52"
+checksum = "e464cf451ba96ebfc6f9b6542f17ee8b8956e33f1e40d9690624e59d7a7f8a4b"
 dependencies = [
  "bytes",
  "futures-core",
