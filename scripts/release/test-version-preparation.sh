@@ -254,7 +254,7 @@ cp Makefile preparation-only.mk
 cp "${repository_root}/Makefile" Makefile
 mkdir -p make
 cp "${repository_root}/make/tools.mk" "${repository_root}/make/rust-format.mk" \
-    "${repository_root}/make/release.mk" make/
+    "${repository_root}/make/release.mk" "${repository_root}/make/execution.mk" make/
 mv scripts/release/bump-version.sh scripts/release/preparation-bump-version.sh
 cat > scripts/release/bump-version.sh <<'EOF'
 #!/usr/bin/env bash

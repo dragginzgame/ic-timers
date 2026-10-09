@@ -1,5 +1,67 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.2.8 Make admission
+
+The authorized 0.16.4 continuation adopts clean committed Shared **0.2.8**
+`b2646cde9abbc8861857a4379c683a0c19eba43e` across all three snapshots:
+**54 baseline / 30 audit-setup / 11 helper files**. The baseline policy is
+unchanged. Add only `make/execution.mk` to the baseline selection; its existing
+execution-probe companion is already selected. Never copy the sibling's dirty
+post-release exporter or fleet-report changes.
+
+The canonical includes now admit Make before recipes, so ordinary ignore-errors
+and non-executing selections cannot hide a prerequisite refusal. Admission
+selects the probe beside the actual include and the running Make executable (`MAKE_COMMAND`),
+independently of ambient runtime snapshot routing or argument-bearing recursive
+`MAKE`. This resolves the two consumer integration cases reported against 0.2.7
+on [Shared #30](https://github.com/dragginzgame/shared-tooling/issues/30#issuecomment-6083697521).
+Keep the consumer's target-specific root and formatter pin bindings. Direct
+delivery remains authoritative through a separate global override assignment
+and export: GNU Make 3.81 rejects the released combined target-specific
+`override export` syntax. The existing environment/command-line delivery fixture
+is written to qualify the policy without freezing its syntax. The isolated
+release-command smoke checker also binds its disposable root and preserves trailing-newline input paths rather than inheriting a runner
+from another snapshot.
+
+All five disposable root-Make callers copy the fourth include and its probe
+before their first Make parse. The index-hook fixture stages both; the shared
+smoke caller explicitly supplies both. Existing composite recursive Make,
+parallel logger, aliased/spaced checkout, external-root and failure-ordering
+coverage stays. Added consumer cases require parse-time refusal for unsupported
+modes with no release-runner or formatter effects; an external admission sentinel
+must never execute. No duplicate local Make flag parser is introduced.
+
+Canonical exports come from a clean detached source clone; isolated helpers
+are exported to a disposable consumer before installation. Preparation evidence
+is retained at `/tmp/ic-timers-shared028.zqdya2y6/`. Source bytes/modes, declared
+companions, snapshot integrity, shell syntax, local documentation links,
+whitespace and full locked offline metadata are checked. Cargo manifest/lock and
+both pin catalogs retain their incoming bytes. No function, method or type is
+removed; timer API/source is unchanged. Expected production
+Wasm/instruction/heap impact is zero, without new measurements.
+
+[Exact Shared 0.2.8 CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37955525946)
+passes Linux portable regression and lint/security; both native macOS jobs are
+queued at inspection. Those upstream results and source preparation do not
+qualify actual consumer execution. The maintainer operates the new fixtures and
+complete gate; no contributor test, build, lint, setup, Make or release ran.
+#34/#35 remain open for their source-bound native acceptance. This is
+repository-only maintenance in the existing undated 0.16.4 batch; prefer bundling
+it with code-bearing work unless the maintainer explicitly selects publication.
+
+Shared #30 now also records an independently executed **remaining** gap:
+[clearing command-line MAKEFLAGS](https://github.com/dragginzgame/shared-tooling/issues/30#issuecomment-6084901420)
+can hide the actual outer invocation mode from the child probe. The upstream
+Metrics reproduction reaches its inert release runner and returns false success
+for `-i release-patch MAKEFLAGS=`. Our added consumer negatives preserve invocation
+flags and do not prove the cleared-flag case. No canonical payload is patched or
+duplicate local parser added; retain this owning upstream limitation and keep
+acceptance open. Do not describe the adopted probe as complete unsupported-mode
+protection. Consumer fixture execution, portable direct-policy parsing and native
+macOS gates also remain pending.
+
+Earlier adoption records retain their source and qualification scope.
+
 ## Shared Tooling 0.2.6 Make adoption
 
 After released IC Timers 0.16.2, the authorized 0.16.3 continuation adopts clean
@@ -68,6 +130,16 @@ existing directly callable runner/hook guards. No copied flag parser or local
 replacement framework is introduced.
 
 Earlier adoption records retain their source and qualification scope.
+
+The maintainer subsequently released this adoption in **0.16.3** at
+`25957e206fbd351656870e9f87a23c47eed0c015`.
+[Matching Linux checks](https://github.com/dragginzgame/ic-timers/actions/runs/37948400741/job/113880561620)
+pass all three snapshot checks, standard release smoke/metadata/gate fixtures,
+Testkit adapter checks and actual consumer staged-hook formatting/failure isolation.
+MSRV and [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37948400870)
+also pass. Both native macOS gates remain queued; #35 stays open for those results.
+The later incoming Host 0.9.4 lock is outside this exact source. No contributor
+test/build/lint or new dispatch ran during this evidence review.
 
 ## Shared Tooling 0.2.5 refresh
 

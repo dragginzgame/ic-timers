@@ -2,6 +2,28 @@
 
 All notable changes to this project are recorded here.
 
+## [0.16.4]
+
+### Development
+
+- Adopt committed Shared Tooling 0.2.8 Make admission. Refuse ignore-errors,
+  dry-run, touch and question modes before recipes when invocation flags are
+  preserved; use the selected include and running Make executable while retaining
+  recursive command arguments.
+  Propagate companions to disposable Make/index fixtures and isolate the shared
+  release smoke checker from ambient snapshot routing
+  ([adoption owner](docs/shared-tooling.md#shared-tooling-028-make-admission),
+  [shared #30](https://github.com/dragginzgame/shared-tooling/issues/30)).
+- Separate direct-delivery assignment from export for GNU Make 3.81 parsing.
+  Keep the consumer policy authoritative under environment and command-line
+  overrides. Shared #30 still tracks bypasses when command-line `MAKEFLAGS`
+  hides invocation modes; this adoption does not claim that gap resolved.
+- Retain incoming Testkit 0.27.2, Metrics 0.3.4 and Host 0.9.7 root-lock
+  selections. Testkit and Metrics library sources are unchanged from the released
+  graph; Host changes only response decoding outside our harness callers. No new
+  Host adapter or timer API is needed. Qualification remains separate from 0.16.3
+  ([qualification owner](docs/releasing.md#host-094-graph-preparation)).
+
 ## [0.16.3] - 2026-10-09
 
 ### Development

@@ -24,7 +24,7 @@ git checkout-index --all
 cp "${repository_root}/Makefile" Makefile
 mkdir -p make
 cp "${repository_root}/make/tools.mk" "${repository_root}/make/rust-format.mk" \
-    "${repository_root}/make/release.mk" make/
+    "${repository_root}/make/release.mk" "${repository_root}/make/execution.mk" make/
 mkdir -p ci
 cp "${repository_root}/ci/tool-versions.env" ci/
 # The current fmt prerequisite must also exist in the fixture's exact index.
@@ -50,7 +50,7 @@ edition.workspace = true
 EOF
     printf 'pub fn fixture( ){}\n' > "${member}/src/lib.rs"
 done
-git add Makefile make/tools.mk make/rust-format.mk make/release.mk ci/tool-versions.env Cargo.toml \
+git add Makefile make/tools.mk make/rust-format.mk make/release.mk make/execution.mk ci/tool-versions.env Cargo.toml \
     crates/hook-fixture testing/crates/hook-probe \
     scripts/ci/check-format-tools.sh scripts/ci/check-make-execution.sh
 printf 'unrelated working edit\n' >> README.md
@@ -93,6 +93,22 @@ for variable in "${mode_variables[@]}"; do
         grep -Fq 'requires recipe execution and failure propagation' "${mode_output}"
         assert_unchanged
     done
+done
+
+# The actual consumer Makefile must refuse before its formatter prerequisites,
+# even if Make would ignore a recipe failure or skip execution.
+for mode in --ignore-errors --dry-run --touch --question; do
+    status=0
+    SHARED_TOOLING_ROOT="${temporary_root}/unselected-snapshot" \
+        make --no-print-directory "$mode" fmt-check \
+        "SHARED_TOOLING_ROOT=${temporary_root}/unselected-snapshot" \
+        > "${temporary_root}/make-${mode}.log" 2>&1 || status=$?
+    if [[ "$status" != 2 ]]; then
+        cat "${temporary_root}/make-${mode}.log" >&2
+        echo "error: consumer formatting did not refuse $mode before recipes" >&2
+        exit 1
+    fi
+    assert_unchanged
 done
 
 # The actual consumer fmt target formats and refreshes both root workspace members,

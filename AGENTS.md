@@ -5,20 +5,21 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `ce13a5314916891fd239d9b199b4a91b04775054` (0.2.6). Its provenance and
+  from revision `b2646cde9abbc8861857a4379c683a0c19eba43e` (0.2.8). Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
 - Apply the [shared audit methods](audits/README.md) from revision
-  `ce13a5314916891fd239d9b199b4a91b04775054`, recorded separately in
+  `b2646cde9abbc8861857a4379c683a0c19eba43e`, recorded separately in
   [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). That
   supplemental snapshot also supplies pinned host/IC setup at the same
   reviewed revision. The isolated
   [Cargo helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
   supplies the structured dependency checker, Cargo readers/rewrites,
   annotated-tag checker and release-command adoption checker from
-  `ce13a5314916891fd239d9b199b4a91b04775054`. The root baseline snapshot owns
-  the formatter guard and the adopted formatting/release Make includes. Apply the
+  `b2646cde9abbc8861857a4379c683a0c19eba43e`. The root baseline snapshot owns
+  the formatter guard, Make execution admission and the adopted formatting/release
+  Make includes. Apply the
   [dependency pinning rules](rules/dependency-pinning.md) with the exact local
   [qualification exceptions](docs/releasing.md#dependency-pin-exceptions).
   The [local hygiene overlay](docs/audits/code-hygiene.md) and adoption record scope

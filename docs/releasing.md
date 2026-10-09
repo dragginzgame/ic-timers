@@ -318,8 +318,9 @@ workspace version and the root lockfile, and `make release-stage` to stage relea
 metadata.
 
 The selected shared contract includes the PR helper. Standard entrypoints come
-from `make/release.mk`; this consumer's target-specific override exports
-`RELEASE_DELIVERY=direct` and fixes snapshot routing to `$(CURDIR)`.
+from `make/release.mk`; this consumer uses separate override assignment and
+export for `RELEASE_DELIVERY=direct`, preserving GNU Make 3.81 parsing.
+Target-specific bindings fix snapshot routing to `$(CURDIR)`.
 Ambient environment or Make-variable
 PR selections do not switch the patch/minor/major or resume commands. Adopting PR
 delivery requires separate merged-source adapters and qualification; this refresh
@@ -427,12 +428,12 @@ review without running build, lint or test suites.
 
 ### Host support
 
-The pending 0.16.3 workflow adds Linux execution of the existing PocketIC
+The released 0.16.3 workflow adds Linux execution of the existing PocketIC
 recovery and policy-cohort targets after CI/probe lint. Testkit's root-lock
 selected CLI prepares and admits the server; the product harness then starts
-fresh managed servers and instances. This closes a configuration gap, not an
-acceptance claim. The matching Linux run and both native macOS gates must pass
-before [#34](https://github.com/dragginzgame/ic-timers/issues/34) can close.
+fresh managed servers and instances. Its matching Linux product run now passes;
+both native macOS gates remain queued. Keep
+[#34](https://github.com/dragginzgame/ic-timers/issues/34) open for those results.
 See [the qualification scope](#linux-product-qualification-for-0163).
 
 Released 0.14.12 is `72e8f5d9769d00fbe165b16cd6eb2d81cf1b0a67`.
@@ -490,7 +491,7 @@ continues to target Wasm on the Internet Computer.
 
 | Host | Current workflow configuration and evidence scope |
 | --- | --- |
-| Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The pending PR/main checks job runs product recovery and policy cohorts with the prepared internal toolchain; Testkit owns server admission from the root-lock selection. Matching execution remains pending. |
+| Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. Released 0.16.3 passes product recovery and policy cohorts with the prepared internal toolchain; Testkit owns server admission from the root-lock selection. The incoming Testkit 0.27.2 / Metrics 0.3.4 / Host 0.9.7 graph retains separate qualification. |
 | macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.15. The historical 0.14.1 missing-`rg` failure is recorded below. |
 | macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.15. Historical failures retain their original scope below. |
 
@@ -1426,13 +1427,25 @@ offline and disable rustup automatic installation; setup remains explicit throug
 `make update-dev` or CI. The guard neither formats nor builds. The following
 formatter recipes in `make/rust-format.mk` cover every member of the single root
 workspace with their existing options. The hook's isolated index must include
-the guard, all three Make includes, the current Makefile and `ci/tool-versions.env`.
+both guards, all four Make includes, the current Makefile and `ci/tool-versions.env`.
 These formatting entrypoints also bind snapshot routing to their current root;
 an inherited external snapshot cannot replace the indexed prerequisite checker.
 Their pin input is bound to the indexed `ci/tool-versions.env`, preserving the
 previous consumer-owned formatter selection rather than ambient host pin routing.
 Fixture wiring and pending native qualification belong in the
-[adoption owner](shared-tooling.md#shared-tooling-026-make-adoption).
+[adoption owner](shared-tooling.md#shared-tooling-028-make-admission).
+
+The adjacent `make/execution.mk` admits the running Make executable before
+recipes, using the probe beside the selected include. With invocation flags preserved,
+it rejects ignore-errors, dry-run, touch and question modes even when an outer
+Make would hide a failed prerequisite. A command-line `MAKEFLAGS` override can
+still conceal those modes; [Shared #30](https://github.com/dragginzgame/shared-tooling/issues/30#issuecomment-6084901420)
+owns that remaining canonical gap. Recursive `MAKE` arguments stay with the consumer invocation;
+they do not enter the isolated probe. Runtime snapshot/delivery/pin bindings
+remain authoritative at their existing target boundaries. All scratch callers
+copy the execution companion and probe before their first Make parse; the
+index-hook fixture stages them too. This requires no tool installation or Cargo
+selection and does not qualify actual consumer execution until the gate runs.
 
 ### Structured dependency checks and host parsers
 
@@ -1615,13 +1628,84 @@ job and uses the existing failure collector/uploader. No new harness, alternate
 server catalog, test fallback or dispatch is introduced.
 
 This change adds native build/execution time to Linux CI; it has no production
-Wasm, instruction or heap impact. Duration and hosted execution remain unmeasured.
+Wasm, instruction or heap impact. During preparation, duration and hosted
+execution remained unmeasured.
 Source/workflow parsing, embedded shell syntax, document links and unchanged
 locked graph checks are preparation evidence only, retained with the dirty
 worktree diff at `/tmp/ic-timers-0163-issues/`. No contributor test/build,
 lint, installation or release ran. Keep #34 open until the matching source's
 Linux product step and both macOS complete gates supply setup/admission/startup
 and recovery/cohort evidence. Earlier released runs retain their original scope.
+
+Released **0.16.3** at `25957e206fbd351656870e9f87a23c47eed0c015` now passes
+[Linux checks](https://github.com/dragginzgame/ic-timers/actions/runs/37948400741/job/113880561620),
+MSRV (113880561635) and [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37948400870).
+The retained Linux log proves Testkit setup/admission of its 16.1.0 Linux server,
+adapter and staged-hook/Make fixtures, **14** actual product recovery/lifecycle
+subjects and the policy-cohort subject with all four installed-Wasm/instruction
+rows. The product step uses Rust **1.99.0**, `timer-probe` profile, Testkit **0.27.1**,
+Host **0.9.3** and Metrics **0.3.2**. This completes Linux product acceptance for
+that source; both macOS jobs (113880561216/113880561677) remain queued.
+Raw logs and job identities are retained at `/tmp/ic-timers-0164-review/`.
+These measurements must not be compared as a runtime optimization against
+historical Rust 1.88 builds, or relabelled for the incoming Host 0.9.4 graph.
+No contributor tests or duplicate workflow dispatch ran; only existing hosted
+results were inspected. Keep #34/#35 open for native macOS acceptance.
+
+### Host 0.9.4 graph preparation
+
+After released IC Timers **0.16.3**
+`25957e206fbd351656870e9f87a23c47eed0c015`, an incoming maintainer lock selects
+all four Host crates at **0.9.4** instead of released **0.9.3**. Preserve that
+lock. The sole root catalog still selects Testkit 0.27; no direct Host dependency
+or alternate process owner is added. Testkit remains the private harness and
+published CLI/server owner.
+
+Host 0.9.4 at `4e3daebd5df07c6449279535668436024a45c02b` changes its repository's
+Shared Make wiring. All **66** registry library source files across artifacts,
+fs, process and tools are byte-identical to 0.9.3 and match tag `v0.9.4`. Its
+[exact hosted run](https://github.com/dragginzgame/ic-host-tooling/actions/runs/37947548868)
+remains pending at inspection. Library source equality avoids an unnecessary
+Timers adapter rewrite; it does not qualify the new package selections.
+
+Full locked offline metadata resolves one of each Host crate at 0.9.4, Testkit
+0.27.1, Metrics 0.3.2 and PocketIC 16.1.0, with all four local members still at
+0.16.3. Cargo bytes are unchanged through inspection. Source comparison and graph
+evidence are retained at `/tmp/ic-timers-0164-review/`. This describes the root
+test graph; the published Testkit CLI's own locked build remains with that owner.
+
+The undated 0.16.4 notes contain repository-only dependency maintenance. No
+production Wasm/instruction/heap change is expected or measured. Prefer bundling
+this with the next code-bearing release unless the maintainer explicitly selects
+a repository-only patch. No contributor dependency update, test/build/lint,
+installation, staging, commit or release ran. The new graph still requires the
+normal native gate and must not inherit 0.16.3's source-bound CI evidence.
+
+On the later 2026-10-09 upstream review, crates.io lists Testkit **0.27.2**,
+Metrics **0.3.4** and all four Host crates **0.9.7**. Committed Testkit
+`1a8f2ff570ea1c3bd58b215e28af52e5d99870e8` has no library/CLI source change from
+released 0.27.1; Metrics `5a5f1dab1f7ee3e1e5624c9d889148c39abf45f2` has no
+crate source change from released 0.3.2. Host
+`ca62e661918db2f4320743b9042a4993a5fff2aa` changes only
+`crates/ic-host-tools/src/response/mod.rs` relative to incoming 0.9.4: it folds
+empty-text validation into the existing hex digit scan, retaining typed errors
+and JSON empty-response acceptance. Our harness uses Testkit's PocketIC startup,
+not this response decoder. Testkit already re-exports the Host families for
+actual host consumers; adding direct dependencies would create no benefit here.
+The custom timer memory-page summary retains paired extents and growth maximums,
+not the cumulative sample sum owned by Metrics. Keep those distinct semantics.
+No new adapter, timer feature or production code deletion follows from this
+review, and dependency selection/qualification remains user-owned.
+
+The incoming lock at the start of this adoption already selects those latest
+Testkit/Metric/Host releases. Preserve it without a contributor Cargo update.
+Full locked offline metadata resolves one Testkit 0.27.2, Metrics 0.3.4, each
+Host crate 0.9.7 and PocketIC 16.1.0, with four local members still at 0.16.3.
+Both the saved incoming lock and metadata are retained under
+`/tmp/ic-timers-shared028.zqdya2y6/`; they supersede the earlier graph preparation,
+not the released execution evidence. Source equivalence does not qualify the new
+package identities or their published CLI build. The complete user-owned gate
+remains required.
 
 ### Dependency pin exceptions
 

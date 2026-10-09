@@ -157,7 +157,8 @@ release-check:
 	perl .shared-tooling/helpers/scripts/ci/test-local-lock-versions.pl
 	bash scripts/ci/test-release-runner.sh
 	bash .shared-tooling/helpers/scripts/ci/check-release-commands.sh "$(CURDIR)" \
-		ci/tool-versions.env make/tools.mk make/rust-format.mk make/release.mk
+		ci/tool-versions.env make/tools.mk make/rust-format.mk make/release.mk \
+		make/execution.mk scripts/ci/check-make-execution.sh
 	bash scripts/release/test-committed-release.sh
 	bash scripts/release/test-release-index.sh
 	bash scripts/release/test-finalize-changelog.sh
@@ -267,7 +268,9 @@ format-tools-check fmt fmt-check release-patch release-minor release-major relea
 format-tools-check fmt fmt-check: override HOST_TOOL_VERSIONS = $(CURDIR)/ci/tool-versions.env
 # Keep direct delivery authoritative for all standard entrypoints, including
 # when an ambient environment or Make command-line variable selects PR delivery.
-release-patch release-minor release-major release-resume: override export RELEASE_DELIVERY := direct
+# Separate assignment and export so GNU Make 3.81 can parse this consumer.
+override RELEASE_DELIVERY := direct
+export RELEASE_DELIVERY
 include make/release.mk
 .PHONY: release-version release-preflight release-prepare-version release-prepared-check release-files release-commit-check release-committed-check release-tagged-check release-push-check
 

@@ -70,7 +70,11 @@ ln -s 'workspace with spaces' "${temporary_root}/workspace-alias"
 cp "${makefile}" "${temporary_root}/workspace with spaces/Makefile"
 mkdir -p "${temporary_root}/workspace with spaces/make"
 cp "${repository_root}/make/tools.mk" "${repository_root}/make/rust-format.mk" \
-    "${repository_root}/make/release.mk" "${temporary_root}/workspace with spaces/make/"
+    "${repository_root}/make/release.mk" "${repository_root}/make/execution.mk" \
+    "${temporary_root}/workspace with spaces/make/"
+mkdir -p "${temporary_root}/workspace with spaces/scripts/ci"
+cp "${repository_root}/scripts/ci/check-make-execution.sh" \
+    "${temporary_root}/workspace with spaces/scripts/ci/"
 cd "${temporary_root}/workspace-alias"
 fixture_root="$(pwd -P)"
 git init -q
@@ -152,8 +156,7 @@ done
 
 # Exercise explicit setup and offline admission through the real Make adapter.
 mkdir -p scripts/ci scripts/dev
-cp "$repository_root/scripts/ci/run-validation-targets.sh" \
-    "$repository_root/scripts/ci/check-make-execution.sh" scripts/ci/
+cp "$repository_root/scripts/ci/run-validation-targets.sh" scripts/ci/
 cat > scripts/dev/testkit-server.sh <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -179,6 +182,11 @@ cat > external-snapshot/scripts/ci/run-release.sh <<'EOF'
 printf '%s\n' 'external snapshot runner executed' > external-runner-events
 exit 99
 EOF
+cat > external-snapshot/scripts/ci/check-make-execution.sh <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' 'external snapshot admission executed' > external-admission-events
+exit 0
+EOF
 cat > scripts/ci/run-release.sh <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -203,6 +211,7 @@ for target in release-patch release-minor release-major release-resume; do
             > entrypoint-output 2>&1
         cmp expected-entrypoint-events standard-entrypoint-events
         test ! -e external-runner-events
+        test ! -e external-admission-events
         if env RELEASE_DELIVERY=pr SHARED_TOOLING_ROOT="$external_root" FIXTURE_ENTRYPOINT_STATUS=37 \
             make --no-print-directory "$target" "${variables[@]}" > entrypoint-output 2>&1; then
             echo "error: $target ignored its selected runner failure" >&2
@@ -210,6 +219,7 @@ for target in release-patch release-minor release-major release-resume; do
         fi
         cmp expected-entrypoint-events standard-entrypoint-events
         test ! -e external-runner-events
+        test ! -e external-admission-events
     done
 done
 rm standard-entrypoint-events
@@ -218,6 +228,25 @@ if make --no-print-directory release-patch release-minor > conflicting-goals-out
     exit 1
 fi
 test ! -e standard-entrypoint-events
+
+# Reject at parse time even when outer Make would ignore a failed recipe.
+# The selected admission must also ignore ambient runtime snapshot routing.
+for target in release-patch release-minor release-major release-resume; do
+    for mode in --ignore-errors --dry-run --touch --question; do
+        status=0
+        env SHARED_TOOLING_ROOT="$external_root" make --no-print-directory \
+            "$mode" "$target" VERSION=0.1.1 "SHARED_TOOLING_ROOT=$external_root" \
+            > rejected-make-mode-output 2>&1 || status=$?
+        if [[ "$status" != 2 ]]; then
+            cat rejected-make-mode-output >&2
+            echo "error: $target did not refuse $mode before recipes" >&2
+            exit 1
+        fi
+        test ! -e standard-entrypoint-events
+        test ! -e external-runner-events
+        test ! -e external-admission-events
+    done
+done
 
 cat > overrides.mk <<'EOF'
 # Keep this orchestration fixture independent of prepared formatter tools.
