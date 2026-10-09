@@ -2,6 +2,26 @@
 
 All notable changes to this project are recorded here.
 
+## [0.16.2]
+
+### Development
+
+- Retain incoming Testkit 0.27.1 and Host 0.9.3 lock selections for the existing
+  owner CLI adapter. Testkit library/CLI source is unchanged from 0.27.0, and
+  Host library source is unchanged from 0.9.2; current graph qualification
+  remains separate from the released 0.16.1 evidence.
+- Refresh all three snapshots to committed Shared Tooling 0.2.5. Preserve literal
+  trailing newlines in hook selections and checkout paths, and record required
+  companions for selected test helpers. Keep the existing snapshot selections
+  and consumer tool pins
+  ([shared #89](https://github.com/dragginzgame/shared-tooling/issues/89),
+  [shared #73](https://github.com/dragginzgame/shared-tooling/issues/73)).
+- Complete frozen 0.14.23 early/late compact-artifact qualification on Linux and
+  both macOS hosts: all six intended failures archive/upload successfully and
+  all six hosted download verifiers pass. This evidence retains its original
+  source and does not qualify later timer or tooling changes
+  ([#30](https://github.com/dragginzgame/ic-timers/issues/30)).
+
 ## [0.16.1] - 2026-10-09
 
 ### Development

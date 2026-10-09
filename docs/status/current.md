@@ -12,6 +12,34 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Current release and remaining acceptance
 
+Released **0.16.1** is `6b508cc0ebcb215d04c2c54ce234d984cb771eda`.
+The maintainer reports it live. Its [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37938451791)
+passes Linux/MSRV with both native macOS gates queued; [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37938451752)
+passes. The released graph selects Testkit **0.27.0**, Host **0.9.2**, Metrics
+**0.3.2** and PocketIC **16.1.0**. A later incoming lock selects Testkit **0.27.1**
+and all four Host crates at **0.9.3**;
+that graph is preserved and remains separate from this release's evidence.
+
+The authorized continuation prepares **0.16.2** repository-only maintenance.
+All three snapshots now select committed Shared **0.2.5**
+`04e07b4bf54e7aeb03eb7804a845cee27b7305df` through the unchanged **49/30/13**
+selections. The [adoption owner](../shared-tooling.md#shared-tooling-025-refresh)
+records canonical exports, hook pathname handling, fixture companions and pending
+native qualification. Shared Linux/lint pass; both native macOS jobs are queued.
+Cargo, consumer pins and Git hook configuration remain unchanged by the refresh.
+Tests/builds/lint and release execution remain user-owned. Do not tag solely for
+repository maintenance without the maintainer's explicit release selection.
+
+**#30 is closed with completed compact transport qualification.** All six frozen v0.14.23
+producers reach the intended failure and archive/upload successfully; all six
+hosted verifiers and actual downloaded archives pass. The [evidence owner](../releasing.md#compact-hosted-qualification-at-01423)
+records all six artifact IDs, sizes, exact source/attempt and retained logs.
+The new native macOS results qualify that frozen compact caller; they do not
+qualify the later five-tool/Testkit handoff or incoming lock. #34 remains open
+for its separate source-bound three-host product startup/acceptance.
+
+Earlier source-bound records follow.
+
 Released **0.16.0** is `984c2f0a92f7e3ebde604f88895b12fb2b78cb2c`.
 The maintainer reports it live. Its [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37923550864)
 passes Linux/MSRV, with both complete macOS gates queued; [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37923551348)
@@ -753,22 +781,16 @@ verification is scoped in the [0.10.21 note](../changelog/0.10.21.md).
 
 ## Next action
 
-The 0.16.0 type cut is released. Prepare the incoming Testkit 0.27 graph through
-the 0.16.1 notes, with upstream and consumer native acceptance still pending.
-This is repository-only work; ordinarily bundle it into the next code-bearing
-release rather than tagging solely for documentation or harness maintenance.
-Contributors do not mutate Cargo versions or execute releases. Current Linux/MSRV
-and tag checks pass, while complete native macOS qualification remains pending.
-Maintainer validation must exercise the adapter
-and release-gate/collector fixtures, explicit replacement of an old six-tool
-bundle, Testkit setup/offline admission, and the complete watchdog/recovery and
-cohort gates on Linux, Intel macOS and Apple Silicon. Shared's source CI and
-native production installer qualification remain pending; record actual source
-before claiming acceptance. Cargo/release execution remain maintainer-owned.
+The 0.16.1 release is live. Review the one 0.16.2 maintenance draft and the
+coordinated Shared 0.2.5 refresh; no timer-runtime feature is justified by this
+batch. Maintainer validation supplies current consumer hook/setup and full
+native acceptance. Contributor preparation does not execute tests/builds/lint
+or mutate Cargo versions/locks, stage, commit or release.
 
-Continue the two existing frozen v0.14.23 #30 runs; do not dispatch duplicates.
-Both Linux downloads and early ARM pass; early Intel, both late macOS stages
-and hosted verifiers remain pending.
-Those runs qualify their frozen compact collector, not the 0.15.0 owner handoff
-or measurement output. The separate formatter consolidation still needs Shared's
-explicit index-export tool root. Do not add a second server or formatter route.
+#30's six frozen observations are complete; retain their original source and
+artifact scope. Keep #34 open until actual three-host setup/offline admission,
+product startup/recovery and cohort evidence qualifies the selected handoff.
+Do not redispatch completed or queued observations, weaken a gate, or infer
+macOS behavior from Linux. The separate formatter consolidation remains outside
+this refresh. Preserve the incoming Testkit 0.27.1 / Host 0.9.3 lock selection without
+relabelling the 0.16.1 runs.

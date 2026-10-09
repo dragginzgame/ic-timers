@@ -1182,6 +1182,9 @@ pin/receipt admission. Measurements are separate for the outer ZIP and inner tar
 | Early Linux/X64 | 11606299473 | 1,341 | 872 | 779 |
 | Late Linux/X64 | 11606958330 | 5,118 | 4,649 | 20,555 |
 | Early macOS/ARM64 | 11610964142 | 10,711 | 10,240 | 781 |
+| Early macOS/X64 | 11615583808 | 10,711 | 10,240 | 779 |
+| Late macOS/X64 | 11617154805 | 10,711 | 10,240 | 20,699 |
+| Late macOS/ARM64 | 11619245834 | 10,711 | 10,240 | 20,700 |
 
 The late Linux ZIP is 99.9986% smaller than the previously measured 373,200,529-byte
 0.14.15 ZIP. This is an observed cross-release artifact comparison, not a
@@ -1199,10 +1202,20 @@ Early ARM reaches its controlled status 22 and archives/uploads successfully;
 its actual downloaded ZIP passes the frozen-source verifier. ZIP SHA-256 is
 `ac6b1567b831cae7805e351266be2a8ebf07be79682b0b1c8f244033432d2aa8`; inner tar
 SHA-256 is `a364c4887a9b4a03665d33341bdbbc4ef6d4cd853284651ad8d55ad1989c8f27`.
-Early Intel, both late macOS producers and hosted download-verification jobs
-remain pending.
-Keep #30 open until all six original producers reach their selected failure,
-archive/upload succeeds and all six hosted verifiers pass. Retained identities,
+Early Intel and both late macOS producers subsequently reach their selected
+failures; actual downloads also pass the frozen-source verifier. Both late macOS
+jobs first pass their complete native release gate. All six original producers
+archive/upload successfully, and all six hosted verifier jobs pass: early jobs
+113819934118 / 113819934339 / 113819934371 and late jobs
+113844785934 / 113844786086 / 113844786094. The overall workflows intentionally
+remain failed because their producers preserve statuses 22 and 2.
+
+The remaining macOS archive-step timestamp spans are one second for early Intel,
+three seconds for late Intel and one second for late ARM. These are whole-step
+API observations, including selection, not precise archiver measurements. The
+completed six observations satisfy #30's compact transport acceptance, without
+relabelling #23's earlier six observations or qualifying the later 0.15.0
+five-tool/Testkit handoff and measurement instrumentation. Retained identities,
 ZIPs, SHA-256 hashes, logs, API step timestamps and measurement reports are under
 `/tmp/ic-timers-issue30.vdZlUd/`; hosted artifact retention still has its normal
 expiry. Focused local fixtures passed, and Cargo manifest/lock plus the existing
@@ -1527,6 +1540,31 @@ hosts. The existing 0.16.0 runs use Testkit 0.26.0 and cannot qualify 0.27.0.
 No duplicate hosted dispatch, new test/build/lint, tool setup or release ran in
 this preparation. No production Wasm, instruction or heap delta is expected
 from this host-only dependency update; none was measured.
+
+The maintainer subsequently released **IC Timers 0.16.1** at
+`6b508cc0ebcb215d04c2c54ce234d984cb771eda`, selecting Testkit 0.27.0, Host 0.9.2
+and Metrics 0.3.2. Its [main Linux/MSRV](https://github.com/dragginzgame/ic-timers/actions/runs/37938451791)
+and [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37938451752)
+pass; both complete native macOS jobs remain queued. Setup and fixtures alone
+do not establish actual Linux product startup or all-host #34 acceptance.
+
+A later incoming lock selects **Testkit 0.27.1**. The owner's entire library/CLI
+source is unchanged from 0.27.0; this patch repairs its own Make CLI build ordering
+and heavy branch/tag CI duplication. Timers already builds the lock-selected
+published CLI through the shared installer and needs no new adapter. All 40
+downloaded Testkit source files match tagged 0.27.1; all eight Metrics 0.3.2
+source files match its tag and are unchanged from 0.3.1. Locked offline metadata
+resolves one identity for every selected owner, preserving Cargo bytes and all
+four local package versions at 0.16.1. These are source/graph checks at
+`/tmp/ic-timers-shared025.3v_vh3a0/`, not native execution qualification for this
+incoming graph. Its full maintainer gate remains required.
+
+A concurrent later lock update advances all four Host crates to **0.9.3**.
+Their complete library source trees are unchanged from tagged 0.9.2. A fresh
+locked offline metadata check resolves one of each at 0.9.3 and preserves this
+new incoming lock's bytes; `metadata-host093.json` retains the later graph
+separately from the earlier 0.9.2 inspection. No contributor dependency update
+ran, and neither graph check establishes execution qualification.
 
 ### Dependency pin exceptions
 

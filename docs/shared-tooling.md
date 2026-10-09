@@ -1,5 +1,46 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.2.5 refresh
+
+After released IC Timers 0.16.1, the authorized continuation refreshes the
+baseline, audit/setup and isolated helper snapshots together to clean committed
+Shared **0.2.5** `04e07b4bf54e7aeb03eb7804a845cee27b7305df`. Selections remain
+**49/30/13** files. The reviewed baseline itself is unchanged; AGENTS.md and all
+three provenance records identify the same source.
+
+The hook and hook installer preserve trailing-newline checkout paths and literal
+`core.hooksPath` values, while failed Git reads still stop setup. Seven selected
+test scripts gain explicit required-companion declarations; all companions are
+already selected in their owning snapshot, so no fixture roster is expanded.
+The cumulative documentation update also clarifies optional installer suites,
+upstream-only export integration and bounded CI queue diagnosis. This consumer
+does not select the standalone CI installer, its broad suite or upstream
+snapshot-distribution fixture. No new tool or CI mode is introduced.
+
+Canonical exports come from a clean detached temporary clone at that exact
+revision. The isolated helpers are exported to a disposable consumer before
+installation; root snapshots use their existing selections. Source bytes/modes,
+all three snapshot integrity records and declared companions are checked.
+The incoming Cargo manifest/lock and both consumer pin files are byte-preserved.
+No hook is activated and no Git hook configuration is changed. No function,
+method or type is removed; hook installer and formatter ownership remain shared.
+Preparation evidence is retained at `/tmp/ic-timers-shared025.3v_vh3a0/`.
+After export and the first metadata check, a concurrent update selected Host
+0.9.3 in the root lock. That incoming graph was preserved and checked separately;
+it does not relabel the earlier 0.9.2 metadata evidence.
+
+[Exact Shared 0.2.5 CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37937705371)
+passes Linux portable regression and lint/security, with both native macOS jobs
+queued at inspection. This source/integrity/syntax preparation does not qualify
+actual consumer hook setup, staged formatting or native platform behavior.
+The maintainer-operated gate retains those obligations; no contributor test,
+build, lint, installation, commit or release execution ran for this refresh.
+The undated 0.16.2 notes contain repository-only maintenance, with no timer API
+or production Wasm/instruction/heap change expected. Prefer bundling it into the
+next code-bearing release unless the maintainer explicitly selects publication.
+
+Earlier adoption records retain their source and qualification scope.
+
 ## Shared Tooling 0.2.0 hard cut
 
 The maintainer explicitly authorized the latest Shared update and ownership hard
