@@ -1,5 +1,59 @@
 # Shared Tooling adoption
 
+## Shared Tooling committed 0.1.34 follow-up
+
+The undated **0.14.23** draft selects committed
+`3d33cd250fcae7dbe5cabe44b2abd6b2c91a1822` through all three snapshots:
+**49/33/13** files. Its commit is labelled 0.1.34; committed `VERSION` is 0.1.33.
+[Exact-source CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37900620129)
+passes Linux, Intel macOS, Apple Silicon and lint/security. Canonical exports
+come from a clean detached temporary clone; dirty sibling changes are excluded.
+The local command-authority exceptions and consumer-owned pins remain.
+
+For [#33](https://github.com/dragginzgame/ic-timers/issues/33), caller inspection
+finds no product owner for the fleet tooling inventory. Remove only
+`scripts/dev/cloc-tooling.pl`, `scripts/ci/test-cloc-tooling.sh`, their two baseline
+records, the local CI invocation and README/Make help advertisements. The removed
+files total **405 code LOC** (279 Perl, 126 shell; cloc 2.10), or 434 physical
+lines. Local `make cloc`, the pinned cloc executable, setup/check commands,
+checksums and snapshot verification remain. The immutable shared include retains
+its optional `cloc-tooling` target: without an explicitly selected reporter it
+explains that fleet reports belong in Shared Tooling and exits before invocation.
+Its existing command fixture now covers both omitted and selected reporters.
+Shared procedure/host guides can still describe optional upstream commands;
+they do not activate a fleet scan in this consumer.
+
+The refreshed alignment helper fixes
+[Shared #82](https://github.com/dragginzgame/shared-tooling/issues/82) at its owner:
+relative operands are anchored before directory resolution, a sentinel preserves
+newline-ending directory names, and a lost directory stops before Cargo starts.
+The existing upstream fixture covers CDPATH, spaces, a leading dash, final
+newlines and the disappearing-directory refusal. Keep the local absolute-path
+Make caller and its space/symlink release-gate fixture. No snapshot payload is
+patched, no gate is weakened, and no extra parser or runtime path is introduced.
+
+Host review is at released **0.8.8**
+`ccfd7724dd31c14cfbb8ae434f683babfeabf906`;
+[CI](https://github.com/dragginzgame/ic-host-tooling/actions/runs/37901415314)
+passes native Linux, both macOS hosts and MSRV. Its new direct-child constructor
+and bounded no-follow hashing belong to callers that own foreground processes or
+artifact hashing. Timers still delegates managed server startup to Testkit and
+has neither caller. No direct Host dependency or adapter is added. Incoming lock
+edits select Testkit 0.25.4, Host 0.8.8 and Metrics 0.2.17; they are preserved
+separately from this tooling cleanup and require their own graph qualification.
+
+Preparation passes all three snapshot integrity checks, exact selected source
+bytes/modes, shell syntax, 282 documentation references/anchors, whitespace and
+full locked/offline metadata for the incoming graph. Evidence is retained under
+`/tmp/ic-timers-01423.KPKxjw/`, including the clean source, original
+pin/manifest/lock bytes and removed-file LOC inputs. Cargo manifest, incoming
+lock and caller pin files remain byte-identical to their preparation inputs.
+Local fixtures/builds/lint and changed caller native qualification remain
+maintainer-owned. #33 stays open until those
+callers are qualified. #30's compact hosted upload/download measurements remain
+separate. There is no timer API, Wasm, instruction or heap impact from this tooling
+selection. No Cargo/version/release mutation runs during contributor preparation.
+
 ## Shared Tooling committed 0.1.32 follow-up
 
 The compatible **0.14.22** draft now selects reviewed committed Shared

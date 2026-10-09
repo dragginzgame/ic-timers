@@ -409,7 +409,6 @@ remain defined in [AGENTS.md](AGENTS.md).
 | `make install-ic-tools` / `make ic-tools-check` | Install the pinned six-tool IC bundle or verify it offline |
 | `make install-tools` / `make tools-check` | Prepare or verify both host and IC bundles |
 | `make cloc` | Report Rust LOC/test counts for all root workspace members |
-| `make cloc-tooling` | Inventory sibling CI/tooling (`CLOC_PARENT=/path/to/projects`) |
 | `make fmt` / `make fmt-check` | Sort manifests and format or check Rust for all workspace members |
 | `make ci` | Run the normal warning-denied checks, native tests, Wasm build, and package checks |
 | `make msrv` | Check the library and its doctests with Rust 1.88.0 |

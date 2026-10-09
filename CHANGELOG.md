@@ -2,6 +2,19 @@
 
 All notable changes to this project are recorded here.
 
+## [0.14.23]
+
+### Development
+
+- Run fleet tooling inventories centrally in Shared Tooling, removing the unused
+  reporter and its regression suite from this consumer. Keep local workspace LOC
+  and pinned tool setup/check commands
+  ([#33](https://github.com/dragginzgame/ic-timers/issues/33),
+  [shared #83](https://github.com/dragginzgame/shared-tooling/issues/83)).
+- Adopt the committed Shared Tooling PocketIC path fix for inherited `CDPATH`,
+  unusual directory names and directories that disappear before Cargo starts
+  ([shared #82](https://github.com/dragginzgame/shared-tooling/issues/82)).
+
 ## [0.14.22] - 2026-10-09
 
 ### Development

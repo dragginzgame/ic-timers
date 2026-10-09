@@ -1382,9 +1382,12 @@ The reviewed installer itself requires no sudo.
 `make cloc` reports all four members of the root workspace, including the
 unpublished probes. `CLOC_MANIFEST=Cargo.toml` explicitly selects that same graph;
 there is no independent testing manifest. The refreshed reporter isolates its
-fixture workspaces and excludes configured build output, including aliases. `make cloc-tooling CLOC_PARENT=/path/to/projects` inventories
-sibling CI/tooling with snapshot ownership and source hashes, without executing
-consumer code. Counts do not establish instruction or Wasm savings.
+fixture workspaces and excludes configured build output, including aliases.
+Fleet tooling inventories now run centrally from Shared Tooling; this consumer
+does not select the optional reporter or its dedicated regression suite. The
+[current adoption owner](shared-tooling.md#shared-tooling-committed-0134-follow-up)
+records that selection boundary. Counts do not establish instruction or Wasm
+savings.
 
 The [0.1.18 adoption owner](shared-tooling.md#shared-tooling-0118-refresh)
 records source inspection and pending Linux/native macOS consumer qualification.

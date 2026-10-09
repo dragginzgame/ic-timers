@@ -43,7 +43,6 @@ help:
 	@echo "  ic-tools-check      Verify the installed IC bundle offline"
 	@echo "  install-tools / tools-check  Prepare or verify both tool bundles"
 	@echo "  cloc                Report root-workspace Rust LOC and test counts"
-	@echo "  cloc-tooling        Inventory sibling CI/tooling (CLOC_PARENT=/path/to/projects)"
 	@echo "  shell-check         Check repository shell-script syntax"
 	@echo "  msrv                Check with the minimum supported Rust version"
 	@echo "  ci                  Run the local CI gate"
@@ -161,7 +160,6 @@ release-check:
 	bash scripts/ci/test-tool-commands.sh
 	bash scripts/ci/test-rust-tools.sh
 	bash scripts/ci/test-cloc.sh
-	bash scripts/ci/test-cloc-tooling.sh
 	bash scripts/ci/test-failure-evidence.sh
 	bash .shared-tooling/helpers/scripts/ci/test-format-tools.sh
 	bash scripts/ci/test-ic-tools.sh

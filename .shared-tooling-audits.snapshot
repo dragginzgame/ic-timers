@@ -1,17 +1,17 @@
 # Shared Tooling snapshot v1
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	635a39a9dd5f8d021fa9c9196b591e00521a7e02
+revision	3d33cd250fcae7dbe5cabe44b2abd6b2c91a1822
 file	faa9a62257ecdfd6532ac2225b3fd053012dfe9c35b8bc2ddc95288d8626a518	-	audits/README.md
 file	518d890bf485bef06c316b4cf26ac6bf357ed52bcce995e8d9b1232a103d0ea3	-	audits/code-hygiene.md
 file	35fd87d36a09ed0971841abf28535d43470c713a82581c2251b924da1ab8f484	-	audits/flow-convergence-and-duplication.md
 file	ffdca09602c44c8aff8fc2a17588b20eb6a56e2e71fb6d42ad75087fdd65819b	-	audits/complexity-and-technical-debt.md
 file	1b64cf2ba0393ab329ec29eb05a696d47ef5933f5ab9bff6e1fe4a7e7b294075	-	audits/module-surface-hardening.md
 file	8f415bcb0e97fcc0e27519e727e7aefae94686e6e5e3619d24e3df3ace5d7708	-	audits/module-cleanup.md
-file	5cdc1f2e8c2743d659f1374c03c40b2c379ecbf7bd34f6c0a3794c6d7e160c64	-	docs/consuming-snapshots.md
+file	27b5713b69e23477897984b973ac99623ab9a09aad5aa9599bb81ea8f7f1681f	-	docs/consuming-snapshots.md
 file	1a0d1d6f2a87a0d77378fdda605f5700cc7e2ca8c8dfac79418248da30b7e657	-	docs/provenance.md
 file	6d4c393d99d70a18c1eff4b2d9910bbc0f1eb64db301ce43983f3a1c916c912c	-	docs/ic-tools.md
-file	fadac2b8ce904663bbdb2ca7bcbd27f3e74fa89461b74c922c9782dfd805afa0	-	docs/local-setup.md
+file	44e433feb4326ec067efc473176697747ef9c9d07a3e39b3f457c9710a345cd9	-	docs/local-setup.md
 file	82892e25292fe47c26035a0031aa4ad1996fcf181732163e75039bd657f2f84b	-	ci/tool-versions.env
 file	f114e128d2d3ab1cd4fae4c8eb89866990063cd5cd4a6dbafde49872f0a02af1	-	rules/dependency-pinning.md
 file	27a04aeee753252b310fef363856edf83577337bfaea1e63a50017460eddde59	-	docs/principles/rust-code-hygiene.md
@@ -29,8 +29,8 @@ file	ac24a1367e55b9e4f19cf67d5e19547aebca278a8b625a565c0e2f4e01e3fe9b	x	scripts/
 file	a74fc5ec8415bbe2ccbd9c51ba16b544bffb1f72a89a981b68e19aff8edbc8c0	x	scripts/ci/test-rust-tools.sh
 file	d115de58d30404698b4c691359189763dc1f9452893002477dc607e02d2d8c90	-	scripts/ci/ic-tool-pins.awk
 file	3e0f75c6388c503c86828811e69786506272dd3ec317b133b0b263369447e858	x	scripts/ci/check-pocketic-binary.sh
-file	77dac099996e513b3c44384e8e22ac66e6b06fe4f2ae3199af1c26fe07485b0a	x	scripts/ci/check-pocketic-alignment.sh
-file	09dcaac753c3c5350641b91f50d961b16080ae33122b659960b6f2b4e3cb8deb	x	scripts/ci/test-pocketic-checks.sh
+file	e1f38c48827c9ad031c9bf2d2283e9eaf0f55cae256f36a8d25ee8a965c33c86	x	scripts/ci/check-pocketic-alignment.sh
+file	aafb69faa35974f18dbe77b9614ed1c56419c76e0a4bb46ca8a51c9d08af1f9a	x	scripts/ci/test-pocketic-checks.sh
 file	90e6b75e1bd3e3d7bc68b18f727379981e6811aa0a1b061e75d32c4699b13632	x	scripts/ci/test-tool-evidence.sh
 file	d7feda634703b4e0acb9e5406deccca2b81b821dfa738b714708b82a2c2e9bc3	x	scripts/ci/select-tool-evidence.sh
 file	5be336cb3e8045b2d2d536542a94944b376ee812b03f786a90b9d962ab697f13	x	scripts/ci/archive-evidence.sh
