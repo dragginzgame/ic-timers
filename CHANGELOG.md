@@ -21,6 +21,9 @@ All notable changes to this project are recorded here.
 - Pass explicit absolute manifest/pin paths to PocketIC alignment so inherited
   `CDPATH` cannot redirect its directory observation
   ([shared #82](https://github.com/dragginzgame/shared-tooling/issues/82)).
+- Update the release-gate fixture to require those absolute paths as separate
+  arguments, using a physical workspace with spaces and a symlink entry point.
+  Report unexpected arguments rather than failing silently.
 - Retain incoming lock selections for ic-host 0.8.5, ic-metrics 0.2.16, TOML 1.1.8
   and its parser 1.1.5 through the existing root dependency catalog and Testkit.
 

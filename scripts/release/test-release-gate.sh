@@ -63,12 +63,13 @@ fi
 temporary_root="$(mktemp -d)"
 trap 'if [[ $? == 0 ]]; then rm -rf -- "${temporary_root}"; else printf "Failed release-gate fixture retained: %s\n" "${temporary_root}" >&2; fi' EXIT
 # Make's CURDIR is physical, including under macOS's /var -> /private/var.
-# Enter through an alias on every host so this path distinction stays covered.
-mkdir "${temporary_root}/workspace"
-ln -s workspace "${temporary_root}/workspace-alias"
-cp "${makefile}" "${temporary_root}/workspace/Makefile"
-mkdir -p "${temporary_root}/workspace/make"
-cp "${repository_root}/make/tools.mk" "${temporary_root}/workspace/make/"
+# Enter through an alias on every host so this path distinction stays covered;
+# a space in the physical root also checks argument boundaries.
+mkdir "${temporary_root}/workspace with spaces"
+ln -s 'workspace with spaces' "${temporary_root}/workspace-alias"
+cp "${makefile}" "${temporary_root}/workspace with spaces/Makefile"
+mkdir -p "${temporary_root}/workspace with spaces/make"
+cp "${repository_root}/make/tools.mk" "${temporary_root}/workspace with spaces/make/"
 cd "${temporary_root}/workspace-alias"
 fixture_root="$(pwd -P)"
 git init -q
@@ -159,7 +160,15 @@ if [[ -z "${POCKET_IC_BIN}" ]]; then exit 2; fi
 EOF
 cat > scripts/ci/check-pocketic-alignment.sh <<'EOF'
 #!/usr/bin/env bash
-[[ "$*" == '--manifest Cargo.toml --pins ci/ic-tools.tsv' ]] || exit 2
+set -euo pipefail
+if [[ $# != 4 || "$1" != --manifest ||
+    "$2" != "${VALIDATION_REPOSITORY_ROOT}/Cargo.toml" || "$3" != --pins ||
+    "$4" != "${VALIDATION_REPOSITORY_ROOT}/ci/ic-tools.tsv" ]]; then
+    printf 'error: unexpected PocketIC alignment arguments: ' >&2
+    printf '%q ' "$@" >&2
+    printf '\n' >&2
+    exit 2
+fi
 printf '%s\n' alignment > alignment
 exit "${FIXTURE_ALIGNMENT_STATUS:-0}"
 EOF

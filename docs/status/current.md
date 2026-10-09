@@ -89,6 +89,15 @@ No local tests/builds/lint, dependency preparation, installer execution, version
 mutation, stage, commit, tag, push or workflow dispatch ran. No additional timer
 feature requirement emerged.
 
+The maintainer's subsequent release gate passed compact collector, shared IC
+installer and PocketIC alignment fixtures, then stopped in the local release-gate
+stub: it still required relative manifest/pin arguments after the real caller
+switched to absolute paths. The local repair checks all four arguments against
+the physical fixture root, reports unexpected arguments, and uses a workspace
+with spaces entered through a symlink. Production admission is unchanged.
+Shell syntax and whitespace checks are preparation only; the maintainer must
+rerun the gate. Incoming lock edits remain untouched.
+
 ## Released 0.14.5 tooling
 
 Released compatible 0.14.5 at `c84d4e4` implements
