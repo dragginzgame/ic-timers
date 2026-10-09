@@ -17,12 +17,14 @@ mkdir -p "$fixture/current/scripts" "$fixture/current/.shared-tooling/helpers/sc
     "$fixture/selected" "$fixture/bin" "$fixture/tmp"
 cp "$root/Makefile" "$fixture/current/"
 mkdir -p "$fixture/current/make"
-cp "$root/make/tools.mk" "$fixture/current/make/"
+cp "$root/make/tools.mk" "$root/make/rust-format.mk" \
+    "$root/make/release.mk" "$fixture/current/make/"
 cp -R "$root/scripts/release" "$fixture/current/scripts/"
 cp "$root/.shared-tooling/helpers/scripts/ci/read-cargo-workspace-version.sh" \
     "$root/.shared-tooling/helpers/scripts/ci/check-release-tag.sh" \
     "$fixture/current/.shared-tooling/helpers/scripts/ci/"
-cp "$root/tool-versions.env" "$fixture/current/"
+mkdir -p "$fixture/current/ci"
+cp "$root/ci/tool-versions.env" "$fixture/current/ci/"
 printf '%s\n' '[workspace.package]' 'version = "0.1.0"' > "$fixture/selected/Cargo.toml"
 printf '%s\n' '| API line | `0.1` |' 'ic-timers = "=0.1.0"' > "$fixture/selected/README.md"
 printf '%s\n' '## [0.1.0] - 2026-10-06' > "$fixture/selected/CHANGELOG.md"
@@ -150,25 +152,5 @@ if "$real_make" --no-print-directory release-committed-check RELEASE_COMMIT= \
 # Prepared metadata checks must still inspect the current worktree.
 reject release-prepared-check 'invalid current metadata'
 
-# The consumer selects direct delivery; an ambient or Make-supplied PR mode
-# must not redirect the standard commands into an unadopted release workflow.
-# Substitute only the runner, preserving the actual Make recipes and arguments.
-mkdir -p scripts/ci
-export DELIVERY_EVENTS="$fixture/delivery"
-cat > scripts/ci/run-release.sh <<'STUB'
-#!/usr/bin/env bash
-set -euo pipefail
-printf '%s\n' "${RELEASE_DELIVERY:?}" > "$DELIVERY_EVENTS"
-STUB
-cp "$EVENTS" "$fixture/before-delivery"
-for kind in patch minor major resume; do
-    for selection in environment command-line; do
-        arguments=(--no-print-directory "release-$kind" VERSION=0.1.0)
-        if [[ "$selection" == command-line ]]; then arguments+=(RELEASE_DELIVERY=pr); fi
-        RELEASE_DELIVERY=pr "$real_make" "${arguments[@]}" > "$fixture/output" 2>&1
-        printf 'direct\n' > "$fixture/expected-delivery"
-        cmp "$fixture/expected-delivery" "$DELIVERY_EVENTS"
-        cmp "$fixture/before-delivery" "$EVENTS"
-    done
-done
+# Standard entrypoint policy and forwarding belong to test-release-gate.sh.
 echo 'Selected-commit Make metadata checks passed (Git/Cargo stubs; no release effects)'

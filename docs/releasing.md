@@ -317,8 +317,10 @@ minor`, `make major`, or `make bump-x VERSION=...` when ready to update the
 workspace version and the root lockfile, and `make release-stage` to stage release
 metadata.
 
-The selected shared contract includes the PR helper, but this consumer's standard
-Make recipes bind `RELEASE_DELIVERY=direct`. Ambient environment or Make-variable
+The selected shared contract includes the PR helper. Standard entrypoints come
+from `make/release.mk`; this consumer's target-specific override exports
+`RELEASE_DELIVERY=direct` and fixes snapshot routing to `$(CURDIR)`.
+Ambient environment or Make-variable
 PR selections do not switch the patch/minor/major or resume commands. Adopting PR
 delivery requires separate merged-source adapters and qualification; this refresh
 grants no merge authority or contributor release effects.
@@ -404,7 +406,7 @@ the completed pre-bump gate remains the evidence for the prepared code.
 
 `make fmt` and `make fmt-check` sort manifests with cargo-sort 2.1.4 before
 formatting/checking Rust for every member of the single root workspace. The exact
-tool pin lives in `tool-versions.env`; `make update-dev` installs it with
+tool pin lives in `ci/tool-versions.env`; `make update-dev` installs it with
 `--version` and `--locked`, and hosted jobs prepare it before gates. Hooks and
 format checks never install tools. Prepared standard-release metadata is checked
 for manifest ordering before staging, so a commit hook does not repair the
@@ -424,6 +426,14 @@ The non-release `make patch`, `make minor`, `make major`, and
 review without running build, lint or test suites.
 
 ### Host support
+
+The pending 0.16.3 workflow adds Linux execution of the existing PocketIC
+recovery and policy-cohort targets after CI/probe lint. Testkit's root-lock
+selected CLI prepares and admits the server; the product harness then starts
+fresh managed servers and instances. This closes a configuration gap, not an
+acceptance claim. The matching Linux run and both native macOS gates must pass
+before [#34](https://github.com/dragginzgame/ic-timers/issues/34) can close.
+See [the qualification scope](#linux-product-qualification-for-0163).
 
 Released 0.14.12 is `72e8f5d9769d00fbe165b16cd6eb2d81cf1b0a67`.
 [Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37639154601)
@@ -480,7 +490,7 @@ continues to target Wasm on the Internet Computer.
 
 | Host | Current workflow configuration and evidence scope |
 | --- | --- |
-| Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The release gate pins the audited PocketIC 16.1.0 Linux x86_64 artifact. Recorded results remain scoped to their original subjects. |
+| Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. The pending PR/main checks job runs product recovery and policy cohorts with the prepared internal toolchain; Testkit owns server admission from the root-lock selection. Matching execution remains pending. |
 | macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.15. The historical 0.14.1 missing-`rg` failure is recorded below. |
 | macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.15. Historical failures retain their original scope below. |
 
@@ -941,7 +951,10 @@ architecture against this matrix, and prepend `/bin` to `PATH` so nested
 `env bash` wrappers exercise Apple's Bash 3.2. The two jobs run only for PR/main;
 their complete gate includes dependency preparation, native CI, MSRV, nested
 probe linting, the maintained PocketIC subjects and policy cohorts. Existing
-Linux jobs and the smaller tag job remain separate. The jobs use explicit
+Linux jobs and the smaller tag job remain separate. Linux checks also run the
+maintained PocketIC subjects/cohorts with the prepared internal toolchain; the
+separate MSRV job retains minimum-version library and probe qualification.
+The jobs use explicit
 [GitHub runner labels](https://docs.github.com/en/actions/reference/runners/github-hosted-runners#standard-github-hosted-runners-for-public-repositories).
 CI configuration supplies a qualification path; only passing native execution
 for the matching revision supplies evidence. Adding these jobs does not claim
@@ -1068,8 +1081,9 @@ gh workflow run ci.yml --repo dragginzgame/ic-timers --ref v0.14.15 -f failure_s
 Each dispatch selects Linux checks and both native macOS jobs. Early qualification
 runs before Rust/tool setup; it calls the real host installer in a fresh scratch
 consumer with a curl substitute that retains partial download bytes and exits
-22. Late qualification runs only after Linux's final nested lint or macOS's
-complete release gate succeeds; it calls the real logger against a failing
+22. Late qualification runs only after Linux's CI, nested lint and product
+PocketIC targets or macOS's complete release gate succeed; it calls the real
+logger against a failing
 scratch Make recipe, preserving Make status 2 and raw/combined failure logs.
 This proves workflow retention ordering with controlled substitutes, not a real
 network outage or a canister failure. The original jobs stay failed; the driver never
@@ -1404,15 +1418,21 @@ observations and from the not-yet-committed Shared Tooling archive helper.
 ### Formatter prerequisites
 
 Both `make fmt` and `make fmt-check` depend on `format-tools-check`. The reviewed
-shared guard requires successful exact cargo-sort 2.1.4 output using the existing
-`tool-versions.env` pin and successful rustfmt availability for the selected
-toolchain. Failed probes reject even if stdout looks correct. They force Cargo
+shared guard at `scripts/ci/check-format-tools.sh` requires successful exact
+cargo-sort 2.1.4 output using the `ci/tool-versions.env` pin and successful
+rustfmt availability for the selected toolchain. Failed probes reject even if
+stdout looks correct. They force Cargo
 offline and disable rustup automatic installation; setup remains explicit through
 `make update-dev` or CI. The guard neither formats nor builds. The following
-formatter recipes cover every member of the single root workspace with their
-existing options. The hook's isolated index must include the guard along with the current
-Makefile and versions file. Fixture wiring and pending native qualification
-belong in the [adoption owner](shared-tooling.md#formatter-prerequisite-adoption).
+formatter recipes in `make/rust-format.mk` cover every member of the single root
+workspace with their existing options. The hook's isolated index must include
+the guard, all three Make includes, the current Makefile and `ci/tool-versions.env`.
+These formatting entrypoints also bind snapshot routing to their current root;
+an inherited external snapshot cannot replace the indexed prerequisite checker.
+Their pin input is bound to the indexed `ci/tool-versions.env`, preserving the
+previous consumer-owned formatter selection rather than ambient host pin routing.
+Fixture wiring and pending native qualification belong in the
+[adoption owner](shared-tooling.md#shared-tooling-026-make-adoption).
 
 ### Structured dependency checks and host parsers
 
@@ -1565,6 +1585,43 @@ locked offline metadata check resolves one of each at 0.9.3 and preserves this
 new incoming lock's bytes; `metadata-host093.json` retains the later graph
 separately from the earlier 0.9.2 inspection. No contributor dependency update
 ran, and neither graph check establishes execution qualification.
+
+### Linux product qualification for 0.16.3
+
+Issue [#34](https://github.com/dragginzgame/ic-timers/issues/34) requires actual
+consumer setup, offline admission and product startup/recovery/cohort execution
+on Linux and both native macOS hosts. Released 0.16.2 at
+`1e1255dc489dead90bbcbf7cd404deedf89300d0` passes
+[Linux checks/MSRV](https://github.com/dragginzgame/ic-timers/actions/runs/37941328947),
+but its Linux workflow stops after probe lint; setup and adapter fixtures cannot
+establish product startup. Both matching macOS gates remain queued at inspection.
+
+The pending 0.16.3 workflow adds one step in the existing Linux checks job:
+`make pocketic-watchdog pocketic-cohorts MSRV="$IC_TIMERS_INTERNAL_TOOLCHAIN"`.
+It follows CI and probe lint and precedes controlled late failure qualification.
+The already-prepared internal toolchain supplies Cargo, rustfmt and the Wasm
+target; no second Linux toolchain install or duplicate MSRV check is added.
+The separate MSRV job retains its minimum-version checks. macOS keeps the
+complete release gate, including its existing MSRV-selected probe execution.
+
+Both product targets use the existing [Make owners](../Makefile): offline
+Testkit admission precedes builds, admission is rechecked afterward, and only
+the resulting server path reaches the probes. The private
+[harness](../testing/crates/ic-timers-pocketic/src/harness/mod.rs) starts a fresh
+managed server and IC instance for each subject. The watchdog target selects
+the existing `tests::` subjects; the cohort target selects the existing size and
+instruction subject with its measurement output. Normal step failure stops the
+job and uses the existing failure collector/uploader. No new harness, alternate
+server catalog, test fallback or dispatch is introduced.
+
+This change adds native build/execution time to Linux CI; it has no production
+Wasm, instruction or heap impact. Duration and hosted execution remain unmeasured.
+Source/workflow parsing, embedded shell syntax, document links and unchanged
+locked graph checks are preparation evidence only, retained with the dirty
+worktree diff at `/tmp/ic-timers-0163-issues/`. No contributor test/build,
+lint, installation or release ran. Keep #34 open until the matching source's
+Linux product step and both macOS complete gates supply setup/admission/startup
+and recovery/cohort evidence. Earlier released runs retain their original scope.
 
 ### Dependency pin exceptions
 

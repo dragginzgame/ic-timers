@@ -4,9 +4,9 @@ set -euo pipefail
 # The fixture owns its Make selections; negative cases set them explicitly.
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
 repository_root="$(git rev-parse --show-toplevel)"
-source "${repository_root}/tool-versions.env"
-bash "${repository_root}/.shared-tooling/helpers/scripts/ci/check-format-tools.sh" \
-    "${IC_TIMERS_CARGO_SORT_VERSION}"
+source "${repository_root}/ci/tool-versions.env"
+bash "${repository_root}/scripts/ci/check-format-tools.sh" \
+    "${SHARED_TOOLING_CARGO_SORT_VERSION}"
 temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/timer-hook-test.XXXXXX")"
 trap 'if [[ $? == 0 ]]; then rm -rf -- "${temporary_root}"; else printf "Failed hook fixture retained: %s\n" "${temporary_root}" >&2; fi' EXIT
 # Reuse committed objects read-only; the fixture never creates a commit.
@@ -23,11 +23,13 @@ git read-tree HEAD
 git checkout-index --all
 cp "${repository_root}/Makefile" Makefile
 mkdir -p make
-cp "${repository_root}/make/tools.mk" make/
-cp "${repository_root}/tool-versions.env" tool-versions.env
+cp "${repository_root}/make/tools.mk" "${repository_root}/make/rust-format.mk" \
+    "${repository_root}/make/release.mk" make/
+mkdir -p ci
+cp "${repository_root}/ci/tool-versions.env" ci/
 # The current fmt prerequisite must also exist in the fixture's exact index.
-cp -p "${repository_root}/.shared-tooling/helpers/scripts/ci/check-format-tools.sh" \
-    .shared-tooling/helpers/scripts/ci/
+cp -p "${repository_root}/scripts/ci/check-format-tools.sh" \
+    scripts/ci/
 cp -p "${repository_root}/scripts/ci/check-make-execution.sh" scripts/ci/
 # The fixture overlays both members into the one root-owned workspace.
 mkdir -p crates/hook-fixture/src testing/crates/hook-probe/src
@@ -48,9 +50,9 @@ edition.workspace = true
 EOF
     printf 'pub fn fixture( ){}\n' > "${member}/src/lib.rs"
 done
-git add Makefile make/tools.mk tool-versions.env Cargo.toml \
+git add Makefile make/tools.mk make/rust-format.mk make/release.mk ci/tool-versions.env Cargo.toml \
     crates/hook-fixture testing/crates/hook-probe \
-    .shared-tooling/helpers/scripts/ci/check-format-tools.sh scripts/ci/check-make-execution.sh
+    scripts/ci/check-format-tools.sh scripts/ci/check-make-execution.sh
 printf 'unrelated working edit\n' >> README.md
 cp README.md "${temporary_root}/unrelated-readme"
 
@@ -95,7 +97,10 @@ done
 
 # The actual consumer fmt target formats and refreshes both root workspace members,
 # preserving unrelated edits and requiring no dependencies, builds or network.
-if ! CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 bash "${repository_root}/.githooks/pre-commit" \
+if ! CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 \
+    SHARED_TOOLING_ROOT="${temporary_root}/unselected-snapshot" \
+    HOST_TOOL_VERSIONS="${temporary_root}/unselected-pins.env" \
+    bash "${repository_root}/.githooks/pre-commit" \
     > "${temporary_root}/format.log" 2>&1; then
     cat "${temporary_root}/format.log" >&2
     exit 1
@@ -106,7 +111,11 @@ for path in crates/hook-fixture/src/lib.rs testing/crates/hook-probe/src/lib.rs;
     test "${formatted}" = 'pub fn fixture() {}'
 done
 cmp "${temporary_root}/unrelated-readme" README.md
-if ! make --no-print-directory fmt-check > "${temporary_root}/fmt-check.log" 2>&1; then
+if ! SHARED_TOOLING_ROOT="${temporary_root}/unselected-snapshot" \
+    HOST_TOOL_VERSIONS="${temporary_root}/unselected-pins.env" make --no-print-directory \
+    fmt-check "SHARED_TOOLING_ROOT=${temporary_root}/unselected-snapshot" \
+    "HOST_TOOL_VERSIONS=${temporary_root}/unselected-pins.env" \
+    > "${temporary_root}/fmt-check.log" 2>&1; then
     cat "${temporary_root}/fmt-check.log" >&2
     exit 1
 fi

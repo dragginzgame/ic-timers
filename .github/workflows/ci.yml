@@ -55,8 +55,8 @@ jobs:
       - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
       - name: Prepare the pinned formatter and tool bundles
         run: |
-          source tool-versions.env
-          cargo install cargo-sort --version "$IC_TIMERS_CARGO_SORT_VERSION" --locked
+          source ci/tool-versions.env
+          cargo install cargo-sort --version "$SHARED_TOOLING_CARGO_SORT_VERSION" --locked
           make install-tools
           make tools-check
           make install-testkit-server
@@ -117,8 +117,8 @@ jobs:
       - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
       - name: Prepare the pinned formatter and tool bundles
         run: |
-          source tool-versions.env
-          cargo install cargo-sort --version "$IC_TIMERS_CARGO_SORT_VERSION" --locked
+          source ci/tool-versions.env
+          cargo install cargo-sort --version "$SHARED_TOOLING_CARGO_SORT_VERSION" --locked
           make install-tools
           make tools-check
           make install-testkit-server
@@ -128,6 +128,8 @@ jobs:
         run: make ci
       - name: Lint unpublished probes with internal toolchain
         run: make testing-check MSRV="$IC_TIMERS_INTERNAL_TOOLCHAIN"
+      - name: Qualify native PocketIC recovery and policy cohorts
+        run: make pocketic-watchdog pocketic-cohorts MSRV="$IC_TIMERS_INTERNAL_TOOLCHAIN"
       - name: Qualify late failure evidence
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.failure_stage == 'late' }}
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
@@ -210,8 +212,8 @@ jobs:
       - name: Prepare the pinned formatter and tool bundles
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: |
-          source tool-versions.env
-          cargo install cargo-sort --version "$IC_TIMERS_CARGO_SORT_VERSION" --locked
+          source ci/tool-versions.env
+          cargo install cargo-sort --version "$SHARED_TOOLING_CARGO_SORT_VERSION" --locked
           make install-tools
           make tools-check
           make install-testkit-server
@@ -330,8 +332,8 @@ jobs:
           make release-tag-check
           make fetch
           bash scripts/release/check-lockfiles.sh
-          source tool-versions.env
-          cargo install cargo-sort --version "$IC_TIMERS_CARGO_SORT_VERSION" --locked
+          source ci/tool-versions.env
+          cargo install cargo-sort --version "$SHARED_TOOLING_CARGO_SORT_VERSION" --locked
           make release-check
       - name: Archive failure evidence
         if: ${{ failure() }}

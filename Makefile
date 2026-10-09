@@ -1,13 +1,14 @@
 .PHONY: \
-	actions-check build bump-x check ci clean clippy docs-check ensure-clean fetch fmt fmt-check format-tools-check help \
+	actions-check build bump-x check ci clean clippy docs-check ensure-clean fetch help \
 	install-hooks install-testkit-server major minor msrv package patch pocketic-cohorts pocketic-watchdog publish release-check release-commit \
-	pocketic-check provider-check release-major release-minor release-patch release-push release-stage \
+	pocketic-check provider-check release-push release-stage \
 	release-impact release-tag-check release-verify release-x repository-check shell-check test testing-check update-dev \
 	version wasm-check
 
 MSRV ?= 1.88.0
 VERSION ?=
 include make/tools.mk
+include make/rust-format.mk
 
 CI_TARGETS := actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package
 RELEASE_TARGETS := fetch install-testkit-server pocketic-check ci msrv testing-check pocketic-watchdog pocketic-cohorts
@@ -54,18 +55,6 @@ version:
 # Prepare every target's locked sources before offline metadata validation.
 fetch:
 	cargo fetch --manifest-path Cargo.toml --locked
-
-format-tools-check:
-	@set -e; . ./tool-versions.env; \
-		bash .shared-tooling/helpers/scripts/ci/check-format-tools.sh "$$IC_TIMERS_CARGO_SORT_VERSION"
-
-fmt: format-tools-check
-	cargo sort --workspace
-	cargo fmt --all
-
-fmt-check: format-tools-check
-	cargo sort --workspace --check
-	cargo fmt --all -- --check
 
 check:
 	cargo check -p ic-timers --all-targets --all-features --locked
@@ -160,14 +149,15 @@ release-check:
 	bash scripts/ci/test-rust-tools.sh
 	bash scripts/ci/test-cloc.sh
 	bash scripts/ci/test-failure-evidence.sh
-	bash .shared-tooling/helpers/scripts/ci/test-format-tools.sh
+	bash scripts/ci/test-format-tools.sh
 	bash scripts/ci/test-ic-tools.sh
 	bash scripts/ci/test-evidence-checksums.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/test-dependency-pins.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/test-cargo-metadata.sh
 	perl .shared-tooling/helpers/scripts/ci/test-local-lock-versions.pl
 	bash scripts/ci/test-release-runner.sh
-	bash .shared-tooling/helpers/scripts/ci/check-release-commands.sh "$(CURDIR)" tool-versions.env make/tools.mk
+	bash .shared-tooling/helpers/scripts/ci/check-release-commands.sh "$(CURDIR)" \
+		ci/tool-versions.env make/tools.mk make/rust-format.mk make/release.mk
 	bash scripts/release/test-committed-release.sh
 	bash scripts/release/test-release-index.sh
 	bash scripts/release/test-finalize-changelog.sh
@@ -271,19 +261,15 @@ release-push: ensure-clean release-tag-check
 publish: ensure-clean release-tag-check package
 	cargo publish --locked --registry crates-io -p ic-timers
 
-# Shared Tooling owns the standard release order and Git effects.
-RELEASE_REMOTE ?= origin
-RELEASE_BRANCH ?= main
-ifneq ($(word 2,$(filter release-patch release-minor release-major release-resume,$(MAKECMDGOALS))),)
-$(error Select exactly one release target)
-endif
-.PHONY: release-resume release-version release-preflight release-prepare-version release-prepared-check release-files release-commit-check release-committed-check release-tagged-check release-push-check
-
-release-patch release-minor release-major:
-	+@RELEASE_DELIVERY=direct bash scripts/ci/run-release.sh "$(@:release-%=%)" "$(RELEASE_REMOTE)" "$(RELEASE_BRANCH)"
-
-release-resume:
-	+@RELEASE_DELIVERY=direct bash scripts/ci/run-release.sh resume "$(VERSION)" "$(RELEASE_REMOTE)" "$(RELEASE_BRANCH)"
+# These consumer entrypoints use the reviewed root snapshot. Preserve their
+# former repository-local routing even if a caller exports another snapshot root.
+format-tools-check fmt fmt-check release-patch release-minor release-major release-resume: override SHARED_TOOLING_ROOT = $(CURDIR)
+format-tools-check fmt fmt-check: override HOST_TOOL_VERSIONS = $(CURDIR)/ci/tool-versions.env
+# Keep direct delivery authoritative for all standard entrypoints, including
+# when an ambient environment or Make command-line variable selects PR delivery.
+release-patch release-minor release-major release-resume: override export RELEASE_DELIVERY := direct
+include make/release.mk
+.PHONY: release-version release-preflight release-prepare-version release-prepared-check release-files release-commit-check release-committed-check release-tagged-check release-push-check
 
 release-version:
 	@bash scripts/release/workspace-version.sh

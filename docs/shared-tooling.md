@@ -1,5 +1,74 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.2.6 Make adoption
+
+After released IC Timers 0.16.2, the authorized 0.16.3 continuation adopts clean
+committed Shared **0.2.6** `ce13a5314916891fd239d9b199b4a91b04775054`. All three
+snapshots identify that source: **53 baseline / 30 audit-setup / 11 helper files**.
+The four new baseline selections are `make/release.mk`, `make/rust-format.mk`,
+`scripts/ci/check-format-tools.sh` and `scripts/ci/test-format-tools.sh`.
+The latter two move out of the isolated helper selection, removing their old
+payloads and records together. The baseline policy itself is unchanged.
+
+The root Makefile selects the canonical includes. Standard release entrypoints
+delegate to the shared runner; a local target-specific override exports direct
+delivery even when the environment or Make command line selects PR delivery.
+Remove duplicate `.PHONY` declarations for targets now owned by those includes.
+Exact-version `release-x`, phase adapters, metadata ownership and complete
+validation gates stay local. The release-gate fixture now owns standard delivery
+policy, exact argument forwarding, runner failure and conflicting-goal refusal;
+its former narrower duplicate is removed from the committed-metadata fixture.
+Formatting and standard release entrypoints also override `SHARED_TOOLING_ROOT`
+with their current root, preserving their former repository-local routing. The
+release fixture supplies an external sentinel through environment and Make
+variables; the hook/check fixture supplies an unselected root. Neither may
+redirect dispatch. This protects this consumer from the inherited-root leak in
+[Shared #7](https://github.com/dragginzgame/shared-tooling/issues/7#issuecomment-6083158846)
+without patching the immutable checker; its reusable owner repair remains upstream.
+
+Formatting keeps the same workspace commands, offline prerequisite checks and
+explicit cargo-sort setup. Delete the duplicate root `tool-versions.env`;
+Make, all four hosted setup sites, update-dev and the index-hook fixture select
+the existing `SHARED_TOOLING_CARGO_SORT_VERSION` in `ci/tool-versions.env`.
+Formatting binds that exact local pin input, preserving its former consumer-owned
+selection even if ambient host setup selects a different versions file. The
+hook/check fixture includes both external snapshot and pin selections.
+Every disposable copy of the root Makefile gains its three includes. The hook
+fixture stages the guard and sole pin catalog along with those includes; the
+canonical hook still formats an isolated index and supplies no implicit setup.
+This does not activate hooks or add a full Rust-tool installation to setup.
+
+Canonical exports come from a clean detached clone at the exact source revision.
+The isolated helper selection is exported to a disposable consumer before copy.
+Preparation evidence is retained at `/tmp/ic-timers-shared026.0kili4bv/`.
+Cargo.toml, Cargo.lock, `ci/tool-versions.env` and the five-tool IC matrix retain
+their pre-adoption bytes. No named function, method or type is deleted: the
+formatter guard's `usage` function moves with its unchanged file. Public Make
+target names remain. The change removes independently maintained recipes and a
+pin owner; it does not claim total physical LOC savings after vendoring includes.
+
+[Exact Shared 0.2.6 CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37944389294)
+passes Linux portable regression (job 113866777007) and lint/security (113866777285).
+Both native macOS jobs (113866776748/113866777469) remain queued at inspection.
+Source/export/mode, companion closure, snapshot integrity, shell syntax, document
+references, whitespace and locked offline metadata checks are preparation evidence.
+They do not qualify consumer formatter execution, setup or native behavior.
+The maintainer operates the changed fixtures and normal complete gate; no
+contributor test, build, lint, installation, staging, commit or release ran.
+
+The one undated 0.16.3 draft is repository-only. Timer source/API is unchanged;
+expected production Wasm/instruction/heap impact is zero, without new measurements.
+Prefer bundling maintenance with the next code-bearing release unless the
+maintainer explicitly selects a repository-only patch. #34's Testkit acceptance
+remains separate from this Make adoption and from the frozen #30 transport results.
+The new upstream [outer-Make ignore-errors finding](https://github.com/dragginzgame/shared-tooling/issues/30#issuecomment-6083156831)
+also remains open. This adoption does not claim that `make -i` can propagate a
+helper refusal: that requires admission at the shared Make boundary, beyond the
+existing directly callable runner/hook guards. No copied flag parser or local
+replacement framework is introduced.
+
+Earlier adoption records retain their source and qualification scope.
+
 ## Shared Tooling 0.2.5 refresh
 
 After released IC Timers 0.16.1, the authorized continuation refreshes the
@@ -1866,7 +1935,8 @@ when the retention destination fails. Full gate membership and ordering remain.
 The local retry wrapper and its duplicate fixtures are removed.
 The shared formatting hook and installer are vendored unchanged. Local formatting
 targets sort both workspace catalogs and format Rust; explicit setup and hosted
-CI use `cargo-sort` 2.1.4 from [tool-versions.env](../tool-versions.env).
+CI use `cargo-sort` 2.1.4 from the then-selected root `tool-versions.env`
+(retired by the [0.2.6 adoption](#shared-tooling-026-make-adoption)).
 The existing two-workspace release boundary and independently centralized
 dependency catalogs remain explicit in [AGENTS.md](../AGENTS.md).
 The numbered pending changelog follows the new shared version-selection rules;

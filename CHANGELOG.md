@@ -2,6 +2,29 @@
 
 All notable changes to this project are recorded here.
 
+## [0.16.3]
+
+### Development
+
+- Adopt committed Shared Tooling 0.2.6 formatting and standard-release Make
+  includes. Keep direct delivery authoritative even when environment or Make
+  variables request PR delivery, and bind these entrypoints to the reviewed root
+  snapshot; retain exact-version and phase adapters
+  ([shared #91](https://github.com/dragginzgame/shared-tooling/issues/91)).
+- Remove the duplicate formatter pin file. Make, CI, developer setup and the
+  staged-index hook fixture use `ci/tool-versions.env`; move the shared formatter
+  checker and its fixture into the root snapshot. Update disposable Make callers
+  and release argument/failure coverage together
+  ([shared #92](https://github.com/dragginzgame/shared-tooling/issues/92)).
+- This batch is repository-only maintenance; timer APIs and production code are
+  unchanged. Consumer fixture execution and native qualification remain pending
+  ([adoption owner](docs/shared-tooling.md#shared-tooling-026-make-adoption)).
+- Run the maintained PocketIC recovery and policy-cohort targets in Linux PR/main
+  CI after probe lint, using the prepared internal toolchain and Testkit-admitted
+  server. This adds actual product startup evidence to the existing setup and
+  fixture checks; it does not claim acceptance before the new job passes
+  ([#34](https://github.com/dragginzgame/ic-timers/issues/34)).
+
 ## [0.16.2] - 2026-10-09
 
 ### Development

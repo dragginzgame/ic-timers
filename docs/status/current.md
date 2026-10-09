@@ -12,23 +12,29 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Current release and remaining acceptance
 
-Released **0.16.1** is `6b508cc0ebcb215d04c2c54ce234d984cb771eda`.
-The maintainer reports it live. Its [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37938451791)
-passes Linux/MSRV with both native macOS gates queued; [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37938451752)
-passes. The released graph selects Testkit **0.27.0**, Host **0.9.2**, Metrics
-**0.3.2** and PocketIC **16.1.0**. A later incoming lock selects Testkit **0.27.1**
-and all four Host crates at **0.9.3**;
-that graph is preserved and remains separate from this release's evidence.
+Released **0.16.2** is `1e1255dc489dead90bbcbf7cd404deedf89300d0`.
+The maintainer reports it live. Its [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37941328947)
+passes Linux/MSRV with both native macOS gates queued; [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37941327820)
+passes. The released graph selects Testkit **0.27.1**, all four Host crates at
+**0.9.3**, Metrics **0.3.2** and PocketIC **16.1.0**.
 
-The authorized continuation prepares **0.16.2** repository-only maintenance.
-All three snapshots now select committed Shared **0.2.5**
-`04e07b4bf54e7aeb03eb7804a845cee27b7305df` through the unchanged **49/30/13**
-selections. The [adoption owner](../shared-tooling.md#shared-tooling-025-refresh)
-records canonical exports, hook pathname handling, fixture companions and pending
-native qualification. Shared Linux/lint pass; both native macOS jobs are queued.
-Cargo, consumer pins and Git hook configuration remain unchanged by the refresh.
-Tests/builds/lint and release execution remain user-owned. Do not tag solely for
-repository maintenance without the maintainer's explicit release selection.
+The authorized continuation prepares **0.16.3** repository-only maintenance.
+All three snapshots select committed Shared **0.2.6**
+`ce13a5314916891fd239d9b199b4a91b04775054` through **53/30/11** selections.
+The [adoption owner](../shared-tooling.md#shared-tooling-026-make-adoption)
+records the canonical formatting/release includes, sole formatter pin ownership,
+fixture propagation and pending native qualification. Root `tool-versions.env`
+is removed; current callers use `ci/tool-versions.env`. Shared Linux/lint pass;
+both native macOS jobs are queued. Cargo, consumer pins and hook configuration
+remain unchanged by the adoption. Tests/builds/lint and release execution remain
+user-owned. Do not tag solely for maintenance without explicit release selection.
+
+For #34, the same draft now adds maintained PocketIC recovery/cohort execution
+to the Linux checks job after probe lint, using the prepared internal toolchain.
+The [qualification owner](../releasing.md#linux-product-qualification-for-0163)
+records the former setup-only gap and acceptance scope. It reuses existing Make
+and Testkit owners; matching Linux execution and both queued macOS gates remain
+pending. #35 also removes duplicate `.PHONY` declarations now owned by its includes.
 
 **#30 is closed with completed compact transport qualification.** All six frozen v0.14.23
 producers reach the intended failure and archive/upload successfully; all six
@@ -781,16 +787,19 @@ verification is scoped in the [0.10.21 note](../changelog/0.10.21.md).
 
 ## Next action
 
-The 0.16.1 release is live. Review the one 0.16.2 maintenance draft and the
-coordinated Shared 0.2.5 refresh; no timer-runtime feature is justified by this
-batch. Maintainer validation supplies current consumer hook/setup and full
-native acceptance. Contributor preparation does not execute tests/builds/lint
-or mutate Cargo versions/locks, stage, commit or release.
+The 0.16.2 release is live. Review the one 0.16.3 maintenance draft, coordinated
+Shared 0.2.6 Make adoption and Linux product qualification step. The maintainer runs the updated release-gate,
+committed-metadata and staged-hook fixtures through the normal complete gate;
+contributor preparation does not execute tests/builds/lint or mutate Cargo,
+stage, commit or release. No timer-runtime feature is justified by this batch.
 
 #30's six frozen observations are complete; retain their original source and
 artifact scope. Keep #34 open until actual three-host setup/offline admission,
 product startup/recovery and cohort evidence qualifies the selected handoff.
 Do not redispatch completed or queued observations, weaken a gate, or infer
-macOS behavior from Linux. The separate formatter consolidation remains outside
-this refresh. Preserve the incoming Testkit 0.27.1 / Host 0.9.3 lock selection without
-relabelling the 0.16.1 runs.
+macOS behavior from Linux. The formatter consolidation is now prepared with its
+canonical owner; current native qualification remains pending.
+Shared #7 retains the generic smoke-fixture routing fix; this consumer binds its
+format/release entrypoints to the reviewed root. Shared #30 retains outer-Make
+ignore-errors admission. Neither is closed by source-only preparation. Consumer
+#35 owns this adoption until its user-operated fixture and native evidence arrive.

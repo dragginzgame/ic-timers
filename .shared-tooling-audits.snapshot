@@ -1,14 +1,14 @@
 # Shared Tooling snapshot v1
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	04e07b4bf54e7aeb03eb7804a845cee27b7305df
+revision	ce13a5314916891fd239d9b199b4a91b04775054
 file	faa9a62257ecdfd6532ac2225b3fd053012dfe9c35b8bc2ddc95288d8626a518	-	audits/README.md
 file	518d890bf485bef06c316b4cf26ac6bf357ed52bcce995e8d9b1232a103d0ea3	-	audits/code-hygiene.md
 file	35fd87d36a09ed0971841abf28535d43470c713a82581c2251b924da1ab8f484	-	audits/flow-convergence-and-duplication.md
 file	ffdca09602c44c8aff8fc2a17588b20eb6a56e2e71fb6d42ad75087fdd65819b	-	audits/complexity-and-technical-debt.md
 file	1b64cf2ba0393ab329ec29eb05a696d47ef5933f5ab9bff6e1fe4a7e7b294075	-	audits/module-surface-hardening.md
 file	8f415bcb0e97fcc0e27519e727e7aefae94686e6e5e3619d24e3df3ace5d7708	-	audits/module-cleanup.md
-file	2f07378fef5bda41bd21a1c1157fc9cf5ce6562bd273c0e05e1cd1755c9faf35	-	docs/consuming-snapshots.md
+file	c504bfccb87ae2bbd286c9182076ff82d86ea274126edb97cfdb108e5cf98931	-	docs/consuming-snapshots.md
 file	1a0d1d6f2a87a0d77378fdda605f5700cc7e2ca8c8dfac79418248da30b7e657	-	docs/provenance.md
 file	67cc50a0c95ad7d9d50b4a50ec2969ce3455c7fdefc4a4a61e00f3a68a7d501c	-	docs/ic-tools.md
 file	077c98e506e8b3998b3b9e668b656c60a502610df06a513e4241bf93bc01b790	-	docs/local-setup.md

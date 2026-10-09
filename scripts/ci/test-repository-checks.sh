@@ -11,7 +11,8 @@ git init -q "${temporary_root}"
 mkdir -p "${temporary_root}"/{.githooks,scripts/{ci,dev,release},.shared-tooling/helpers/scripts/ci,crates/ic-timers/src}
 cp "${repository_root}/Makefile" "${temporary_root}/Makefile"
 mkdir -p "${temporary_root}/make"
-cp "${repository_root}/make/tools.mk" "${temporary_root}/make/"
+cp "${repository_root}/make/tools.mk" "${repository_root}/make/rust-format.mk" \
+    "${repository_root}/make/release.mk" "${temporary_root}/make/"
 cp "${repository_root}/scripts/ci/check-provider-boundary.sh" "${temporary_root}/scripts/ci/"
 cp "${repository_root}/.shared-tooling/helpers/scripts/ci/check-dependency-pins.sh" \
     "${repository_root}/.shared-tooling/helpers/scripts/ci/dependency-pins.jq" \
