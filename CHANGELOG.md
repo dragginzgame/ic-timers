@@ -6,6 +6,9 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Check Make-mode refusal by exit status, absence of release phases and unchanged
+  metadata in the version-preparation fixture. Remove its stale error-prose
+  assertion, which rejected the correctly functioning Shared 0.2.8 guard.
 - Adopt committed Shared Tooling 0.2.8 Make admission. Refuse ignore-errors,
   dry-run, touch and question modes before recipes when invocation flags are
   preserved; use the selected include and running Make executable while retaining

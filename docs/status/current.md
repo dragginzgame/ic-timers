@@ -50,6 +50,16 @@ records a bypass when command-line MAKEFLAGS hides the actual invocation modes;
 the adoption does not claim complete unsafe-mode protection. Upstream Linux
 portable/lint jobs pass, with both native macOS jobs queued at inspection.
 
+The maintainer's later gate passes release-gate/standard-adapter checks, then
+fails version preparation at the retained fixture
+`/tmp/timer-version-test.hPIL7K/`. Its first unsafe-mode log shows correct shared
+parse-time rejection; the consumer's old error-prose assertion caused the silent
+failure. The local repair now checks status 2, no release-phase events and
+unchanged metadata, with failure diagnostics. The
+[adoption owner](../shared-tooling.md#shared-tooling-028-make-admission) records
+retained failure evidence and current repair scope. The 0.16.4 draft includes this repair; fixture and
+complete-gate reruns remain user-owned. Preserve incoming Cargo release edits.
+
 The latest registry review finds Testkit **0.27.2**, Metrics **0.3.4** and all
 four Host crates **0.9.7**. Testkit/Metric library source is unchanged from the
 released graph; Host changes only response decoding, which this consumer does

@@ -354,8 +354,8 @@ if "${fixture_make[@]}" release-x VERSION= > release-x-empty-version.log 2>&1; t
 fi
 test ! -f release-events
 # Actual Make dispatch must stop before every leaf phase and metadata mutation.
-# Outer Make -i may itself return success after ignoring the guard's error;
-# version-only Make never dispatches the recipe. Neither may produce effects.
+# The shared include rejects unsafe execution modes while parsing; version-only
+# Make never dispatches the recipe. Neither may produce effects.
 # GNU Make 3.81 on macOS ignores GNUMAKEFLAGS; 4.0 introduced it.
 mode_variables=(MAKEFLAGS)
 make_version="$(make --version)"
@@ -368,13 +368,20 @@ for variable in "${mode_variables[@]}"; do
             > "${mode_output}" 2>&1 || mode_status=$?
         case "$flags" in
             v|--version) ;;
-            *) grep -Fq 'requires recipe execution and failure propagation' "${mode_output}" ;;
+            *)
+                if [[ "$mode_status" != 2 ]]; then
+                    cat "${mode_output}" >&2
+                    echo "error: Make did not reject $variable=$flags before release phases (status $mode_status)" >&2
+                    exit 1
+                fi
+                ;;
         esac
-        case "$flags" in
-            i|--ignore-errors|v|--version) ;;
-            *) test "$mode_status" -ne 0 ;;
-        esac
-        test ! -f release-events
+        if [[ -f release-events ]]; then
+            cat "${mode_output}" >&2
+            cat release-events >&2
+            echo "error: Make dispatched release phases with $variable=$flags" >&2
+            exit 1
+        fi
         assert_metadata_unchanged original-files
     done
 done

@@ -60,6 +60,23 @@ acceptance open. Do not describe the adopted probe as complete unsupported-mode
 protection. Consumer fixture execution, portable direct-policy parsing and native
 macOS gates also remain pending.
 
+The maintainer's subsequent retained validation passes release-gate execution
+and standard adapter checks, then stops in the version-preparation fixture.
+The repair base inspected here is `33d902012e71f28c3d6d55a116b638e7d43eed3b`
+with incoming Cargo release edits; those edits remain untouched. Retained
+`/tmp/timer-version-test.hPIL7K/MAKEFLAGS-i.log` proves the shared include rejected
+the first unsafe invocation while parsing. The consumer still required the older
+helper's exact refusal phrase and exited silently on that prose mismatch. The
+local repair removes that assertion and the obsolete allowance for ignored
+recipe failures: unsafe modes now require Make status 2, no release-phase events
+and unchanged metadata bytes/modes. A failed status/effect check prints its
+retained output. Version-only invocations retain their no-effect contract.
+Failure evidence remains at
+`.git/release-state/validation-failures/20261009T170629Z-3470085-3-ci.log`.
+This is a consumer fixture repair, not a canonical guard change or a fix for the
+separate MAKEFLAGS override gap. Shell syntax and whitespace checks pass; no
+contributor fixture/test/build/lint/release rerun qualifies the repair.
+
 Earlier adoption records retain their source and qualification scope.
 
 ## Shared Tooling 0.2.6 Make adoption
