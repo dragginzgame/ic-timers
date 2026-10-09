@@ -39,6 +39,15 @@ fi
 if [[ -d "$root/target/validation-failures" ]]; then
     selections+=("$root" target/validation-failures)
 fi
+# Preserve failed CLI builds and Testkit provisioning attempts, never its admitted
+# server bundles. Testkit owns the attempt prefix and preserves those directories.
+if [[ -d "$root/.tools/rust/build" ]]; then
+    selections+=("$root" .tools/rust/build)
+fi
+for attempt in "$root"/.tools/testkit-server/.setup-v1-*; do
+    [[ -d "$attempt" && ! -L "$attempt" ]] || continue
+    selections+=("$root" "${attempt#"$root"/}")
+done
 # The shared selector freshly checks the exact managed selections with our pins.
 # Failed, changed and unselected bundles stay full; verified sets retain checks
 # and receipts. Keep selection output on disk so producer failure cannot be lost
@@ -53,5 +62,11 @@ done < "$metadata/tool-selections.nul"
 if [[ -d "$metadata/tool-evidence/host" || -d "$metadata/tool-evidence/ic" ]]; then
     selections+=("$metadata" tool-evidence)
 fi
+archive_started=$SECONDS
 bash "$script_root/scripts/ci/archive-evidence.sh" "$archive" "${selections[@]}"
+archive_seconds=$((SECONDS - archive_started))
+archive_bytes="$(wc -c < "$archive")"
+archive_bytes="${archive_bytes//[[:space:]]/}"
+printf 'CI failure evidence measurements: archive_bytes=%s archive_seconds=%s\n' \
+    "$archive_bytes" "$archive_seconds"
 printf 'CI failure evidence archived at: %s\n' "$archive"

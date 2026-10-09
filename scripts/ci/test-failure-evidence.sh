@@ -48,9 +48,24 @@ unusual=$'colon:and\nnewline\n'
 printf 'unusual filename bytes\n' > "$scratch/$unusual"
 chmod 0640 "$scratch/$unusual"
 
+mkdir -p "$GITHUB_WORKSPACE/.tools/rust/build/failed-cli" \
+    "$GITHUB_WORKSPACE/.tools/testkit-server/.setup-v1-failed" \
+    "$GITHUB_WORKSPACE/.tools/testkit-server/admitted"
+printf 'failed Cargo build\n' > "$GITHUB_WORKSPACE/.tools/rust/build/failed-cli/install.log"
+printf 'failed server download\n' > "$GITHUB_WORKSPACE/.tools/testkit-server/.setup-v1-failed/failure.txt"
+printf 'admitted server bytes\n' > "$GITHUB_WORKSPACE/.tools/testkit-server/admitted/pocket-ic"
 bash "$root/scripts/ci/collect-failure-evidence.sh" > "$fixture/collection.log" 2>&1
+archive_bytes="$(wc -c < "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz")"
+archive_bytes="${archive_bytes//[[:space:]]/}"
+grep -Eq "^CI failure evidence measurements: archive_bytes=${archive_bytes} archive_seconds=[0-9]+$" \
+    "$fixture/collection.log"
 mkdir "$fixture/extracted"
 tar -xzpf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" -C "$fixture/extracted"
+for path in .tools/rust/build/failed-cli/install.log .tools/testkit-server/.setup-v1-failed/failure.txt; do
+    cmp "$GITHUB_WORKSPACE/$path" "$fixture/extracted/$path"
+done
+test ! -e "$fixture/extracted/.tools/testkit-server/admitted"
+
 for path in scenario.log before "$unusual"; do
     cmp "$scratch/$path" "$fixture/extracted/ic-timers-fixtures/failed case/$path"
 done
@@ -134,7 +149,6 @@ printf '%s\n' "$ic_host" > "$GITHUB_WORKSPACE/.tools/ic-set.active/host"
 while IFS=$'\t' read -r tool version selected_host _; do
     [[ "$tool" != \#* && "$selected_host" == "$ic_host" ]] || continue
     report="$tool $version"
-    [[ "$tool" != pocket-ic ]] || report="pocket-ic-server $version"
     [[ "$tool" != wasm-opt ]] || report="wasm-opt version $version"
     payload="$GITHUB_WORKSPACE/.tools/ic-set.active/bin/$tool"
     printf '#!/bin/sh\nprintf "%%s\\n" "%s"\n' "$report" > "$payload"
@@ -152,6 +166,10 @@ if cmp -s "$GITHUB_WORKSPACE/ci/ic-tools.tsv" "$GITHUB_WORKSPACE/.tools/ic-set.a
     exit 1
 fi
 bash "$root/scripts/ci/collect-failure-evidence.sh" > "$fixture/compact-collection.log" 2>&1
+archive_bytes="$(wc -c < "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz")"
+archive_bytes="${archive_bytes//[[:space:]]/}"
+grep -Eq "^CI failure evidence measurements: archive_bytes=${archive_bytes} archive_seconds=[0-9]+$" \
+    "$fixture/compact-collection.log"
 mkdir "$fixture/compact-extracted"
 tar -xzpf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" -C "$fixture/compact-extracted"
 for kind in host ic; do
@@ -223,6 +241,10 @@ PATH="$fixture/bin:$PATH" bash "$root/scripts/ci/collect-failure-evidence.sh" \
     > "$fixture/failed-collection.log" 2>&1 || collection_status=$?
 test "$collection_status" -eq 1
 grep -Fq 'injected archive failure' "$fixture/failed-collection.log"
+if grep -Fq 'CI failure evidence measurements:' "$fixture/failed-collection.log"; then
+    echo 'error: failed collection reported completed archive measurements' >&2
+    exit 1
+fi
 printf 'partial archive bytes' > "$fixture/expected-partial"
 cmp "$fixture/expected-partial" "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz"
 # A retained partial output must not be overwritten by a subsequent attempt.

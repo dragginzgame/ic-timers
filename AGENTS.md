@@ -5,33 +5,32 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `3d33cd250fcae7dbe5cabe44b2abd6b2c91a1822` (committed 0.1.34
-  follow-up; source VERSION 0.1.33). Its provenance and
+  from revision `06b2e22f6bd213f1a590eb2a8797aee34c42dd69` (0.2.1). Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
 - Apply the [shared audit methods](audits/README.md) from revision
-  `3d33cd250fcae7dbe5cabe44b2abd6b2c91a1822`, recorded separately in
+  `06b2e22f6bd213f1a590eb2a8797aee34c42dd69`, recorded separately in
   [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). That
   supplemental snapshot also supplies pinned host/IC setup at the same
   reviewed revision. The isolated
   [Cargo helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
   supplies the structured dependency checker, Cargo readers/rewrites, formatter prerequisite guard, annotated-tag checker and release-command
-  adoption checker from `3d33cd250fcae7dbe5cabe44b2abd6b2c91a1822`. Apply the
+  adoption checker from `06b2e22f6bd213f1a590eb2a8797aee34c42dd69`. Apply the
   [dependency pinning rules](rules/dependency-pinning.md) with the exact local
   [qualification exceptions](docs/releasing.md#dependency-pin-exceptions).
   The [local hygiene overlay](docs/audits/code-hygiene.md) and adoption record scope
   their product obligations. This supplements the pinned baseline's review
-  contract. Host and IC setup are explicit; verification is offline. The local
-  audited PocketIC admission and automatic single-artifact provisioning contract
-  remain separate from generic IC setup. The paired baseline and maintenance
+  contract. Host, IC and Testkit server setup are explicit; verification is offline.
+  Testkit owns PocketIC provisioning, checksums and compatibility admission;
+  the local adapter selects its CLI from the one root lockfile. The paired baseline and maintenance
   rule are adopted together; all three snapshots use the same reviewed revision.
   Common setup/check/LOC commands come from [make/tools.mk](make/tools.mk);
   Make, update-dev and CI select the complete pinned host bundle.
-  The consumer-owned [IC pin matrix](ci/ic-tools.tsv) selects the product-selected
-  PocketIC pair and is excluded from the immutable audit export. Shared installers
-  still receive that one explicit matrix; the upstream default catalog cannot
-  overwrite local artifact admission during a snapshot refresh.
+  The consumer-owned [IC pin matrix](ci/ic-tools.tsv) selects the five shared
+  tools and is excluded from the immutable audit export. It contains no PocketIC
+  policy. Shared installers receive that explicit matrix; a snapshot refresh
+  cannot overwrite consumer tool selections.
   Optional helpers described in shared guides do not become local commands
   without a separate caller adoption.
   The linked [maintenance catalog](tasks/README.md) is included as reviewed
@@ -57,7 +56,8 @@ This file is normative for automated contributors.
 - macOS host workflows are required by the shared baseline. The local
   [host matrix](docs/releasing.md#host-support) records current qualification
   gaps; Linux evidence does not qualify macOS. A baseline refresh alone does
-  not close those gaps or authorize weakening the pinned PocketIC gate.
+  not close those gaps or authorize weakening Testkit admission or product
+  PocketIC recovery/cohort gates.
 - The native `platform` substitute is test-only evidence, not simulated IC
   recovery. Production platform paths and PocketIC evidence retain their own
   contracts; never use a test configuration to change production guarantees.
@@ -151,11 +151,12 @@ This file is normative for automated contributors.
   empty notes, or a missing chosen version must not block deployment; ambiguous
   release selection is resolved during preparation. The user runs `release-verify`
   as part of deployment; it must retain the normal CI,
-  MSRV, probe lint, watchdog PocketIC, and policy-cohort gates; it fails
-  closed unless `POCKET_IC_BIN` matches the exact audited PocketIC version and
-  hash. When no override is supplied, provision that pinned artifact in the
-  ignored repository tool cache automatically; never weaken validation or
-  overwrite an explicit override. After version mutation, update every local member in the root lockfile
+  MSRV, probe lint, watchdog PocketIC, and policy-cohort gates. Release
+  preparation explicitly installs the root-lock
+  selected Testkit CLI and its server; validation uses the owner's offline check
+  and passes only that admitted absolute path to the probes. Retire local server
+  pins, override admission and implicit provisioning; never add a second server
+  installer or compatibility route. After version mutation, update every local member in the root lockfile
   and verify the complete graph with a cheap locked metadata check. The user
   stages the root lockfile. Do not require the maintainer to edit a changelog heading
   by hand, prepare a test binary manually, or remember a separate evidence command.

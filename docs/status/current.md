@@ -12,19 +12,20 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Current release and remaining acceptance
 
-Released **0.14.22** is `3c288715a64952a418cb9649a9b9bee27be56e85`, tag
-`v0.14.22`; the maintainer reports it pushed.
-[Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37898799656)
-passes Linux checks/probe lint, MSRV and both complete native macOS gates;
-[tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37898799653)
-passes. The released lock selects Testkit 0.25.3, Host 0.8.6, Metrics 0.2.16 and
-PocketIC 16.1.0. This supersedes the failed local release fixture's stale relative
-path assertion. Registry publication was not independently checked.
+Released **0.14.23** is `10a392f98d42701959d0c1d2deddfbef5c96144a`, tag
+`v0.14.23`, observed in the local release commit and hosted runs.
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37904587019)
+passes; [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37904586955)
+now passes Linux, MSRV and both complete native macOS gates, qualifying the
+released cleanup callers. The released lock
+selects Testkit 0.25.4, all four Host crates at 0.8.8, Metrics 0.2.18 and
+PocketIC 16.1.0. Prior 0.14.22 passed all normal native gates. Registry publication
+was not independently checked.
 
-The undated **0.14.23** draft adopts committed Shared follow-up
+Released **0.14.23** adopts committed Shared follow-up
 `3d33cd250fcae7dbe5cabe44b2abd6b2c91a1822` through **49/33/13** snapshots
 (labelled 0.1.34, committed VERSION 0.1.33), with complete upstream native CI.
-For [#33](https://github.com/dragginzgame/ic-timers/issues/33), remove the unused
+For [#33](https://github.com/dragginzgame/ic-timers/issues/33), removed the unused
 fleet reporter and dedicated suite, their manifest records and local CI/help
 references: **405 code LOC** in two files. Workspace LOC, all tool setup/check
 commands and required companions remain. The optional shared target explains its
@@ -38,21 +39,62 @@ user-owned. The [adoption owner](../shared-tooling.md#shared-tooling-committed-0
 records exact scope and evidence at `/tmp/ic-timers-01423.KPKxjw/`.
 
 Host 0.8.8's direct-child ownership and no-follow streaming hashing do not justify
-new Timers callers: Testkit remains the server owner. Incoming lock edits select
-Testkit 0.25.4, all four Host crates at 0.8.8 and Metrics 0.2.17. Preserve these
-edits; they need their own graph qualification and are not contributor updates.
-Timer source/API, Cargo manifest and consumer IC/host pin bytes remain unchanged.
-This tooling-only batch has no expected timer Wasm/instruction/heap delta and can
-remain untagged until code-bearing work.
+new Timers callers: Testkit remains the server owner. The dependency edits are
+now in the released lock and qualified by matching native main CI. Contributors
+did not mutate that graph. Timer source/API and consumer IC/host
+pins were unchanged by the tooling cleanup.
 
-[#30](https://github.com/dragginzgame/ic-timers/issues/30) now has released compact
-collector implementation and passing normal native gates. It remains open for
-fresh exact-source early/late hosted upload/download verification and actual
-archive bytes/time measurements. The six frozen v0.14.17 observations are already
-complete, as recorded by the [evidence owner](../releasing.md#evidence-path-repair-and-01417-qualification);
-they do not qualify compact transport. No new workflow is dispatched here.
-#33 remains open for changed-caller native qualification. No local tests/builds/
-lint, dependency update, staging, commit, tag, push or release execution runs.
+The maintainer authorized the latest Shared ownership hard cut. The pending
+**0.15.0** draft supersedes 0.14.24; Cargo versions remain 0.14.23. All three
+snapshots now select committed Shared **0.2.1**
+`06b2e22f6bd213f1a590eb2a8797aee34c42dd69` (VERSION 0.2.1) through **49/30/13**
+exports. Remove shared PocketIC helpers/fixture and matrix rows together; retain
+the other five tools. The [adoption owner](../shared-tooling.md#shared-tooling-020-hard-cut)
+records exact scope, deleted functions and pending native qualification.
+
+`make install-testkit-server` explicitly prepares the root-lock selected Testkit
+CLI and its owner server. `pocketic-check` is offline. Release preparation and
+CI/update-dev select the adapter; watchdog/cohorts pass only the rechecked admitted
+path and retain their existing fresh-server topology. Remove the local downloader,
+raw-hash/version catalog, alignment rule, Make override and their tests. Failed
+CLI builds/provisioning attempts remain retained; admitted server payloads are
+not archived. The existing #30 size/time output and its tests stay in the one
+draft. Timer API, production Wasm and instructions are unchanged.
+
+Incoming maintainer edits now select Testkit 0.26 in the root catalog and
+Testkit 0.26.0, all four Host 0.9.0 and Metrics 0.2.20 in the lock. Contributors
+did not mutate Cargo or update dependencies. The adapter
+reads that sole lock instead of introducing a second CLI version catalog. The
+Shared exception parser fix is adopted exactly; our actual exceptions still
+have one document. Earlier Shared 0.2.0 Linux/lint and production-installer Linux qualification pass;
+both native macOS assessments remain pending. Source/syntax/snapshot/document checks are preparation evidence,
+not consumer setup or real startup qualification. New fixtures/builds/lint and
+release execution remain user-owned; no installation ran for this cut.
+
+The authorized cargo-sort consolidation remains separate and pending. The
+canonical index hook still exposes no invoking tool-root for nested selected
+receipt admission. Keep its current formatter route until that owner input and
+native production evidence arrive; do not patch immutable shared payloads.
+
+[#30](https://github.com/dragginzgame/ic-timers/issues/30) is actively qualifying
+frozen v0.14.23 in the authorized [early run](https://github.com/dragginzgame/ic-timers/actions/runs/37912633994)
+and [late run](https://github.com/dragginzgame/ic-timers/actions/runs/37912637422),
+both attempt 1. Linux reaches the intended status 22/2, archives/uploads, and
+its actual downloads pass the frozen verifier. Early/late outer ZIPs are
+1,341/5,118 bytes; late inner tar.gz is 4,649 bytes. Both macOS hosts and hosted
+verifiers remain pending: keep the issue open, do not redispatch or count an
+unrelated setup failure. The [evidence owner](../releasing.md#compact-hosted-qualification-at-01423)
+records identity, comparison/time scope and retained files at
+`/tmp/ic-timers-issue30.vdZlUd/`. These runs qualify released compact transport,
+not the dirty 0.15.0 measurement output or incoming lock graph. The six frozen
+v0.14.17 observations remain complete with their original scope.
+
+#33 is closed with all three native logs. Shared #86's committed parser fix is
+now adopted; native acceptance remains upstream-owned. Current #30 work ran its
+authorized focused fixtures and two hosted dispatches before this hard cut.
+Those results do not qualify the subsequent changed fixtures or five-tool
+shape. No dependency update, staging, commit, version mutation, tag, push or
+release execution ran.
 
 ## Released 0.14.5 tooling
 
@@ -657,10 +699,15 @@ verification is scoped in the [0.10.21 note](../changelog/0.10.21.md).
 
 ## Next action
 
-The 0.14.22 compact collector and its new fixture need the normal user-operated
-validation and complete native gates. After a committed source is selected,
-qualify its early/late compact upload/download and measure actual archive bytes
-and collection time under #30. The previous frozen six observations are complete;
-do not redispatch them or relabel them as compact acceptance. #31/#32 are closed.
-No new timer feature, dependency update or independent release is justified by
-this repository-only batch; keep one undated draft.
+The 0.15.0 hard cut is prepared. Maintainer validation must exercise the adapter
+and release-gate/collector fixtures, explicit replacement of an old six-tool
+bundle, Testkit setup/offline admission, and the complete watchdog/recovery and
+cohort gates on Linux, Intel macOS and Apple Silicon. Shared's source CI and
+native production installer qualification remain pending; record actual source
+before claiming acceptance. Cargo/release execution remain maintainer-owned.
+
+Continue the two existing frozen v0.14.23 #30 runs; do not dispatch duplicates.
+Both Linux downloads pass; both macOS stages and hosted verifiers remain pending.
+Those runs qualify their frozen compact collector, not the 0.15.0 owner handoff
+or measurement output. The separate formatter consolidation still needs Shared's
+explicit index-export tool root. Do not add a second server or formatter route.

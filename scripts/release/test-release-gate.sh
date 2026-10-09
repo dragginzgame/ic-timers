@@ -57,7 +57,7 @@ if bash "${impact_checker}" unexpected 0.6.0 >/dev/null 2>&1; then
     exit 1
 fi
 
-# Host-specific artifact admission is exercised by test-pocketic-verification.sh.
+# Testkit owns host-specific artifact admission; test-testkit-server.sh checks our adapter.
 # Execute the real orchestration with cheap leaf targets. Expected checks remain
 # independent of Makefile variables; their spelling and recipe layout do not.
 temporary_root="$(mktemp -d)"
@@ -149,72 +149,30 @@ for target in build test msrv; do
     done
 done
 
-# Exercise the actual recipe and Make variable origins without provisioning.
-mkdir -p scripts/ci
+# Exercise explicit setup and offline admission through the real Make adapter.
+mkdir -p scripts/ci scripts/dev
 cp "$repository_root/scripts/ci/run-validation-targets.sh" \
     "$repository_root/scripts/ci/check-make-execution.sh" scripts/ci/
-cat > scripts/ci/check-pocketic.sh <<'EOF'
-#!/usr/bin/env bash
-printf '%s\n%s\n' "${POCKET_IC_BIN}" "${POCKET_IC_AUTO_INSTALL}" > provisioning
-if [[ -z "${POCKET_IC_BIN}" ]]; then exit 2; fi
-EOF
-cat > scripts/ci/check-pocketic-alignment.sh <<'EOF'
+cat > scripts/dev/testkit-server.sh <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-if [[ $# != 4 || "$1" != --manifest ||
-    "$2" != "${VALIDATION_REPOSITORY_ROOT}/Cargo.toml" || "$3" != --pins ||
-    "$4" != "${VALIDATION_REPOSITORY_ROOT}/ci/ic-tools.tsv" ]]; then
-    printf 'error: unexpected PocketIC alignment arguments: ' >&2
-    printf '%q ' "$@" >&2
-    printf '\n' >&2
-    exit 2
-fi
-printf '%s\n' alignment > alignment
-exit "${FIXTURE_ALIGNMENT_STATUS:-0}"
+printf '%s\n' "$@" >> server-events
+exit "${FIXTURE_SERVER_STATUS:-0}"
 EOF
-default_binary="${fixture_root}/target/tools/pocket-ic/16.1.0/pocket-ic"
-for source in default environment command-line same-as-default empty; do
-    case "${source}" in
-        default)
-            env -u POCKET_IC_BIN make --no-print-directory pocketic-check >/dev/null
-            expected_path="${default_binary}"; expected_install=1 ;;
-        environment)
-            POCKET_IC_BIN=/explicit/environment make --no-print-directory pocketic-check >/dev/null
-            expected_path=/explicit/environment; expected_install=0 ;;
-        command-line)
-            make --no-print-directory pocketic-check POCKET_IC_BIN=/explicit/command-line >/dev/null
-            expected_path=/explicit/command-line; expected_install=0 ;;
-        same-as-default)
-            make --no-print-directory pocketic-check "POCKET_IC_BIN=${default_binary}" >/dev/null
-            expected_path="${default_binary}"; expected_install=0 ;;
-        empty)
-            if make --no-print-directory pocketic-check POCKET_IC_BIN= >/dev/null 2>&1; then
-                echo 'error: empty PocketIC override was accepted' >&2
-                exit 1
-            fi
-            expected_path=''; expected_install=0 ;;
-    esac
-    printf '%s\n%s\n' "${expected_path}" "${expected_install}" > expected-provisioning
-    if ! cmp -s expected-provisioning provisioning; then
-        cat provisioning >&2
-        echo "error: ${source} PocketIC selection was incorrect" >&2
-        exit 1
-    fi
-done
-rm provisioning alignment
-if FIXTURE_ALIGNMENT_STATUS=1 make --no-print-directory pocketic-check > alignment-output 2>&1; then
-    echo 'error: failed PocketIC client alignment was accepted' >&2
+make --no-print-directory install-testkit-server >/dev/null
+make --no-print-directory pocketic-check >/dev/null
+printf 'setup\ncheck\n' > expected-server-events
+cmp expected-server-events server-events
+if FIXTURE_SERVER_STATUS=31 make --no-print-directory pocketic-check >/dev/null 2>&1; then
+    echo 'error: failed Testkit offline admission was accepted' >&2
     exit 1
 fi
-test -f alignment
-test ! -e provisioning
-env -u POCKET_IC_BIN make --no-print-directory pocketic-check >/dev/null
-rm provisioning
+rm server-events
 cat > overrides.mk <<'EOF'
 # Keep this orchestration fixture independent of prepared formatter tools.
 format-tools-check:
 	@:
-fetch host-tools-check actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package pocketic-check msrv testing-check pocketic-watchdog pocketic-cohorts:
+fetch install-testkit-server host-tools-check actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package pocketic-check msrv testing-check pocketic-watchdog pocketic-cohorts:
 	@printf '%s\n' '$@' >> checks-ran
 	@if [ '$@' = '$(FAIL_TARGET)' ]; then echo 'failed $@' >&2; exit 1; fi
 EOF
@@ -224,7 +182,7 @@ fixture_make=(make --no-print-directory -f Makefile
 # actions-check retains its real host-tools-check prerequisite when its recipe
 # is overridden. Record that admission before the action/dependency leaf.
 ci_targets=(host-tools-check actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package)
-release_targets=(fetch pocketic-check "${ci_targets[@]}" msrv testing-check
+release_targets=(fetch install-testkit-server pocketic-check "${ci_targets[@]}" msrv testing-check
     pocketic-check pocketic-watchdog pocketic-check pocketic-cohorts)
 for gate in ci release-verify pocketic-watchdog pocketic-cohorts; do
     case "${gate}" in

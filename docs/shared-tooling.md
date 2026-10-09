@@ -1,14 +1,183 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.2.0 hard cut
+
+The maintainer explicitly authorized the latest Shared update and ownership hard
+cut on 2026-10-09. All three snapshots now select committed
+`06b2e22f6bd213f1a590eb2a8797aee34c42dd69`, 0.2.1 (VERSION 0.2.1): **49 baseline / 30 audit-setup / 13 helper files**. Canonical exports
+come from a clean isolated checkout; three retired PocketIC records and payloads
+are removed from the audit selection. Consumer IC pins are not an export: their
+three PocketIC rows are removed locally. The source also fixes IC pin processing without a final newline, while retaining
+exact caller bytes; the canonical fixture covers all three host selections. It
+also supplies the 0.1.38
+single-document exception fix and 0.1.37 checkout-local hook PATH repair.
+
+The pending batch becomes **0.15.0**, superseding the undated 0.14.24 draft,
+because the documented server provisioning/override contract is removed. Cargo
+versions and dependencies are not changed by this work. The timer API, private
+provider and fresh-server/instance topology are unchanged; expected production
+Wasm/instruction/heap impact is zero.
+
+The local `scripts/dev/testkit-server.sh` reads exactly one registry Testkit
+selection from the root lockfile, then selects only its published owner CLI via
+the shared Cargo installer, release profile. Explicit setup prepares the CLI and
+owner server; check verifies the CLI receipt/bytes and owner server offline.
+No global-tool fallback, local server catalog/hash policy or implicit check-time
+setup remains. Make/CI/update-dev use this adapter. Release preparation runs
+setup before offline admission; watchdog/cohort commands recheck after builds
+and pass the returned path. Failed CLI builds and provisioning attempts remain
+collectable without selecting admitted server payloads.
+
+Deleted files contain **621 physical lines**: local downloader (95), local
+verification fixture (288), shared alignment (63), shared binary checker (19)
+and shared dedicated fixture (156). Removed named shell functions are `cleanup`
+from the downloader; `usage` from alignment; `expect_failure` from the shared
+fixture; and `expect_events`, `assert_cache_preserved`, `reject_without_execution`
+from the local fixture. Their former pin/provisioning policies belong to Testkit;
+the new adapter tests only lock selection, setup/check separation and propagation.
+No Rust function, method or type is removed. The release orchestration fixture
+retains its actual gate/fail-fast checks and replaces old override cases with
+explicit setup/offline check. The download verifier's synthetic IC matrix is
+updated to the five-tool shape; frozen #30 runs retain their old source verifier.
+
+Source-bound qualification remains pending. Testkit's published 0.25.4 owner
+setup/check/managed-launch contract passed [all native hosts](https://github.com/dragginzgame/ic-testkit/actions/runs/37901828971).
+An incoming maintainer update now selects 0.26.0; consumer CLI compilation/startup and native
+acceptance at that selection are required. [Earlier Shared 0.2.0 CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37916384666)
+passes Linux portable regression and lint/security; both macOS jobs are queued.
+The selected installer has [Linux production qualification](https://github.com/dragginzgame/shared-tooling/actions/runs/37915522504)
+at 0.1.38, while both macOS hosts remain pending. [Shared #76](https://github.com/dragginzgame/shared-tooling/issues/76)
+retains owner/consumer coordination. No all-host acceptance is claimed. Latest exact-source
+[0.2.1 CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37918240103)
+is queued; the 0.2.0 pass does not qualify the final-row fix. Consumer preparation
+is recorded on [Shared #76](https://github.com/dragginzgame/shared-tooling/issues/76#issuecomment-6079190668).
+
+Preparation checks pass: source/export/integrity, shell/Python/workflow syntax,
+311 local document references/anchors, whitespace and full locked offline
+metadata. No contributor manifest/lock mutation ran. During preparation, incoming
+maintainer edits advanced the root Testkit requirement to 0.26 and selected
+Testkit 0.26.0 / Host 0.9.0 / Metrics 0.2.20. Those changes are retained; the
+Timers-used `pic` startup APIs are unchanged. The streaming server check and
+cache-process cleanup belong to their Testkit/Host owners. A fresh full locked/offline metadata read resolves one package identity for
+each selected dependency and leaves both current inputs byte-identical. It is
+graph evidence only; the new native selection still needs the product gate. The new adapter and changed collector/gate
+fixtures, real explicit five-tool/Testkit setup, offline refusal and complete
+native recovery/cohort gates remain maintainer-owned. Evidence is retained under
+`/tmp/ic-timers-shared020.81DJke/`. No installation, tests/builds/lint, dependency
+update, staging, commit, version mutation or release execution ran for this cut.
+
+The follow-up cleanup removes only old split-workspace fixture deletion and
+retired-directory assertions plus the single-manifest loops in the root checker
+and its fixture: **10 net physical lines** in four files. Current failure/status,
+full graph and lock-preservation checks remain. No named function, method or type
+is removed. The actual cheap root metadata check and syntax/diff checks pass;
+Cargo bytes are preserved, and changed fixtures remain unexecuted. Retained
+follow-up evidence: `/tmp/ic-timers-cleanup.pPMGOg/`.
+
+The separate selected cargo-sort consolidation stays pending: the canonical
+index hook still supplies no original tool-root input for checking a nested
+selected installation receipt. Do not patch the shared hook or ship a partial
+formatter route. Existing formatter commands are retained, independently of the
+complete PocketIC ownership cut above. Earlier reviews below keep their original
+source and pending-evidence scope.
+
+## Shared Tooling 0.1.37 review
+
+Reviewed clean committed `dc4fdf0f78928d75b69bbf43b37c690c53a04d1e`
+(`VERSION` 0.1.37). It includes the committed 0.1.36 installer repairs and adds
+the original checkout's fixed host/IC/Rust bin directories to PATH for staged
+formatting and the formatting-adoption checker. Staged source/configuration
+isolation is preserved. This addresses Shared #85's fixed-bundle lookup.
+
+The authorized selected cargo-sort adoption remains pending: the registry mode
+uses a nested installation slot, and the hook still exposes no original tool-root
+input for its offline receipt checks. The already-posted
+[consumer requirement](https://github.com/dragginzgame/shared-tooling/issues/65#issuecomment-6077815113)
+therefore remains relevant. Both 0.1.36 and 0.1.37 normal CI are queued at review;
+no separate native production-installer qualification is listed for either.
+Keep the qualified snapshots and active formatter callers unchanged. No tests,
+installer, dependency update, release draft or workflow dispatch runs here.
+
+Subsequent issue review adds [Shared #86](https://github.com/dragginzgame/shared-tooling/issues/86)
+to refresh prerequisites: its canonical dependency checker validates the last
+exception JSON document but consumes the first, allowing malformed concatenated
+input to suppress a finding. Our nested helper has the same parser; the actual
+consumer exception catalog is a single document. Repair and qualify this at its
+shared owner, then adopt exact bytes rather than patching the consumer copy.
+
+## Shared Tooling 0.1.35 review
+
+Reviewed clean committed `be550afa57fe9e16872e5110b5cd69c24b4fa9e8`
+(`VERSION` 0.1.35). Its network/cache policy distinguishes authorized locked
+preparation from offline validation and respects explicit caller offline settings.
+Timers already uses a Bash release adapter and locked fetch before offline
+metadata checks; no compiled-adapter launcher or preparation change is needed.
+Local user-owned validation, dependency metadata and release exceptions remain.
+
+Defer the three-snapshot refresh. The new selected Cargo binary/example branch
+does not recheck shared ancestors after Cargo returns, unlike its fixed-bundle
+branch. `selected_paths "$stage"` checks the final directory and children, not
+the shared build ancestor or selection slot. The independently reproduced gap
+and smallest owner correction are already recorded in
+[Shared #65](https://github.com/dragginzgame/shared-tooling/issues/65#issuecomment-6077295387).
+Source inspection confirms that omission; no reproduction/test ran in Timers.
+Keep the current qualified 49/33/13 snapshots unchanged rather than patching
+immutable payloads or introducing a caller for the new mode.
+
+[Exact-source CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37904190217)
+has passed Linux portable regression and lint/security; both macOS jobs are still
+running at review. Passing existing fixtures alone cannot close the admission
+gap. Review a committed owner correction and its native evidence before adoption.
+This review creates no release draft, installer execution or dependency update.
+
+### Authorized 0.14.24 formatter consolidation
+
+The maintainer authorized consolidating cargo-sort setup on 2026-10-09. Prepare
+one local entry point selecting only `cargo-sort 2.1.4`, binary `cargo-sort`,
+release profile, through the shared installer. Developer setup and all four
+hosted installation sites must call it after host prerequisites are prepared.
+Retire the five direct `cargo install` recipes together. Do not install the
+unused cargo-sort-derives/candid-extractor bundle or change the formatter pin.
+
+Offline formatter admission must check the selected installation receipt/bytes
+before the existing exact version and rustfmt checks. Trace Make formatting,
+release metadata checks and the shared index-snapshot hook together: that hook
+formats an exported tree with no ignored `.tools` directory, so the prepared
+tool root must remain explicitly bound to the invoking checkout. A per-CURDIR
+lookup alone would break staged formatting. No global-tool fallback should hide
+a missing or changed managed installation.
+
+Shared **0.1.36** is now committed at
+`1af63d31942448a46ef42553285176b98dce9274`. Source inspection confirms the three
+owner corrections: post-Cargo ancestor admission, single-document receipt
+admission and propagation of Cargo's original failed status. See the
+[owner's repair and qualification record](https://github.com/dragginzgame/shared-tooling/issues/65#issuecomment-6077706862).
+The corrected production installer still needs its separate native registry-install
+qualification; normal 0.1.35 portable CI does not supply it. The index-export tool
+root requirement is reported in [consumer feedback](https://github.com/dragginzgame/shared-tooling/issues/65#issuecomment-6077815113).
+The pending shared hook's fixed-bundle PATH enhancement is not an input for
+receipt-checking the new nested registry slot. Keep active Timers commands and
+snapshots unchanged until those prerequisites are met. Then implement
+the callers and their focused fixture together, prepare the undated 0.14.24
+changelog, and leave consumer validation/release execution maintainer-owned.
+
 ## Shared Tooling committed 0.1.34 follow-up
 
-The undated **0.14.23** draft selects committed
+Released **0.14.23** selects committed
 `3d33cd250fcae7dbe5cabe44b2abd6b2c91a1822` through all three snapshots:
 **49/33/13** files. Its commit is labelled 0.1.34; committed `VERSION` is 0.1.33.
 [Exact-source CI](https://github.com/dragginzgame/shared-tooling/actions/runs/37900620129)
 passes Linux, Intel macOS, Apple Silicon and lint/security. Canonical exports
 come from a clean detached temporary clone; dirty sibling changes are excluded.
 The local command-authority exceptions and consumer-owned pins remain.
+
+Consumer acceptance is now complete at released
+`10a392f98d42701959d0c1d2deddfbef5c96144a`:
+[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37904586955) and
+[tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37904587019)
+pass. Inspected Linux, Intel and ARM host logs confirm snapshot export checks,
+shared Make tool commands and local cloc fixtures. #33 is closed with this source-bound
+acceptance; the earlier pending qualification below describes preparation.
 
 For [#33](https://github.com/dragginzgame/ic-timers/issues/33), caller inspection
 finds no product owner for the fleet tooling inventory. Remove only
@@ -560,7 +729,7 @@ hash/download substitutes. The shared PocketIC fixture is explicitly selected in
 `release-check`. This prepares [#25](https://github.com/dragginzgame/ic-timers/issues/25).
 
 Removed named functions are `sha256` and `verify_binary` from
-[`check-pocketic.sh`](../scripts/ci/check-pocketic.sh), replaced by the canonical
+[the former `check-pocketic.sh`](https://github.com/dragginzgame/ic-timers/blob/10a392f98d42701959d0c1d2deddfbef5c96144a/scripts/ci/check-pocketic.sh), replaced by the canonical
 checksum and PocketIC binary owners. The anonymous Perl draft-selection engine
 is also removed; mode and scalar version-boundary checks remain in the wrapper.
 No timer API or runtime source changes. Testkit 0.21.1 is an incoming compatible

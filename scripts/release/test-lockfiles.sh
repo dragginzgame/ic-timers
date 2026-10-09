@@ -57,18 +57,16 @@ exec "${IC_TIMERS_FIXTURE_CARGO}" "$@"
 EOF
 chmod +x bin/cargo
 cp Cargo.lock original-root.lock
-for failed_manifest in Cargo.toml; do
-    for produced_output in empty matching; do
-        failure_status=0
-        output="$(PATH="${temporary_root}/bin:${PATH}" \
-            FIXTURE_FAIL_METADATA="${failed_manifest}" FIXTURE_METADATA_OUTPUT="${produced_output}" \
-            bash "${checker}" 2>&1)" || failure_status=$?
-        if [[ "${failure_status}" != 101 || "${output}" != *'injected offline metadata failure'* ]]; then
-            echo "error: metadata check lost Cargo failure for ${failed_manifest}: ${output}" >&2
-            exit 1
-        fi
-        cmp Cargo.lock original-root.lock
-    done
+for produced_output in empty matching; do
+    failure_status=0
+    output="$(PATH="${temporary_root}/bin:${PATH}" \
+        FIXTURE_FAIL_METADATA=Cargo.toml FIXTURE_METADATA_OUTPUT="${produced_output}" \
+        bash "${checker}" 2>&1)" || failure_status=$?
+    if [[ "${failure_status}" != 101 || "${output}" != *'injected offline metadata failure'* ]]; then
+        echo "error: metadata check lost Cargo failure for Cargo.toml: ${output}" >&2
+        exit 1
+    fi
+    cmp Cargo.lock original-root.lock
 done
 rm bin/cargo original-root.lock
 

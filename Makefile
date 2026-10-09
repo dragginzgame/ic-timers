@@ -1,20 +1,16 @@
 .PHONY: \
 	actions-check build bump-x check ci clean clippy docs-check ensure-clean fetch fmt fmt-check format-tools-check help \
-	install-hooks major minor msrv package patch pocketic-cohorts pocketic-watchdog publish release-check release-commit \
+	install-hooks install-testkit-server major minor msrv package patch pocketic-cohorts pocketic-watchdog publish release-check release-commit \
 	pocketic-check provider-check release-major release-minor release-patch release-push release-stage \
 	release-impact release-tag-check release-verify release-x repository-check shell-check test testing-check update-dev \
 	version wasm-check
 
 MSRV ?= 1.88.0
 VERSION ?=
-POCKET_IC_VERSION := 16.1.0
-POCKET_IC_BIN_ORIGIN := $(origin POCKET_IC_BIN)
-POCKET_IC_BIN ?= $(CURDIR)/target/tools/pocket-ic/$(POCKET_IC_VERSION)/pocket-ic
-POCKET_IC_AUTO_INSTALL := $(if $(filter undefined,$(POCKET_IC_BIN_ORIGIN)),1,0)
 include make/tools.mk
 
 CI_TARGETS := actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package
-RELEASE_TARGETS := fetch pocketic-check ci msrv testing-check pocketic-watchdog pocketic-cohorts
+RELEASE_TARGETS := fetch install-testkit-server pocketic-check ci msrv testing-check pocketic-watchdog pocketic-cohorts
 REPOSITORY_TARGETS := actions-check shell-check release-check provider-check fmt-check
 
 help:
@@ -29,7 +25,7 @@ help:
 	@echo "  fetch               Download locked dependencies for the root workspace"
 	@echo "  pocketic-watchdog   Build and run the focused watchdog canister evidence"
 	@echo "  pocketic-cohorts    Build and run comparable timer policy cohorts"
-	@echo "  pocketic-check      Install or verify the audited PocketIC evidence binary"
+	@echo "  pocketic-check      Check the Testkit-selected PocketIC server offline"
 	@echo "  provider-check      Enforce the private ic-cdk-timers provider boundary"
 	@echo "  testing-check       Check formatting and lint supported unpublished probes"
 	@echo "  release-verify      Run the complete fail-closed release evidence gate"
@@ -39,7 +35,8 @@ help:
 	@echo "  actions-check       Check parsed Actions and dependency pin declarations"
 	@echo "  install-host-tools  Install pinned jq/yq/ripgrep/cloc host tools"
 	@echo "  host-tools-check    Verify the complete host bundle offline"
-	@echo "  install-ic-tools    Explicitly install the reviewed six-tool IC bundle"
+	@echo "  install-ic-tools    Explicitly install the reviewed five-tool IC bundle"
+	@echo "  install-testkit-server  Prepare the locked Testkit CLI and its admitted server"
 	@echo "  ic-tools-check      Verify the installed IC bundle offline"
 	@echo "  install-tools / tools-check  Prepare or verify both tool bundles"
 	@echo "  cloc                Report root-workspace Rust LOC and test counts"
@@ -106,17 +103,18 @@ testing-check:
 package:
 	cargo package --locked --offline --allow-dirty -p ic-timers
 
+install-testkit-server:
+	bash scripts/dev/testkit-server.sh setup
+
 pocketic-check:
-	bash scripts/ci/check-pocketic-alignment.sh --manifest "$(CURDIR)/Cargo.toml" --pins "$(CURDIR)/ci/ic-tools.tsv"
-	POCKET_IC_BIN="$(POCKET_IC_BIN)" \
-		POCKET_IC_AUTO_INSTALL="$(POCKET_IC_AUTO_INSTALL)" \
-		bash scripts/ci/check-pocketic.sh
+	@bash scripts/dev/testkit-server.sh check
 
 pocketic-watchdog: pocketic-check
 	CARGO_TARGET_DIR="$(CURDIR)/testing/target" \
 		cargo +$(MSRV) build -p ic-timers-runtime-probe \
 		--profile timer-probe --target wasm32-unknown-unknown --locked
-	POCKET_IC_BIN="$(POCKET_IC_BIN)" \
+	@set -e; server="$$(bash scripts/dev/testkit-server.sh check)"; \
+		POCKET_IC_BIN="$$server" \
 		IC_TIMERS_PROBE_WASM="$(CURDIR)/testing/target/wasm32-unknown-unknown/timer-probe/ic_timers_runtime_probe.wasm" \
 		cargo +$(MSRV) test -p ic-timers-pocketic --locked tests::
 
@@ -133,7 +131,8 @@ pocketic-cohorts: pocketic-check
 	CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-watchdog" \
 		cargo +$(MSRV) build -p ic-timers-size-probe \
 		--profile timer-probe --target wasm32-unknown-unknown --locked --no-default-features --features watchdog
-	POCKET_IC_BIN="$(POCKET_IC_BIN)" \
+	@set -e; server="$$(bash scripts/dev/testkit-server.sh check)"; \
+		POCKET_IC_BIN="$$server" \
 		IC_TIMERS_COHORT_ROOT="$(CURDIR)/testing/target" \
 		cargo +$(MSRV) test -p ic-timers-pocketic --locked \
 			comparable_policy_cohorts_report_size_and_instruction_subjects -- --nocapture
@@ -163,7 +162,6 @@ release-check:
 	bash scripts/ci/test-failure-evidence.sh
 	bash .shared-tooling/helpers/scripts/ci/test-format-tools.sh
 	bash scripts/ci/test-ic-tools.sh
-	bash scripts/ci/test-pocketic-checks.sh
 	bash scripts/ci/test-evidence-checksums.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/test-dependency-pins.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/test-cargo-metadata.sh
@@ -181,7 +179,7 @@ release-check:
 	bash scripts/release/test-version-preparation.sh
 	bash scripts/release/test-tag-at-head.sh
 	bash scripts/release/test-commit-release.sh
-	bash scripts/ci/test-pocketic-verification.sh
+	bash scripts/ci/test-testkit-server.sh
 	bash scripts/ci/test-git-hook.sh
 	bash scripts/ci/test-repository-checks.sh
 	bash scripts/release/readme-version.sh --check

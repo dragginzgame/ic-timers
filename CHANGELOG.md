@@ -2,6 +2,40 @@
 
 All notable changes to this project are recorded here.
 
+## [0.15.0]
+
+### Breaking
+
+- Delegate PocketIC setup, artifact pins and offline admission to the root-lock
+  selected Testkit CLI. Remove the local server downloader, client alignment and
+  binary checkers, their tests, and the `POCKET_IC_BIN` Make override. Explicit
+  `make install-testkit-server` prepares the owner CLI/server; `pocketic-check`
+  checks it offline. Release preparation and CI select this route while retaining
+  watchdog/recovery and policy-cohort gates
+  ([shared #76](https://github.com/dragginzgame/shared-tooling/issues/76)).
+- Adopt committed Shared Tooling 0.2.1 through all three snapshots and remove
+  PocketIC from the shared IC bundle. Run explicit `make install-ic-tools` to
+  replace the old six-tool selection; old bundles and evidence remain retained.
+  Timer APIs are unchanged.
+
+### Development
+
+- Remove obsolete split-workspace fixture cleanup and single-manifest loops.
+  Keep full root-graph resolution, failed-Cargo propagation and lock preservation.
+- Retain incoming Testkit 0.26.0, Host 0.9.0 and Metrics 0.2.20 selections through
+  the one root catalog/lock. The server adapter follows the same Testkit selection.
+- Process every IC pin row during setup/check, including a final row without
+  a newline ([shared #87](https://github.com/dragginzgame/shared-tooling/issues/87)).
+- Adopt the shared single-document dependency-exception fix and checkout-local
+  hook executable lookup ([shared #86](https://github.com/dragginzgame/shared-tooling/issues/86),
+  [shared #85](https://github.com/dragginzgame/shared-tooling/issues/85)).
+- Retain failed Testkit provisioning attempts and selected CLI build evidence
+  without archiving admitted server bundles.
+- Report compressed failure-archive bytes and archive creation time in collector
+  logs, so hosted compact-evidence qualification can measure the actual output.
+  Failed archives do not report completed measurements
+  ([#30](https://github.com/dragginzgame/ic-timers/issues/30)).
+
 ## [0.14.23] - 2026-10-09
 
 ### Development

@@ -1006,6 +1006,18 @@ preserves modes, including the metadata modes used by release regressions.
 `identity.txt` records actual checkout and event SHAs, job, host, run and attempt.
 If no diagnostic payload exists yet, the archive still records that identity.
 
+The pending 0.15.0 collector reports `archive_bytes` (the completed compressed
+tar's byte size) and `archive_seconds` (time spent in the archiver, using Bash's
+whole-second counter) in its collection log. The existing upload includes that
+log, so fresh hosted evidence retains the measurements without another artifact
+or archive pass. Zero seconds means completion within the counter's resolution;
+this is not a subsecond benchmark. Selection/check time, upload/download time and
+the outer artifact ZIP size are separate. Failed archiving emits no completed
+measurements. With the maintainer's explicit #30 instruction, the focused
+collector and downloaded-verifier fixtures passed locally on 2026-10-09. Native
+qualification of this uncommitted measurement addition remains separate from
+the frozen 0.14.23 compact round trips [below](#compact-hosted-qualification-at-01423).
+
 The official upload action is pinned to 7.0.1 at
 [`043fb46d1a93c77aae656e7c1c64a875d1fc6a0a`](https://github.com/actions/upload-artifact/tree/043fb46d1a93c77aae656e7c1c64a875d1fc6a0a).
 Its [documented permission behavior](https://github.com/actions/upload-artifact/blob/043fb46d1a93c77aae656e7c1c64a875d1fc6a0a/README.md#permission-loss)
@@ -1147,6 +1159,49 @@ measurement of actual bytes and collection time. Old large-artifact measurements
 prove the opportunity, not this collector's saving. The collector changes no
 timer API or dependency selection; incoming lock edits are separate. No timer
 Wasm/instruction/heap change or new IC recovery guarantee is claimed.
+
+#### Compact hosted qualification at 0.14.23
+
+On 2026-10-09 the maintainer's instruction to complete #30 authorized the focused
+collector/download-verifier fixtures and two new manual dispatches at frozen
+**v0.14.23**, `10a392f98d42701959d0c1d2deddfbef5c96144a`, attempt 1:
+[early 37912633994](https://github.com/dragginzgame/ic-timers/actions/runs/37912633994)
+and [late 37912637422](https://github.com/dragginzgame/ic-timers/actions/runs/37912637422).
+These qualify the released compact caller; they do not execute the uncommitted
+0.14.24 archive measurement output or incoming lock selections. No duplicate
+observation was dispatched.
+
+Both Linux producers reached their selected controlled failure (early status 22,
+late status 2) and archived/uploaded successfully. The late producer first passed
+its normal CI and probe lint. Actual downloaded ZIPs passed the maintained verifier
+from the frozen source, including original identity, modes, status and compact
+pin/receipt admission. Measurements are separate for the outer ZIP and inner tar:
+
+| Stage / host | Artifact | ZIP bytes | tar.gz bytes | Regular payload bytes |
+| --- | --- | ---: | ---: | ---: |
+| Early Linux/X64 | 11606299473 | 1,341 | 872 | 779 |
+| Late Linux/X64 | 11606958330 | 5,118 | 4,649 | 20,555 |
+
+The late Linux ZIP is 99.9986% smaller than the previously measured 373,200,529-byte
+0.14.15 ZIP. This is an observed cross-release artifact comparison, not a
+same-source benchmark: retained diagnostics and tool selections differ. The
+current verifier proves the verified active payloads are omitted while required
+logs/pins/receipts and controlled failure evidence remain.
+
+GitHub's archive-step timestamps fall within one whole-second bucket on Linux
+at both stages. This measures the entire collection step, including selection,
+and gives no subsecond archiver timing. The frozen source has no `archive_seconds`
+output; the pending 0.15.0 instrumentation must receive its own native gate.
+Local download/unpack/verification timings are separate from hosted collection.
+
+Both macOS hosts at both stages and all hosted download-verification jobs remain pending.
+Keep #30 open until all six original producers reach their selected failure,
+archive/upload succeeds and all six hosted verifiers pass. Retained identities,
+ZIPs, SHA-256 hashes, logs, API step timestamps and measurement reports are under
+`/tmp/ic-timers-issue30.vdZlUd/`; hosted artifact retention still has its normal
+expiry. Focused local fixtures passed, and Cargo manifest/lock plus the existing
+worktree were byte-preserved through those checks. No commit, release, version
+mutation or dependency update ran.
 
 The following records describe the earlier archiver-only preparation.
 
@@ -1401,36 +1456,35 @@ Ordinary checks never download tools.
 ### Pinned IC tool setup
 
 `make install-ic-tools` explicitly prepares Quill 0.5.4, ICP CLI 1.6.0, didc
-0.6.2, ic-wasm 0.11.1, PocketIC 16.1.0 and wasm-opt 132 from
-[`ci/ic-tools.tsv`](../ci/ic-tools.tsv). `make ic-tools-check` verifies the bundle
-offline. `make install-tools` / `make tools-check` operate on both the host
-and IC bundles. `update-dev` and CI use explicit setup; ordinary checks never
-invoke these installers without `--check`. Make prepends `.tools/host/bin` and
-`.tools/ic/bin` to PATH. Bootstrap also needs tar with xz support for IC assets.
+0.6.2, ic-wasm 0.11.1 and wasm-opt 132 from
+[`ci/ic-tools.tsv`](../ci/ic-tools.tsv). `make ic-tools-check` verifies this
+five-tool bundle offline. `make install-tools` / `make tools-check` select host
+and IC bundles. Shared Tooling 0.2.0 removes PocketIC from that policy. An existing
+six-tool bundle fails admission until explicit setup selects a new bundle;
+previous bundles, pins and receipts are retained.
 
-The shared installer verifies archives before extraction, preserves Binaryen's
-native runtime libraries, and activates a complete checked bundle under ignored
-`.tools/`. Failed candidates and previous bundles remain available. Installed
-file receipts and versions are checked before reuse; changed pins require
-explicit setup. Tool installation neither deploys canisters nor selects
+`make install-testkit-server` invokes the [local adapter](../scripts/dev/testkit-server.sh),
+which reads the single registry Testkit selection from the root lockfile. The
+reviewed shared Cargo installer prepares only that package's `ic-testkit-server`
+binary in release profile and checks its exact receipt/bytes. The CLI owns
+server setup under `.tools/testkit-server`, asset hashes and compatibility.
+`make pocketic-check` invokes both offline admissions and prints the admitted
+absolute server path. No global CLI, local server catalog, client alignment rule
+or Make binary override is retained. Failed admission never invokes setup.
+
+Developer update and the Linux/MSRV/native CI preparation sites explicitly set
+up the CLI/server after host prerequisites. `release-verify` runs locked fetch,
+explicit Testkit setup, then offline admission before the complete existing
+product gates. Each watchdog/cohort command rechecks after compiling its probes
+and passes only the admitted path to the test harness. Product tests still own
+fresh servers/instances and their existing startup deadlines; this handoff adds
+no shared-server reuse or recovery guarantee.
+
+Shared archive selection preserves failed CLI builds and Testkit `.setup-v1-*`
+attempts without selecting successful server bundles. Scope and pending native
+qualification belong in the [adoption record](shared-tooling.md#shared-tooling-020-hard-cut).
+Ordinary validation never downloads. Setup neither deploys a canister nor selects
 credentials or a network target.
-
-Native macOS CI supplies `.tools/ic/bin/pocket-ic` as an explicit `POCKET_IC_BIN`
-override to the existing release gate. The consumer's independently audited raw
-hash and exact version remain required. Locally, the same selection is optional:
-
-```text
-make install-tools
-POCKET_IC_BIN="$PWD/.tools/ic/bin/pocket-ic" make release-verify
-```
-
-Without an override, the required automatic single-artifact evidence cache
-provisioning is unchanged. Invalid explicit overrides never download or get
-replaced. The generic six-tool setup does not replace this product contract or
-the [PocketIC artifact pins](#pocketic-artifact-pins). Shared fixtures are wired
-into `release-check`; execution and fresh native qualification remain
-maintainer-owned. Exact source and scope belong in the
-[adoption record](shared-tooling.md#cargo-and-ic-helper-adoption).
 
 ### Dependency pin exceptions
 
@@ -1453,10 +1507,10 @@ ownership are unchanged. No exception permits a floating action or Docker image.
 
 ### PocketIC artifact pins
 
-The verifier selects PocketIC **16.1.0** for Linux x86_64, Darwin x86_64 and
-Darwin arm64. Independent host queries and exact extracted-binary hashes remain
-required. Explicit overrides must report `pocket-ic-server 16.1.0`; they are never
-replaced automatically. No caller-supplied digest/version relaxes these checks.
+The following table is historical 0.14.19 artifact-review evidence. It is not
+an executable pin catalog for the pending 0.15.0 handoff. Testkit now owns current
+server selection, authentication and compatibility; the consumer adapter uses
+its setup/check contract as described [above](#pinned-ic-tool-setup).
 
 On 2026-10-08, official [release metadata](https://api.github.com/repos/dfinity/pocketic/releases/tags/16.1.0)
 and the [PocketIC 16.1.0 release](https://github.com/dfinity/pocketic/releases/tag/16.1.0)
@@ -1476,35 +1530,10 @@ The complete user-operated gate must supply that fresh qualification.
 | `pocket-ic-x86_64-darwin.gz` | `af9ad2d781530a43556ef2d1c8f93db99a2425c6cabdc78520f61922399ed530` | `a2ad872a5d84778b25a254c4eb4a8df99917b5792edaa7702d730de2d7de664d` |
 | `pocket-ic-arm64-darwin.gz` | `9ae843fbb7ae6c6eb30137671c8629a80ef53b3a3652eb85b344847ac39f9fcd` | `2ffd9d5ae103cbb85289424056e68920459e702bf27317e38003b019a0a959d1` |
 
-The consumer-owned [`ci/ic-tools.tsv`](../ci/ic-tools.tsv) is the sole executable
-archive/version matrix; the table above records provenance. It is excluded from
-the immutable audit/setup export. Exact extracted-binary digests remain local to
-[`check-pocketic.sh`](../scripts/ci/check-pocketic.sh); generic installers/checkers
-retain their reviewed shared owners. The first Make gate checks the sole root
-lock's exact client/server alignment through locked offline Cargo metadata and
-jq, without fetching or updating dependencies. The default cache is versioned
-16.1.0. Setup and native CI use the same consumer pin matrix.
-
-Automatic provisioning downloads over HTTPS into an adjacent temporary directory,
-checks the archive digest before `gzip`, checks the decompressed binary digest
-before execution, then checks its exact version before replacing the cache.
-Failures preserve the existing cache and clean the temporary installation.
-Candidates must resolve to regular executable files before hashing. A symlink to
-a verified executable remains valid input and is retained. If verification fails,
-automatic provisioning requires an absent cache path or a regular file without a
-symlink at that path; directories, FIFOs and links are rejected before download.
-This prevents `mv` from silently installing inside a directory while reporting
-the selected cache path as installed. Explicit overrides retain their existing
-read-only contract.
-The maintained fixture covers each supported host's pins and URL, strict and
-missing overrides, partial checksum failure output, download/decompression
-failure, version rejection, unsupported hosts, failed host queries and cleanup.
-It compares retained cache bytes and permission bits against a distinct cached
-copy, so replacing it with the fixture's download cannot pass preservation checks.
-These new scenarios and native CI jobs remain unexecuted. Workflow YAML, shell
-and embedded fixture shell/Perl syntax, source flow, read-only 0.11.9 changelog
-preparation and diff whitespace checks passed. No tests, builds, lint gates,
-release commands or version changes were run.
+The former consumer server matrix, extracted-binary checker, downloader and
+verification fixture are removed together in the hard cut. Their prior
+qualification describes the historical route only; do not use the table to
+recreate server admission alongside Testkit.
 
 The 0.11.10 cache-type scenarios cover directories, FIFOs, rejected file/directory/
 dangling symlinks and accepted verified file symlinks with both installation modes.
@@ -1597,14 +1626,11 @@ and does not prepare these dependency caches.
 That gate includes `make ci`, the Rust 1.88 MSRV check, warning-denied linting
 of every supported unpublished probe configuration, the maintained watchdog/recovery,
 ordinary-await and provider-churn PocketIC subjects, and the four policy cohorts.
-If `POCKET_IC_BIN` is unset, the
-gate installs the pinned PocketIC 16.0.0 artifact for the current supported host
-into the ignored `target/tools` cache. It verifies the archive SHA-256 before
-decompression and the audited binary SHA-256 before executing any
-downloaded, cached or overridden binary, then checks its version. Diagnostic
-paths also leave hash-mismatched binaries unexecuted. An explicitly supplied `POCKET_IC_BIN` remains
-a strict override: a missing or mismatched override fails and is never
-replaced automatically.
+Release preparation explicitly installs the root-lock selected Testkit CLI and
+its authenticated server. The subsequent offline admission and watchdog/cohort
+commands use Testkit's admitted path. No custom binary override, consumer server
+catalog or implicit validation-time downloader remains. See the
+[setup contract](#pinned-ic-tool-setup).
 
 After the version changes, the helper reads Cargo's no-deps member inventory
 and updates every local package identity in `Cargo.lock` through the shared

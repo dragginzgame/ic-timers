@@ -59,6 +59,7 @@ jobs:
           cargo install cargo-sort --version "$IC_TIMERS_CARGO_SORT_VERSION" --locked
           make install-tools
           make tools-check
+          make install-testkit-server
           echo "$GITHUB_WORKSPACE/.tools/host/bin" >> "$GITHUB_PATH"
           echo "$GITHUB_WORKSPACE/.tools/ic/bin" >> "$GITHUB_PATH"
       - name: Check MSRV, provider visibility and nested probes
@@ -120,6 +121,7 @@ jobs:
           cargo install cargo-sort --version "$IC_TIMERS_CARGO_SORT_VERSION" --locked
           make install-tools
           make tools-check
+          make install-testkit-server
           echo "$GITHUB_WORKSPACE/.tools/host/bin" >> "$GITHUB_PATH"
           echo "$GITHUB_WORKSPACE/.tools/ic/bin" >> "$GITHUB_PATH"
       - name: Run CI gate
@@ -212,9 +214,9 @@ jobs:
           cargo install cargo-sort --version "$IC_TIMERS_CARGO_SORT_VERSION" --locked
           make install-tools
           make tools-check
+          make install-testkit-server
           echo "$GITHUB_WORKSPACE/.tools/host/bin" >> "$GITHUB_PATH"
           echo "$GITHUB_WORKSPACE/.tools/ic/bin" >> "$GITHUB_PATH"
-          echo "POCKET_IC_BIN=$GITHUB_WORKSPACE/.tools/ic/bin/pocket-ic" >> "$GITHUB_ENV"
       - name: Run the complete native release gate
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: make release-verify

@@ -33,7 +33,7 @@ class DownloadedEvidenceTests(unittest.TestCase):
             for host in ("linux-x86_64", "darwin-x86_64", "darwin-arm64")
             for tool, version in (("quill", "0.5.4"), ("icp", "1.6.0"),
                                   ("didc", "0.6.2"), ("ic-wasm", "0.11.1"),
-                                  ("pocket-ic", "16.1.0"), ("wasm-opt", "132"))
+                                  ("wasm-opt", "132"))
         ).encode()
         tool_pins = {"host": b"selected host pins\n", "ic": ic_pins}
         for stage in ("early", "late"):

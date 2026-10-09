@@ -1,12 +1,12 @@
 # Shared Tooling snapshot v1
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	3d33cd250fcae7dbe5cabe44b2abd6b2c91a1822
+revision	06b2e22f6bd213f1a590eb2a8797aee34c42dd69
 file	4c981184847462ab3c01cac087e28309f8e054253fd95c7bbe56f643877aa708	x	scripts/ci/verify-file-checksum.sh
 file	ba5c6b76d15bec4ac226f1ab0732d5087446152d64107993c52642a68d2ff464	x	scripts/ci/verify-shared-tooling-snapshot.sh
-file	c50a0e7c23ad9bbace12c9e8fa9aa8e6c5bc97151a9c76cf5d371f18922a0b94	x	scripts/ci/check-dependency-pins.sh
+file	de68acd7ba25355c73fa3e9a32cbde5525debf081862c1f1a52eccb4a66c48de	x	scripts/ci/check-dependency-pins.sh
 file	3d56ca1b0c5952b9534ece61b6754ca39e6ec1980d929f09de3dbd967a0c4977	-	scripts/ci/dependency-pins.jq
-file	479cec75dff5f81705db3f10d63f494b6eca73d5a0714e648ab3174c645ca93d	x	scripts/ci/test-dependency-pins.sh
+file	70cc88ba522bb9069827d948c5708a6cc09e24d098d8f27f1f37ac12bc2a3ae4	x	scripts/ci/test-dependency-pins.sh
 file	40f31a19d6115411ebffe7c26e3ed30b8af7eead10dd4830de8d5a9312291222	x	scripts/ci/read-cargo-workspace-version.sh
 file	740dd07566c83efc8c89f6ec661d1ed95956cf990073387ceb1f4055cae4373b	x	scripts/ci/test-cargo-metadata.sh
 file	236f9b2d7fe391a73d03cfe355c0d26fa73de8db1553c7e670f7b19aeb65d086	x	scripts/ci/rewrite-local-lock-versions.pl

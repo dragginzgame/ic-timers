@@ -15,7 +15,7 @@ pub fn fresh_pocket_ic() -> (PocketIcManagedServer, PocketIc) {
     let binary = env::var_os("POCKET_IC_BIN")
         .filter(|path| !path.is_empty())
         .map(PathBuf::from)
-        .expect("run the pinned pocketic-check gate and supply POCKET_IC_BIN");
+        .expect("run the Testkit pocketic-check gate and supply its admitted POCKET_IC_BIN");
     let server = PocketIcStartupConfig::spawn(binary, STARTUP_TIMEOUT)
         .start_managed_server()
         .expect("start the verified PocketIC server through ic-testkit");

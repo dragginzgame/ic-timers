@@ -29,10 +29,7 @@ cp "${repository_root}/tool-versions.env" tool-versions.env
 cp -p "${repository_root}/.shared-tooling/helpers/scripts/ci/check-format-tools.sh" \
     .shared-tooling/helpers/scripts/ci/
 cp -p "${repository_root}/scripts/ci/check-make-execution.sh" scripts/ci/
-# The fixture overlays both members into one root-owned workspace, including
-# removals from a pre-consolidation source commit without creating a commit.
-rm -f testing/Cargo.toml testing/Cargo.lock
-git rm -q --cached --ignore-unmatch -- testing/Cargo.toml testing/Cargo.lock
+# The fixture overlays both members into the one root-owned workspace.
 mkdir -p crates/hook-fixture/src testing/crates/hook-probe/src
 cat > Cargo.toml <<'EOF'
 [workspace]

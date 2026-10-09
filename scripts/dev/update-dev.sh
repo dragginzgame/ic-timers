@@ -15,6 +15,7 @@ rustup toolchain install "${TOOLCHAIN}" --profile minimal \
     --target wasm32-unknown-unknown
 cargo +"${TOOLCHAIN}" install cargo-sort --version "${IC_TIMERS_CARGO_SORT_VERSION}" --locked
 make --no-print-directory -C "${ROOT_DIR}" install-tools
+make --no-print-directory -C "${ROOT_DIR}" install-testkit-server
 bash "${ROOT_DIR}/scripts/dev/install-git-hooks.sh"
 
 echo "ic-timers development toolchain is ready: Rust ${TOOLCHAIN}"

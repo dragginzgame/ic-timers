@@ -38,9 +38,6 @@ expect_failure() {
     fi
 }
 
-# The retired nested dev directory must remain absent: an obsolete Make glob
-# would otherwise be masked by fixture-only files instead of failing here.
-test ! -e .shared-tooling/helpers/scripts/dev
 make --no-print-directory shell-check >/dev/null
 for directory in scripts/ci scripts/dev scripts/release \
     .shared-tooling/helpers/scripts/ci; do

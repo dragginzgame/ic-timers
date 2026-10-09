@@ -404,10 +404,11 @@ remain defined in [AGENTS.md](AGENTS.md).
 
 | Command | Purpose |
 | --- | --- |
-| `make update-dev` | Install the pinned toolchain, components, host and IC tools, Wasm target, and formatting hook |
+| `make update-dev` | Install the pinned toolchain, components, host/IC tools and Testkit server, Wasm target, and formatting hook |
 | `make install-host-tools` / `make host-tools-check` | Install pinned jq/yq/ripgrep/cloc or verify the complete bundle offline |
-| `make install-ic-tools` / `make ic-tools-check` | Install the pinned six-tool IC bundle or verify it offline |
+| `make install-ic-tools` / `make ic-tools-check` | Install the pinned five-tool IC bundle or verify it offline |
 | `make install-tools` / `make tools-check` | Prepare or verify both host and IC bundles |
+| `make install-testkit-server` / `make pocketic-check` | Prepare the root-lock selected Testkit CLI/server or check admission offline |
 | `make cloc` | Report Rust LOC/test counts for all root workspace members |
 | `make fmt` / `make fmt-check` | Sort manifests and format or check Rust for all workspace members |
 | `make ci` | Run the normal warning-denied checks, native tests, Wasm build, and package checks |
@@ -427,12 +428,16 @@ downloads tools. See the [setup and pin boundaries](docs/releasing.md#structured
 Both `fmt` and `fmt-check` first require the exact cargo-sort pin and prepared
 rustfmt for the selected toolchain; missing tools require explicit setup.
 To run the development-toolchain probe checks locally, use
-`make testing-check MSRV=1.99.0`. The host-side real-canister suites currently resolve
-`ic-testkit` 0.25.2 and the pinned PocketIC 16.1.0 server on Linux x86_64 or
-macOS Intel/Apple Silicon. The first run downloads it into the ignored
-`target/tools` cache; later runs verify its version and SHA-256. Set
-`POCKET_IC_BIN=/path/to/pocket-ic` only for an explicitly managed binary. Testkit
-starts a caller-owned server and fresh IC instance for each fixture, with a
+`make testing-check MSRV=1.99.0`.
+
+The host-side real-canister suites select Testkit from the root lockfile.
+`make install-testkit-server` explicitly installs that version's CLI and prepares
+its authenticated server under ignored `.tools/testkit-server`; `make pocketic-check`
+checks it offline. `update-dev`, hosted CI and release preparation run explicit
+setup. Ordinary checks never download the server. The old Make binary override
+and `target/tools` provisioning route are removed. Testkit owns server versions,
+asset hashes and compatibility; Timers passes its admitted path to the probes.
+Testkit starts a caller-owned server and fresh IC instance for each fixture, with a
 30-second deadline for each startup phase. The instance is dropped before its
 server; upstream instance deletion itself remains unbounded.
 
