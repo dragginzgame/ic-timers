@@ -2,6 +2,26 @@
 
 All notable changes to this project are recorded here.
 
+## [0.16.5]
+
+### Development
+
+- Refresh all three snapshots to committed Shared Tooling 0.2.11, retaining
+  source-version/revision diagnostics and consumer dependency/tool selections
+  ([adoption owner](docs/shared-tooling.md#shared-tooling-0211-formatting-and-make-admission)).
+- Print one formatting success line; retain full stdout/stderr on failure with
+  its exit status and log path. Carry the canonical reporter through disposable
+  Make/index fixtures and archive its failed logs in CI
+  ([#35](https://github.com/dragginzgame/ic-timers/issues/35)).
+- Adopt canonical refusal of unsafe Make modes hidden by cleared or replaced
+  MAKEFLAGS, including attempts to overwrite MFLAGS. Extend actual consumer
+  release/formatter negatives without adding a local flag parser
+  ([shared #30](https://github.com/dragginzgame/shared-tooling/issues/30)).
+- Retain the incoming Metrics 0.3.6 lock selection. Its seven published Rust
+  source files are identical to 0.3.5, so no arithmetic adapter change is needed;
+  the refreshed graph needs separate qualification
+  ([graph owner](docs/releasing.md#metrics-036-incoming-graph)).
+
 ## [0.16.4] - 2026-10-09
 
 ### Development

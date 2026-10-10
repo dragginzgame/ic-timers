@@ -1,5 +1,133 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.2.11 formatting and Make admission
+
+Pending IC Timers **0.16.5** adopts exact committed Shared
+`83efac446348dea024798a331d77933b24b429dc` across all three clean canonical
+exports: **55 baseline / 30 audit-setup / 11 helper files**. Its committed
+VERSION is **0.2.11**, despite the commit subject saying 0.2.10; source identity
+comes from the exact revision and committed bytes, not that subject. This
+supersedes the pending 0.2.9 selection below and retains its snapshot diagnostics.
+The baseline and audit-method bytes remain unchanged. Add only the explicitly
+selected `scripts/ci/run-formatting.sh` companion, not optional fleet or registry
+observation helpers.
+
+The canonical formatter prints `Formatting... ok` or `Checking formatting... ok`
+on success. Failure prints the command's exit status and an escaped path to the
+complete retained stdout/stderr log. Make may add its own error line and returns
+its normal recipe-failure status. Sorter-first ordering, all workspace members,
+check-only flags, offline tool admission and selected consumer root/pins stay at
+their existing owners. Each of the five disposable actual-Make callers receives
+the new companion; the index-hook fixture stages it and the shared release smoke
+caller explicitly includes it. The shared immutable evidence action refreshes
+with the audit snapshot. Our consumer collector includes `formatting.*` from
+CI's required RUNNER_TEMP; the wrapper inherits that selection. Local invocations
+without RUNNER_TEMP retain failures under TMPDIR or /tmp instead.
+
+This revision also contains Shared #30's hidden-mode correction. The selected
+include passes MAKEFLAGS and MFLAGS independently through GNU Make's parser and
+refuses assignments that erase generated MFLAGS. No consumer parser or vendored
+patch is introduced. The actual consumer release and formatting fixtures now
+cover all four unsafe modes with preserved, cleared and replaced MAKEFLAGS and
+both variables cleared, requiring status 2 before effects. Existing parallel,
+argument-bearing recursive Make, selected-root and direct-policy cases remain.
+The formatter fixture checks exact success output, sorter failure status 23,
+complete retained output streams, skipped Rustfmt and unchanged index/worktree.
+The collector fixture archives an actual reporter failure and compares its bytes
+and mode. These new behavioral cases are written, not executed by the contributor.
+
+Clean source, canonical export and preparation records are retained under
+`/tmp/ic-timers-shared0211.706a0ieg/`. Snapshot source bytes/modes and companion
+closure, integrity, shell syntax, local documentation references, whitespace and
+complete locked offline metadata are the permitted preparation checks. No tests,
+builds, lint, setup, Make target, version mutation, staging, commit or release
+runs. Cargo.toml, the incoming Cargo.lock and both pin catalogs are byte-preserved.
+No function, method or type is removed; the formatter/admission change has
+expected zero production timer Wasm/instruction/heap impact because it changes
+no product code. The preserved incoming graph separately selects Metrics 0.3.6,
+Testkit 0.28.0, Host 0.10.1 and PocketIC 16.1.0. All seven published Metrics Rust
+source files match 0.3.5 exactly; no arithmetic adapter change is needed. The
+new package identity and cc/smallvec/syn refresh still require their own execution
+qualification; no measured Wasm or instruction delta is claimed for that graph.
+
+[#35](https://github.com/dragginzgame/ic-timers/issues/35) remains open for actual
+consumer fixtures and Linux/native macOS acceptance of this new source. Released
+0.16.4's all-host acceptance does not qualify the new snapshot or incoming lock.
+Shared [#30](https://github.com/dragginzgame/shared-tooling/issues/30) owns upstream
+qualification; committed delivery alone does not prove native acceptance.
+This is repository-only maintenance in the existing undated 0.16.5 batch.
+
+Earlier adoption records retain their source and qualification scope.
+
+## Shared Tooling 0.2.9 snapshot diagnostics
+
+After pushed IC Timers **0.16.4** `da921fc899d2c7c99ed0a6cacac6e2111307ac71`,
+the authorized continuation refreshes all three selections together to committed
+Shared **0.2.9** `f8a70ba348e9975a6eb5b337860b00bc8a0b36d1`: still
+**54 baseline / 30 audit-setup / 11 helper files**. Baseline/audit method bytes,
+Make admission, formatter and release behavior are unchanged. The local audit
+overlay now identifies the current reviewed method revision rather than an older
+byte-identical adoption.
+
+The clean canonical exporter records the source's committed VERSION as a
+`# version` annotation. Verification reports that display version and full
+revision with the existing file count and rejects malformed/duplicate annotations.
+The commit and declared hashes/modes remain the integrity identity; the version
+annotation neither proves publication/provenance nor selects Cargo or tooling.
+Keep the new version field with refresh rather than editing it independently.
+No fleet-dashboard, LOC report or optional helper is added. The shared hosted
+artifact readback repair belongs to its own CI; consumer transport is unchanged.
+
+Exports and source-bound preparation evidence remain at
+`/tmp/ic-timers-shared029.00umv319/`. Committed bytes/modes, annotation identity, declared companion closure, all
+snapshot integrity records, shell syntax, documentation references, whitespace
+and complete locked offline metadata checks pass.
+Cargo.toml/Cargo.lock and both pin catalogs retain their incoming bytes; the
+released graph already selects Testkit 0.28.0, Metrics 0.3.5, Host 0.10.1 and
+PocketIC 16.1.0 with four local members 0.16.4. No contributor test, build, lint,
+setup, release, version mutation, staging or commit runs. No function, method or
+type is removed, and expected production Wasm/instruction/heap delta is zero.
+
+The one undated **0.16.5** draft is repository-only maintenance. Prefer bundling
+it with code-bearing work unless the maintainer explicitly selects publication.
+[Shared's exact 0.2.9 run](https://github.com/dragginzgame/shared-tooling/actions/runs/37967008620)
+passes Linux portable regression and lint/security; both native macOS jobs
+remain queued. Those upstream results and source export do not establish
+consumer/native acceptance.
+Shared #30's command-line MAKEFLAGS replacement gap remains unchanged. #34/#35
+stay open for source-bound product and Make/hook native acceptance; the
+[0.2.8 owner](#shared-tooling-028-make-admission) retains the earlier failed and
+prepared fixture evidence.
+
+A subsequent latest-source check confirms Shared HEAD still equals this exact
+0.2.9 revision with no dirty source to adopt. The pushed 0.16.4 Linux job has now
+passed, including the version-preparation correction and actual product/hook
+subjects; [the qualification owner](releasing.md#testkit-028-and-host-010-released-graph)
+binds those results to the released 0.2.8 consumer and selected library graph.
+It does not qualify this pending snapshot refresh or close native acceptance.
+No further code change is justified by this review; Shared #30 still owns the
+unchanged flag-replacement gap. No new release note is added for routine evidence.
+
+On 2026-10-10, exact Shared 0.2.9 CI also passes both native macOS jobs.
+The released **0.16.4** consumer passes all three hosts, including actual hook,
+release and product subjects; #34 is closed with source-bound Testkit acceptance.
+Those consumer results select Shared 0.2.8, so this pending 0.2.9 export does not
+inherit execution qualification. New cc/smallvec/syn lock edits remain separate.
+[The graph owner](releasing.md#testkit-028-and-host-010-released-graph) records
+native raw logs, distinct canister toolchains and incoming metadata scope.
+
+The original #35 Make/formatter adoption is qualified, but its new
+[concise-formatting follow-up](https://github.com/dragginzgame/ic-timers/issues/35#issuecomment-6086711136)
+waits for committed Shared 0.2.10. The sibling checkout now has provisional
+Make/wrapper/collector changes; no such bytes are copied. When committed, adopt
+`run-formatting.sh` with the canonical include, every selected scratch/index
+fixture and the local failure collector's `formatting.*` retention together.
+Preserve the existing prepared tools, sorter-first ordering, check-only mode,
+failing status and complete diagnostics. Shared #30's flag-replacement gap stays
+separate. No new implementation or release note is added for routine evidence.
+
+Earlier adoption records retain their source and qualification scope.
+
 ## Shared Tooling 0.2.8 Make admission
 
 The authorized 0.16.4 continuation adopts clean committed Shared **0.2.8**

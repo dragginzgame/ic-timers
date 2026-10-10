@@ -158,7 +158,7 @@ release-check:
 	bash scripts/ci/test-release-runner.sh
 	bash .shared-tooling/helpers/scripts/ci/check-release-commands.sh "$(CURDIR)" \
 		ci/tool-versions.env make/tools.mk make/rust-format.mk make/release.mk \
-		make/execution.mk scripts/ci/check-make-execution.sh
+		make/execution.mk scripts/ci/check-make-execution.sh scripts/ci/run-formatting.sh
 	bash scripts/release/test-committed-release.sh
 	bash scripts/release/test-release-index.sh
 	bash scripts/release/test-finalize-changelog.sh

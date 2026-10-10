@@ -30,7 +30,8 @@ cp "${repository_root}/ci/tool-versions.env" ci/
 # The current fmt prerequisite must also exist in the fixture's exact index.
 cp -p "${repository_root}/scripts/ci/check-format-tools.sh" \
     scripts/ci/
-cp -p "${repository_root}/scripts/ci/check-make-execution.sh" scripts/ci/
+cp -p "${repository_root}/scripts/ci/check-make-execution.sh" \
+    "${repository_root}/scripts/ci/run-formatting.sh" scripts/ci/
 # The fixture overlays both members into the one root-owned workspace.
 mkdir -p crates/hook-fixture/src testing/crates/hook-probe/src
 cat > Cargo.toml <<'EOF'
@@ -52,7 +53,7 @@ EOF
 done
 git add Makefile make/tools.mk make/rust-format.mk make/release.mk make/execution.mk ci/tool-versions.env Cargo.toml \
     crates/hook-fixture testing/crates/hook-probe \
-    scripts/ci/check-format-tools.sh scripts/ci/check-make-execution.sh
+    scripts/ci/check-format-tools.sh scripts/ci/check-make-execution.sh scripts/ci/run-formatting.sh
 printf 'unrelated working edit\n' >> README.md
 cp README.md "${temporary_root}/unrelated-readme"
 
@@ -97,18 +98,28 @@ done
 
 # The actual consumer Makefile must refuse before its formatter prerequisites,
 # even if Make would ignore a recipe failure or skip execution.
-for mode in --ignore-errors --dry-run --touch --question; do
-    status=0
-    SHARED_TOOLING_ROOT="${temporary_root}/unselected-snapshot" \
-        make --no-print-directory "$mode" fmt-check \
-        "SHARED_TOOLING_ROOT=${temporary_root}/unselected-snapshot" \
-        > "${temporary_root}/make-${mode}.log" 2>&1 || status=$?
-    if [[ "$status" != 2 ]]; then
-        cat "${temporary_root}/make-${mode}.log" >&2
-        echo "error: consumer formatting did not refuse $mode before recipes" >&2
-        exit 1
-    fi
-    assert_unchanged
+for target in fmt fmt-check; do
+    for mode in --ignore-errors --dry-run --touch --question; do
+        for replacement in preserved cleared replaced both; do
+            flags=(--no-print-directory)
+            case "$replacement" in
+                cleared) flags=(MAKEFLAGS=) ;;
+                replaced) flags=(MAKEFLAGS=--no-print-directory) ;;
+                both) flags=(MAKEFLAGS= MFLAGS=) ;;
+            esac
+            status=0
+            SHARED_TOOLING_ROOT="${temporary_root}/unselected-snapshot" \
+                make --no-print-directory "$mode" "$target" "${flags[@]}" \
+                "SHARED_TOOLING_ROOT=${temporary_root}/unselected-snapshot" \
+                > "${temporary_root}/make-${target}-${mode}-${replacement}.log" 2>&1 || status=$?
+            if [[ "$status" != 2 ]]; then
+                cat "${temporary_root}/make-${target}-${mode}-${replacement}.log" >&2
+                echo "error: consumer formatting admitted $mode with $replacement flags" >&2
+                exit 1
+            fi
+            assert_unchanged
+        done
+    done
 done
 
 # The actual consumer fmt target formats and refreshes both root workspace members,
@@ -121,7 +132,8 @@ if ! CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 \
     cat "${temporary_root}/format.log" >&2
     exit 1
 fi
-cat "${temporary_root}/format.log"
+printf 'Formatting... ok\n' > "${temporary_root}/expected-format-output"
+cmp "${temporary_root}/expected-format-output" "${temporary_root}/format.log"
 for path in crates/hook-fixture/src/lib.rs testing/crates/hook-probe/src/lib.rs; do
     formatted="$(git show ":${path}")"
     test "${formatted}" = 'pub fn fixture() {}'
@@ -135,7 +147,45 @@ if ! SHARED_TOOLING_ROOT="${temporary_root}/unselected-snapshot" \
     cat "${temporary_root}/fmt-check.log" >&2
     exit 1
 fi
-cat "${temporary_root}/fmt-check.log"
+printf 'Checking formatting... ok\n' > "${temporary_root}/expected-check-output"
+cmp "${temporary_root}/expected-check-output" "${temporary_root}/fmt-check.log"
+
+# Use the actual consumer recipe and reporter with a sorter that fails after
+# both output streams. Rustfmt must not run, and no working/index input changes.
+mkdir "${temporary_root}/format-logs"
+cat > "${temporary_root}/failing-cargo" <<'CARGO'
+#!/usr/bin/env bash
+set -euo pipefail
+case "$*" in
+    'sort --version') echo "cargo-sort $SHARED_TOOLING_CARGO_SORT_VERSION"; exit 0 ;;
+    'fmt --version') exit 0 ;;
+    sort*) echo 'sorter stdout details'; echo 'sorter stderr details' >&2; exit 23 ;;
+    *) echo 'unexpected rustfmt execution' > "$FORMAT_TEST_EVENTS"; exit 99 ;;
+esac
+CARGO
+chmod +x "${temporary_root}/failing-cargo"
+printf 'sorter stdout details\nsorter stderr details\n' > "${temporary_root}/expected-diagnostics"
+capture_before_hook
+for target in fmt fmt-check; do
+    status=0
+    RUNNER_TEMP="${temporary_root}/format-logs" \
+        SHARED_TOOLING_CARGO_SORT_VERSION="$SHARED_TOOLING_CARGO_SORT_VERSION" \
+        FORMAT_TEST_EVENTS="${temporary_root}/unexpected-format-events" \
+        make --no-print-directory "$target" "FORMAT_CARGO=${temporary_root}/failing-cargo" \
+        > "${temporary_root}/$target-failure.log" 2>&1 || status=$?
+    test "$status" -eq 2
+    label=Formatting
+    [[ "$target" != fmt-check ]] || label='Checking formatting'
+    grep -Fxq "$label... FAILED (exit 23)" "${temporary_root}/$target-failure.log"
+    logs=("${temporary_root}"/format-logs/formatting.*)
+    test "${#logs[@]}" -eq 1
+    printf 'Details: %q\n' "${logs[0]}" > "${temporary_root}/expected-log-path"
+    grep -Fxf "${temporary_root}/expected-log-path" "${temporary_root}/$target-failure.log"
+    cmp "${temporary_root}/expected-diagnostics" "${logs[0]}"
+    test ! -e "${temporary_root}/unexpected-format-events"
+    assert_unchanged
+    mv "${logs[0]}" "${temporary_root}/$target-diagnostics.log"
+done
 
 # Partial staging must reject before formatting or refreshing the real index.
 printf 'pub fn fixture() {}\n// unstaged edit\n' > testing/crates/hook-probe/src/lib.rs

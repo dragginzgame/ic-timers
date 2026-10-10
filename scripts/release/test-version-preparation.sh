@@ -15,6 +15,7 @@ for script in bump-version finalize-changelog \
 done
 cp "${repository_root}/scripts/ci/next-release-version.sh" \
     "${repository_root}/scripts/ci/check-make-execution.sh" \
+    "${repository_root}/scripts/ci/run-formatting.sh" \
     "${repository_root}/scripts/ci/finalize-release-changelog.awk" "${temporary_root}/scripts/ci/"
 cp "${repository_root}/.shared-tooling/helpers/scripts/ci/read-cargo-workspace-version.sh" \
     "${repository_root}/.shared-tooling/helpers/scripts/ci/rewrite-local-lock-versions.pl" \

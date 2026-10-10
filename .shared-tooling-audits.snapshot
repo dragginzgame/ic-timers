@@ -1,15 +1,16 @@
 # Shared Tooling snapshot v1
+# version	0.2.11
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	b2646cde9abbc8861857a4379c683a0c19eba43e
+revision	83efac446348dea024798a331d77933b24b429dc
 file	faa9a62257ecdfd6532ac2225b3fd053012dfe9c35b8bc2ddc95288d8626a518	-	audits/README.md
 file	518d890bf485bef06c316b4cf26ac6bf357ed52bcce995e8d9b1232a103d0ea3	-	audits/code-hygiene.md
 file	35fd87d36a09ed0971841abf28535d43470c713a82581c2251b924da1ab8f484	-	audits/flow-convergence-and-duplication.md
 file	ffdca09602c44c8aff8fc2a17588b20eb6a56e2e71fb6d42ad75087fdd65819b	-	audits/complexity-and-technical-debt.md
 file	1b64cf2ba0393ab329ec29eb05a696d47ef5933f5ab9bff6e1fe4a7e7b294075	-	audits/module-surface-hardening.md
 file	8f415bcb0e97fcc0e27519e727e7aefae94686e6e5e3619d24e3df3ace5d7708	-	audits/module-cleanup.md
-file	039f9e043059985a60e3022e53d243c8430ca67ae813fa926be5e7ffb67ef65e	-	docs/consuming-snapshots.md
-file	1a0d1d6f2a87a0d77378fdda605f5700cc7e2ca8c8dfac79418248da30b7e657	-	docs/provenance.md
+file	951aa062682f46542bfa44ab649a3332e534c104505a98de66416987715b029e	-	docs/consuming-snapshots.md
+file	15315edad497b9b165671c3f57e9f56e6ba1d206bbc635eb0ff51afaa8456bb3	-	docs/provenance.md
 file	67cc50a0c95ad7d9d50b4a50ec2969ce3455c7fdefc4a4a61e00f3a68a7d501c	-	docs/ic-tools.md
 file	077c98e506e8b3998b3b9e668b656c60a502610df06a513e4241bf93bc01b790	-	docs/local-setup.md
 file	82892e25292fe47c26035a0031aa4ad1996fcf181732163e75039bd657f2f84b	-	ci/tool-versions.env
@@ -17,7 +18,7 @@ file	4692d760ea97861b52c183bb69e24c929d9baf7c292795c61d65ea3166368787	-	rules/de
 file	27a04aeee753252b310fef363856edf83577337bfaea1e63a50017460eddde59	-	docs/principles/rust-code-hygiene.md
 file	457fd38e0073c91ba470b918d4facd9faac3c5200ebd38c97e9d6b76acdaea55	-	docs/principles/simplicity-and-maintainability.md
 file	4c981184847462ab3c01cac087e28309f8e054253fd95c7bbe56f643877aa708	x	scripts/ci/verify-file-checksum.sh
-file	ba5c6b76d15bec4ac226f1ab0732d5087446152d64107993c52642a68d2ff464	x	scripts/ci/verify-shared-tooling-snapshot.sh
+file	5f3037e3e9a6114b23b425a8f36e280181ae05b1a6af00bab332dde4c1302537	x	scripts/ci/verify-shared-tooling-snapshot.sh
 file	74134f6567746b2071ecfca28829b0ea4da69ed207b958b38fd181e722a3aea9	x	scripts/dev/install-host-tools.sh
 file	ab60367040118f0e26a1ae7daf8e29832a9e9887fc6e9039dc5b0b41c80bbd1b	x	scripts/ci/test-host-tools.sh
 file	f41ba134d2838df094d373c70ba254f6bc2f1184914eee06119062708f2d6797	x	scripts/dev/install-ic-tools.sh
@@ -31,4 +32,4 @@ file	775da89f655a3781059f433f80470ee6db9675e08942a805c111614183322fe1	-	scripts/
 file	90e6b75e1bd3e3d7bc68b18f727379981e6811aa0a1b061e75d32c4699b13632	x	scripts/ci/test-tool-evidence.sh
 file	d7feda634703b4e0acb9e5406deccca2b81b821dfa738b714708b82a2c2e9bc3	x	scripts/ci/select-tool-evidence.sh
 file	5be336cb3e8045b2d2d536542a94944b376ee812b03f786a90b9d962ab697f13	x	scripts/ci/archive-evidence.sh
-file	020b67bcb75d35f5c12392b8c9ec3d7ba31f3a8e07c8318c35643be1ddf72d40	-	.github/actions/retain-failure-evidence/action.yml
+file	00e0ed34684017a20cfc1a970480f693dce145baf8b85a742f45613443f7898a	-	.github/actions/retain-failure-evidence/action.yml

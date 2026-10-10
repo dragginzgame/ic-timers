@@ -74,6 +74,7 @@ cp "${repository_root}/make/tools.mk" "${repository_root}/make/rust-format.mk" \
     "${temporary_root}/workspace with spaces/make/"
 mkdir -p "${temporary_root}/workspace with spaces/scripts/ci"
 cp "${repository_root}/scripts/ci/check-make-execution.sh" \
+    "${repository_root}/scripts/ci/run-formatting.sh" \
     "${temporary_root}/workspace with spaces/scripts/ci/"
 cd "${temporary_root}/workspace-alias"
 fixture_root="$(pwd -P)"
@@ -233,18 +234,26 @@ test ! -e standard-entrypoint-events
 # The selected admission must also ignore ambient runtime snapshot routing.
 for target in release-patch release-minor release-major release-resume; do
     for mode in --ignore-errors --dry-run --touch --question; do
-        status=0
-        env SHARED_TOOLING_ROOT="$external_root" make --no-print-directory \
-            "$mode" "$target" VERSION=0.1.1 "SHARED_TOOLING_ROOT=$external_root" \
-            > rejected-make-mode-output 2>&1 || status=$?
-        if [[ "$status" != 2 ]]; then
-            cat rejected-make-mode-output >&2
-            echo "error: $target did not refuse $mode before recipes" >&2
-            exit 1
-        fi
-        test ! -e standard-entrypoint-events
-        test ! -e external-runner-events
-        test ! -e external-admission-events
+        for replacement in preserved cleared replaced both; do
+            flags=(--no-print-directory)
+            case "$replacement" in
+                cleared) flags=(MAKEFLAGS=) ;;
+                replaced) flags=(MAKEFLAGS=--no-print-directory) ;;
+                both) flags=(MAKEFLAGS= MFLAGS=) ;;
+            esac
+            status=0
+            env SHARED_TOOLING_ROOT="$external_root" make --no-print-directory \
+                "$mode" "$target" "${flags[@]}" VERSION=0.1.1 "SHARED_TOOLING_ROOT=$external_root" \
+                > rejected-make-mode-output 2>&1 || status=$?
+            if [[ "$status" != 2 ]]; then
+                cat rejected-make-mode-output >&2
+                echo "error: $target admitted $mode with $replacement flags" >&2
+                exit 1
+            fi
+            test ! -e standard-entrypoint-events
+            test ! -e external-runner-events
+            test ! -e external-admission-events
+        done
     done
 done
 

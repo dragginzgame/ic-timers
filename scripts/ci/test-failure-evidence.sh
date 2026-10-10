@@ -54,6 +54,21 @@ mkdir -p "$GITHUB_WORKSPACE/.tools/rust/build/failed-cli" \
 printf 'failed Cargo build\n' > "$GITHUB_WORKSPACE/.tools/rust/build/failed-cli/install.log"
 printf 'failed server download\n' > "$GITHUB_WORKSPACE/.tools/testkit-server/.setup-v1-failed/failure.txt"
 printf 'admitted server bytes\n' > "$GITHUB_WORKSPACE/.tools/testkit-server/admitted/pocket-ic"
+# A real reporter failure preserves its original status and both streams. The
+# consumer archive must contain those exact diagnostic bytes and mode.
+format_status=0
+bash "$root/scripts/ci/run-formatting.sh" --check bash -c \
+    'echo "formatter stdout details"; echo "formatter stderr details" >&2; exit 23' \
+    > "$fixture/formatting-output.log" 2>&1 || format_status=$?
+test "$format_status" -eq 23
+grep -Fxq 'Checking formatting... FAILED (exit 23)' "$fixture/formatting-output.log"
+format_logs=("$RUNNER_TEMP"/formatting.*)
+test "${#format_logs[@]}" -eq 1
+format_log="${format_logs[0]}"
+printf 'formatter stdout details\nformatter stderr details\n' > "$fixture/expected-format-log"
+cmp "$fixture/expected-format-log" "$format_log"
+printf 'Details: %q\n' "$format_log" > "$fixture/expected-format-path"
+grep -Fxf "$fixture/expected-format-path" "$fixture/formatting-output.log"
 bash "$root/scripts/ci/collect-failure-evidence.sh" > "$fixture/collection.log" 2>&1
 archive_bytes="$(wc -c < "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz")"
 archive_bytes="${archive_bytes//[[:space:]]/}"
@@ -61,6 +76,11 @@ grep -Eq "^CI failure evidence measurements: archive_bytes=${archive_bytes} arch
     "$fixture/collection.log"
 mkdir "$fixture/extracted"
 tar -xzpf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" -C "$fixture/extracted"
+cmp "$format_log" "$fixture/extracted/${format_log##*/}"
+perl -e 'my @a=stat $ARGV[0]; my @b=stat $ARGV[1];
+    @a && @b && ($a[2]&07777)==($b[2]&07777) or die "archive lost formatter log mode\n";' \
+    "$format_log" "$fixture/extracted/${format_log##*/}"
+rm "$format_log"
 for path in .tools/rust/build/failed-cli/install.log .tools/testkit-server/.setup-v1-failed/failure.txt; do
     cmp "$GITHUB_WORKSPACE/$path" "$fixture/extracted/$path"
 done

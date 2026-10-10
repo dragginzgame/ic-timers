@@ -32,6 +32,12 @@ selections=("$metadata" identity.txt)
 if [[ -d "$temporary/ic-timers-fixtures" ]]; then
     selections+=("$temporary" ic-timers-fixtures)
 fi
+# The canonical formatter inherits RUNNER_TEMP in CI. Retain complete failed
+# stdout/stderr logs from that selected root; successful logs remove themselves.
+for log in "$temporary"/formatting.*; do
+    [[ -f "$log" && ! -L "$log" ]] || continue
+    selections+=("$temporary" "${log#"$temporary"/}")
+done
 # Select the raw release logs without admitting the surrounding Git metadata.
 if [[ -d "$root/.git/release-state/validation-failures" ]]; then
     selections+=("$root/.git/release-state" validation-failures)

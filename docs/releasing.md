@@ -375,8 +375,9 @@ itself also supports a dirty worktree without a preparatory commit. An exact
 releases, validation logging and pre-commit formatting require executing Make
 modes that propagate failures. The shared admission probe rejects ignore-errors,
 dry-run, question, touch and version-only controls before protected effects.
-Use ordinary Make modes for those commands. Outer Make with ignore-errors can
-still mask a rejected recipe's exit status; it cannot admit later release phases.
+Use ordinary Make modes for those commands. The reviewed Shared 0.2.11 include
+independently probes MAKEFLAGS and retained MFLAGS, and refuses assignments
+that erase MFLAGS. Clearing/replacing MAKEFLAGS cannot admit hidden unsafe modes.
 Release selections and normal parallel-job controls remain inherited.
 Hook and version-preparation regressions print their retained scratch paths on
 failure, including per-scenario Make output and before/after fixture state.
@@ -412,6 +413,14 @@ tool pin lives in `ci/tool-versions.env`; `make update-dev` installs it with
 format checks never install tools. Prepared standard-release metadata is checked
 for manifest ordering before staging, so a commit hook does not repair the
 runner's saved payload. `testing-check` uses the same formatting gate.
+
+Formatting success prints one line. Failure prints the failing command's exit
+status and the path to complete retained stdout/stderr; Make then returns its
+normal recipe-failure status. In CI, the wrapper uses RUNNER_TEMP and the local
+failure collector archives `formatting.*` there. Local runs otherwise use TMPDIR
+or /tmp. Successful logs remove themselves. The
+[0.2.11 adoption owner](shared-tooling.md#shared-tooling-0211-formatting-and-make-admission)
+records source identity and pending consumer qualification.
 
 The vendored formatting hook exports the index to disposable scratch, formats
 all root workspace members, then copies/stages only the fully staged selection. Partial
@@ -491,9 +500,9 @@ continues to target Wasm on the Internet Computer.
 
 | Host | Current workflow configuration and evidence scope |
 | --- | --- |
-| Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. Released 0.16.3 passes product recovery and policy cohorts with the prepared internal toolchain; Testkit owns server admission from the root-lock selection. The incoming Testkit 0.27.2 / Metrics 0.3.4 / Host 0.9.7 graph retains separate qualification. |
-| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.15. The historical 0.14.1 missing-`rg` failure is recorded below. |
-| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.15. Historical failures retain their original scope below. |
+| Linux x86_64 | Hosted Rust/MSRV jobs use Ubuntu runners. Released 0.16.3 passes product recovery and policy cohorts with the prepared internal toolchain; Testkit owns server admission from the root-lock selection. 0.16.4 also passes at its own Testkit 0.28.0 / Metrics 0.3.5 / Host 0.10.1 graph; newer transitive lock changes remain separate. |
+| macOS 15, Intel x86_64 | Declared host target. PR/main job uses `macos-15-intel`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.15. 0.16.3 fails before the gate on Make override/export parsing; the repaired 0.16.4 native gate passes with actual recovery and policy-cohort subjects. Historical failures retain their original scope below. |
+| macOS 15, Apple Silicon arm64 | Declared host target. PR/main job uses `macos-15`, Apple's Bash 3.2 and the complete release gate. The gate passed for released 0.14.15. 0.16.3 fails before the gate on Make override/export parsing; the repaired 0.16.4 native gate passes with actual recovery and policy-cohort subjects. Historical failures retain their original scope below. |
 
 Released **0.14.21** is `5c6b7f45d72f9051b4e155410ec47339885dc4f2`;
 the maintainer reports it pushed. Matching
@@ -1416,6 +1425,18 @@ recorded on [#30](https://github.com/dragginzgame/ic-timers/issues/30#issuecomme
 This archive-scope follow-up is separate from #23's required upload/download
 observations and from the not-yet-committed Shared Tooling archive helper.
 
+The subsequently completed **0.16.3** native jobs
+[ARM 113880561216](https://github.com/dragginzgame/ic-timers/actions/runs/37948400741/job/113880561216)
+and [Intel 113880561677](https://github.com/dragginzgame/ic-timers/actions/runs/37948400741/job/113880561677)
+both fail during tool preparation at `Makefile:270: multiple target patterns`,
+before any native release gate. Logs retained under
+`/tmp/ic-timers-0165-review.5lms07fg/` bind that failure to the combined
+target-specific override/export syntax. **0.16.4** uses separate global override
+assignment and export for direct delivery, removing that exact parse defect.
+Its two native jobs are queued at inspection, so neither the source repair nor
+older Linux checks qualify native acceptance. Do not retain the superseded
+"0.16.3 native jobs queued" description as current evidence or rerun those jobs.
+
 ### Formatter prerequisites
 
 Both `make fmt` and `make fmt-check` depend on `format-tools-check`. The reviewed
@@ -1707,6 +1728,80 @@ not the released execution evidence. Source equivalence does not qualify the new
 package identities or their published CLI build. The complete user-owned gate
 remains required.
 
+### Testkit 0.28 and Host 0.10 released graph
+
+The maintainer's pushed **0.16.4** at
+`da921fc899d2c7c99ed0a6cacac6e2111307ac71` actually selects Testkit **0.28.0**,
+all four Host crates **0.10.1**, Metrics **0.3.5** and PocketIC **16.1.0**.
+Four root-owned members remain 0.16.4. This supersedes earlier preparation graph
+selection, including the versions described by the finalized development prose;
+it does not relabel any earlier execution evidence. Registry publication is not
+independently checked. The sole root catalog owns
+Testkit 0.28 and Metrics 0.3; members retain workspace inheritance.
+
+Review Testkit commit `48cfff270d5e228c0e09d6ee452786fb14c9a66e` and Host
+`c7bdc3d4e1c658957202eebd76bff2c51e22f645`: Host consolidates durable writes on
+`write_with(path, options, producer)` and preserves publication/cleanup failure
+state. Testkit updates those calls and preserves error evidence in cache and
+server provisioning paths. Host 0.10.1 also synchronizes newly observed parent
+directories when a competing creator wins mkdir. Our private harness consumes
+PocketIC managed startup, never the changed durable-write APIs or cache error
+matches. Therefore no timer adapter, direct Host dependency, compatibility shim,
+public timer cut or retained-data reset follows. The published CLI is still
+installed/check-admitted by its selected Testkit version; that owner CLI's locked
+build remains distinct from the root test graph. Metrics 0.3.5 changes inspector
+fixtures/docs, not measurement library arithmetic.
+
+Full locked offline metadata is retained at `/tmp/ic-timers-0165-metadata.json`.
+The current root Cargo/pin bytes are preserved through Shared 0.2.9 export under
+`/tmp/ic-timers-shared029.00umv319/`.
+
+[Exact Linux job 113946212101](https://github.com/dragginzgame/ic-timers/actions/runs/37967730569/job/113946212101)
+has now passed with this pushed source/graph. The actual log proves Testkit server
+setup/offline admission, standard release adapters/gate, corrected version
+preparation, actual staged-hook formatting/failure isolation, 142 native library
+tests, 14 maintained PocketIC recovery subjects and all four policy cohorts.
+Product/cohort commands use internal Rust **1.99.0** and the root `timer-probe`
+profile; the separate MSRV job passes at **1.88.0**. Raw evidence remains at
+`/tmp/ic-timers-0165-review.5lms07fg/0164-linux-job.log`. Tag truth also passes;
+both native macOS jobs remain queued at inspection. No contributor test/build/
+lint/setup/Cargo update/release runs for this evidence review. These results
+qualify the released Linux graph, not native macOS behavior or the pending
+Shared 0.2.9 consumer selection. Keep #34/#35 open for their remaining acceptance.
+
+The four retained 0.16.4 cohort rows exactly match the earlier 0.16.3 Linux
+observations at the same internal Rust 1.99.0 and profile: Wasm sizes are
+241280 / 286066 / 286835 / 288401 bytes for baseline / once / after-completion /
+watchdog, and all reported instruction/cycle fields are unchanged. This is a
+comparison of existing hosted observations, not a new benchmark execution or a
+claim about unmeasured workloads. The older raw log remains at
+`/tmp/ic-timers-0164-review/linux-checks.log`; current measurements remain tied to
+the newer graph above. No optimization or footprint regression is evidenced in
+these maintained subjects.
+
+Both native jobs subsequently complete successfully at the exact 0.16.4 source:
+[Intel 113946212038](https://github.com/dragginzgame/ic-timers/actions/runs/37967730569/job/113946212038)
+and [ARM 113946212124](https://github.com/dragginzgame/ic-timers/actions/runs/37967730569/job/113946212124).
+Their raw logs prove host-specific Testkit PocketIC 16.1.0 provisioning/check
+admission, the complete native release gate, corrected version preparation,
+actual staged-hook formatting/isolation, 142 library tests, 14 recovery subjects
+and all four cohorts. Logs are retained at `/tmp/ic-timers-0164-native.cutpdaam/`.
+Native canister commands explicitly use **Rust 1.88.0** despite the internal host
+toolchain being 1.99.0. Linux canister subjects use 1.99.0. Different native and
+Linux cohort rows therefore are not an equal-input performance comparison.
+No contributor tests, builds or deployment checks ran to obtain these results.
+[Issue #34 closes with completed three-host acceptance](https://github.com/dragginzgame/ic-timers/issues/34#issuecomment-6095003127).
+#35's original Make/hook acceptance also completes; its new uncommitted upstream
+concise-formatting follow-up remains open. These results qualify the tagged graph
+and its Shared 0.2.8 consumer, not the pending 0.2.9 selection.
+
+An incoming lock on 2026-10-10 updates cc, smallvec and syn to **1.7.0 / 1.16.3 /
+3.0.7**. Preserve this maintainer input. Cheap locked offline metadata at
+`/tmp/ic-timers-0165-incoming-metadata.json` retains one Testkit/Metrics/PocketIC
+selection and four local 0.16.4 members; it does not execute or qualify the new
+transitive graph. Source-bound release evidence above remains tied to the old
+lock. No contributor Cargo mutation, version change or validation rerun occurs.
+
 ### Dependency pin exceptions
 
 [Exact exception records](../ci/dependency-pinning-exceptions.json) retain three
@@ -1715,9 +1810,11 @@ checker pass. `ic-cdk-timers =1.0.0` fixes provider behavior audited in
 [SAFETY](../SAFETY.md), including cancellation heap retention and dispatch limits.
 `ic0 =1.2.0` preserves the production platform bindings and counter-1 reader
 reviewed in the [measurement owner](design/callback-delivery-ownership.md#ic-metrics-02-adoption).
-The root catalog retains `ic-cdk =0.20.3` for probe execution/suspension with
-the historically qualified PocketIC 16.0.0 server; the prepared 16.1.0 pair needs
-fresh runtime qualification. Testkit uses a compatible 0.20 requirement;
+The root catalog retains `ic-cdk =0.20.3` for probe execution/suspension.
+Current source-bound Linux PocketIC 16.1.0 recovery/cohort qualification is
+recorded [above](#testkit-028-and-host-010-released-graph), including both complete
+native macOS gates at their explicit canister toolchain. The historical 16.0.0 observations retain their own
+source and do not define today's server selection. Testkit uses a compatible 0.20 requirement;
 its former exact 0.17.3 exception is retired. These are product qualification boundaries, not blanket exact-pin policy.
 
 Each exception matches its declaring root, dependency name and literal version.
@@ -2060,3 +2157,15 @@ new build or evidence command. Earlier hosted logs have instruction subjects
 but no byte counts, so no historical Wasm delta is inferred. The completed
 0.13.5 native macOS gates supply executed output, scoped in the
 [cohort review](design/callback-delivery-ownership.md#released-0135-cohort-review).
+
+### Metrics 0.3.6 incoming graph
+
+The preserved incoming root lock for pending 0.16.5 selects Metrics **0.3.6**,
+Testkit **0.28.0**, Host **0.10.1** and PocketIC **16.1.0**, with four local
+members still **0.16.4**. Metrics 0.3.5 and 0.3.6 have byte-identical sets of
+all seven published `src/**/*.rs` files in the Cargo registry cache; upstream
+0.3.6 changes repository snapshot diagnostics and the private Wasm inspector's
+Host selection. This requires no timer arithmetic adapter or public semantic cut.
+The incoming lock also updates cc, smallvec and syn. Locked offline metadata is
+preparation evidence only; released 0.16.4's tests/cohorts do not qualify the new
+graph. No contributor Cargo mutation, build/test/lint or measurement runs.

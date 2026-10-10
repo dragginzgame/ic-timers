@@ -20,7 +20,8 @@ mkdir -p "$fixture/current/make"
 cp "$root/make/tools.mk" "$root/make/rust-format.mk" \
     "$root/make/release.mk" "$root/make/execution.mk" "$fixture/current/make/"
 mkdir -p "$fixture/current/scripts/ci"
-cp "$root/scripts/ci/check-make-execution.sh" "$fixture/current/scripts/ci/"
+cp "$root/scripts/ci/check-make-execution.sh" "$root/scripts/ci/run-formatting.sh" \
+    "$fixture/current/scripts/ci/"
 cp -R "$root/scripts/release" "$fixture/current/scripts/"
 cp "$root/.shared-tooling/helpers/scripts/ci/read-cargo-workspace-version.sh" \
     "$root/.shared-tooling/helpers/scripts/ci/check-release-tag.sh" \
