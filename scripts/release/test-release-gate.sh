@@ -13,6 +13,20 @@ bump_script="${repository_root}/scripts/release/bump-version.sh"
 impact_checker="${repository_root}/scripts/release/check-bump-impact.sh"
 export GITHUB_ACTIONS=false GITHUB_STEP_SUMMARY=''
 
+temporary_root="$(mktemp -d)"
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
+finish() {
+    local status=$?
+    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
+    if [[ "$status" == 0 ]]; then rm -rf -- "${temporary_root}"
+    else
+        printf "Failed release-gate fixture retained: %s\n" "${temporary_root}" >&2
+    fi
+    exit "$status"
+}
+trap finish EXIT
+
 if downgrade_output="$(bash "${bump_script}" 0.0.0 2>&1)"; then
     echo "error: version bump accepted a downgrade" >&2
     exit 1
@@ -60,8 +74,6 @@ fi
 # Testkit owns host-specific artifact admission; test-testkit-server.sh checks our adapter.
 # Execute the real orchestration with cheap leaf targets. Expected checks remain
 # independent of Makefile variables; their spelling and recipe layout do not.
-temporary_root="$(mktemp -d)"
-trap 'if [[ $? == 0 ]]; then rm -rf -- "${temporary_root}"; else printf "Failed release-gate fixture retained: %s\n" "${temporary_root}" >&2; fi' EXIT
 # Make's CURDIR is physical, including under macOS's /var -> /private/var.
 # Enter through an alias on every host so this path distinction stays covered;
 # a space in the physical root also checks argument boundaries.
@@ -425,4 +437,5 @@ EOF
 grep -Fq child-checkout-marker nested-logging-output
 if grep -Fq 'jobserver unavailable' nested-logging-output; then exit 1; fi
 
+fixture_complete=true
 echo "Release gate execution checks passed"

@@ -1,8 +1,29 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.3.4 review and retained optimizer pins
+
+Committed upstream **0.3.4** `169d77b8440568c5200eede971625126181f7bb2` matches
+remote main. Its change selects Binaryen 133 at the upstream pin owner, adds
+a producer-owned Node/Wasm optimization smoke and updates setup/host guidance.
+The engineering baseline, selected Make/setup/helper scripts and runtime runner
+are unchanged from our reviewed 0.3.3. Exact-source
+[producer CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38054347275)
+is queued at observation; [Shared #102](https://github.com/dragginzgame/shared-tooling/issues/102)
+owns qualification.
+
+Timers retains its three canonical **0.3.3** snapshots and consumer-owned
+`ci/ic-tools.tsv` selecting **132**. No maintained build/probe target invokes
+`wasm-opt`, so this inspection establishes no product Wasm/instruction benefit
+from changing that installed tool. Upstream requires consumer Wasm/native
+qualification before a new optimizer selection and permits retaining a reviewed
+local matrix while that remains outstanding. No pin edit, setup, optimization
+smoke, Node dependency or additional CI gate is added. Review the completed
+producer evidence and a concrete consumer qualification subject before moving
+the pin; do not count existing unoptimized probe acceptance as Binaryen evidence.
+
 ## Shared Tooling 0.3.3 validation completion
 
-Pending **0.17.2** advances all three canonical exports from 0.3.2 to committed
+Released **0.17.2** advances all three canonical exports from 0.3.2 to committed
 Shared **0.3.3** `d63f0cfaba8ab2961d6012064adbf051c1898bc1`, confirmed against remote
 main. Selections remain **56 baseline / 30 audit-setup / 11 helpers**. The only
 selected payload change is `scripts/ci/run-validation-targets.sh`; governance,
@@ -204,7 +225,10 @@ pipeline/PATH review, 279 documentation targets/anchors, whitespace and complete
 locked offline metadata. Incoming Cargo bytes, both pin files and real index
 are unchanged. These checks do not execute the new aggregate or its fixtures.
 [Consumer feedback](https://github.com/dragginzgame/ic-timers/issues/36#issuecomment-6096551930)
-records this preparation; native/delivery acceptance remains open at that owner.
+records this preparation. Subsequent downloaded 0.17.0 Intel/ARM logs complete
+consumer acceptance alongside Linux/MSRV/tag evidence at the
+[release owner](releasing.md#0170-release-acceptance); this resolves #36 without
+qualifying later dependency graphs, shared revisions or fixture repairs.
 
 ## Shared Tooling 0.2.14 CI inspection
 

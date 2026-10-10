@@ -2,6 +2,23 @@
 
 All notable changes to this project are recorded here.
 
+## [0.17.3]
+
+### Development
+
+- Require explicit completion before local CI/release fixtures report success or
+  remove inputs. Preserve failure status and incomplete evidence, including Bash
+  3.2 premature zero-status exits. Check each actual cleanup boundary through
+  disposable copies before fixture work; consolidate the Testkit exit probes
+  into that shared local check ([#38](https://github.com/dragginzgame/ic-timers/issues/38)).
+- Require completed failure-evidence collection before successful cleanup, so
+  premature collector exits fail and retain scratch evidence. Extend the existing
+  collection fixture with actual-boundary exit and retention cases
+  ([#39](https://github.com/dragginzgame/ic-timers/issues/39)).
+- Preserve failed workspace-version reads during release preflight, including
+  failures that emit the expected version. Stop before fetch/setup and retain
+  the reader's exit status; add failure and mismatch cases to the index fixture.
+
 ## [0.17.2] - 2026-10-10
 
 ### Development

@@ -5,7 +5,18 @@ repository_root="$(git rev-parse --show-toplevel)"
 export PATH="${repository_root}/.tools/host/bin:${PATH}"
 export YQ="${repository_root}/.tools/host/bin/yq"
 temporary_root="$(mktemp -d)"
-trap 'rm -rf -- "${temporary_root}"' EXIT
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
+finish() {
+    local status=$?
+    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
+    if [[ "$status" == 0 ]]; then rm -rf -- "${temporary_root}"
+    else
+        printf "Failed release-commit fixture retained: %s\n" "${temporary_root}" >&2
+    fi
+    exit "$status"
+}
+trap finish EXIT
 mkdir -p "${temporary_root}"/{scripts/{ci,release},.shared-tooling/helpers/scripts/ci,bin}
 for script in commit-release check-tag-at-head workspace-version; do
     cp "${repository_root}/scripts/release/${script}.sh" "${temporary_root}/scripts/release/"
@@ -211,4 +222,5 @@ printf '%s\n' 'Unstaged change.' >> README.md
 expect_failure 'stage all release changes' bash scripts/release/commit-release.sh
 git add README.md
 expect_failure 'cannot commit more changes' bash scripts/release/commit-release.sh
+fixture_complete=true
 echo 'Release commit recovery checks passed'

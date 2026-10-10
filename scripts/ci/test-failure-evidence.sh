@@ -10,11 +10,64 @@ temporary="${TMPDIR:-/tmp}"
 temporary="$(cd -P "$temporary" && printf '%s/.' "$PWD")"
 temporary="${temporary%/.}"
 fixture="$(mktemp -d "$temporary/timer-evidence-test.XXXXXX")"
-trap 'if [[ $? == 0 ]]; then rm -rf "$fixture"; else printf "Failed evidence fixture retained: %s\n" "$fixture" >&2; fi' EXIT
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
+finish() {
+    local status=$?
+    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
+    if [[ "$status" == 0 ]]; then rm -rf -- "${fixture}"
+    else
+        printf "Failed evidence fixture retained: %s\n" "${fixture}" >&2
+    fi
+    exit "$status"
+}
+trap finish EXIT
 export GITHUB_WORKSPACE="$fixture/repo" RUNNER_TEMP="$fixture/runner"
 export GITHUB_SHA=fixture-event-sha GITHUB_JOB=fixture-job
 export RUNNER_OS=fixture-os RUNNER_ARCH=fixture-arch GITHUB_RUN_ID=123 GITHUB_RUN_ATTEMPT=2
 mkdir -p "$GITHUB_WORKSPACE" "$RUNNER_TEMP"
+# Probe the actual collector EXIT boundary, truncating before Git inspection,
+# tool selection or archiving. Existing full collection cases below still prove
+# the successful archive path. Use the invoking Bash, including native Bash 3.2.
+mkdir -p "$fixture/collector-probe/scripts/ci" "$fixture/collector scratch"
+export CI_EVIDENCE_EXIT_PATH="$fixture/collector-exit-path"
+for failure in nounset command nonzero premature completed failed-completion; do
+    # shellcheck disable=SC2016 # Expanded only by the disposable collector copy.
+    case "$failure" in
+        nounset) injection='unset COLLECTOR_UNBOUND; printf "%s\n" "$COLLECTOR_UNBOUND"'; expected=1 ;;
+        command) injection='false'; expected=1 ;;
+        nonzero) injection='exit 23'; expected=23 ;;
+        premature) injection='exit 0'; expected=1 ;;
+        completed) injection='collection_complete=true; exit 0'; expected=0 ;;
+        failed-completion) injection='collection_complete=true; exit 23'; expected=23 ;;
+    esac
+    COLLECTOR_INJECTION="$injection" awk '
+        { print }
+        /^trap finish EXIT$/ {
+            print "printf \"%s\\n\" \"$metadata\" > \"$CI_EVIDENCE_EXIT_PATH\""
+            print "printf evidence > \"$metadata/exit-evidence\""
+            print ENVIRON["COLLECTOR_INJECTION"]
+            print "exit 99"
+            injected=1
+            exit
+        }
+        END { if (!injected) exit 1 }
+    ' "$root/scripts/ci/collect-failure-evidence.sh" \
+        > "$fixture/collector-probe/scripts/ci/collect-failure-evidence.sh"
+    rm -f -- "$CI_EVIDENCE_EXIT_PATH"
+    status=0
+    RUNNER_TEMP="$fixture/collector scratch" \
+        "$BASH" "$fixture/collector-probe/scripts/ci/collect-failure-evidence.sh" \
+        > "$fixture/collector-exit-$failure.log" 2>&1 || status=$?
+    [[ "$status" == "$expected" ]]
+    retained="$(cat "$CI_EVIDENCE_EXIT_PATH")"
+    [[ -n "$retained" ]]
+    if [[ "$expected" == 0 ]]; then [[ ! -e "$retained" ]]
+    else
+        [[ -d "$retained" && "$(cat "$retained/exit-evidence")" == evidence ]]
+        grep -Fq "Failed evidence collection retained: $retained" "$fixture/collector-exit-$failure.log"
+    fi
+done
 # Read-only reuse of committed objects gives the fixture an actual checkout SHA.
 objects="$(git -C "$root" rev-parse --git-path objects && printf '.')"
 objects="${objects%$'\n'.}"
@@ -474,4 +527,5 @@ grep -Fxq "checkout_sha=$(git -C "$root" rev-parse HEAD)" "$fixture/path-extract
 grep -Fxq 'event_sha=fixture-event-sha' "$fixture/path-extracted/identity.txt"
 cmp "$copied/target/validation-failures/latest.log" \
     "$fixture/path-extracted/target/validation-failures/latest.log"
+fixture_complete=true
 echo 'CI failure evidence selection, metadata, modes, empty-input, retention and qualification-driver checks passed'

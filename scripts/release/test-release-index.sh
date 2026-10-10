@@ -9,11 +9,19 @@ export PATH="$root/.tools/host/bin:$PATH"
 export YQ="$root/.tools/host/bin/yq"
 export RELEASE_INDEX_REAL_CARGO="$(command -v cargo)"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/release-index-check.XXXXXX")"
-trap 'status=$?; if [[ "$status" == 0 ]]; then rm -rf -- "$fixture";
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
+finish() {
+    local status=$?
+    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
+    if [[ "$status" == 0 ]]; then rm -rf -- "${fixture}"
     else
         if [[ -f "$fixture/output" ]]; then cat "$fixture/output" >&2 || :; fi
-        printf "Failed release-index fixture retained: %s\n" "$fixture" >&2;
-    fi; exit "$status"' EXIT
+        printf "Failed release-index fixture retained: %s\n" "${fixture}" >&2
+    fi
+    exit "$status"
+}
+trap finish EXIT
 git clone -q --no-local --depth 1 "$root" "$fixture/repo"
 mkdir "$fixture/bin" "$fixture/tmp"
 export FETCH_EVENTS="$fixture/fetch-events"
@@ -182,6 +190,47 @@ reject commit-check 'failed index/worktree comparison'
 grep -Fq 'fixture failed index query' "$fixture/output"
 unset FAIL_ADMISSION_QUERY PARTIAL_ADMISSION_OUTPUT
 
+# A failed version reader may emit the expected version. Never compare that
+# output as successful metadata or advance to source admission/fetch/setup.
+export RELEASE_INDEX_REAL_BASH="$real_bash"
+printf '#!%s\n' "$real_bash" > "$fixture/bin/bash"
+cat >> "$fixture/bin/bash" <<'STUB'
+set -euo pipefail
+if [[ "${1:-}" == scripts/release/workspace-version.sh && -n "${FAIL_VERSION_READ:-}" ]]; then
+    case "$FAIL_VERSION_READ" in
+        matching) printf '%s\n' "$RELEASE_PREVIOUS" ;;
+        empty) ;;
+        mismatch) printf '%s\n' '0.0.0'; exit 0 ;;
+    esac
+    echo 'fixture failed workspace version read' >&2
+    exit 23
+fi
+exec "$RELEASE_INDEX_REAL_BASH" "$@"
+STUB
+chmod +x "$fixture/bin/bash"
+cp .git/index "$fixture/version-read-index"
+for path in Cargo.toml Cargo.lock CHANGELOG.md README.md; do
+    cp "$path" "$fixture/version-read-${path}"
+done
+for output in empty matching mismatch; do
+    : > "$FETCH_EVENTS"
+    : > "$PREPARATION_EVENTS"
+    status=0
+    FAIL_VERSION_READ="$output" "$real_bash" "$root/scripts/release/adapter.sh" preflight \
+        > "$fixture/output" 2>&1 || status=$?
+    expected=23; [[ "$output" != mismatch ]] || expected=1
+    [[ "$status" == "$expected" ]]
+    if [[ "$output" != mismatch ]]; then
+        grep -Fq 'fixture failed workspace version read' "$fixture/output"
+    fi
+    if grep -Fq 'release source refused' "$fixture/output"; then exit 1; fi
+    [[ ! -s "$FETCH_EVENTS" && ! -s "$PREPARATION_EVENTS" && ! -e .git/release-state ]]
+    cmp .git/index "$fixture/version-read-index"
+    for path in Cargo.toml Cargo.lock CHANGELOG.md README.md; do
+        cmp "$path" "$fixture/version-read-${path}"
+    done
+done
+
 # A clean release preflight fetches, sets up and admits the selected tool, in
 # order. Every failure stops before later effects or release metadata mutation.
 cp CHANGELOG.md "$fixture/original-changelog"
@@ -235,4 +284,5 @@ cp "$fixture/original-changelog" CHANGELOG.md
 [[ "$(git rev-parse HEAD)" == "$original_head" ]]
 git diff --quiet HEAD --
 git diff --cached --quiet
+fixture_complete=true
 echo 'Real release-index admission checks passed (reused history; Cargo/tool stubs)'

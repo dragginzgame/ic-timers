@@ -5,7 +5,18 @@ repository_root="$(git rev-parse --show-toplevel)"
 checker="${repository_root}/scripts/release/warn-release-prose.sh"
 fixture_root="$(mktemp -d)"
 status_file="${fixture_root}/current.md"
-trap 'rm -f "${status_file}"; rmdir "${fixture_root}"' EXIT
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
+finish() {
+    local status=$?
+    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
+    if [[ "$status" == 0 ]]; then rm -rf -- "${fixture_root}"
+    else
+        printf "Failed release-prose fixture retained: %s\n" "${fixture_root}" >&2
+    fi
+    exit "$status"
+}
+trap finish EXIT
 
 printf '%s\n' \
     '# Current status' \
@@ -50,4 +61,5 @@ if [[ "${missing_output}" != *"continuing"* ]]; then
     exit 1
 fi
 
+fixture_complete=true
 echo "Release-prose advisory checks passed"

@@ -1910,6 +1910,77 @@ mutation, setup or qualification runs. Metadata resolution alone establishes
 neither selected CLI/server admission nor native or PocketIC acceptance; the
 normal user-operated gate must qualify this selected graph and new snapshots.
 
+### Local fixture completion follow-up
+
+After the maintainer reported **0.17.2** live at
+`1cc87a467c4552b95d8a9728334e4e29eff0bc4c`, pending **0.17.3** repairs fourteen
+consumer-owned fixture EXIT boundaries. Cleanup requires both successful status
+and explicit completion after the assertions; incomplete/failed fixtures retain
+their inputs, diagnostics and actual nonzero status. Release-gate and hook
+admission now precede their first helper calls. Selected shared files are
+unchanged and remain governed by their three immutable 0.3.3 snapshots.
+
+The new [boundary check](../scripts/ci/test-fixture-completion.sh) copies the
+actual initialization and EXIT admission of all sixteen local CI/release
+fixtures, including itself and Testkit. It truncates each copy at the trap and
+injects nounset, failed command, explicit nonzero, premature-zero, completed-zero
+and completed-but-failed exits before any fixture body. It checks exact status,
+successful cleanup and preservation of an evidence file for failure. Each probe
+gets a fresh path marker and scratch paths containing spaces. The check is first
+in `release-check`, so existing Linux/macOS gates run it with their selected Bash;
+the standalone Testkit exit probes are consolidated there. No shared fixture is
+patched or independently copied into the local boundary roster. These cases are
+written, not run; [#38](https://github.com/dragginzgame/ic-timers/issues/38) remains
+open for current-Bash and native Bash 3.2 qualification.
+
+The incoming lock selects Testkit **0.32.1** under the existing `0.32` requirement.
+During inspection external lock updates advance all four Host packages from
+0.12.2 to **0.12.3** and Metrics from 0.5.1 to **0.5.2**. Preserve those newer
+selections; no contributor lock write or rollback occurs. The root catalog,
+pin catalogs and index compare exactly with the initial copies. This is
+repository-only work with no runtime/API or measured Wasm/instruction change;
+dependency and release execution remain maintainer-owned. Preparation inputs and
+downloaded historical native logs are retained under
+`/tmp/ic-timers-fixture-completion.9z8952mm/`.
+
+Permitted syntax inspection covers sixteen local scripts, 31 embedded Bash
+bodies and all 96 generated probe prefixes using the actual awk generator;
+none of those prefixes or fixture bodies is executed. All three snapshot
+integrity checks, seven added local documentation links and diff whitespace pass.
+Initial locked offline metadata
+resolves the Testkit 0.32.1/Host 0.12.2 selection. A fresh locked offline check
+also resolves the externally updated Testkit 0.32.1/Host 0.12.3/Metrics 0.5.2 graph,
+without changing its lock bytes. This is resolution, not execution qualification.
+
+The same batch also repairs the production collector's status-only EXIT cleanup,
+tracked separately by [#39](https://github.com/dragginzgame/ic-timers/issues/39).
+`collect-failure-evidence.sh` requires explicit completion after final archive
+diagnostics before successful cleanup. Incomplete zero-status exits become
+failure; actual nonzero status and scratch evidence are retained. Archive
+selection, paths, byte/mode handling and ordinary successful output are unchanged.
+The existing evidence fixture adds six exit cases against copies of the actual
+collector initialization/trap, truncated before Git inspection, tool selection
+or archiving. Cases check status, successful cleanup, retained evidence bytes and
+the retained-path diagnostic; full collection cases stay in their existing owner.
+Syntax for both affected scripts and six generated collector prefixes plus diff
+whitespace pass. No prefix or fixture executes. Cargo, lock, pins and index match
+the separate preserved inputs at `/tmp/ic-timers-collector-completion.vb52tc9h/`.
+Both #38 and #39 remain open for user-operated current/native Bash qualification.
+
+The last local preflight repair captures the workspace-version reader's exit
+status before comparing its output with `RELEASE_PREVIOUS`. Failed empty or
+matching output cannot authorize source admission, fetch or setup. The existing
+real-index fixture wraps that reader with a Bash stub and checks status 23,
+untouched fetch/preparation logs, unchanged metadata/index and no release intent;
+a successful mismatching read still refuses with status 1. The normal successful
+preflight remains covered by its existing cases. Syntax for the adapter, index
+fixture and four embedded Bash stubs plus diff checks pass; cases are written,
+not run. Preserved inputs are at `/tmp/ic-timers-preflight-reader.1hfppy0_/`.
+The same unchecked-observation pattern in the immutable pre-commit hook is
+reported to [Shared #106](https://github.com/dragginzgame/shared-tooling/issues/106).
+There is no active downstream hook patch or duplicate hook path; canonical
+producer repair and source-bound qualification must precede its refresh.
+
 ### Host 0.12.2 and Testkit 0.32 review
 
 Remote Host's latest committed release is **0.12.2**
@@ -1949,20 +2020,24 @@ Testkit's separately installed CLI uses its packaged lock, also selecting Host
 [Matching main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38048325468)
 passes Linux checks **114202244232** and MSRV **114202244227**.
 [Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/38048325379)
-**114202243658** passes. Intel **114202244037** and ARM **114202244196** are still
-queued at observation; the overall native gate is not complete. No job is
-redispatched. Existing raw job logs and job metadata are retained under
+**114202243658** passes. Intel **114202244037** and ARM **114202244196** now pass.
+No job is redispatched. Existing Linux/MSRV raw job logs and metadata are retained under
 `/tmp/ic-timers-shared031.aFkkRB/`; completed-job REST readback supplies Linux and
-MSRV logs while the overall run remains unfinished.
+MSRV logs during the earlier unfinished run. Newly downloaded Intel and ARM logs
+are retained under `/tmp/ic-timers-fixture-completion.9z8952mm/`.
 
 Linux logs establish actual execution of selected-commit and real-index release
 checks, version preparation, root lock coherence, ordered Testkit adapter
 failure propagation, 142 library tests, 14 maintained recovery subjects and all
-four policy cohorts. These qualify the released 0.3.0 graph and README-gate
-removal on Linux; they do not qualify pending Shared 0.3.1 or native macOS.
+four policy cohorts. Both native macOS logs now show complete tool setup/check,
+Shared 0.3.0 snapshot integrity, ordered Testkit adapter failure propagation,
+142 library cases, all 14 maintained recovery subjects, four policy cohorts and
+the final `VALIDATION PASSED` marker, selecting Metrics 0.5.0 and Timers 0.17.0.
+Together these qualify the released graph and README-gate removal on all three
+hosts; they do not qualify later graphs or fixture changes.
 [#36](https://github.com/dragginzgame/ic-timers/issues/36) and
-[#37](https://github.com/dragginzgame/ic-timers/issues/37) remain open for their
-complete source-bound qualification. The contributor inspected existing hosted
+[#37](https://github.com/dragginzgame/ic-timers/issues/37) now have complete
+source-bound adoption qualification. The contributor inspected existing hosted
 results and locked offline metadata; no new test/build/lint/setup or release ran.
 Historical 0.17.0 notes describe the earlier 0.4/0.30 preparation; current usage
 must follow the delivered graph rather than those version examples.

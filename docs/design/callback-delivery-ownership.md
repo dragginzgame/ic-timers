@@ -246,9 +246,9 @@ Metrics 0.5; its root lock selects one Timers 0.17.0 and one Metrics 0.5.0. This
 removes the reported duplicate Metrics selection in that graph without claiming
 new downstream compilation or changing sibling files. Existing released Linux library, recovery/cohort,
 MSRV and tag results are recorded by the
-[release owner](../releasing.md#0170-release-acceptance). Both macOS jobs remain
-queued at observation; [#37](https://github.com/dragginzgame/ic-timers/issues/37)
-stays open for complete source-bound qualification. No Wasm/instruction delta is
+[release owner](../releasing.md#0170-release-acceptance). Both macOS jobs now pass;
+their downloaded logs establish complete source-bound qualification for
+[#37](https://github.com/dragginzgame/ic-timers/issues/37). No Wasm/instruction delta is
 measured by these source/graph checks, and no contributor test/build ran.
 
 ## IC Metrics 0.4 adoption

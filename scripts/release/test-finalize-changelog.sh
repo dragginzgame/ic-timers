@@ -4,7 +4,18 @@ set -euo pipefail
 repository_root="$(git rev-parse --show-toplevel)"
 finalizer="${repository_root}/scripts/release/finalize-changelog.sh"
 temporary_root="$(mktemp -d)"
-trap 'rm -rf -- "${temporary_root}"' EXIT
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
+finish() {
+    local status=$?
+    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
+    if [[ "$status" == 0 ]]; then rm -rf -- "${temporary_root}"
+    else
+        printf "Failed changelog fixture retained: %s\n" "${temporary_root}" >&2
+    fi
+    exit "$status"
+}
+trap finish EXIT
 export IC_TIMERS_RELEASE_PREVIOUS=0.1.0
 
 # Keep successful child output private, but show the full diagnostic if
@@ -224,4 +235,5 @@ for kind in symlink directory; do
     fi
 done
 
+fixture_complete=true
 echo 'Draft finalization checks passed'

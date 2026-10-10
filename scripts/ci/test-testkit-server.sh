@@ -15,38 +15,6 @@ finish() {
     exit "$status"
 }
 trap finish EXIT
-# Check the actual cleanup boundary with early exits before any owner/installer
-# dispatch. Use the invoking Bash, including native macOS Bash 3.2.
-export TESTKIT_EXIT_PATH="$fixture/exit-path"
-for failure in nounset command nonzero premature completed failed-completion; do
-    # shellcheck disable=SC2016 # Expanded by the disposable fixture copy.
-    case "$failure" in
-        nounset) injection='unset TESTKIT_UNBOUND; printf "%s\n" "$TESTKIT_UNBOUND"'; expected=1 ;;
-        command) injection='false'; expected=1 ;;
-        nonzero) injection='exit 23'; expected=23 ;;
-        premature) injection='exit 0'; expected=1 ;;
-        completed) injection='fixture_complete=true; exit 0'; expected=0 ;;
-        failed-completion) injection='fixture_complete=true; exit 23'; expected=23 ;;
-    esac
-    TESTKIT_INJECTION="$injection" awk '
-        { print }
-        /^trap finish EXIT$/ && !injected {
-            print "printf \"%s\\n\" \"$fixture\" > \"$TESTKIT_EXIT_PATH\""
-            print ENVIRON["TESTKIT_INJECTION"]
-            print "exit 99"
-            injected=1
-        }
-        END { if (!injected) exit 1 }
-    ' "$root/scripts/ci/test-testkit-server.sh" > "$fixture/exit-probe.sh"
-    status=0
-    TMPDIR="$fixture" "$BASH" "$fixture/exit-probe.sh" \
-        > "$fixture/exit-$failure.log" 2>&1 || status=$?
-    [[ "$status" == "$expected" ]]
-    retained="$(cat "$TESTKIT_EXIT_PATH")"
-    [[ -n "$retained" ]]
-    if [[ "$expected" == 0 ]]; then [[ ! -e "$retained" ]]
-    else [[ -d "$retained" ]]; fi
-done
 consumer="$fixture/consumer with spaces"
 mkdir -p "$consumer/scripts/dev" "$consumer/.tools/host/bin"
 cp "$root/scripts/dev/testkit-server.sh" "$consumer/scripts/dev/"

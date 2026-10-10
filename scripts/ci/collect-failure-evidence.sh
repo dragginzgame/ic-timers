@@ -20,7 +20,17 @@ temporary="$RUNNER_TEMP"
 temporary="$(cd -P "$temporary" && printf '%s/.' "$PWD")"
 temporary="${temporary%/.}"
 metadata="$(mktemp -d "$temporary/ic-timers-evidence.XXXXXX")"
-trap 'if [[ $? == 0 ]]; then rm -rf "$metadata"; else printf "Failed evidence collection retained: %s\n" "$metadata" >&2; fi' EXIT
+# Bash 3.2 can report zero after a fatal expansion. Only a completed collection
+# may remove its scratch evidence and return success.
+collection_complete=false
+finish() {
+    local status=$?
+    [[ "$collection_complete" == true || "$status" != 0 ]] || status=1
+    if [[ "$status" == 0 ]]; then rm -rf -- "$metadata"
+    else printf 'Failed evidence collection retained: %s\n' "$metadata" >&2; fi
+    exit "$status"
+}
+trap finish EXIT
 checkout_sha="$(git -C "$root" rev-parse HEAD)"
 printf 'checkout_sha=%s\nevent_sha=%s\njob=%s\nhost=%s/%s\nrun=%s\nattempt=%s\n' \
     "$checkout_sha" "$GITHUB_SHA" "${GITHUB_JOB:-unknown}" \
@@ -76,3 +86,4 @@ archive_bytes="${archive_bytes//[[:space:]]/}"
 printf 'CI failure evidence measurements: archive_bytes=%s archive_seconds=%s\n' \
     "$archive_bytes" "$archive_seconds"
 printf 'CI failure evidence archived at: %s\n' "$archive"
+collection_complete=true

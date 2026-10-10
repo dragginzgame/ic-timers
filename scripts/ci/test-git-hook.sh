@@ -5,10 +5,21 @@ set -euo pipefail
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
 repository_root="$(git rev-parse --show-toplevel)"
 source "${repository_root}/ci/tool-versions.env"
+temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/timer-hook-test.XXXXXX")"
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
+finish() {
+    local status=$?
+    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
+    if [[ "$status" == 0 ]]; then rm -rf -- "${temporary_root}"
+    else
+        printf "Failed hook fixture retained: %s\n" "${temporary_root}" >&2
+    fi
+    exit "$status"
+}
+trap finish EXIT
 bash "${repository_root}/scripts/ci/check-format-tools.sh" \
     "${SHARED_TOOLING_CARGO_SORT_VERSION}"
-temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/timer-hook-test.XXXXXX")"
-trap 'if [[ $? == 0 ]]; then rm -rf -- "${temporary_root}"; else printf "Failed hook fixture retained: %s\n" "${temporary_root}" >&2; fi' EXIT
 # Reuse committed objects read-only; the fixture never creates a commit.
 source_commit="$(git rev-parse HEAD)"
 source_objects="$(git rev-parse --git-path objects)"
@@ -221,4 +232,5 @@ if bash "${repository_root}/.githooks/pre-commit" > "${temporary_root}/failed-fo
     exit 1
 fi
 assert_unchanged
+fixture_complete=true
 echo 'Consumer hook auto-formatting, nested selection and failure-isolation checks passed'

@@ -7,7 +7,18 @@ root="${BASH_SOURCE[0]}"
 root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
 root="${root%/.}"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/timer-snapshot-test.XXXXXX")"
-trap 'if [[ $? == 0 ]]; then rm -rf "$fixture"; else printf "Snapshot fixtures retained: %s\n" "$fixture" >&2; fi' EXIT
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
+finish() {
+    local status=$?
+    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
+    if [[ "$status" == 0 ]]; then rm -rf -- "${fixture}"
+    else
+        printf "Snapshot fixtures retained: %s\n" "${fixture}" >&2
+    fi
+    exit "$status"
+}
+trap finish EXIT
 verifier="$root/scripts/ci/verify-shared-tooling-snapshot.sh"
 sources=("$root" "$root" "$root/.shared-tooling/helpers")
 manifests=(.shared-tooling.snapshot .shared-tooling-audits.snapshot .shared-tooling.snapshot)
@@ -90,4 +101,5 @@ for index in 0 1 2; do
     done
 done
 
+fixture_complete=true
 echo 'Consumer snapshot exports, directory admission and corruption refusals passed'

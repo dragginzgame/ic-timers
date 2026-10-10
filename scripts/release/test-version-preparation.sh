@@ -6,7 +6,18 @@ repository_root="$(git rev-parse --show-toplevel)"
 export PATH="${repository_root}/.tools/host/bin:${PATH}"
 export YQ="${repository_root}/.tools/host/bin/yq"
 temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/timer-version-test.XXXXXX")"
-trap 'if [[ $? == 0 ]]; then rm -rf -- "${temporary_root}"; else printf "Failed version-preparation fixture retained: %s\n" "${temporary_root}" >&2; fi' EXIT
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
+finish() {
+    local status=$?
+    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
+    if [[ "$status" == 0 ]]; then rm -rf -- "${temporary_root}"
+    else
+        printf "Failed version-preparation fixture retained: %s\n" "${temporary_root}" >&2
+    fi
+    exit "$status"
+}
+trap finish EXIT
 git init -q "${temporary_root}"
 mkdir -p "${temporary_root}"/{scripts/release,scripts/ci,.shared-tooling/helpers/scripts/ci,docs/status,docs/changelog,crates/ic-timers/src,testing/probe/src}
 for script in bump-version finalize-changelog \
@@ -545,4 +556,5 @@ if [[ "${output}" != *'tag v0.1.2 already exists'* ]]; then
     exit 1
 fi
 assert_metadata_unchanged tagged-files
+fixture_complete=true
 echo 'Version preflight, rollback and dirty-worktree preparation checks passed'

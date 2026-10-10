@@ -141,6 +141,7 @@ shell-check:
 	done
 
 release-check:
+	bash scripts/ci/test-fixture-completion.sh
 	bash scripts/ci/verify-shared-tooling-snapshot.sh
 	bash scripts/ci/verify-shared-tooling-snapshot.sh --manifest .shared-tooling-audits.snapshot
 	bash .shared-tooling/helpers/scripts/ci/verify-shared-tooling-snapshot.sh \

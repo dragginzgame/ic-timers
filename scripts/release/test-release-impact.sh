@@ -4,10 +4,18 @@ set -euo pipefail
 repository_root="$(git rev-parse --show-toplevel)"
 classifier="${repository_root}/scripts/release/classify-release-impact.sh"
 temporary_root="$(mktemp -d)"
-cleanup() {
-    rm -rf -- "${temporary_root}"
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
+finish() {
+    local status=$?
+    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
+    if [[ "$status" == 0 ]]; then rm -rf -- "${temporary_root}"
+    else
+        printf "Failed release-impact fixture retained: %s\n" "${temporary_root}" >&2
+    fi
+    exit "$status"
 }
-trap cleanup EXIT
+trap finish EXIT
 
 git init -q "${temporary_root}"
 mkdir -p \
@@ -165,4 +173,5 @@ if (cd "${temporary_root}" && bash "${classifier}") >/dev/null 2>&1; then
     exit 1
 fi
 
+fixture_complete=true
 echo "Release-impact classification checks passed"

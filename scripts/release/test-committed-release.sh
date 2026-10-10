@@ -8,11 +8,19 @@ export PATH="$root/.tools/host/bin:$PATH"
 export YQ="$root/.tools/host/bin/yq"
 export COMMITTED_RELEASE_REAL_CARGO="$(command -v cargo)"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/committed-release-check.XXXXXX")"
-trap 'status=$?; if [[ "$status" == 0 ]]; then rm -rf -- "$fixture";
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
+finish() {
+    local status=$?
+    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
+    if [[ "$status" == 0 ]]; then rm -rf -- "${fixture}"
     else
         if [[ -f "$fixture/output" ]]; then cat "$fixture/output" >&2 || :; fi
-        printf "Failed committed-release fixture retained: %s\n" "$fixture" >&2;
-    fi; exit "$status"' EXIT
+        printf "Failed committed-release fixture retained: %s\n" "${fixture}" >&2
+    fi
+    exit "$status"
+}
+trap finish EXIT
 mkdir -p "$fixture/current/scripts" "$fixture/current/.shared-tooling/helpers/scripts/ci" \
     "$fixture/selected" "$fixture/bin" "$fixture/tmp"
 cp "$root/Makefile" "$fixture/current/"
@@ -162,4 +170,5 @@ if "$real_make" --no-print-directory release-committed-check RELEASE_COMMIT= \
 reject release-prepared-check 'invalid current metadata'
 
 # Standard entrypoint policy and forwarding belong to test-release-gate.sh.
+fixture_complete=true
 echo 'Selected-commit Make metadata checks passed (Git/Cargo stubs; no release effects)'
