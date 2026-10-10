@@ -1,8 +1,57 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.3.1 setup preflight
+
+After released IC Timers **0.17.0**
+`5e0d0865248f6ebfc1f98c896581f21e2ce67831`, pending **0.17.1** refreshes all three
+canonical exports to committed Shared **0.3.1**
+`fa452afaa5012866eb1c20820dfa8038c106e7ec`, retaining **55/30/11** selections.
+The clean detached source, export logs, unchanged input copies and graph/source
+inspection are retained at `/tmp/ic-timers-shared031.aFkkRB/`. Baseline and audit
+slices refresh directly; the isolated helper slice is exported to an owned
+temporary Git consumer and copied with its verified paths and modes. All slices
+use the same reviewed revision. No optional fleet helper or task is added.
+
+`install-tools` first calls the existing IC and Rust installers with
+`--preflight`: admit the complete-set platform and IC catalog, then probe the
+consumer-selected `rustc` and `cargo` with Rustup auto-installation disabled.
+These calls exit before tool/build directory creation and downloads. Installation
+then retains host → IC → Cargo → selected Testkit CLI/server ordering; setup still
+requires explicit Rust bootstrap. Offline `tools-check`, narrow setup commands,
+tool receipts/authentication and retained failures preserve their prior roles.
+The improved host check names the exact tool, expected version, path, reason and
+repair command; untrusted payloads are authenticated before diagnostic execution.
+
+The existing Testkit adapter fixture admits the two preflight calls separately
+from setup/check, requires their order under `-j4`, and injects failure at every
+preflight/common/CLI/server boundary. Its expected command prefix prevents a
+preflight failure from reaching installation or product setup. These new cases
+are written, not executed; upstream fixtures retain generic installer ownership.
+Cargo, lock, both tool pin catalogs and the real index remain unchanged. The
+released graph is Metrics 0.5/Testkit 0.31/Host 0.11/PocketIC 16.1; this tooling
+refresh adds no timer code, production dependency or measured optimization.
+
+[Shared #101](https://github.com/dragginzgame/shared-tooling/issues/101) owns producer
+acceptance. Its exact-source
+[CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38049622600) passes
+Linux regression and lint/security, with both native macOS jobs queued at
+observation; no earlier result qualifies this revision. Released
+0.17.0's Linux/MSRV/tag proof has its
+[release owner](releasing.md#0170-release-acceptance), with both native macOS jobs
+still queued. [#36](https://github.com/dragginzgame/ic-timers/issues/36) remains open
+for complete released 0.3.0 adoption qualification. New 0.3.1 consumer execution
+belongs to the normal user-operated gate; no contributor test/build/lint/setup
+or release command is run.
+
+Permitted preparation checks pass: all three snapshot integrity checks, syntax
+for 38 shell scripts and 24 embedded Bash bodies, eight new local documentation
+targets/anchors, diff whitespace and full locked offline metadata. Preserved
+Cargo, lock, pin and index copies compare exactly. These checks execute no setup
+or fixtures and provide no new native host qualification.
+
 ## Shared Tooling 0.3.0 complete toolset
 
-Pending **0.17.0** adopts committed Shared **0.3.0**
+Released **0.17.0** adopts committed Shared **0.3.0**
 `88a73139a0f083344c41a6f6f4b5c3a8aca7dc1d` after released 0.16.7
 `999d9b5c3a84ec5abd729ca72b8f259abbb060e1`. All three canonical exports retain
 **55 baseline / 30 audit-setup / 11 helper files**. Clean detached source,
@@ -38,10 +87,12 @@ ordering; this consumer does not implement another installer or pin catalog.
 These new behavioral assertions are written but unexecuted under the approved
 local validation exception. Native macOS execution is still required separately.
 
-The changed setup/host-installer contract requires a minor boundary. The same
-0.17.0 batch preserves incoming Metrics 0.4 and Testkit 0.30 selections; their
-[public identity and graph review](design/callback-delivery-ownership.md#ic-metrics-04-adoption)
-is separate from Shared setup. Cargo/pin/index inputs are preserved; no package
+The changed setup/host-installer contract required a minor boundary. Preparation
+initially preserved incoming Metrics 0.4 and Testkit 0.30 selections; the released
+Metrics 0.5/Testkit 0.31
+[identity and graph](design/callback-delivery-ownership.md#ic-metrics-05-released-graph)
+supersedes that preparation and is separate from Shared setup. Cargo/pin/index
+inputs were preserved during contributor preparation; no package
 version or release effect is performed. Existing installations, receipts and
 failure artifacts remain intact. No timer runtime optimization is claimed.
 

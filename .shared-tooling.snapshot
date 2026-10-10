@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.3.0
+# version	0.3.1
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	88a73139a0f083344c41a6f6f4b5c3a8aca7dc1d
+revision	fa452afaa5012866eb1c20820dfa8038c106e7ec
 file	e5d128419ea122da0d5654fa4c9f7ba772b12a3e104ad9796c38da856b52df78	-	DRAGGINZGAME.md
 file	b5a6e8fb723a861b722834675e27b4b16f3d296112622c1b40cdc8714f575404	-	rules/changelogs.md
 file	84db20c3fa0b7a524bcd10b875a11100ed00be27c9f329ce93c79f5ab8f1f40d	-	rules/cargo-dependencies.md
@@ -30,10 +30,10 @@ file	431f4a40037fc341bec1d53416b440b3bcd4b6af5cd45210e390c82abb08b475	-	scripts/
 file	24130b81f25fe6f60d2074cb8b932dc7874e2f7088933fc87095f3a9e00c5df3	x	scripts/dev/gh-ci.sh
 file	289473e702bd636cbf545afffdd837979dfc41fc0a530e31e110f8b88d01d337	-	rules/rust-workspaces.md
 file	9e32385247296ce95d2b15b1290c64e6b6dff15716c1c139f21ab5e5128f4be3	x	scripts/ci/check-make-execution.sh
-file	6cf19a762faa691a73ac42ee861024bd1d24aa0c7262642fc2ff52f33a6d1364	-	make/tools.mk
+file	f6dc92eccecb971bcd487562bf953e5c3078b1291c9c0722f0758f46d7c909bb	-	make/tools.mk
 file	8a14c80cec16a2cb07454c4e0f741150bc8385cd51ebc720a84ee3af1cc63043	x	scripts/dev/cloc.sh
 file	5c984a6fea79f3c275b7c846bacf0fe3767ba2733581648fd77083a621be3005	x	scripts/ci/test-cloc.sh
-file	b52e0adbe12e78c4b816dec9845e6e1aeced3710f9bda4576cb9136f554927cb	x	scripts/ci/test-tool-commands.sh
+file	e27ac17f460485ef503d50443041563a1ce4246cf401190d15270ccf287a339b	x	scripts/ci/test-tool-commands.sh
 file	05838a36f21bb4299617ae8965687791062c94d768181f5f97676cc577382153	-	rules/contributions.md
 file	fc40c8ad1c4ab850fda0e60b8cb0b3201724d020966e4d7e5d07620781f5e814	-	scripts/ci/release-pr.sh
 file	5be336cb3e8045b2d2d536542a94944b376ee812b03f786a90b9d962ab697f13	x	scripts/ci/archive-evidence.sh

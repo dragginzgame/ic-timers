@@ -2,6 +2,18 @@
 
 All notable changes to this project are recorded here.
 
+## [0.17.1]
+
+### Development
+
+- Adopt Shared Tooling 0.3.1: check supported platforms, IC pins and the selected
+  Rust/Cargo toolchain before aggregate setup downloads tools. Host-tool failures
+  identify the tool, expected version, path and repair command
+  ([Shared #101](https://github.com/dragginzgame/shared-tooling/issues/101)).
+- Correct current adoption guidance for the released Metrics 0.5 and Testkit
+  0.31 graph, including public measurement type identity. Timer behavior and
+  dependency selections are unchanged.
+
 ## [0.17.0] - 2026-10-10
 
 ### Breaking

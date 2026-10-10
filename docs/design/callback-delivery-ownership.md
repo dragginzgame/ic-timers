@@ -218,6 +218,39 @@ larger than AfterCompletion in this build; deleting its distinct prearmed recove
 semantics is not justified by that size difference. No further runtime change
 or performance release is supported by this review.
 
+## IC Metrics 0.5 released graph
+
+Released IC Timers **0.17.0** at
+[`5e0d0865248f6ebfc1f98c896581f21e2ce67831`](https://github.com/dragginzgame/ic-timers/commit/5e0d0865248f6ebfc1f98c896581f21e2ce67831)
+selects one registry Metrics **0.5.0**, Testkit **0.31.0**, all four Host
+**0.11.0** packages and PocketIC **16.1.0**. This supersedes the 0.4/0.30
+preparation below; the finalized historical release notes retain their original
+description. Current consumers exchanging measurement values must select the
+same Metrics package identity or use `ic_timers::MeasurementSummary` directly.
+A matching struct definition in Metrics 0.4 is still a different Rust type.
+
+All seven published Metrics 0.5 Rust files match committed
+[`01549632c0c3fa6e1ff315ce4de803ddfae904ad`](https://github.com/dragginzgame/ic-metrics/commit/01549632c0c3fa6e1ff315ce4de803ddfae904ad);
+its arithmetic source is unchanged from 0.4. All 40 published Testkit 0.31 Rust
+files match committed
+[`f1ae9e6d3b0f3f20ec1e1f1b49c8b1dea3155e0a`](https://github.com/dragginzgame/ic-testkit/commit/f1ae9e6d3b0f3f20ec1e1f1b49c8b1dea3155e0a).
+Its packaged CLI lock also selects Host 0.11. No timer adapter, arithmetic reader
+or direct Host dependency is needed; Host/Testkit remain outside the production
+library's dependency closure. Host 0.12's availability does not change Testkit's
+selected 0.11 requirement or justify a second native dependency route.
+
+Full locked offline metadata and source comparisons are retained under
+`/tmp/ic-timers-shared031.aFkkRB/`. Read-only inspection of clean IcyDB source
+`736c583ebf27097826517a0010b8e6ae87a811ad` finds declarations for Timers 0.17 and
+Metrics 0.5; its root lock selects one Timers 0.17.0 and one Metrics 0.5.0. This
+removes the reported duplicate Metrics selection in that graph without claiming
+new downstream compilation or changing sibling files. Existing released Linux library, recovery/cohort,
+MSRV and tag results are recorded by the
+[release owner](../releasing.md#0170-release-acceptance). Both macOS jobs remain
+queued at observation; [#37](https://github.com/dragginzgame/ic-timers/issues/37)
+stays open for complete source-bound qualification. No Wasm/instruction delta is
+measured by these source/graph checks, and no contributor test/build ran.
+
 ## IC Metrics 0.4 adoption
 
 Incoming maintainer catalog/lock edits after released **0.16.7** select Metrics
@@ -229,10 +262,10 @@ adapter. [#37](https://github.com/dragginzgame/ic-timers/issues/37) records the
 real downstream mixed 0.3/0.4 graph that motivates package convergence.
 
 IC Timers publicly re-exports `MeasurementSummary`; its 0.3 and 0.4 identities
-are different Rust types despite identical arithmetic. Pending **0.17.0** covers
-that public hard cut as well as the independent tooling-contract change.
-Consumers exchanging these values with Metrics must select 0.4 or use
-`ic_timers::MeasurementSummary`. There is one selected Metrics package, with no
+are different Rust types despite identical arithmetic. The then-pending
+**0.17.0** covered that public hard cut and the tooling-contract change. Its final
+Metrics 0.5 selection is recorded above; this paragraph records earlier preparation.
+That preparation selected one Metrics package, with no
 alias, second dependency route, persisted layout or timer lifecycle change.
 
 Complete locked offline metadata at `/tmp/ic-timers-shared030.roCrPG/metadata.json`

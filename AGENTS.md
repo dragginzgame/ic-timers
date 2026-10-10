@@ -5,19 +5,19 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `88a73139a0f083344c41a6f6f4b5c3a8aca7dc1d` (0.3.0). Its provenance and
+  from revision `fa452afaa5012866eb1c20820dfa8038c106e7ec` (0.3.1). Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
 - Apply the [shared audit methods](audits/README.md) from revision
-  `88a73139a0f083344c41a6f6f4b5c3a8aca7dc1d`, recorded separately in
+  `fa452afaa5012866eb1c20820dfa8038c106e7ec`, recorded separately in
   [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). That
   supplemental snapshot also supplies pinned host/IC setup at the same
   reviewed revision. The isolated
   [Cargo helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
   supplies the structured dependency checker, Cargo readers/rewrites,
   annotated-tag checker and release-command adoption checker from
-  `88a73139a0f083344c41a6f6f4b5c3a8aca7dc1d`. The root baseline snapshot owns
+  `fa452afaa5012866eb1c20820dfa8038c106e7ec`. The root baseline snapshot owns
   the formatter guard, Make execution admission and the adopted formatting/release
   Make includes. Apply the
   [dependency pinning rules](rules/dependency-pinning.md) with the exact local

@@ -118,6 +118,7 @@ phase=setup
 selected=false
 for argument in "$@"; do
     [[ "$argument" != --check ]] || phase=check
+    [[ "$argument" != --preflight ]] || phase=preflight
     [[ "$argument" != --package ]] || selected=true
 done
 case "${0##*/}" in
@@ -145,13 +146,16 @@ EOF
 for target in install-tools tools-check; do
     phase=setup; [[ "$target" != tools-check ]] || phase=check
     steps=("host-$phase" "ic-$phase" "rust-$phase" "cli-$phase" "server-$phase")
+    if [[ "$target" == install-tools ]]; then
+        steps=(ic-preflight rust-preflight "${steps[@]}")
+    fi
     : > "$TESTKIT_AGGREGATE_LOG"
     make --no-print-directory -j4 -C "$consumer" "$target" \
         > "$fixture/$target.log" 2>&1
     printf '%s\n' "${steps[@]}" > "$fixture/expected-aggregate"
     cmp "$fixture/expected-aggregate" "$TESTKIT_AGGREGATE_LOG"
     cmp "$fixture/next-lock" "$consumer/Cargo.lock"
-    for index in 0 1 2 3 4; do
+    for ((index=0; index<${#steps[@]}; index++)); do
         : > "$TESTKIT_AGGREGATE_LOG"
         status=0
         TESTKIT_AGGREGATE_FAIL="${steps[$index]}" \

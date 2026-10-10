@@ -4,71 +4,67 @@
 
 Last updated: 2026-10-10
 
-This compact handoff links the [release evidence](../releasing.md),
+This handoff links the [release evidence](../releasing.md),
 [Shared adoption](../shared-tooling.md) and [safety boundary](../../SAFETY.md).
 The earlier accumulated handoff remains in [its historical archive](archive-2026-10-10.md).
 
 ## Released source and acceptance
 
-Latest release commit **0.16.7** is `999d9b5c3a84ec5abd729ca72b8f259abbb060e1`.
-The finalized notes and matching tag job exist. Its released graph selects
-Testkit 0.29.0, Host 0.11.0, Metrics 0.3.7 and PocketIC 16.1.0, four local 0.16.7
-members and Shared 0.2.14 snapshots (55/30/11). Matching
-[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38042864177) passes
-Linux/MSRV, with Intel running and ARM queued at inspection;
-[tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/38042864373) passes.
-Do not count this source as complete native acceptance or redispatch jobs.
+The maintainer reports **0.17.0** live at
+`5e0d0865248f6ebfc1f98c896581f21e2ce67831`; its annotated tag matches that commit.
+All four local packages select 0.17.0. The released graph is Metrics **0.5.0**,
+Testkit **0.31.0**, Host **0.11.0** and PocketIC **16.1.0**, with Shared **0.3.0**
+`88a73139a0f083344c41a6f6f4b5c3a8aca7dc1d` snapshots (55/30/11).
 
-Released **0.16.6** now has all-host and tag acceptance. Downloaded raw logs
-prove its actual lock-preservation, directory/preflight/adapter cases, library
-and product gates. [The source-bound owner](../releasing.md#0166-release-acceptance)
-records that scope; #35 is closed with its remaining proof complete. Earlier results do not
-qualify the new Shared selection or incoming dependency graph.
+[Matching main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38048325468)
+passes Linux and MSRV;
+[tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/38048325379) passes.
+Both native macOS jobs remain queued at observation. Downloaded completed-job
+REST logs prove the actual released Linux fixtures, library tests and maintained
+recovery/cohorts. The [release owner](../releasing.md#0170-release-acceptance)
+records exact jobs, graph and proof limits. Earlier host results do not qualify
+this graph. Do not redispatch CI or treat queued jobs as acceptance.
 
-## Pending 0.17.0
+[#36](https://github.com/dragginzgame/ic-timers/issues/36) and
+[#37](https://github.com/dragginzgame/ic-timers/issues/37) remain open for complete
+native qualification; both adoptions are delivered. Current guidance supersedes
+0.17.0's earlier Metrics 0.4/Testkit 0.30 preparation. Consumers exchanging public
+measurement summaries must use the same selected Metrics package identity or
+`ic_timers::MeasurementSummary`. The
+[identity owner](../design/callback-delivery-ownership.md#ic-metrics-05-released-graph)
+records seven matching published Metrics and 40 matching Testkit Rust sources,
+unchanged arithmetic and no required timer adapter. Testkit's packaged CLI also
+selects Host 0.11; Host/Testkit remain outside the timer library closure. Read-only
+clean IcyDB source/lock inspection now finds one Timers 0.17/Metrics 0.5 graph;
+that is downstream convergence evidence, not new compilation. Delivered-source
+feedback is posted on both adoption issues; their macOS proof remains pending.
 
-The undated draft adopts committed Shared **0.3.0**
-`88a73139a0f083344c41a6f6f4b5c3a8aca7dc1d` through all three canonical snapshots,
-retaining 55/30/11 files. The [adoption owner](../shared-tooling.md#shared-tooling-030-complete-toolset)
-records complete host → IC → Cargo aggregates, followed by existing Testkit
-setup/check targets. CI/update-dev prepare Rust first; the separate global
-cargo-sort route is removed. CI retains complete aggregate failure logs.
-Local parallel-Make extension and collector assertions are written, not run.
-[#36](https://github.com/dragginzgame/ic-timers/issues/36) owns delivery/qualification.
+The README freshness gate and automatic rewrite/staging are removed in 0.17.0.
+Only Cargo.toml, Cargo.lock and CHANGELOG.md are release outputs. README edits
+retain ordinary source/staging admission; stale examples never select release
+identity. [Shared #100](https://github.com/dragginzgame/shared-tooling/issues/100)
+requests periodic read-only advisory review; no task or scheduler is enabled.
 
-Incoming maintainer Cargo edits select Metrics **0.4.0**, Testkit **0.30.0**,
-Host **0.11.0** and PocketIC **16.1.0**. They also report local version **0.16.6**,
-although the preceding release is 0.16.7; preserve those user-owned bytes. Contributor
-preparation does not repair or bump Cargo metadata. The next user-operated minor
-preparation must select **0.17.0**.
+## Pending 0.17.1
 
-The minor boundary covers the changed tooling contract and Metrics' public Rust
-package identity. Consumers exchanging public summaries must use Metrics 0.4 or
-`ic_timers::MeasurementSummary`. [The identity/graph owner](../design/callback-delivery-ownership.md#ic-metrics-04-adoption)
-records unchanged arithmetic, published source comparisons and remaining execution
-qualification. [#37](https://github.com/dragginzgame/ic-timers/issues/37) stays open
-for delivered alignment. Testkit's existing startup/CLI calls need no adapter;
-its packaged CLI lock selects Host 0.11, and the timer library has no Host/Testkit
-edge. No timer runtime mechanism, persistence or optimization is added.
-
-The maintainer's minor-release attempt stopped before validation because README
-examples did not match Cargo 0.16.6. The prepared repair removes the local
-freshness helper/test and all phase/CI callers, automatic rewriting and README
-release-output ownership.
-Only Cargo.toml, Cargo.lock and CHANGELOG.md remain release outputs. Ordinary
-README edits retain source/staging guards; stale or missing examples are accepted.
-Existing preparation/Git/selected-commit fixtures cover that distinction and
-README preservation; they are written, not run. The
-[release owner](../releasing.md) records the contract and
-[Shared #100](https://github.com/dragginzgame/shared-tooling/issues/100) requests a
-periodic read-only advisory task. No Cargo or lock bytes are changed by this repair.
+All three canonical snapshots now select committed Shared **0.3.1**
+`fa452afaa5012866eb1c20820dfa8038c106e7ec`, preserving the 55/30/11 selections.
+The [adoption owner](../shared-tooling.md#shared-tooling-031-setup-preflight)
+records read-only IC/Rust preflight before downloads and exact host-tool
+failure diagnostics. The existing local Testkit fixture admits both preflight
+calls, their order and stop-on-failure prefixes under parallel Make. New cases
+are written, not run. Source/export and preserved input evidence remains under
+`/tmp/ic-timers-shared031.aFkkRB/`. Producer Linux regression and lint/security pass,
+with both native macOS jobs queued at observation;
+released 0.17.0 proof does not qualify this new snapshot. Consumer Cargo, root
+lock, tool pins, real index and existing installations are unchanged.
 
 ## Next action and authority
 
-Permitted integrity/source/syntax/documentation/locked-metadata checks pass.
-Leave the normal full gate to the maintainer. New source has no hosted result;
-Linux/Bash source inspection does
-not qualify macOS. All tests/builds/lint/setup and Cargo/release effects remain
-user-owned. Preserve pins, index, existing installations and failure evidence.
-The tooling alone is repository-only work; incoming Metrics identity alignment
-is crate-impacting and must not be published as a 0.16 patch.
+Finish source-bound native acceptance for the released adoption issues as jobs
+complete, then close their owning issues with actual proof. The new snapshot
+requires the normal full user-operated gate. No timer runtime feature, dependency
+update or measured Wasm/instruction saving is added. This batch is repository-only
+and normally bundles into the next code-bearing release; the undated 0.17.1 draft
+records it without mutating Cargo. Tests/builds/lint/setup and Cargo/release effects
+remain user-owned. Preserve installations, pins, index and failed evidence.

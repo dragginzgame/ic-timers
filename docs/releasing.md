@@ -1872,6 +1872,40 @@ consumer fixture and updates formatter prerequisites. Those new assertions are
 unexecuted; the released 0.16.5 evidence does not qualify them. No contributor
 build/test/lint/setup or release runs; observations above inspect existing jobs.
 
+### 0.17.0 release acceptance
+
+The maintainer reports **0.17.0** live at
+`5e0d0865248f6ebfc1f98c896581f21e2ce67831`; its annotated `v0.17.0` tag resolves to
+that same commit. All four local packages are 0.17.0. The released root graph
+selects one Metrics **0.5.0**, Testkit **0.31.0**, each Host **0.11.0** package and
+PocketIC **16.1.0**, with Shared **0.3.0** snapshots at
+`88a73139a0f083344c41a6f6f4b5c3a8aca7dc1d` (55/30/11). The
+[measurement owner](design/callback-delivery-ownership.md#ic-metrics-05-released-graph)
+records the public type identity and unchanged published arithmetic source.
+Testkit's separately installed CLI uses its packaged lock, also selecting Host
+0.11; no direct Host dependency is added to the timer library.
+
+[Matching main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38048325468)
+passes Linux checks **114202244232** and MSRV **114202244227**.
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/38048325379)
+**114202243658** passes. Intel **114202244037** and ARM **114202244196** are still
+queued at observation; the overall native gate is not complete. No job is
+redispatched. Existing raw job logs and job metadata are retained under
+`/tmp/ic-timers-shared031.aFkkRB/`; completed-job REST readback supplies Linux and
+MSRV logs while the overall run remains unfinished.
+
+Linux logs establish actual execution of selected-commit and real-index release
+checks, version preparation, root lock coherence, ordered Testkit adapter
+failure propagation, 142 library tests, 14 maintained recovery subjects and all
+four policy cohorts. These qualify the released 0.3.0 graph and README-gate
+removal on Linux; they do not qualify pending Shared 0.3.1 or native macOS.
+[#36](https://github.com/dragginzgame/ic-timers/issues/36) and
+[#37](https://github.com/dragginzgame/ic-timers/issues/37) remain open for their
+complete source-bound qualification. The contributor inspected existing hosted
+results and locked offline metadata; no new test/build/lint/setup or release ran.
+Historical 0.17.0 notes describe the earlier 0.4/0.30 preparation; current usage
+must follow the delivered graph rather than those version examples.
+
 ### 0.16.6 release acceptance
 
 The maintainer reports **0.16.6** live at release commit
