@@ -2,6 +2,20 @@
 
 All notable changes to this project are recorded here.
 
+## [0.16.7]
+
+### Development
+
+- Adopt Shared Tooling 0.2.14's CI inspection fix: report unavailable failed-step
+  logs, retain partial logs/fetch errors, and distinguish completed successful
+  runs with no failure logs. No CI rerun or timer behavior change is introduced
+  ([shared #97](https://github.com/dragginzgame/shared-tooling/issues/97),
+  [adoption owner](docs/shared-tooling.md#shared-tooling-0214-ci-inspection)).
+- Use Testkit 0.29 and Host 0.11 for native qualification and selected CLI setup.
+  The existing PocketIC harness needs no adapter; timer APIs remain unchanged
+  ([testkit #47](https://github.com/dragginzgame/ic-testkit/issues/47),
+  [graph owner](docs/releasing.md#testkit-029-and-host-011-preparation)).
+
 ## [0.16.6] - 2026-10-10
 
 ### Development

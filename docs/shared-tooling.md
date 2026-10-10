@@ -1,8 +1,49 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.2.14 CI inspection
+
+After released IC Timers **0.16.6** `0b929539686a5c428a6a3af96c2a88139cc5553d`,
+pending compatible **0.16.7** refreshes all three canonical snapshots to committed
+Shared **0.2.14** `fd11692f31e7dfd44dcc2ca56634eaeab3569825`, retaining
+**55 baseline / 30 audit-setup / 11 helper files**. Clean detached source and
+canonical export records are retained at `/tmp/ic-timers-shared0214.axid05wo/`.
+No new optional helper, caller, test roster or local parser is introduced.
+Engineering baseline, audit methods, Make includes and installation behavior
+are unchanged from 0.2.13; the maintenance rule and selected `gh-ci.sh` refresh.
+
+`gh-ci.sh --run ID --logs` no longer silently succeeds when a failed, cancelled
+or unfinished run has no returned failure logs. It retains observation files,
+checks status/conclusion only for an empty log body and reports unavailable
+failure evidence. Completed successful/neutral/skipped runs can legitimately
+have no failed-step logs. A failed fetch retains partial stdout/stderr and its
+original nonzero status. This is read-only inspection, not CI rerun or gate
+acceptance. [Shared #97](https://github.com/dragginzgame/shared-tooling/issues/97)
+owns the helper's regression coverage; consumers do not duplicate its test suite.
+
+The snapshot refresh preserves its released Cargo/pin inputs and the real index.
+Subsequent maintainer catalog/lock edits select Testkit 0.29 and Host 0.11;
+those incoming bytes are preserved, with the separate
+[graph owner](releasing.md#testkit-029-and-host-011-preparation) recording scope.
+No contributor tests, builds, lint, tool setup
+or release effects run under the existing local command-authority exceptions.
+The complete user-operated gate remains unchanged. Exact-source
+[Shared CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38041453237)
+passes lint/security and Linux portable regression, with Intel running and ARM
+queued at inspection;
+this does not qualify the consumer's uncommitted helper selection.
+
+Permitted preparation checks pass: exact source/hash/mode and companion closure
+for all 55/30/11 records, all three actual snapshot integrity checks, syntax of
+38 selected shell scripts, documentation targets/anchors and diff whitespace.
+The unchanged engineering baseline and all audit methods match 0.2.13 byte for
+byte. Complete locked offline metadata records the incoming graph separately;
+it does not execute or qualify the new dependencies.
+[Consumer feedback](https://github.com/dragginzgame/shared-tooling/issues/97#issuecomment-6096202572)
+records this preparation at the existing upstream owner.
+
 ## Shared Tooling 0.2.13 selected CLI preparation
 
-The same pending IC Timers **0.16.6** batch now selects committed Shared
+Released IC Timers **0.16.6** selected committed Shared
 **0.2.13** `5864f468d39f8f9d1bd26fca1afe0e20f25f1b5e` across all three canonical
 snapshots, retaining **55 baseline / 30 audit-setup / 11 helper files**.
 Clean detached source and exports are retained under
@@ -55,7 +96,8 @@ and its GitHub description remain aligned. No tests or tool setup were executed.
 [Exact-source Shared CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38039035514)
 passes Linux portable and lint/security, with ARM running and Intel queued at
 inspection. Source/integrity/syntax/documentation/locked-metadata checks remain
-preparation evidence; consumer execution and native qualification are pending.
+preparation evidence. Released 0.16.6 qualification is recorded separately in the
+[source-bound owner](releasing.md#0166-release-acceptance).
 [#96](https://github.com/dragginzgame/shared-tooling/issues/96) owns shared delivery
 and remaining consumer coordination, independently of directory admission #95.
 [Consumer feedback](https://github.com/dragginzgame/shared-tooling/issues/96#issuecomment-6095895802)

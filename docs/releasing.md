@@ -1864,6 +1864,34 @@ consumer fixture and updates formatter prerequisites. Those new assertions are
 unexecuted; the released 0.16.5 evidence does not qualify them. No contributor
 build/test/lint/setup or release runs; observations above inspect existing jobs.
 
+### 0.16.6 release acceptance
+
+The maintainer reports **0.16.6** live at release commit
+`0b929539686a5c428a6a3af96c2a88139cc5553d`. All four local packages are 0.16.6;
+the root graph selects Testkit **0.28.1**, Host **0.10.2**, Metrics **0.3.7** and
+PocketIC **16.1.0**. All three released snapshots select Shared **0.2.13**
+`5864f468d39f8f9d1bd26fca1afe0e20f25f1b5e`, retaining **55/30/11** files.
+The separately installed Testkit CLI uses its packaged lock, including Host
+0.10.1; the root graph does not change that installation contract.
+
+[Matching main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38041494927)
+passes MSRV **114182479493**. Linux checks **114182479646** remain in progress;
+Intel **114182479613** and ARM **114182479680** are queued at inspection.
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/38041495172)
+**114182480244** passes at the same SHA, with duplicate full tag jobs skipped.
+Release availability, metadata and tag truth do not qualify the new execution
+paths. Full consumer acceptance remains pending.
+
+This source adds explicit staged/working lock-preservation assertions, forbidden
+directory cases, selected-CLI failure isolation and ordered preflight preparation.
+The [Shared adoption owner](shared-tooling.md#shared-tooling-0213-selected-cli-preparation)
+records their scope; prior 0.16.5 logs qualify only that earlier source.
+[#35](https://github.com/dragginzgame/ic-timers/issues/35) remains open until
+the released lock-preservation proof executes on all three hosts. No contributor
+build/test/lint/setup or release commands ran; this records existing hosted jobs.
+[Delivery feedback](https://github.com/dragginzgame/ic-timers/issues/35#issuecomment-6096203471)
+retains that remaining acceptance boundary.
+
 ### Dependency pin exceptions
 
 [Exact exception records](../ci/dependency-pinning-exceptions.json) retain three
@@ -2303,3 +2331,46 @@ was queued at inspection. Source review and graph checks do not qualify Host
 remote revision; no further snapshot refresh or Cargo mutation is required by
 this inspection. Required native/product gates remain with the future selected
 graph's maintainer-operated validation.
+
+### Testkit 0.29 and Host 0.11 preparation
+
+During pending **0.16.7** preparation after released 0.16.6, maintainer catalog
+and lock edits select published Testkit **0.29.0** and all four Host **0.11.0**
+packages. Testkit's remote release is
+[`e15cc2acfd9324f6877f854415005f91d169a031`](https://github.com/dragginzgame/ic-testkit/commit/e15cc2acfd9324f6877f854415005f91d169a031).
+All 40 published Rust source files match that committed release byte for byte.
+Complete locked offline metadata at `/tmp/ic-timers-0167-testkit029-metadata.json`
+retains one Testkit/Metrics/PocketIC identity and four local **0.16.6** members.
+Metrics remains **0.3.7**, PocketIC **16.1.0**. Incoming Cargo bytes are retained
+under `/tmp/ic-timers-shared0214.axid05wo/incoming/`; the contributor does not
+mutate dependency selection or package versions.
+
+The unpublished native harness uses Testkit's unchanged `pic` startup/builder
+calls. Version-probe output quotas and deadlines are unchanged by the Host
+migration: Testkit expresses them with per-stream `OutputLimit::Terminate` and
+`timeout: Some(...)`. Provisioning likewise keeps its prior quotas/deadlines.
+Host's composed cleanup errors stay with Testkit; Timers does not flatten or
+reconstruct them. No harness adapter or direct Host dependency is needed; the
+library dependency closure contains no Host/Testkit package. Testkit's Cargo
+build runner preserves its existing output policy and no deadline, and our
+Make/Cargo probe builds do not invoke it. No timer Wasm/instruction saving is
+measured or claimed.
+
+The root lock also selects CLI **0.29.0** through the existing adapter. Its
+published packaged Cargo.lock selects all four Host **0.11.0** packages, unlike
+the released 0.28.1 CLI's independent 0.10.1 graph. Keep `cargo install --locked`,
+the owner's setup/check commands and admitted absolute server path. PocketIC
+selection stays 16.1.0. No retained server bundle/cache reset or compatibility
+route is introduced. Testkit's public Host reexport hard cut requires its 0.29
+minor release; Timers exposes none of those types, so this remains compatible
+0.16.7 repository-only qualification work.
+
+[Matching Testkit CI](https://github.com/dragginzgame/ic-testkit/actions/runs/38041559012)
+is queued at inspection. [Testkit #47](https://github.com/dragginzgame/ic-testkit/issues/47)
+owns upstream migration acceptance. Source equality and metadata are preparation,
+not executed startup/recovery or native qualification. The normal user-operated
+release gate must prepare/admit the selected CLI/server and execute library,
+MSRV, probe lint, watchdog/recovery and policy-cohort checks on supported hosts.
+No contributor builds/tests/lint/setup or release effects run for this review.
+[Consumer feedback](https://github.com/dragginzgame/ic-testkit/issues/47#issuecomment-6096202942)
+records the published selection and unchanged harness at its migration owner.
