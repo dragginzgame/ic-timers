@@ -1,5 +1,54 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.3.6 hook and lock selection
+
+After released **0.17.4** `d7ae76c8b23ea4b0a868eb86330531ef8bd70116`, pending
+**0.17.5** refreshes all three canonical exports to committed Shared **0.3.6**
+`0604bfd730ec7ec288cd2cfdad217a0d42bf256b`, confirmed against remote main.
+Selections remain **56 baseline / 30 audit-setup / 11 helpers**. Clean detached
+source, canonical export logs and preserved incoming catalog/lock/pins/index are
+at `/tmp/ic-timers-shared036.u0iglx_p/`. The isolated helper export uses an owned
+temporary Git consumer; no sibling file is modified or uncommitted byte copied.
+
+[Timers #40](https://github.com/dragginzgame/ic-timers/issues/40) adopts
+[Shared #106](https://github.com/dragginzgame/shared-tooling/issues/106)'s hook
+repair. Initial, post-snapshot and post-format tree observations admit command
+status before comparing values. The consumer hook fixture injects status 23
+with empty or matching tree output at each boundary, checking the diagnostic,
+exact status, stopped later Git commands, raw index and working-file preservation,
+and whether formatting ran. Existing successful formatting, mode rejection,
+partial staging and formatter-failure cases remain. Cases are written, not run;
+source-bound current/native qualification remains outstanding, so #40 stays open.
+
+The selected Cargo installer gains `--lockfile`; the Testkit adapter now passes
+the absolute root lock instead of parsing package/version/source locally.
+[Shared #96](https://github.com/dragginzgame/shared-tooling/issues/96)'s owner admits
+one exact stable crates.io selection, propagates parser failures and rechecks the
+selection before activation and returning a path. Shared fixtures own malformed,
+ambiguous, unsupported-source and changing-lock cases. The consumer fixture checks
+the exact forwarded lock, unchanged lock bytes, explicit offline policy and failed
+admission with plausible stdout in both setup/check modes before Testkit dispatch.
+Its duplicate parser cases are removed; ordered Make/jobserver and server failure
+propagation remain. Server provisioning/admission stays entirely Testkit-owned.
+
+Other selected changes are host/IC setup guidance and the upstream Rust installer
+fixture. The optional producer optimizer smoke and hook-adoption checker remain
+unselected. Consumer-owned Binaryen **132** pins, tool installations and retained
+evidence are preserved; no optimizer, Node, task scheduler or second server route
+is enabled. The incoming maintainer-owned catalog selects Testkit `0.33`; locked
+offline metadata resolves **0.33.0**, all four Host packages at **0.12.4** and
+Metrics **0.5.4**. Its dependency update is separate from this refresh and must
+retain its own qualification.
+No timer/public API or measured Wasm/instruction change follows from this batch.
+Tests/builds/lint/setup and release effects remain maintainer-owned.
+
+Permitted checks pass: integrity for all 56/30/11 exports, syntax for 41 shell
+scripts and 27 embedded Bash bodies, and locked offline metadata. Incoming
+Cargo, lock, pin catalogs and raw index compare exactly with preserved copies.
+The [exact-source producer CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38061078001)
+is queued at observation; producer delivery supplies no consumer execution or
+native-host proof. The maintainer's existing full gate retains qualification.
+
 ## Shared Tooling 0.3.5 review and pending hook repair
 
 Committed upstream **0.3.5** `a744d7f1990b9e1451ef45cd6d495de00a141cd3` matches

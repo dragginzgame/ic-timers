@@ -10,21 +10,14 @@ The earlier accumulated handoff remains in [its historical archive](archive-2026
 
 ## Released source and qualification
 
-The maintainer reports **0.17.3** live at
-`4cc3c64e6b773d73edb66f6bdf2d91cce5e68790`. Its committed graph selects four local
-0.17.3 packages, Metrics **0.5.3**, Testkit **0.32.1**, all four Host packages at
-**0.12.3** and PocketIC **16.1.0**. All three snapshots select Shared **0.3.3**
-`d63f0cfaba8ab2961d6012064adbf051c1898bc1`, with **56/30/11** files. The
-[adoption owner](../shared-tooling.md#shared-tooling-033-validation-completion)
-records canonical runner completion and nesting-depth admission.
-
-The [main run](https://github.com/dragginzgame/ic-timers/actions/runs/38056525080)
-has Linux **114226065101** running and MSRV **114226065026** passing; ARM
-**114226065141** and Intel **114226065188** are queued at observation. The
-[tag run](https://github.com/dragginzgame/ic-timers/actions/runs/38056525399)
-has tag-truth **114226066046** running. Job states alone are not raw-log proof of
-completed current/native qualification. Do not transfer earlier release evidence
-or redispatch jobs.
+Current released source is **0.17.4**
+`d7ae76c8b23ea4b0a868eb86330531ef8bd70116`. Its committed graph selects four local
+0.17.4 packages, Metrics **0.5.3**, Testkit **0.32.2**, all four Host packages at
+**0.12.4** and PocketIC **16.1.0**. Its
+[tag run](https://github.com/dragginzgame/ic-timers/actions/runs/38060308653)
+passes; [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38060308649)
+is queued at observation. Job states alone are not raw-log proof of completed
+current/native qualification. Do not transfer earlier evidence or redispatch jobs.
 
 Earlier **0.17.0** has downloaded complete Linux/MSRV/tag and both macOS evidence;
 its [release record](../releasing.md#0170-release-acceptance) owns the source-bound
@@ -34,42 +27,51 @@ identity remains with the selected Metrics package or
 `ic_timers::MeasurementSummary`, recorded by the
 [identity owner](../design/callback-delivery-ownership.md#ic-metrics-05-released-graph).
 
-## Open issues
+## Pending 0.17.5
 
-[#38](https://github.com/dragginzgame/ic-timers/issues/38) and
-[#39](https://github.com/dragginzgame/ic-timers/issues/39) are implemented in
-0.17.3 and remain open for source-bound current/native Bash qualification.
-The [preparation owner](../releasing.md#local-fixture-completion-follow-up)
-records all sixteen local fixture completion boundaries, six exit cases each,
-collector completion/retention cases and the preflight reader status repair.
-Preparation source/syntax evidence remains at
-`/tmp/ic-timers-fixture-completion.9z8952mm/`,
-`/tmp/ic-timers-collector-completion.vb52tc9h/` and
-`/tmp/ic-timers-preflight-reader.1hfppy0_/`. None of these inspection checks is
-fixture execution evidence.
+All three canonical exports now select committed Shared **0.3.6**
+`0604bfd730ec7ec288cd2cfdad217a0d42bf256b`, with **56/30/11** files. The
+[adoption owner](../shared-tooling.md#shared-tooling-036-hook-and-lock-selection)
+records clean detached source, canonical export logs, preserved inputs and
+failure-isolation cases at `/tmp/ic-timers-shared036.u0iglx_p/`.
+[Producer CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38061078001)
+is queued at observation; that is not consumer/native qualification.
 
-New [#40](https://github.com/dragginzgame/ic-timers/issues/40) tracks canonical
-adoption of [Shared #106](https://github.com/dragginzgame/shared-tooling/issues/106).
-Latest committed Shared is **0.3.5**
-`a744d7f1990b9e1451ef45cd6d495de00a141cd3`; the sibling's 0.3.6 hook repair is still
-uncommitted. Retain the immutable hook and all three reviewed 0.3.3 exports until
-producer delivery. The [review owner](../shared-tooling.md#shared-tooling-035-review-and-pending-hook-repair)
-records why 0.3.5 changes no selected executable payload. Consumer-owned Binaryen
-**132** pins remain; unoptimized probe evidence does not qualify Binaryen 133.
-No Node helper, optimization gate, task scheduler or direct Host dependency is added.
+The shared hook preserves failed initial/post-snapshot/post-format tree reads
+before copying or staging, including matching output with failed status. The
+consumer fixture adds empty/matching failure cases at all three boundaries.
+The Testkit adapter now delegates its absolute root lock to the shared Cargo
+installer, removing the duplicate parser and parser-specific local cases.
+Shared fixtures own strict package/source/version admission and selection changes;
+consumer cases cover argument/lock preservation, failed admission before server
+dispatch, offline policy and ordered Make/jobserver failure propagation.
+Cases are written, not run. Binaryen **132** pins remain; no Node/optimizer gate,
+optional adoption checker, task scheduler or new server route is enabled.
 
-## Pending 0.17.4
+Incoming maintainer-owned Cargo changes select Testkit **0.33.0**, Host **0.12.5**
+and Metrics **0.5.4**. All local packages remain 0.17.4. These inputs are preserved
+and resolve with locked offline metadata; that does not qualify CLI/server or
+product execution. The [release owner](../releasing.md#0174-delivery-and-shared-036-preparation)
+separates this graph from released 0.17.4.
 
-The consumer-owned release-gate fixture now clears inherited retained/failure
-log directory selections. Its deliberate synthetic failures stay within its own
-evidence roots; real nested production checks retain their inheritance contract.
-The [release owner](../releasing.md#0173-delivery-and-fixture-log-isolation)
-records the concrete gap and preserved inputs at
-`/tmp/ic-timers-fixture-logs.a34mj0d4/`.
+The later [Host review](../releasing.md#host-0125-review) confirms its NUL-path
+fix and byte-exact published source, without adding a direct dependency.
+Testkit 0.33.0's separately installed CLI still builds with its shipped Host
+0.12.4 lock; the workspace graph alone cannot update that executable's internals.
+Wait for a published, qualified Testkit update through the existing CLI owner.
 
-This compatible repository-only fix selects an undated **0.17.4** changelog,
-with no timer/API or measured Wasm/instruction change. Normally bundle it into
-later code-bearing work; an explicit maintainer release remains sufficient
-publication authority and keeps the complete gate. Integrity, syntax, local
-links, diff and cheap locked metadata inspection are permitted. Tests/builds/lint,
-setup, Cargo mutation, staging/commits and all release execution remain user-owned.
+[#40](https://github.com/dragginzgame/ic-timers/issues/40) is implemented through
+canonical adoption and remains open for committed consumer current/native
+qualification. [#38](https://github.com/dragginzgame/ic-timers/issues/38) and
+[#39](https://github.com/dragginzgame/ic-timers/issues/39) were implemented in
+0.17.3 and also await source-bound native evidence. Their preparation remains at
+[its owner](../releasing.md#local-fixture-completion-follow-up); do not relabel
+inspection or historical acceptance as execution of these new boundaries.
+
+The compatible tooling batch selects an undated **0.17.5** changelog. This is
+repository-only work with no timer/public API or measured Wasm/instruction change;
+normally bundle it into later code-bearing work. An explicit maintainer release
+retains the complete gate. Snapshot integrity, syntax (41 scripts/27 embedded
+Bash bodies), locked metadata and preserved catalog/lock/pins/index checks pass.
+Tests/builds/lint, setup, Cargo mutation, staging/commits and all release execution
+remain user-owned.

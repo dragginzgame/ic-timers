@@ -55,7 +55,7 @@ for mode in setup check; do
     env -u CARGO_NET_OFFLINE bash "$consumer/scripts/dev/testkit-server.sh" "$mode" > "$fixture/path"
     printf '%s\n' "$fixture/admitted-server" > "$fixture/expected-path"
     cmp "$fixture/expected-path" "$fixture/path"
-    printf '%s\n' --consumer "$consumer" --package ic-testkit --version 0.26.0 \
+    printf '%s\n' --consumer "$consumer" --package ic-testkit --lockfile "$consumer/Cargo.lock" \
         --bin ic-testkit-server --profile release > "$fixture/expected-installer"
     [[ "$mode" != check ]] || printf '%s\n' --check >> "$fixture/expected-installer"
     cmp "$fixture/expected-installer" "$fixture/installer-arguments"
@@ -66,21 +66,24 @@ for mode in setup check; do
     cmp "$fixture/expected-offline" "$fixture/offline"
     cmp "$fixture/expected-offline" "$fixture/installer-offline"
 done
-# A failed offline installation admission must not execute the owner or set up.
-rm "$fixture/owner-arguments"
-status=0
-FIXTURE_INSTALLER_STATUS=23 bash "$consumer/scripts/dev/testkit-server.sh" check > "$fixture/failure.out" 2> "$fixture/failure.log" || status=$?
-test "$status" -eq 23
-test ! -s "$fixture/failure.out"
-grep -Fq 'fixture selected Cargo tool refused' "$fixture/failure.log"
-grep -Fq 'run make install-testkit-server' "$fixture/failure.log"
-test ! -e "$fixture/owner-arguments"
+# Failed lock/tool admission cannot execute Testkit, even with a path on stdout.
+for mode in setup check; do
+    rm -f "$fixture/owner-arguments"
+    status=0
+    FIXTURE_INSTALLER_STATUS=23 bash "$consumer/scripts/dev/testkit-server.sh" "$mode" \
+        > "$fixture/failure.out" 2> "$fixture/failure.log" || status=$?
+    test "$status" -eq 23
+    test ! -s "$fixture/failure.out"
+    grep -Fq 'fixture selected Cargo tool refused' "$fixture/failure.log"
+    grep -Fq 'run make install-testkit-server' "$fixture/failure.log"
+    test ! -e "$fixture/owner-arguments"
+done
 status=0
 FIXTURE_OWNER_STATUS=31 bash "$consumer/scripts/dev/testkit-server.sh" check > "$fixture/failure.log" 2>&1 || status=$?
 test "$status" -eq 31
 
-# Setup inherits explicit offline policy, and a changed lock selects only the
-# new CLI. The shared installer owns installation reuse and receipt admission.
+# Setup inherits explicit offline policy and forwards the current root lock
+# unchanged. The shared installer owns version/source parsing and receipts.
 CARGO_NET_OFFLINE=true bash "$consumer/scripts/dev/testkit-server.sh" setup > "$fixture/path"
 printf 'true\n' > "$fixture/expected-offline"
 cmp "$fixture/expected-offline" "$fixture/installer-offline"
@@ -88,25 +91,11 @@ cmp "$fixture/expected-offline" "$fixture/offline"
 sed 's/0.26.0/0.27.0/' "$fixture/lock" > "$consumer/Cargo.lock"
 cp "$consumer/Cargo.lock" "$fixture/next-lock"
 bash "$consumer/scripts/dev/testkit-server.sh" setup > "$fixture/path"
-printf '%s\n' --consumer "$consumer" --package ic-testkit --version 0.27.0 \
+printf '%s\n' --consumer "$consumer" --package ic-testkit --lockfile "$consumer/Cargo.lock" \
     --bin ic-testkit-server --profile release > "$fixture/expected-installer"
 cmp "$fixture/expected-installer" "$fixture/installer-arguments"
 cmp "$fixture/expected-path" "$fixture/path"
 cmp "$fixture/next-lock" "$consumer/Cargo.lock"
-
-for invalid in missing duplicate unqualified; do
-    case "$invalid" in
-        missing) printf 'version = 4\npackage = []\n' > "$consumer/Cargo.lock" ;;
-        duplicate) cat "$fixture/lock" > "$consumer/Cargo.lock"; sed '1d' "$fixture/lock" >> "$consumer/Cargo.lock" ;;
-        unqualified) sed 's/registry+https:\/\/github.com\/rust-lang\/crates.io-index/path/' "$fixture/lock" > "$consumer/Cargo.lock" ;;
-    esac
-    rm "$fixture/installer-arguments" "$fixture/owner-arguments" 2>/dev/null || :
-    if bash "$consumer/scripts/dev/testkit-server.sh" check > "$fixture/invalid.log" 2>&1; then
-        echo "error: invalid $invalid Testkit selection was accepted" >&2; exit 1
-    fi
-    test ! -e "$fixture/installer-arguments"
-    test ! -e "$fixture/owner-arguments"
-done
 
 # Exercise this consumer's actual aggregate wiring with substitute common tools
 # and owner effects. Upstream tests own tool downloads/receipts; this proves the

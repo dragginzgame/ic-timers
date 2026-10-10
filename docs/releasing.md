@@ -1910,6 +1910,56 @@ mutation, setup or qualification runs. Metadata resolution alone establishes
 neither selected CLI/server admission nor native or PocketIC acceptance; the
 normal user-operated gate must qualify this selected graph and new snapshots.
 
+### Host 0.12.5 review
+
+Committed Host **0.12.5**
+`85f051c60b2a6f37717c4274b1e31caf5b9d3453` matches remote main. The incoming
+maintainer-owned root lock now resolves all four Host packages at **0.12.5**
+through Testkit **0.33.0**, with Metrics **0.5.4** and local packages still 0.17.4.
+Locked offline metadata passes and all 66 selected Host source files match that
+committed revision. Catalog, lock, pins and index are preserved; inspection
+evidence is at `/tmp/ic-timers-host0125-review.mr_aqtps/`.
+
+The only Rust implementation change from 0.12.4 is early NUL pathname rejection
+in durable publication, before parent creation, staging or producer callbacks
+([Host #54](https://github.com/dragginzgame/ic-host-tooling/issues/54)). Host's
+process/tools/artifact Rust sources and public signatures are unchanged. Its
+release/publication guard repairs remain Host-owned. There is no timer-runtime
+adoption or measured canister Wasm/instruction benefit.
+
+Distinguish the workspace test graph from the installed owner CLI. The selected
+Cargo installer uses `cargo install --locked`, so published Testkit 0.33.0's CLI
+build uses its own shipped lock, which selects Host **0.12.4**. Testkit's pending
+0.33.1 lock already selects Host 0.12.5, but those dirty bytes are not publication
+or qualification. The CLI's download evidence, executable publication and failure
+records use Host durable writes; qualify a published Testkit update through the
+existing selected-CLI/server route rather than overriding that build graph.
+Timers' probes retain managed startup through Testkit and no direct Host import.
+[Exact-source Host CI](https://github.com/dragginzgame/ic-host-tooling/actions/runs/38061390080)
+is queued at observation. No contributor tests, builds, setup, dependency update
+or sibling mutation run; native acceptance remains source-bound and user-owned.
+
+### 0.17.4 delivery and Shared 0.3.6 preparation
+
+Current released source is **0.17.4**
+`d7ae76c8b23ea4b0a868eb86330531ef8bd70116`, with four local 0.17.4 packages,
+Metrics **0.5.3**, Testkit **0.32.2**, all four Host packages at **0.12.4** and
+PocketIC **16.1.0**. Its
+[tag run](https://github.com/dragginzgame/ic-timers/actions/runs/38060308653)
+passes; [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38060308649)
+is queued at observation. Earlier job states and inspected source do not establish
+complete native acceptance for this graph or the pending tooling repair.
+
+Pending **0.17.5** adopts committed Shared **0.3.6** through all three exports,
+repairs failed hook observations and delegates Testkit CLI lock selection to the
+shared installer. The [adoption owner](shared-tooling.md#shared-tooling-036-hook-and-lock-selection)
+records exact source, changed consumers, failure cases and permitted inspection.
+The incoming maintainer-owned catalog/lock separately select Testkit **0.33.0**,
+Host **0.12.4** and Metrics **0.5.4**; those bytes and the index are preserved.
+Qualification remains the complete user-operated gate, including current/native
+Bash, selected CLI/server admission and existing product PocketIC subjects.
+No optimizer pin, deployment route or validation obligation is changed.
+
 ### 0.17.3 delivery and fixture log isolation
 
 The maintainer reports **0.17.3** live at

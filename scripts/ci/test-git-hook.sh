@@ -72,7 +72,7 @@ git show :Cargo.lock > "${temporary_root}/index-lock"
 printf '\n# unrelated working lock edit\n' >> Cargo.lock
 cp Cargo.lock "${temporary_root}/working-lock"
 
-working_files=(Cargo.toml Cargo.lock crates/hook-fixture/Cargo.toml testing/crates/hook-probe/Cargo.toml
+working_files=(Makefile Cargo.toml Cargo.lock crates/hook-fixture/Cargo.toml testing/crates/hook-probe/Cargo.toml
     crates/hook-fixture/src/lib.rs testing/crates/hook-probe/src/lib.rs README.md)
 capture_before_hook() {
     local path
@@ -134,6 +134,58 @@ for target in fmt fmt-check; do
             fi
             assert_unchanged
         done
+    done
+done
+
+# Failed initial, post-snapshot and post-format tree reads must stop before
+# copying or staging, even when Git prints the expected tree before failing.
+mkdir "$temporary_root/tree-failure-bin"
+cat > "$temporary_root/tree-failure-bin/git" <<'GIT'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> "$HOOK_TREE_STATE/commands"
+if [[ "$*" == write-tree ]]; then
+    count=0
+    [[ ! -f "$HOOK_TREE_STATE/count" ]] || read -r count < "$HOOK_TREE_STATE/count"
+    count=$((count + 1))
+    printf '%s\n' "$count" > "$HOOK_TREE_STATE/count"
+    tree="$("$HOOK_TREE_GIT" "$@")" || exit $?
+    if [[ "$count" == "$HOOK_TREE_OBSERVATION" ]]; then
+        [[ "$HOOK_TREE_OUTPUT" != matching ]] || printf '%s\n' "$tree"
+        echo 'injected write-tree observation failure' >&2
+        exit 23
+    fi
+    printf '%s\n' "$tree"
+    exit 0
+fi
+exec "$HOOK_TREE_GIT" "$@"
+GIT
+chmod +x "$temporary_root/tree-failure-bin/git"
+real_git="$(type -P git)"
+for observation in 1 2 3; do
+    for output in empty matching; do
+        state="$temporary_root/tree-failure-$observation-$output"
+        mkdir "$state"
+        capture_before_hook
+        cp .git/index "$state/index-before"
+        status=0
+        CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 \
+            PATH="$temporary_root/tree-failure-bin:$PATH" \
+            HOOK_TREE_GIT="$real_git" HOOK_TREE_STATE="$state" \
+            HOOK_TREE_OBSERVATION="$observation" HOOK_TREE_OUTPUT="$output" \
+            "$BASH" "$repository_root/.githooks/pre-commit" \
+            > "$state/output.log" 2>&1 || status=$?
+        [[ "$status" == 23 && "$(cat "$state/count")" == "$observation" ]]
+        grep -Fq 'injected write-tree observation failure' "$state/output.log"
+        [[ "$(tail -n 1 "$state/commands")" == write-tree ]]
+        cmp .git/index "$state/index-before"
+        assert_unchanged
+        if [[ "$observation" == 3 ]]; then
+            grep -Fxq 'Formatting... ok' "$state/output.log"
+        elif grep -Fq 'Formatting...' "$state/output.log"; then
+            echo 'error: formatting ran after an earlier tree observation failed' >&2
+            exit 1
+        fi
     done
 done
 

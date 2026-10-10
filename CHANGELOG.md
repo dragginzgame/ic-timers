@@ -2,6 +2,19 @@
 
 All notable changes to this project are recorded here.
 
+## [0.17.5]
+
+### Development
+
+- Adopt Shared Tooling 0.3.6: preserve failed Git tree observations before the
+  pre-commit hook can copy or stage files, with consumer failure-isolation cases
+  ([#40](https://github.com/dragginzgame/ic-timers/issues/40),
+  [Shared #106](https://github.com/dragginzgame/shared-tooling/issues/106)).
+- Delegate Testkit CLI lock selection to the shared Cargo installer, removing
+  the local parser. Setup and offline checks share strict package admission and
+  reject selection changes during installation
+  ([Shared #96](https://github.com/dragginzgame/shared-tooling/issues/96)).
+
 ## [0.17.4] - 2026-10-10
 
 ### Development
