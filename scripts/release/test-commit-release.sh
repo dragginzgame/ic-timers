@@ -7,7 +7,7 @@ export YQ="${repository_root}/.tools/host/bin/yq"
 temporary_root="$(mktemp -d)"
 trap 'rm -rf -- "${temporary_root}"' EXIT
 mkdir -p "${temporary_root}"/{scripts/{ci,release},.shared-tooling/helpers/scripts/ci,bin}
-for script in commit-release check-tag-at-head workspace-version readme-version; do
+for script in commit-release check-tag-at-head workspace-version; do
     cp "${repository_root}/scripts/release/${script}.sh" "${temporary_root}/scripts/release/"
 done
 cp "${repository_root}/scripts/ci/ensure-clean.sh" "${temporary_root}/scripts/ci/"
@@ -24,7 +24,7 @@ printf '%s\n' 'ensure-clean:' $'\t@bash scripts/ci/ensure-clean.sh' > Makefile
 printf '%s\n' '[workspace.dependencies.fixture]' 'version = "0.2.0"' \
     '[workspace.package]' 'version = "0.1.0"' > Cargo.toml
 printf '%s\n' '# Changelog' '' '## [0.1.0] - 2026-10-03' '' '- Fixture release.' > CHANGELOG.md
-printf '%s\n' '# Fixture' '| API line | `0.1` |' 'ic-timers = "=0.1.0"' > README.md
+printf '%s\n' '# Fixture' 'ic-timers = "=0.0.7"' > README.md
 git add .
 git commit -qm fixture
 
@@ -47,15 +47,23 @@ initial_commit="$(git rev-parse HEAD)"
 bash scripts/release/commit-release.sh --check-before-bump
 expect_failure 'Usage:' bash scripts/release/commit-release.sh --check-before-bump extra
 mkdir -p testing
-for path in Cargo.toml Cargo.lock CHANGELOG.md README.md; do
+for path in Cargo.toml Cargo.lock CHANGELOG.md; do
     tracked=false
-    case "${path}" in Cargo.toml | CHANGELOG.md | README.md) tracked=true ;; esac
+    case "${path}" in Cargo.toml | CHANGELOG.md) tracked=true ;; esac
     printf '%s\n' '# Dirty metadata fixture.' >> "${path}"
     bash scripts/release/commit-release.sh --check-before-bump
     expect_failure 'stage all release changes' bash scripts/release/commit-release.sh
     grep -Fqx '# Dirty metadata fixture.' "${path}"
     if [[ "${tracked}" == true ]]; then git restore -- "${path}"; else rm -- "${path}"; fi
 done
+
+# README is ordinary source: stale examples are accepted, unstaged edits still
+# need explicit staging and are never silently selected by release-stage.
+printf '%s\n' 'Unstaged documentation.' >> README.md
+expect_failure 'README.md' bash scripts/release/commit-release.sh --check-before-bump
+git add README.md
+bash scripts/release/commit-release.sh --check-before-bump
+git restore --staged --worktree -- README.md
 
 printf '%s\n' '# Unstaged implementation fixture.' >> scripts/ci/ensure-clean.sh
 expect_failure 'scripts/ci/ensure-clean.sh' bash scripts/release/commit-release.sh --check-before-bump

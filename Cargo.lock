@@ -870,15 +870,15 @@ dependencies = [
 
 [[package]]
 name = "ic-metrics"
-version = "0.4.0"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6bdcedba0e995c3c57f1f608d9f1664b8ec56c0d437d330c13004e78dbce434d"
+checksum = "04d79403a81e4fa0bc2a7434c181995c57246b85aa647a84838e712183013b1d"
 
 [[package]]
 name = "ic-testkit"
-version = "0.30.0"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1f639412105b6f5c909ac7342c94a22c07ccbeb5285112fc123e78fcb3b24d8"
+checksum = "c05b04dd09011a4d15f02756104a7a7102b6d4fbf765274957fd1056c784c807"
 dependencies = [
  "candid",
  "fs2",

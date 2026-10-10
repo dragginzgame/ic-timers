@@ -9,7 +9,6 @@ check_metadata() {
     version="$(bash "$script_dir/workspace-version.sh")" || return
     [[ "$version" == "${RELEASE_VERSION:?}" ]] || return
     cargo sort --workspace --check || return
-    bash "$script_dir/readme-version.sh" --check || return
     bash "$script_dir/check-lockfiles.sh" || return
     awk -v heading="## [$RELEASE_VERSION] - ${RELEASE_DATE:?}" \
         '$0 == heading { n++ } END { if (n != 1) exit 1 }' CHANGELOG.md
@@ -19,7 +18,7 @@ case "${1:-}" in
     preflight)
         [[ "$(bash scripts/release/workspace-version.sh)" == "${RELEASE_PREVIOUS:?}" ]]
         bash "$script_dir/../ci/check-release-source.sh" \
-            --allow Cargo.toml --allow Cargo.lock --allow CHANGELOG.md --allow README.md
+            --allow Cargo.toml --allow Cargo.lock --allow CHANGELOG.md
         IC_TIMERS_RELEASE_DATE="${RELEASE_DATE:?}" bash scripts/release/bump-version.sh --check "${RELEASE_VERSION:?}"
         # Prepare only the admitted graph's existing owners, in order. Fetching
         # sources alone does not install the root-lock-selected executable.
@@ -32,8 +31,8 @@ case "${1:-}" in
         ;;
     commit-check)
         bash "$script_dir/../ci/check-release-source.sh" \
-            --allow Cargo.toml --allow Cargo.lock --allow CHANGELOG.md --allow README.md
-        git ls-files --error-unmatch -- Cargo.toml Cargo.lock CHANGELOG.md README.md > /dev/null
+            --allow Cargo.toml --allow Cargo.lock --allow CHANGELOG.md
+        git ls-files --error-unmatch -- Cargo.toml Cargo.lock CHANGELOG.md > /dev/null
         git diff --quiet --
         check_metadata
         ;;

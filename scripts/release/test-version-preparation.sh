@@ -10,7 +10,7 @@ trap 'if [[ $? == 0 ]]; then rm -rf -- "${temporary_root}"; else printf "Failed 
 git init -q "${temporary_root}"
 mkdir -p "${temporary_root}"/{scripts/release,scripts/ci,.shared-tooling/helpers/scripts/ci,docs/status,docs/changelog,crates/ic-timers/src,testing/probe/src}
 for script in bump-version finalize-changelog \
-    warn-release-prose check-bump-impact check-lockfiles workspace-version readme-version update-local-lock; do
+    warn-release-prose check-bump-impact check-lockfiles workspace-version update-local-lock; do
     cp "${repository_root}/scripts/release/${script}.sh" "${temporary_root}/scripts/release/"
 done
 cp "${repository_root}/scripts/ci/next-release-version.sh" \
@@ -72,7 +72,8 @@ cat > "${temporary_root}/docs/status/current.md" <<'EOF'
 
 Read Cargo for package identity. This handoff has no release marker.
 EOF
-printf '%s\n' '# Fixture' '| API line | `0.1` |' 'ic-timers = "=0.1.0"' \
+printf '%s\n' '# Fixture' '| API line | `0.0` |' 'ic-timers = "=0.0.7"' \
+    'ic-timers = "0.0" # Another legitimate documentation example.' \
     > "${temporary_root}/README.md"
 printf '%s\n' 'release-verify:' $'\t@touch unexpected-gate' $'\t@exit 1' \
     > "${temporary_root}/Makefile"
@@ -222,17 +223,28 @@ for kind in patch minor major; do
     assert_metadata_unchanged original-files
 done
 
-# Preparation must not replace a consumer-owned metadata symlink.
+# README shape, freshness and presence are not release preconditions.
 mv README.md owned-readme.md
+bash scripts/release/bump-version.sh --check patch >/dev/null
+test ! -e README.md
 ln -s owned-readme.md README.md
+bash scripts/release/bump-version.sh --check patch >/dev/null
+test -L README.md
+rm README.md
+mv owned-readme.md README.md
+assert_metadata_unchanged original-files
+
+# Preparation must not replace a consumer-owned metadata symlink.
+mv Cargo.lock owned-lock
+ln -s owned-lock Cargo.lock
 if bash scripts/release/bump-version.sh patch >/dev/null 2>&1; then
     echo 'error: version preparation accepted a symlinked metadata output' >&2
     exit 1
 fi
-test -L README.md
+test -L Cargo.lock
 assert_metadata_unchanged original-files
-rm README.md
-mv owned-readme.md README.md
+rm Cargo.lock
+mv owned-lock Cargo.lock
 
 # Classification must reach the bump boundary, including failure and advisory.
 for impact in none unexpected error; do
@@ -422,16 +434,7 @@ if [[ "${FIXTURE_FAIL_STAGE:-}" == interrupt && "$stage" == root-update ]]; then
 fi
 bash scripts/release/original-update-local-lock.sh "$@"
 EOF
-cp scripts/release/readme-version.sh scripts/release/original-readme-version.sh
-cat > scripts/release/readme-version.sh <<'EOF'
-#!/usr/bin/env bash
-if [[ "${FIXTURE_FAIL_STAGE:-}" == readme-update && "${1:-}" == --update ]]; then
-    echo 'injected README update failure' >&2
-    exit 1
-fi
-bash scripts/release/original-readme-version.sh "$@"
-EOF
-for stage in readme-update root-update root-metadata interrupt; do
+for stage in root-update root-metadata interrupt; do
     if output="$(PATH="${temporary_root}/bin:${PATH}" FIXTURE_FAIL_STAGE="${stage}" \
         bash scripts/release/bump-version.sh patch 2>&1)"; then
         echo "error: version preparation accepted injected ${stage} failure" >&2
@@ -443,7 +446,6 @@ for stage in readme-update root-update root-metadata interrupt; do
     fi
     assert_metadata_unchanged original-files
 done
-mv scripts/release/original-readme-version.sh scripts/release/readme-version.sh
 
 # An absent changelog is created during preparation and removed by rollback.
 # Keep the lock-update injector installed until this final rollback scenario.
@@ -481,8 +483,7 @@ test ! -f unexpected-gate
 grep -Fqx '  version = "0.1.1" # Workspace truth; preserve spacing and this comment.' Cargo.toml
 test "$(bash scripts/release/workspace-version.sh)" = 0.1.1
 grep -Fqx '## [0.1.0]' CHANGELOG.md
-grep -Fqx 'ic-timers = "=0.1.1"' README.md
-grep -Fqx '| API line | `0.1` |' README.md
+cmp original-files/README.md README.md
 # The earlier dependency version must survive the bump unchanged.
 grep -Fqx 'version = "0.1.0"' Cargo.toml
 bash scripts/release/check-lockfiles.sh
@@ -515,7 +516,7 @@ for target in version release-stage; do
 done
 mv valid-stage-manifest.toml Cargo.toml
 make --no-print-directory release-stage >/dev/null
-expected_staged=(CHANGELOG.md Cargo.lock Cargo.toml README.md)
+expected_staged=(CHANGELOG.md Cargo.lock Cargo.toml)
 git diff --cached --name-only > staged-paths
 printf '%s\n' "${expected_staged[@]}" > expected-staged-paths
 if ! cmp -s expected-staged-paths staged-paths; then

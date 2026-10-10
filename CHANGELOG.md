@@ -22,6 +22,11 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Remove README version freshness from release preflight, preparation, CI and
+  final metadata checks. Delete automatic README rewriting/staging and its
+  projection test; keep package, lockfile, changelog and Git integrity guards.
+  Periodic advisory review is requested in
+  [Shared Tooling #100](https://github.com/dragginzgame/shared-tooling/issues/100).
 - Use Testkit 0.30 for native qualification and selected CLI setup, retaining
   its managed PocketIC startup contract. Keep complete setup/check logs in CI
   failure archives and check the local Testkit extension's ordering under

@@ -109,24 +109,32 @@ git reset -q HEAD -- "$source_path"
 git show "HEAD:$working_path" > "$working_path"
 rm "$untracked_path"
 
-printf '\nPrepared metadata fixture.\n' >> README.md
-git add README.md
+printf '\nPrepared metadata fixture.\n' >> CHANGELOG.md
+git add CHANGELOG.md
 staged_tree="$(git write-tree)"
-git show HEAD:README.md > README.md
+git show HEAD:CHANGELOG.md > CHANGELOG.md
 reject commit-check 'index differing from prepared working metadata'
 [[ "$(git write-tree)" == "$staged_tree" ]]
-git reset -q HEAD -- README.md
+git reset -q HEAD -- CHANGELOG.md
 
-printf '\nPrepared metadata fixture.\n' >> README.md
+printf '\nPrepared metadata fixture.\n' >> CHANGELOG.md
 reject commit-check 'unstaged metadata'
-git add README.md
+git add CHANGELOG.md
 bash "$root/scripts/release/adapter.sh" commit-check
+git reset -q HEAD -- CHANGELOG.md
+git show HEAD:CHANGELOG.md > CHANGELOG.md
+
+git rm -q --cached CHANGELOG.md
+reject commit-check 'untracked release metadata'
+git reset -q HEAD -- CHANGELOG.md
+# Ordinary documentation edits remain subject to source admission, independently
+# of version freshness. Neither unstaged nor staged README edits are metadata.
+printf '\nDocumentation fixture.\n' >> README.md
+reject preflight 'unstaged ordinary documentation'
+git add README.md
+reject commit-check 'ordinary documentation in release index'
 git reset -q HEAD -- README.md
 git show HEAD:README.md > README.md
-
-git rm -q --cached README.md
-reject commit-check 'untracked release metadata'
-git reset -q HEAD -- README.md
 printf '%s\n' 'untracked implementation' > unexpected-source.rs
 reject commit-check 'untracked implementation'
 rm unexpected-source.rs

@@ -164,7 +164,6 @@ release-check:
 	bash scripts/release/test-committed-release.sh
 	bash scripts/release/test-release-index.sh
 	bash scripts/release/test-finalize-changelog.sh
-	bash scripts/release/test-readme-version.sh
 	bash scripts/release/test-release-impact.sh
 	bash scripts/release/test-lockfiles.sh
 	bash scripts/release/test-release-prose-warning.sh
@@ -175,7 +174,6 @@ release-check:
 	bash scripts/ci/test-testkit-server.sh
 	bash scripts/ci/test-git-hook.sh
 	bash scripts/ci/test-repository-checks.sh
-	bash scripts/release/readme-version.sh --check
 
 provider-check:
 	bash scripts/ci/check-provider-boundary.sh
@@ -248,7 +246,7 @@ release-x:
 
 release-stage:
 	@set -e; bash scripts/release/workspace-version.sh >/dev/null; \
-		git add Cargo.toml Cargo.lock CHANGELOG.md README.md
+		git add Cargo.toml Cargo.lock CHANGELOG.md
 
 release-commit:
 	@bash scripts/release/commit-release.sh
@@ -289,7 +287,7 @@ release-commit-check:
 release-committed-check:
 	@bash scripts/release/adapter.sh check-committed
 release-files:
-	@printf '%s\0' Cargo.toml Cargo.lock CHANGELOG.md README.md
+	@printf '%s\0' Cargo.toml Cargo.lock CHANGELOG.md
 release-tagged-check release-push-check:
 	@bash scripts/release/adapter.sh check-committed
 	@bash scripts/release/check-tag-at-head.sh "$(RELEASE_COMMIT)" "$(RELEASE_VERSION)"

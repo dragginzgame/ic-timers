@@ -51,7 +51,7 @@ Normal fetch still prepares the selected lock before validation; no contributor
 dependency update, lock edit, fetch or local qualification ran.
 
 Release-source admission delegates to the reviewed shared checker. The adapter
-still permits only `Cargo.toml`, `Cargo.lock`, `CHANGELOG.md` and `README.md`;
+permits only `Cargo.toml`, `Cargo.lock` and `CHANGELOG.md` as release outputs;
 it reports all other staged, unstaged and untracked paths, quoting unusual names.
 Failed Git observations preserve their own error rather than claiming dirty
 source. The runner adds the initial preflight context only before that attempt
@@ -172,12 +172,14 @@ workspace metadata checks also require exactly one resolved `ic-timers` package
 at the workspace version; coherent lockfiles for a different package version
 are rejected.
 
-`scripts/release/readme-version.sh` projects that same workspace version into
-the README API line and exact shared-registry dependency example. Bump preflight
-checks those two fields before mutation; the bump updates them after the manifest
-and restores the README along with other metadata on failure or interruption.
-Metadata checks reject drift. Only the two structured version fields are
-checked; historical links and free-form release prose are not version selectors.
+README versions, examples, layout and presence are not release prerequisites.
+Release preparation leaves README bytes and modes unchanged and does not stage
+it. The former local version-projection helper and test are removed from every
+release phase and CI. README edits follow ordinary source admission and explicit
+maintainer staging; stale examples alone cannot refuse a release. Periodic
+advisory documentation review is requested in
+[Shared Tooling #100](https://github.com/dragginzgame/shared-tooling/issues/100),
+using the shared maintenance catalog rather than another local gate.
 
 The clean-worktree and release-commit guards capture untracked-file queries
 before testing their output. The commit helper treats Git's staged-diff status
@@ -214,7 +216,7 @@ changes no timer runtime contract and supplies no new native macOS qualification
 
 Combined release targets run `bump-version.sh --check` before deployment
 validation. This preflight checks the requested version, impact, unambiguous
-draft selection and structured README projections without changing version
+draft selection without changing version
 metadata or running tests. An empty exact `VERSION` is rejected before the gate.
 The bump helper accepts exactly one `patch`, `minor`, `major` or canonical
 `x.y.z` argument after an optional leading `--check`. Missing or extra arguments,
@@ -245,8 +247,8 @@ syntax were reviewed; rerunning the corrected fixture remains maintainer-owned.
 
 The release-commit owner then runs its read-only `--check-before-bump` mode. It
 accepts staged implementation changes and dirty metadata selected by
-`release-stage`: `Cargo.toml`, `Cargo.lock`, `CHANGELOG.md`
-and `README.md`. Other unstaged or untracked paths are listed with Bash escaping
+`release-stage`: `Cargo.toml`, `Cargo.lock` and `CHANGELOG.md`.
+Other unstaged or untracked paths are listed with Bash escaping
 and rejected before dependency fetching, validation or version mutation. Stage
 the intended implementation changes yourself; the helper does not expand the
 metadata staging scope or require a preparatory source commit. Plain `patch`,
@@ -256,7 +258,7 @@ preparation without this combined-release admission check.
 The same owner requires every path to be staged in its normal commit/tag mode.
 Both modes complete NUL-delimited Git discovery before reading records; an empty
 or plausible partial result from a failed query cannot establish admission.
-The normal commit mode retains README/lockfile validation, exact tag identity,
+The normal commit mode retains lockfile validation, exact tag identity,
 clean-worktree checks and interrupted-tag retries. The real bump repeats the
 version preflight checks afterward and always advances the requested version.
 
@@ -293,8 +295,8 @@ Before version mutation, the helper also scans
 the compact status for target-version wording likely to become stale, such as
 `candidate`, `unreleased`, or a next action to publish after release. This is
 advisory: it prints a warning and always continues. Free-form prose is never a
-post-mutation release blocker. Canonical Cargo identity, structured README pins,
-resolved lockfiles and exact annotated tags remain enforced facts.
+post-mutation release blocker. Canonical Cargo identity, resolved lockfiles and
+exact annotated tags remain enforced facts.
 
 Use one of the standard release families:
 
@@ -2075,14 +2077,14 @@ inspection found that archive and eight other selected testing archives absent
 from the local default cache; it does not establish results in another cache or
 native macOS qualification.
 
-`release-stage` selects only the four outputs the bump owns. Workspace members
+`release-stage` selects only the three outputs the bump owns. Workspace members
 inherit their versions, so their manifests are not version-bump outputs and
 remain under the maintainer's separate code-staging ownership. Stage and commit
 the intended implementation and supporting evidence before the combined release;
 the release commit still rejects unrelated unstaged or untracked work.
 
-Before mutation, the helper captures only its four output files: the workspace
-manifest, root lockfile, changelog and README. Failed
+Before mutation, the helper captures only its three output files: the workspace
+manifest, root lockfile and changelog. Failed
 commands and handled `INT`/`TERM` interruptions restore their pre-bump contents
 and modes, including existing user edits; a previously absent file is removed
 on rollback. If restoration fails, the backup is
@@ -2132,8 +2134,8 @@ retains the complete release gate despite having no runtime changes.
 
 The three standard SemVer entry points use the [common release contract](releases.md)
 with explicit `RELEASE_REMOTE=origin` and `RELEASE_BRANCH=main`. The complete local
-release gate is unchanged. Consumer adapters select the four metadata outputs,
-README projection and the complete root graph. Publishing stays separate.
+release gate retains its product qualification. Consumer adapters select the
+three metadata outputs and the complete root graph. Publishing stays separate.
 Normal targets select unfinished preparation intent before another increment.
 The 22-file snapshot is exported from committed Shared Tooling revision
 `cb86188c5956866564de4fb6ec6be67b27981ab9`; the
@@ -2145,7 +2147,7 @@ The runner owns commit ancestry, saved source/tree/subject, destination, locking
 annotated tagging and exact atomic branch/tag publication. Local committed,
 tagged and push callbacks instead inspect `RELEASE_COMMIT`: the current adapter
 exports its immutable source tree into an owned temporary directory and invokes
-the current workspace-version, README and lockfile check owners there. The root
+the current workspace-version and lockfile check owners there. The root
 workspace manifest-sort check and the exact dated changelog heading remain
 required. No scripts from the older tree are executed. Failed archive reads,
 including partial output, fail closed; the temporary copy is removed without
@@ -2153,7 +2155,7 @@ touching build artifacts, plans or validation logs. This is cold release-path
 disk work and has no crate, Wasm, runtime instruction or heap impact.
 
 Preflight reads staged, unstaged and untracked paths separately, with NUL records
-and rename detection disabled, before admitting only the four metadata outputs.
+and rename detection disabled, before admitting only the three metadata outputs.
 Its existing bump check rejects candidate/changelog conflicts before validation
 or intent creation. After admission, preflight invokes the existing `make fetch`,
 `make install-testkit-server` and `make pocketic-check` owners sequentially for
@@ -2175,7 +2177,7 @@ before cache fetching. The requested common guidance is owned by
 [Shared Tooling #6](https://github.com/dragginzgame/shared-tooling/issues/6), without
 unlocking release fetches or changing release phase order.
 The final commit adapter checks the entire index, requires
-all four outputs to be tracked and the worktree to match the index, then applies
+all three outputs to be tracked and the worktree to match the index, then applies
 the existing metadata checks. Staged implementation changes hidden by restoring
 only the working file cannot pass either admission boundary.
 
@@ -2213,10 +2215,12 @@ publication, deployment and cleanup remain separate.
 
 `test-committed-release.sh` exercises the actual local Make callbacks and metadata
 owners with Git/Cargo command stubs: selected metadata despite newer HEAD,
-the complete locked root graph, corruption of all four metadata outputs, tag
+the complete locked root graph, corruption of all three metadata outputs, tag
 conflicts, archive failure before/after output, failed resolution/manifest sorting,
-missing selection and temporary-copy cleanup. The real-Git tag fixture now
-checks an earlier selected commit separately from HEAD. The shared runner fixture
+missing selection and temporary-copy cleanup. New cases cover stale, noncanonical
+and absent README content independently of metadata integrity; these cases have
+not been executed by the contributor. The real-Git tag fixture checks an earlier
+selected commit separately from HEAD. The shared runner fixture
 owns the patch/minor/major and same/different-kind interruption matrix, lost
 push replies, fresh-gate failure/retry, conflicts and locking. These fixtures
 remain in the complete release gate on Linux and both native macOS jobs.

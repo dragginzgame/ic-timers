@@ -38,7 +38,7 @@ Local parallel-Make extension and collector assertions are written, not run.
 
 Incoming maintainer Cargo edits select Metrics **0.4.0**, Testkit **0.30.0**,
 Host **0.11.0** and PocketIC **16.1.0**. They also report local version **0.16.6**,
-although HEAD is the 0.16.7 release; preserve those user-owned bytes. Contributor
+although the preceding release is 0.16.7; preserve those user-owned bytes. Contributor
 preparation does not repair or bump Cargo metadata. The next user-operated minor
 preparation must select **0.17.0**.
 
@@ -50,6 +50,18 @@ qualification. [#37](https://github.com/dragginzgame/ic-timers/issues/37) stays 
 for delivered alignment. Testkit's existing startup/CLI calls need no adapter;
 its packaged CLI lock selects Host 0.11, and the timer library has no Host/Testkit
 edge. No timer runtime mechanism, persistence or optimization is added.
+
+The maintainer's minor-release attempt stopped before validation because README
+examples did not match Cargo 0.16.6. The prepared repair removes the local
+freshness helper/test and all phase/CI callers, automatic rewriting and README
+release-output ownership.
+Only Cargo.toml, Cargo.lock and CHANGELOG.md remain release outputs. Ordinary
+README edits retain source/staging guards; stale or missing examples are accepted.
+Existing preparation/Git/selected-commit fixtures cover that distinction and
+README preservation; they are written, not run. The
+[release owner](../releasing.md) records the contract and
+[Shared #100](https://github.com/dragginzgame/shared-tooling/issues/100) requests a
+periodic read-only advisory task. No Cargo or lock bytes are changed by this repair.
 
 ## Next action and authority
 

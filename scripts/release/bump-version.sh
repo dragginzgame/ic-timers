@@ -80,7 +80,6 @@ bash scripts/release/check-bump-impact.sh "${release_impact}" "${previous_versio
 release_date="${IC_TIMERS_RELEASE_DATE:-$(date -u +%F)}"
 IC_TIMERS_RELEASE_PREVIOUS="${previous_version}" \
     bash scripts/release/finalize-changelog.sh --check "${new_version}" "${release_date}"
-bash scripts/release/readme-version.sh --check
 if ! bash scripts/release/warn-release-prose.sh "${new_version}"; then
     echo "warning: advisory release-prose check could not run; continuing" >&2
 fi
@@ -93,7 +92,7 @@ fi
 # Capture only files this bump mutates, including any existing user edits.
 # Failed updates/checks and catchable interruptions restore that exact state.
 backup_directory="$(mktemp -d "${TMPDIR:-/tmp}/ic-timers-bump.XXXXXX")"
-metadata_files=(Cargo.toml Cargo.lock CHANGELOG.md README.md)
+metadata_files=(Cargo.toml Cargo.lock CHANGELOG.md)
 mutation_started=false
 bump_completed=false
 cleanup() {
@@ -140,14 +139,12 @@ IC_TIMERS_RELEASE_PREVIOUS="${previous_version}" \
     bash scripts/release/finalize-changelog.sh "${new_version}" "${release_date}"
 
 bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh" set "${previous_version}" "${new_version}"
-bash scripts/release/readme-version.sh --update
 # Preserve external dependency selections; update every local workspace member.
 bash scripts/release/update-local-lock.sh Cargo.lock "$previous_version" "$new_version"
 
 # Version mutation must leave the complete root workspace graph coherent.
 # Behavioral evidence belongs to the user-operated deployment release gate.
 bash scripts/release/check-lockfiles.sh
-bash scripts/release/readme-version.sh --check
 bump_completed=true
 
 echo "Bumped: ${previous_version} -> ${new_version}"

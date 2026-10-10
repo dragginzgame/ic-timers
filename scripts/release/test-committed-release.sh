@@ -29,7 +29,7 @@ cp "$root/.shared-tooling/helpers/scripts/ci/read-cargo-workspace-version.sh" \
 mkdir -p "$fixture/current/ci"
 cp "$root/ci/tool-versions.env" "$fixture/current/ci/"
 printf '%s\n' '[workspace.package]' 'version = "0.1.0"' > "$fixture/selected/Cargo.toml"
-printf '%s\n' '| API line | `0.1` |' 'ic-timers = "=0.1.0"' > "$fixture/selected/README.md"
+printf '%s\n' 'ic-timers = "=0.0.7"' > "$fixture/selected/README.md"
 printf '%s\n' '## [0.1.0] - 2026-10-06' > "$fixture/selected/CHANGELOG.md"
 for path in Cargo.lock; do
     printf '%s\n' 'version = "0.1.0"' > "$fixture/selected/$path"
@@ -105,8 +105,14 @@ for target in release-committed-check release-tagged-check release-push-check; d
     done
     [[ -z "$(ls -A "$fixture/tmp")" ]]
 done
-# All four metadata outputs must be checked in the selected tree, not HEAD.
-for path in Cargo.toml README.md CHANGELOG.md Cargo.lock; do
+# Documentation need not contain canonical fields or exist in a release tree.
+printf '%s\n' 'An ordinary README without version fields.' > "$SELECTED_TREE/README.md"
+check release-push-check
+rm "$SELECTED_TREE/README.md"
+check release-push-check
+[[ -z "$(ls -A "$fixture/tmp")" ]]
+# All three metadata outputs must be checked in the selected tree, not HEAD.
+for path in Cargo.toml CHANGELOG.md Cargo.lock; do
     cp "$SELECTED_TREE/$path" "$fixture/saved"
     printf '%s\n' 'invalid selected release metadata' > "$SELECTED_TREE/$path"
     reject release-push-check "$path corruption"
