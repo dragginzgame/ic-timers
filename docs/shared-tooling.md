@@ -1,5 +1,25 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.3.5 review and pending hook repair
+
+Committed upstream **0.3.5** `a744d7f1990b9e1451ef45cd6d495de00a141cd3` matches
+remote main. Since the reviewed 0.3.3, selected executable payloads remain
+unchanged; 0.3.4 changes selected host/IC guidance and adds an optional producer
+optimizer qualification helper outside our export. The 0.3.5 repair clears
+inherited log/summary selections in the producer's validation-runner fixture,
+which Timers does not select. Its analogous consumer-owned release-gate fixture
+gap is repaired locally, with evidence at the
+[release owner](releasing.md#0173-delivery-and-fixture-log-isolation).
+
+[Timers #40](https://github.com/dragginzgame/ic-timers/issues/40) tracks adoption
+of the hook observation repair in
+[Shared #106](https://github.com/dragginzgame/shared-tooling/issues/106).
+The sibling's uncommitted 0.3.6 work is not canonical delivery. Retain reviewed
+0.3.3 snapshots and the byte-exact shared hook until its producer revision is
+committed, then refresh through canonical exports and qualify actual Git failure
+status, untouched index/files and stopped later operations on supported hosts.
+This review changes no optimizer pins, optional helper selection or setup route.
+
 ## Shared Tooling 0.3.4 review and retained optimizer pins
 
 Committed upstream **0.3.4** `169d77b8440568c5200eede971625126181f7bb2` matches

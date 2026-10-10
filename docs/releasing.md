@@ -1910,6 +1910,41 @@ mutation, setup or qualification runs. Metadata resolution alone establishes
 neither selected CLI/server admission nor native or PocketIC acceptance; the
 normal user-operated gate must qualify this selected graph and new snapshots.
 
+### 0.17.3 delivery and fixture log isolation
+
+The maintainer reports **0.17.3** live at
+`4cc3c64e6b773d73edb66f6bdf2d91cce5e68790`. The four local packages select
+0.17.3, with Metrics **0.5.3**, Testkit **0.32.1**, all four Host packages at
+**0.12.3** and PocketIC **16.1.0**. All three Shared snapshots remain 0.3.3.
+The [main run](https://github.com/dragginzgame/ic-timers/actions/runs/38056525080)
+has Linux **114226065101** running and MSRV **114226065026** passing, with ARM
+**114226065141** and Intel **114226065188** queued at observation. The
+[tag run](https://github.com/dragginzgame/ic-timers/actions/runs/38056525399)
+has tag-truth **114226066046** running. These states are not complete execution
+evidence for [#38](https://github.com/dragginzgame/ic-timers/issues/38) or
+[#39](https://github.com/dragginzgame/ic-timers/issues/39); both stay open pending
+source-bound current/native Bash logs. No workflow is redispatched.
+
+Pending **0.17.4** clears inherited `VALIDATION_LOG_DIR` and
+`VALIDATION_FAILURE_LOG_DIR` in the consumer-owned release-gate fixture. The
+fixture already owns logger checkout/depth and disables GitHub summaries, but
+its direct logger calls still inherited caller-selected evidence directories.
+Deliberate failed target output could therefore populate real validation logs;
+an inherited retained-log directory also collected synthetic successful runs.
+Clearing both selections lets each synthetic logger use fixture-owned roots.
+The root Make release adapter still supplies its fixture-local failure directory.
+The production runner retains its intentional inheritance for real nested checks.
+This follows the producer fixture repair in
+[Shared #105](https://github.com/dragginzgame/shared-tooling/issues/105), without
+editing a shared file or adding a runner/installation path.
+
+Preserved incoming catalog, lock, pin catalogs, index and fixture source are at
+`/tmp/ic-timers-fixture-logs.a34mj0d4/`. Permitted shell syntax, diff, six changed
+local links, snapshot integrity (56/30/11) and locked offline metadata checks pass;
+fixture execution and current/native qualification remain user-owned. This is
+repository-only work with no timer/API, Wasm or instruction change. No dependency
+or release metadata is mutated beyond the undated changelog draft.
+
 ### Local fixture completion follow-up
 
 After the maintainer reported **0.17.2** live at

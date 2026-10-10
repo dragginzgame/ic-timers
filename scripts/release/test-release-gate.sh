@@ -4,6 +4,8 @@ set -euo pipefail
 # This independent fixture owns its Make selections and logger checkout.
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
 unset VALIDATION_REPOSITORY_ROOT VALIDATION_RUNNER_SNAPSHOT_PATH
+# Synthetic failures belong to this fixture, never its caller's evidence roots.
+unset VALIDATION_LOG_DIR VALIDATION_FAILURE_LOG_DIR
 
 repository_root="$(git rev-parse --show-toplevel)"
 export PATH="${repository_root}/.tools/host/bin:${PATH}"

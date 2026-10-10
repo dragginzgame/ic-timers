@@ -2,6 +2,14 @@
 
 All notable changes to this project are recorded here.
 
+## [0.17.4]
+
+### Development
+
+- Isolate release-gate fixture logs from inherited validation directories, so
+  deliberately failed checks cannot pollute the caller's retained evidence.
+  Production log-directory inheritance remains unchanged.
+
 ## [0.17.3] - 2026-10-10
 
 ### Development
