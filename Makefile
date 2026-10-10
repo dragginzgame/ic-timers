@@ -56,73 +56,73 @@ version:
 
 # Prepare every target's locked sources before offline metadata validation.
 fetch:
-	cargo fetch --manifest-path Cargo.toml --locked
+	+cargo fetch --manifest-path Cargo.toml --locked
 
 check:
-	cargo check -p ic-timers --all-targets --all-features --locked
+	+cargo check -p ic-timers --all-targets --all-features --locked
 
 clippy:
-	cargo clippy -p ic-timers --all-targets --all-features --locked -- -D warnings
+	+cargo clippy -p ic-timers --all-targets --all-features --locked -- -D warnings
 
 docs-check:
-	RUSTDOCFLAGS="-D warnings" cargo doc -p ic-timers --all-features --no-deps --locked
+	+RUSTDOCFLAGS="-D warnings" cargo doc -p ic-timers --all-features --no-deps --locked
 
 test:
-	cargo test -p ic-timers --all-targets --all-features --locked
-	cargo test -p ic-timers --doc --all-features --locked
+	+cargo test -p ic-timers --all-targets --all-features --locked
+	+cargo test -p ic-timers --doc --all-features --locked
 
 wasm-check:
-	cargo check -p ic-timers --all-features --locked --target wasm32-unknown-unknown
+	+cargo check -p ic-timers --all-features --locked --target wasm32-unknown-unknown
 
 msrv:
-	cargo +$(MSRV) check -p ic-timers --all-targets --all-features --locked
-	cargo +$(MSRV) test -p ic-timers --doc --all-features --locked
+	+cargo +$(MSRV) check -p ic-timers --all-targets --all-features --locked
+	+cargo +$(MSRV) test -p ic-timers --doc --all-features --locked
 
 testing-check:
 	+$(MAKE) --no-print-directory fmt-check
-	cargo +$(MSRV) clippy \
+	+cargo +$(MSRV) clippy \
 		-p ic-timers-runtime-probe -p ic-timers-pocketic --all-targets --locked -- -D warnings
-	cargo +$(MSRV) clippy \
+	+cargo +$(MSRV) clippy \
 		-p ic-timers-size-probe --no-default-features --features baseline --all-targets --locked -- -D warnings
-	cargo +$(MSRV) clippy \
+	+cargo +$(MSRV) clippy \
 		-p ic-timers-size-probe --no-default-features --features once --all-targets --locked -- -D warnings
-	cargo +$(MSRV) clippy \
+	+cargo +$(MSRV) clippy \
 		-p ic-timers-size-probe --no-default-features --features after-completion --all-targets --locked -- -D warnings
-	cargo +$(MSRV) clippy \
+	+cargo +$(MSRV) clippy \
 		-p ic-timers-size-probe --no-default-features --features watchdog --all-targets --locked -- -D warnings
 
 package:
-	cargo package --locked --offline --allow-dirty -p ic-timers
+	+cargo package --locked --offline --allow-dirty -p ic-timers
 
 install-testkit-server:
-	bash scripts/dev/testkit-server.sh setup
+	+bash scripts/dev/testkit-server.sh setup
 
 pocketic-check:
-	@bash scripts/dev/testkit-server.sh check
+	+@bash scripts/dev/testkit-server.sh check
 
 pocketic-watchdog: pocketic-check
-	CARGO_TARGET_DIR="$(CURDIR)/testing/target" \
+	+CARGO_TARGET_DIR="$(CURDIR)/testing/target" \
 		cargo +$(MSRV) build -p ic-timers-runtime-probe \
 		--profile timer-probe --target wasm32-unknown-unknown --locked
-	@set -e; server="$$(bash scripts/dev/testkit-server.sh check)"; \
+	+@set -e; server="$$(bash scripts/dev/testkit-server.sh check)"; \
 		POCKET_IC_BIN="$$server" \
 		IC_TIMERS_PROBE_WASM="$(CURDIR)/testing/target/wasm32-unknown-unknown/timer-probe/ic_timers_runtime_probe.wasm" \
 		cargo +$(MSRV) test -p ic-timers-pocketic --locked tests::
 
 pocketic-cohorts: pocketic-check
-	CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-baseline" \
+	+CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-baseline" \
 		cargo +$(MSRV) build -p ic-timers-size-probe \
 		--profile timer-probe --target wasm32-unknown-unknown --locked
-	CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-once" \
+	+CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-once" \
 		cargo +$(MSRV) build -p ic-timers-size-probe \
 		--profile timer-probe --target wasm32-unknown-unknown --locked --no-default-features --features once
-	CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-after-completion" \
+	+CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-after-completion" \
 		cargo +$(MSRV) build -p ic-timers-size-probe \
 		--profile timer-probe --target wasm32-unknown-unknown --locked --no-default-features --features after-completion
-	CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-watchdog" \
+	+CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-watchdog" \
 		cargo +$(MSRV) build -p ic-timers-size-probe \
 		--profile timer-probe --target wasm32-unknown-unknown --locked --no-default-features --features watchdog
-	@set -e; server="$$(bash scripts/dev/testkit-server.sh check)"; \
+	+@set -e; server="$$(bash scripts/dev/testkit-server.sh check)"; \
 		POCKET_IC_BIN="$$server" \
 		IC_TIMERS_COHORT_ROOT="$(CURDIR)/testing/target" \
 		cargo +$(MSRV) test -p ic-timers-pocketic --locked \
@@ -205,10 +205,10 @@ repository-check:
 		done
 
 build:
-	cargo build -p ic-timers --all-targets --all-features --locked
+	+cargo build -p ic-timers --all-targets --all-features --locked
 
 clean:
-	cargo clean
+	+cargo clean
 
 install-hooks:
 	bash scripts/dev/install-git-hooks.sh
@@ -260,7 +260,7 @@ release-push: ensure-clean release-tag-check
 		"HEAD:refs/heads/$(RELEASE_BRANCH)" "refs/tags/v$$version:refs/tags/v$$version"
 
 publish: ensure-clean release-tag-check package
-	cargo publish --locked --registry crates-io -p ic-timers
+	+cargo publish --locked --registry crates-io -p ic-timers
 
 # These consumer entrypoints use the reviewed root snapshot. Preserve their
 # former repository-local routing even if a caller exports another snapshot root.

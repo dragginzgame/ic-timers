@@ -1,5 +1,97 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.3.3 validation completion
+
+Pending **0.17.2** advances all three canonical exports from 0.3.2 to committed
+Shared **0.3.3** `d63f0cfaba8ab2961d6012064adbf051c1898bc1`, confirmed against remote
+main. Selections remain **56 baseline / 30 audit-setup / 11 helpers**. The only
+selected payload change is `scripts/ci/run-validation-targets.sh`; governance,
+setup and helper bytes are unchanged. Clean detached source, canonical export
+logs and preserved incoming inputs are retained at
+`/tmp/ic-timers-shared033.0vrxoaq1/`. This continues the 0.3.2 adoption below,
+including the advisory README task and local jobserver/fixture changes.
+
+[Shared #104](https://github.com/dragginzgame/shared-tooling/issues/104)'s committed
+repair admits a canonical non-negative decimal nesting depth of at most 18
+digits before arithmetic, log creation or target dispatch. Empty/unset depth
+starts at zero; leading zeroes, expressions, signs, whitespace and oversized
+values are rejected. The runner's source wrapper and log cleanup require explicit
+completion, preserve nonzero failure status and retain available evidence on
+premature exits, including Bash 3.2 nounset exits which can report zero. Completed
+target failures keep the existing evidence/status contract. There is no local
+runner patch or new execution path. Upstream's runner fixture adds malformed-depth
+and actual-source early-exit cases; it remains producer-owned rather than adding
+a second consumer fixture. Existing consumer fixture completion work stays with
+[#38](https://github.com/dragginzgame/ic-timers/issues/38).
+
+Exact-source [Shared CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38052409053)
+is queued at observation. This refresh supplies no new executed fixture, native
+host, timer or PocketIC qualification. The maintainer-owned gate retains those
+obligations. The incoming root catalog/lock now select Testkit 0.32.0, all four
+Host 0.12.2 packages and Metrics 0.5.1; the
+[graph record](releasing.md#0172-preparation-inputs) owns that separate selection.
+This inspection preserves those inputs and adds no dependency/version mutation.
+
+Permitted checks pass: integrity for all 56/30/11 snapshot files, syntax for 38
+shell scripts and 24 embedded Bash bodies, added local documentation links,
+diff whitespace and full locked offline metadata. Cargo, incoming lock, both
+pin catalogs and the real index compare exactly with preserved input copies.
+These checks execute no setup or fixture and supply no new host qualification.
+
+## Shared Tooling 0.3.2 jobserver and fixture admission
+
+After pushed **0.17.1** `2a8710834c9283ccc46daa4e4c93b1cc4629c6bc`, pending
+**0.17.2** selects committed Shared **0.3.2**
+`c16444bf006f17c5bb4dda5ad070a0f345da9623` through all three canonical exports.
+The baseline explicitly adds `tasks/readme-freshness.md` to close its updated
+catalog/prompt links; selections are **56 baseline / 30 audit-setup / 11 helpers**.
+Clean source, export logs and preserved incoming inputs are retained at
+`/tmp/ic-timers-shared032.rXciNI/`. The isolated helper slice uses a verified
+temporary Git consumer as before. No fleet helper, production override or new
+installation route is added; both pin catalogs and real index are preserved.
+
+Shared formatting, Rust setup/check and LOC recipes now preserve Cargo's
+jobserver descriptors. Standalone `make/tools.mk` includes the existing execution
+guard, so recursive recipe markings cannot admit dry-run, touch, question or
+ignore-errors execution. Local Cargo build/lint/test/package/publication recipes
+and Testkit setup/check receive the same descriptor handoff. Targets, arguments,
+ordering, graph selection and user-owned execution authority are unchanged.
+The existing Testkit fixture checks readable/writable pipe jobserver descriptors
+through the actual root Make product extension, requesting pipe mode only when
+Make supports that option. Shared fixtures own the generic Make guard checks.
+
+Selected shared fixtures require explicit completion before successful cleanup.
+The local Testkit adapter adopts that boundary too and injects nounset, command,
+nonzero, premature-zero and completed exits into disposable copies of itself
+before any installer/owner dispatch. These cases are written, not run. Remaining
+consumer-owned fixture admission is tracked by
+[#38](https://github.com/dragginzgame/ic-timers/issues/38); the canonical production
+validation-depth gap remains with
+[Shared #104](https://github.com/dragginzgame/shared-tooling/issues/104), whose fix
+is not included in this reviewed commit. Do not patch the shared runner locally.
+
+The requested [README task](../tasks/readme-freshness.md) is advisory: assess
+maintained commands, examples and claims against their actual owners, allow
+valid older examples and ranges, and report concrete findings without prose
+rewrites or release/CI blockers. It joins the seven routine maintenance tasks;
+this refresh enables no schedule and adds no release prerequisite.
+
+Exact-source [Shared CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38051446835)
+passes lint/security, with Linux regression running and both native jobs queued
+at observation. Existing released consumer results do not qualify this new
+snapshot or its local fixture changes. No contributor test/build/lint/setup or
+release command runs. Current offline metadata inspection stops at the uncached
+maintainer-selected Metrics 0.5.1 archive; that selection is preserved rather than
+fetched or reverted. Host/Testkit graph review has its
+[release owner](releasing.md#host-0122-and-testkit-032-review).
+
+Permitted preparation checks pass: integrity for all 56/30/11 snapshot files,
+syntax for 38 shell scripts and 24 embedded Bash bodies, seven new local
+documentation targets/anchors, and diff whitespace. Cargo, incoming lock, pin
+catalogs and real index compare exactly with the preserved input copies. Full
+locked offline metadata remains blocked by the uncached Metrics archive; these
+checks execute no fixtures and provide no new native qualification.
+
 ## Shared Tooling 0.3.1 setup preflight
 
 After released IC Timers **0.17.0**

@@ -8,63 +8,70 @@ This handoff links the [release evidence](../releasing.md),
 [Shared adoption](../shared-tooling.md) and [safety boundary](../../SAFETY.md).
 The earlier accumulated handoff remains in [its historical archive](archive-2026-10-10.md).
 
-## Released source and acceptance
+## Pushed source and qualification
 
-The maintainer reports **0.17.0** live at
-`5e0d0865248f6ebfc1f98c896581f21e2ce67831`; its annotated tag matches that commit.
-All four local packages select 0.17.0. The released graph is Metrics **0.5.0**,
-Testkit **0.31.0**, Host **0.11.0** and PocketIC **16.1.0**, with Shared **0.3.0**
-`88a73139a0f083344c41a6f6f4b5c3a8aca7dc1d` snapshots (55/30/11).
+Latest pushed release source **0.17.1** is
+`2a8710834c9283ccc46daa4e4c93b1cc4629c6bc`, with four local 0.17.1 packages,
+Metrics **0.5.0**, Testkit **0.31.0**, Host **0.11.0** and PocketIC **16.1.0**.
+Its three snapshots select Shared **0.3.1** `fa452afaa5012866eb1c20820dfa8038c106e7ec`
+(55/30/11). [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38051205368)
+passes Linux/MSRV; both native macOS jobs are queued. The
+[tag run](https://github.com/dragginzgame/ic-timers/actions/runs/38051205322) is
+running at initial observation. Job-state inspection is not complete native
+acceptance or downloaded proof of each fixture.
 
-[Matching main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38048325468)
-passes Linux and MSRV;
-[tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/38048325379) passes.
-Both native macOS jobs remain queued at observation. Downloaded completed-job
-REST logs prove the actual released Linux fixtures, library tests and maintained
-recovery/cohorts. The [release owner](../releasing.md#0170-release-acceptance)
-records exact jobs, graph and proof limits. Earlier host results do not qualify
-this graph. Do not redispatch CI or treat queued jobs as acceptance.
-
+Earlier **0.17.0** has Linux/MSRV/tag acceptance and now a passing ARM job, with
+Intel running at observation. Its downloaded Linux logs and exact graph remain
+with the [release owner](../releasing.md#0170-release-acceptance).
 [#36](https://github.com/dragginzgame/ic-timers/issues/36) and
-[#37](https://github.com/dragginzgame/ic-timers/issues/37) remain open for complete
-native qualification; both adoptions are delivered. Current guidance supersedes
-0.17.0's earlier Metrics 0.4/Testkit 0.30 preparation. Consumers exchanging public
-measurement summaries must use the same selected Metrics package identity or
-`ic_timers::MeasurementSummary`. The
+[#37](https://github.com/dragginzgame/ic-timers/issues/37) stay open for complete
+source-bound native proof. Do not transfer earlier acceptance to a new graph or
+redispatch jobs. Public summaries must use the same selected Metrics identity or
+`ic_timers::MeasurementSummary`; the
 [identity owner](../design/callback-delivery-ownership.md#ic-metrics-05-released-graph)
-records seven matching published Metrics and 40 matching Testkit Rust sources,
-unchanged arithmetic and no required timer adapter. Testkit's packaged CLI also
-selects Host 0.11; Host/Testkit remain outside the timer library closure. Read-only
-clean IcyDB source/lock inspection now finds one Timers 0.17/Metrics 0.5 graph;
-that is downstream convergence evidence, not new compilation. Delivered-source
-feedback is posted on both adoption issues; their macOS proof remains pending.
+records published source checks and downstream convergence.
 
-The README freshness gate and automatic rewrite/staging are removed in 0.17.0.
-Only Cargo.toml, Cargo.lock and CHANGELOG.md are release outputs. README edits
-retain ordinary source/staging admission; stale examples never select release
-identity. [Shared #100](https://github.com/dragginzgame/shared-tooling/issues/100)
-requests periodic read-only advisory review; no task or scheduler is enabled.
+The incoming root catalog/lock now select Metrics **0.5.1**, Testkit **0.32.0**
+and all four Host packages at **0.12.2**, with PocketIC **16.1.0** and four local
+0.17.1 packages. Preserve those maintainer-owned bytes. Full locked offline
+metadata now resolves; no fetch or dependency/version repair is performed.
+The [preparation record](../releasing.md#0172-preparation-inputs) distinguishes
+resolution from the user-operated setup/server/native/PocketIC qualification.
 
-## Pending 0.17.1
+## Pending 0.17.2
 
-All three canonical snapshots now select committed Shared **0.3.1**
-`fa452afaa5012866eb1c20820dfa8038c106e7ec`, preserving the 55/30/11 selections.
-The [adoption owner](../shared-tooling.md#shared-tooling-031-setup-preflight)
-records read-only IC/Rust preflight before downloads and exact host-tool
-failure diagnostics. The existing local Testkit fixture admits both preflight
-calls, their order and stop-on-failure prefixes under parallel Make. New cases
-are written, not run. Source/export and preserved input evidence remains under
-`/tmp/ic-timers-shared031.aFkkRB/`. Producer Linux regression and lint/security pass,
-with both native macOS jobs queued at observation;
-released 0.17.0 proof does not qualify this new snapshot. Consumer Cargo, root
-lock, tool pins, real index and existing installations are unchanged.
+All three canonical snapshots select committed Shared **0.3.3**
+`d63f0cfaba8ab2961d6012064adbf051c1898bc1`. Selections remain **56/30/11**, including
+the shared advisory README task. The
+[adoption owner](../shared-tooling.md#shared-tooling-033-validation-completion)
+records malformed nesting-depth admission and explicit runner completion before
+success, retaining available evidence on premature exits. Earlier 0.3.2 jobserver,
+standalone Make admission and fixture guards remain included. Local Cargo/Testkit
+recipes retain descriptor handoff; the Testkit adapter fixture checks descriptor
+accessibility and early-exit retention. New cases are written, not run. Current
+source/export/input records are at `/tmp/ic-timers-shared033.0vrxoaq1/`; the earlier
+0.3.2 records remain at `/tmp/ic-timers-shared032.rXciNI/`. The README task adds no
+release gate, prose rewrite or enabled schedule. Incoming Cargo, lock, pins, real
+index and existing tool/server installations remain unchanged by this inspection.
 
-## Next action and authority
+Producer Shared 0.3.3 CI is queued at observation. Remaining consumer-owned fixture
+completion guards are tracked by [#38](https://github.com/dragginzgame/ic-timers/issues/38).
+[Shared #104](https://github.com/dragginzgame/shared-tooling/issues/104) separately
+owns producer qualification for the runner repair now included in this snapshot.
+No earlier source's acceptance qualifies the new runner revision.
 
-Finish source-bound native acceptance for the released adoption issues as jobs
-complete, then close their owning issues with actual proof. The new snapshot
-requires the normal full user-operated gate. No timer runtime feature, dependency
-update or measured Wasm/instruction saving is added. This batch is repository-only
-and normally bundles into the next code-bearing release; the undated 0.17.1 draft
-records it without mutating Cargo. Tests/builds/lint/setup and Cargo/release effects
-remain user-owned. Preserve installations, pins, index and failed evidence.
+## Host and next action
+
+Host's latest remote release is **0.12.2**; Rust source is unchanged from 0.11.0.
+Its relevant Make/fixture improvements are adopted through Shared. The incoming
+Testkit 0.32 graph selects Host 0.12.2 transitively and now resolves offline.
+The [Host/Testkit owner](../releasing.md#host-0122-and-testkit-032-review) records
+the prior source review; the current preparation record supersedes its wait for
+selection. There is no direct Host dependency or sibling path. Follow the existing
+root catalog/lock and owner CLI qualification workflow for the selected graph.
+
+This is repository-only work with an undated 0.17.2 draft; no timer feature or
+measured Wasm/instruction saving is added. Integrity, syntax, documentation and
+locked offline metadata checks are allowed. Tests/builds/lint/setup and
+Cargo/release effects remain user-owned.
+Preserve incoming selections, installations, index and failure evidence.

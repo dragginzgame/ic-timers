@@ -1872,6 +1872,67 @@ consumer fixture and updates formatter prerequisites. Those new assertions are
 unexecuted; the released 0.16.5 evidence does not qualify them. No contributor
 build/test/lint/setup or release runs; observations above inspect existing jobs.
 
+### 0.17.1 pushed source and pending graph
+
+Pushed release source **0.17.1** is
+`2a8710834c9283ccc46daa4e4c93b1cc4629c6bc`. Its committed root lock selects Metrics
+**0.5.0**, Testkit **0.31.0**, all four Host **0.11.0** packages and PocketIC
+**16.1.0**, with four local 0.17.1 packages and Shared **0.3.1** snapshots
+`fa452afaa5012866eb1c20820dfa8038c106e7ec` (55/30/11).
+[Matching main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38051205368)
+passes Linux checks **114210531711** and MSRV **114210531705**; ARM
+**114210531587** and Intel **114210531746** remain queued at observation.
+[The tag run](https://github.com/dragginzgame/ic-timers/actions/runs/38051205322)
+is still running at the initial observation. These are job-state observations,
+not downloaded fixture proof or complete host qualification.
+
+The incoming maintainer-owned root lock now selects Metrics **0.5.1** under the
+existing compatible `0.5` requirement. Inspection preserves those exact bytes,
+all manifest/pin inputs and the real index. Full `cargo metadata --locked
+--offline` stops because that archive is uncached; retained stderr at
+`/tmp/ic-timers-shared032.rXciNI/metadata.err` records the failed attempt. There is
+no contributor fetch, dependency mutation, rollback to 0.5.0 or claim that the
+new full graph resolved. The normal maintainer-owned fetch/setup/release gate
+retains its existing roles. Pending Shared 0.3.2 work is repository-only; no timer
+source, production dependency requirement or measured optimization is added.
+
+### 0.17.2 preparation inputs
+
+During the subsequent Shared 0.3.3 inspection, the incoming maintainer-owned root
+catalog selects Testkit `0.32` and its lock resolves **0.32.0**, all four Host
+packages at **0.12.2**, Metrics **0.5.1** and PocketIC **16.1.0**. All four local
+members remain **0.17.1**. Full `cargo metadata --locked --offline` now succeeds;
+its graph and preserved inputs are retained at
+`/tmp/ic-timers-shared033.0vrxoaq1/`. This supersedes the earlier cache blockage
+and Testkit preparation observation for the current worktree, without changing
+the released 0.17.1 graph or its evidence. No contributor fetch, catalog/lock
+mutation, setup or qualification runs. Metadata resolution alone establishes
+neither selected CLI/server admission nor native or PocketIC acceptance; the
+normal user-operated gate must qualify this selected graph and new snapshots.
+
+### Host 0.12.2 and Testkit 0.32 review
+
+Remote Host's latest committed release is **0.12.2**
+[`e1ef99e6a4c6d05f0b0d8364f8586c6cc358dadc`](https://github.com/dragginzgame/ic-host-tooling/commit/e1ef99e6a4c6d05f0b0d8364f8586c6cc358dadc).
+All tracked Rust source is unchanged from 0.11.0. The 0.12 line's changes cover
+setup, release-tool ownership, jobserver propagation and fixture retention;
+the applicable shared Make/fixture fixes are adopted through Shared 0.3.2 rather
+than a new direct Host dependency. Its
+[CI](https://github.com/dragginzgame/ic-host-tooling/actions/runs/38051203749) passes
+Linux and MSRV with both macOS jobs queued at observation; source equality is
+not new runtime or native qualification.
+
+Testkit's local clean preparation commit `fb62fee8696443676c92a3f86d413251dffd9327`
+selects Host 0.12 through its four public reexports and prepares 0.32.0. Remote
+main remains released **0.31.0** `f1ae9e6d3b0f3f20ec1e1f1b49c8b1dea3155e0a` at
+inspection. The prepared release changes no Rust source but changes public
+Host package identity, so its 0.32 minor boundary remains Testkit-owned.
+Timers consumes startup/CLI calls through Testkit and exposes no Host types.
+Wait for published, qualified Testkit 0.32 before reviewing a root catalog/lock
+update; keep the current 0.31/Host 0.11 path without a sibling dependency, patch,
+second native route or borrowed unreleased library bytes. No canister Wasm or
+timer instruction savings follow from these native tooling changes.
+
 ### 0.17.0 release acceptance
 
 The maintainer reports **0.17.0** live at

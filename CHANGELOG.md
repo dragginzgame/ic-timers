@@ -2,6 +2,23 @@
 
 All notable changes to this project are recorded here.
 
+## [0.17.2]
+
+### Development
+
+- Adopt Shared Tooling 0.3.3 and preserve Cargo jobserver access in local Cargo
+  and Testkit recipes. Standalone shared tool includes retain execution admission;
+  selected shared fixtures and the local Testkit adapter require explicit
+  completion before successful cleanup
+  ([Shared #99](https://github.com/dragginzgame/shared-tooling/issues/99),
+  [Shared #103](https://github.com/dragginzgame/shared-tooling/issues/103)).
+- Reject malformed validation nesting depth before target dispatch and require
+  explicit runner completion before success, retaining available evidence on
+  premature exits ([Shared #104](https://github.com/dragginzgame/shared-tooling/issues/104)).
+- Include the shared advisory README freshness task in the maintenance catalog,
+  without adding a release gate, automatic rewrite or enabled schedule
+  ([Shared #100](https://github.com/dragginzgame/shared-tooling/issues/100)).
+
 ## [0.17.1] - 2026-10-10
 
 ### Development
