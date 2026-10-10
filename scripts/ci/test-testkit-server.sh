@@ -23,8 +23,14 @@ cat > "$consumer/scripts/dev/install-rust-tools.sh" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 printf '%s\n' "$@" > "$TESTKIT_ADAPTER_FIXTURE/installer-arguments"
+printf '%s\n' "${CARGO_NET_OFFLINE:-unset}" > "$TESTKIT_ADAPTER_FIXTURE/installer-offline"
 exit_status="${FIXTURE_INSTALLER_STATUS:-0}"
-[[ "$exit_status" == 0 ]] || exit "$exit_status"
+if [[ "$exit_status" != 0 ]]; then
+    echo 'fixture selected Cargo tool refused' >&2
+    # A plausible partial path on stdout must not authorize owner execution.
+    printf '%s\n' "$TESTKIT_ADAPTER_FIXTURE/owner"
+    exit "$exit_status"
+fi
 printf '%s\n' "$TESTKIT_ADAPTER_FIXTURE/owner"
 EOF
 cat > "$fixture/owner" <<'EOF'
@@ -50,16 +56,35 @@ for mode in setup check; do
     if [[ "$mode" == check ]]; then expected=true; else expected=unset; fi
     printf '%s\n' "$expected" > "$fixture/expected-offline"
     cmp "$fixture/expected-offline" "$fixture/offline"
+    cmp "$fixture/expected-offline" "$fixture/installer-offline"
 done
 # A failed offline installation admission must not execute the owner or set up.
 rm "$fixture/owner-arguments"
 status=0
-FIXTURE_INSTALLER_STATUS=23 bash "$consumer/scripts/dev/testkit-server.sh" check > "$fixture/failure.log" 2>&1 || status=$?
+FIXTURE_INSTALLER_STATUS=23 bash "$consumer/scripts/dev/testkit-server.sh" check > "$fixture/failure.out" 2> "$fixture/failure.log" || status=$?
 test "$status" -eq 23
+test ! -s "$fixture/failure.out"
+grep -Fq 'fixture selected Cargo tool refused' "$fixture/failure.log"
+grep -Fq 'run make install-testkit-server' "$fixture/failure.log"
 test ! -e "$fixture/owner-arguments"
 status=0
 FIXTURE_OWNER_STATUS=31 bash "$consumer/scripts/dev/testkit-server.sh" check > "$fixture/failure.log" 2>&1 || status=$?
 test "$status" -eq 31
+
+# Setup inherits explicit offline policy, and a changed lock selects only the
+# new CLI. The shared installer owns installation reuse and receipt admission.
+CARGO_NET_OFFLINE=true bash "$consumer/scripts/dev/testkit-server.sh" setup > "$fixture/path"
+printf 'true\n' > "$fixture/expected-offline"
+cmp "$fixture/expected-offline" "$fixture/installer-offline"
+cmp "$fixture/expected-offline" "$fixture/offline"
+sed 's/0.26.0/0.27.0/' "$fixture/lock" > "$consumer/Cargo.lock"
+cp "$consumer/Cargo.lock" "$fixture/next-lock"
+bash "$consumer/scripts/dev/testkit-server.sh" setup > "$fixture/path"
+printf '%s\n' --consumer "$consumer" --package ic-testkit --version 0.27.0 \
+    --bin ic-testkit-server --profile release > "$fixture/expected-installer"
+cmp "$fixture/expected-installer" "$fixture/installer-arguments"
+cmp "$fixture/expected-path" "$fixture/path"
+cmp "$fixture/next-lock" "$consumer/Cargo.lock"
 
 for invalid in missing duplicate unqualified; do
     case "$invalid" in

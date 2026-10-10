@@ -174,6 +174,21 @@ if FIXTURE_SERVER_STATUS=31 make --no-print-directory pocketic-check >/dev/null 
 fi
 rm server-events
 
+# Standalone qualification must refuse before any probe compilation, including
+# under parallel Make. The real dependency edges dispatch only offline admission.
+for target in pocketic-watchdog pocketic-cohorts; do
+    : > early-cargo-events
+    status=0
+    PATH="${fixture_root}/bin:${PATH}" FIXTURE_CARGO_LOG=early-cargo-events \
+        FIXTURE_SERVER_STATUS=31 make --no-print-directory -j2 "$target" \
+        > early-admission-output 2>&1 || status=$?
+    test "$status" -eq 2
+    test ! -s early-cargo-events
+    printf 'check\n' > expected-server-events
+    cmp expected-server-events server-events
+    rm server-events
+done
+
 # Exercise the actual shared entrypoints with an inert runner. Delivery remains
 # direct even when inherited environment or command-line Make variables ask for PR.
 mkdir -p external-snapshot/scripts/ci

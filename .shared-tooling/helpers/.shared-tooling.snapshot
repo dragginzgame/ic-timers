@@ -1,10 +1,10 @@
 # Shared Tooling snapshot v1
-# version	0.2.11
+# version	0.2.13
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	83efac446348dea024798a331d77933b24b429dc
+revision	5864f468d39f8f9d1bd26fca1afe0e20f25f1b5e
 file	4c981184847462ab3c01cac087e28309f8e054253fd95c7bbe56f643877aa708	x	scripts/ci/verify-file-checksum.sh
-file	5f3037e3e9a6114b23b425a8f36e280181ae05b1a6af00bab332dde4c1302537	x	scripts/ci/verify-shared-tooling-snapshot.sh
+file	71d1c69a25f190bc4b2b1df66d3359f172638371caa722142e820a8294d1938e	x	scripts/ci/verify-shared-tooling-snapshot.sh
 file	de68acd7ba25355c73fa3e9a32cbde5525debf081862c1f1a52eccb4a66c48de	x	scripts/ci/check-dependency-pins.sh
 file	3d56ca1b0c5952b9534ece61b6754ca39e6ec1980d929f09de3dbd967a0c4977	-	scripts/ci/dependency-pins.jq
 file	4c2577bd91936d542c0f95ec27e8f554e2f1ac190bd2a7e8904859081b219c1c	x	scripts/ci/test-dependency-pins.sh

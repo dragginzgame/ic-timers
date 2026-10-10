@@ -56,8 +56,12 @@ git add Makefile make/tools.mk make/rust-format.mk make/release.mk make/executio
     scripts/ci/check-format-tools.sh scripts/ci/check-make-execution.sh scripts/ci/run-formatting.sh
 printf 'unrelated working edit\n' >> README.md
 cp README.md "${temporary_root}/unrelated-readme"
+# Preserve distinct index and working lock bytes across selected-file formatting.
+git show :Cargo.lock > "${temporary_root}/index-lock"
+printf '\n# unrelated working lock edit\n' >> Cargo.lock
+cp Cargo.lock "${temporary_root}/working-lock"
 
-working_files=(Cargo.toml crates/hook-fixture/Cargo.toml testing/crates/hook-probe/Cargo.toml
+working_files=(Cargo.toml Cargo.lock crates/hook-fixture/Cargo.toml testing/crates/hook-probe/Cargo.toml
     crates/hook-fixture/src/lib.rs testing/crates/hook-probe/src/lib.rs README.md)
 capture_before_hook() {
     local path
@@ -142,6 +146,9 @@ for path in crates/hook-fixture/src/lib.rs testing/crates/hook-probe/src/lib.rs;
     test "${formatted}" = 'pub fn fixture() {}'
 done
 cmp "${temporary_root}/unrelated-readme" README.md
+cmp "${temporary_root}/working-lock" Cargo.lock
+git show :Cargo.lock > "${temporary_root}/after-hook-index-lock"
+cmp "${temporary_root}/index-lock" "${temporary_root}/after-hook-index-lock"
 if ! SHARED_TOOLING_ROOT="${temporary_root}/unselected-snapshot" \
     HOST_TOOL_VERSIONS="${temporary_root}/unselected-pins.env" make --no-print-directory \
     fmt-check "SHARED_TOOLING_ROOT=${temporary_root}/unselected-snapshot" \
@@ -152,6 +159,9 @@ if ! SHARED_TOOLING_ROOT="${temporary_root}/unselected-snapshot" \
 fi
 printf 'Checking formatting... ok\n' > "${temporary_root}/expected-check-output"
 cmp "${temporary_root}/expected-check-output" "${temporary_root}/fmt-check.log"
+cmp "${temporary_root}/working-lock" Cargo.lock
+git show :Cargo.lock > "${temporary_root}/after-check-index-lock"
+cmp "${temporary_root}/index-lock" "${temporary_root}/after-check-index-lock"
 
 # Use the actual consumer recipe and reporter with a sorter that fails after
 # both output streams. Rustfmt must not run, and no working/index input changes.

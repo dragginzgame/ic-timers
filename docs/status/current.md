@@ -12,79 +12,72 @@ references and validation belong in [release notes](../changelog/README.md),
 
 ## Current release and remaining acceptance
 
-Pushed **0.16.4** is `da921fc899d2c7c99ed0a6cacac6e2111307ac71`.
-The maintainer reports it pushed. Its
-[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37967730569)
-passes Linux checks, explicit MSRV and both complete native macOS gates. [Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37967730677)
-passes. The required Testkit handoff acceptance is complete; do not dispatch
-duplicate observations.
+Pushed **0.16.5** is `0d7b85ec6658f91421bd13c44fa19592d8cc029e`, verified
+against its local release commit and matching hosted jobs.
+[Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38036823188)
+passes Linux checks **114168872952**, MSRV **114168873087**, ARM
+**114168873084** and Intel **114168873187**.
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/38036823190)
+passes at the same SHA. The released adoption now has three-host acceptance;
+#35 retains the pending .6 explicit working/index lock-preservation proof.
+Do not dispatch duplicate observations or count old evidence for those new cases.
 
-The actual released root graph selects Testkit **0.28.0**, all four Host crates
-**0.10.1**, Metrics **0.3.5** and PocketIC **16.1.0**, four local members 0.16.4.
-The earlier 0.16.4 preparation notes describe older selections, not this final
-tagged graph. The [qualification owner](../releasing.md#testkit-028-and-host-010-released-graph)
-records the Host durable-publication cut and why this private startup harness
-needs no writer adapter, public timer change or retained-data reset. The released graph remains its own execution identity. An incoming lock now
-updates Metrics 0.3.5 -> 0.3.6, cc 1.6.0 -> 1.7.0, smallvec 1.16.2 -> 1.16.3
-and syn 3.0.6 -> 3.0.7. All seven published Metrics Rust source files are identical;
-no adapter change follows. Its private inspector/tooling changes do not affect
-our arithmetic callers.
-Preserve those bytes; cheap locked offline metadata passes with four local 0.16.4
-members, but the refreshed transitive graph has no new execution qualification.
+The released root graph selects Testkit **0.28.0**, Host **0.10.1**, Metrics
+**0.3.6** and PocketIC **16.1.0**, four local members 0.16.5. All three snapshots
+select Shared **0.2.11** `83efac446348dea024798a331d77933b24b429dc`, **55/30/11**
+files. The [adoption owner](../shared-tooling.md#shared-tooling-0211-formatting-and-make-admission)
+records the concise formatter, complete failed-log retention, independent
+MAKEFLAGS/MFLAGS admission, canonical fixture propagation and source-bound
+qualification. Shared's exact-source Linux and both native macOS jobs now pass;
+Shared #30/#91/#92 are closed. Pending 0.16.6 now selects committed
+0.2.13 separately, as described below.
 
-Released 0.16.4 adopts Shared **0.2.8** and includes both the portable direct-policy
-repair and the version-preparation fixture correction. The
-[adoption owner](../shared-tooling.md#shared-tooling-028-make-admission) preserves
-the earlier retained failure evidence. Both 0.16.3 macOS jobs have now failed
-before the native gate at the combined target-specific override/export parse.
-0.16.4 removes that exact syntax; its new native jobs now pass.
-The [host owner](../releasing.md#host-support) retains this distinction. Released
-0.16.3 Linux product evidence remains bound to its own source/graph/toolchain.
+Raw 0.16.5 Linux logs prove actual hook output/failure isolation, cleared/replaced
+Make-mode refusal, release/version preparation, 142 library tests, 14 PocketIC
+recovery subjects and all four policy cohorts. The
+[qualification owner](../releasing.md#0165-linux-and-tag-acceptance) retains raw
+logs and graph scope. The earlier hook-output assertion failure is repaired in
+this release; it correctly distinguishes the formatter's one success line from
+the hook's separate selected-file refresh receipt. #34 remains closed for its
+completed three-host Testkit acceptance at released 0.16.4.
 
-The completed 0.16.4 Linux job **113946212101** passes the repaired version
-preparation, release gate, actual staged-hook fixture, 142 native library tests,
-14 PocketIC recovery subjects and all four policy cohorts at Rust 1.99.0. Its
-[qualification owner](../releasing.md#testkit-028-and-host-010-released-graph)
-retains actual source/graph and raw log scope. This qualifies that pushed Linux
-graph, not the uncommitted Shared 0.2.9 selection or native macOS behavior.
+Only **#35** is open locally. The undated **0.16.6** batch retains its explicit
+index/working-lock preservation assertions and current formatter-guide correction.
+It now also adopts committed Shared **0.2.13**
+`5864f468d39f8f9d1bd26fca1afe0e20f25f1b5e` across all three canonical snapshots,
+unchanged **55/30/11** selections. The
+[adoption owner](../shared-tooling.md#shared-tooling-0213-selected-cli-preparation)
+records exact CLI diagnostics, the local setup hint and admitted preflight's
+ordered fetch/setup/offline check. Existing standalone PocketIC dependency edges
+are unchanged and gain parallel early-refusal cases. The earlier
+[directory admission](../shared-tooling.md#shared-tooling-0212-directory-admission)
+and negative fixtures remain. Forbidden LF/CR roots must not select their trimmed neighbors;
+ordinary relative aliases remain valid. Preserve all retained artifacts.
 
-The later completed Intel **113946212038** and ARM **113946212124** jobs each
-prove Testkit host-specific setup/admission, complete release-gate/Make/hook
-checks, 14 maintained PocketIC recovery subjects and four policy cohorts.
-Native Wasm subjects use explicit Rust **1.88.0**; Linux uses **1.99.0**. Do not
-compare those cross-toolchain cohort values as regressions or improvements.
-[The graph owner](../releasing.md#testkit-028-and-host-010-released-graph) retains
-raw native logs and host/source identities. **#34 is closed** with
-[completed acceptance](https://github.com/dragginzgame/ic-timers/issues/34#issuecomment-6095003127).
-The original #35 Make/formatter adoption has the same all-host evidence.
+Incoming maintainer lock edits select Testkit **0.28.1**, Host **0.10.2** and
+Metrics **0.3.7**; PocketIC stays 16.1.0 and local members stay 0.16.5. The
+[graph owner](../releasing.md#0166-incoming-host-and-metrics-graph) records unchanged
+Metrics arithmetic, Host's directory-suffix publication refusal and the separate
+installed CLI graph (Testkit's packaged lock selects Host 0.10.1). No direct Host
+dependency or timer adapter is needed. Existing release setup/admission ordering
+already prevented Shared #96's late missing-CLI failure; admitted preflight now
+also prepares/checks its selected executable under the updated shared contract.
 
-The authorized continuation prepares one undated **0.16.5** repository-only draft
-and adopts committed Shared **0.2.11**
-`83efac446348dea024798a331d77933b24b429dc`, **55/30/11** selections.
-The [adoption owner](../shared-tooling.md#shared-tooling-0211-formatting-and-make-admission)
-records the new concise formatter and independent MAKEFLAGS/MFLAGS admission,
-canonical companion propagation to all five actual-Make fixtures and staged
-index, and CI retention of complete `formatting.*` diagnostics. This source's
-VERSION says 0.2.11 although its commit subject says 0.2.10. No optional fleet or
-registry observer, Cargo selection, tool pin or product timer change is added.
+Latest Host **0.11.0** is committed at `1d768c80a5bb87e3330a6b7bacfdfc543063968f`.
+The [ownership review](../releasing.md#host-011-ownership-review) traces all four
+Host crates through the native Testkit harness, with none in the timer library.
+Testkit 0.28.1 requires 0.10 and uses removed process APIs; its existing #47 owns
+the 0.11 migration/public-reexport boundary. Await that owner release rather than
+adding a direct Host dependency or changing Cargo selection here. Shared remote
+main remains the already-adopted 0.2.13 revision.
 
-**#35 remains open** for the new consumer source's actual fixture and Linux/native
-macOS qualification. Shared #30's correction is now committed and adopted; its
-upstream acceptance remains with that issue. New success/failure/log-transport
-and hidden-mode consumer cases are written but unexecuted. Permitted
-source/export/integrity/syntax/link/metadata checks are preparation only.
-Tests/builds/lint/setup and all Cargo/release effects remain user-owned. The
-incoming Metrics/cc/smallvec/syn graph likewise does not inherit released qualification.
-No new timer defect or feature is evidenced by these tooling issues.
-
-The maintainer's latest release verification passes fetch, Testkit server setup
-and PocketIC admission, then fails the hook fixture's exact-output assertion.
-The retained output proves the concise formatter succeeds and the hook adds its
-existing selected-file refresh confirmation. The fixture now expects both lines;
-direct `fmt-check` keeps its one-line assertion. The
-[adoption owner](../shared-tooling.md#shared-tooling-0211-formatting-and-make-admission)
-records the exact failure log and scratch input. Contributor syntax/diff checks
-are permitted; the repaired fixture and complete gate remain user-owned.
+New lock/path/preparation assertions are written but unexecuted. Shared 0.2.13 Linux portable
+and lint jobs pass, with ARM running and Intel queued. Host 0.10.2 Linux/MSRV/Intel
+pass, with ARM queued. Canonical source/integrity/syntax/link/metadata checks
+are preparation only. Cargo/pin input bytes are preserved. Tests/builds/lint/setup
+and all Cargo/release effects remain user-owned. Do not reuse released evidence
+for the new snapshot/graph/fixtures. No timer defect or extra feature is invented
+for this repository-only maintenance; no function, method or type is removed.
 
 **#30 is closed with completed compact transport qualification.** All six frozen v0.14.23
 producers reach the intended failure and archive/upload successfully; all six
@@ -837,12 +830,14 @@ verification is scoped in the [0.10.21 note](../changelog/0.10.21.md).
 
 ## Next action
 
-The 0.16.4 main/tag/MSRV and both native gates pass; #34 is closed for completed
-Testkit setup/admission/product acceptance. The pending 0.16.5 batch now adopts
-committed Shared 0.2.11's concise formatter and hidden-Make-mode correction.
-#35 stays open for actual consumer fixtures and the new source's Linux/native
-acceptance. Do not reuse the released 0.2.8 consumer evidence for this selection.
+Released 0.16.5 Linux, ARM, Intel, MSRV and tag acceptance now pass. #35 retains
+pending .6 explicit lock-preservation proof; #34 and Shared #30/#91/#92 are complete. Do not
+redispatch observations or infer consumer acceptance from upstream results.
 
-Retain the one undated 0.16.5 draft and incoming Metrics/cc/smallvec/syn lock refresh.
-Tests/builds/lint/setup, Cargo selection and release effects remain user-owned.
-No timer feature or extra release is justified merely to fill this tooling batch.
+The undated 0.16.6 batch contains lock-preservation assertions, corrected formatter
+guidance, committed Shared 0.2.13 directory admission/CLI diagnostics, admitted
+preflight setup/check and the preserved incoming
+Testkit/Host/Metrics graph. Its negative fixtures and new graph await the normal
+user-owned gate; native source qualification remains separate. Prefer bundling
+repository-only maintenance with code-bearing work unless publication is selected.
+Tests/builds/lint/setup, Cargo mutation and release effects remain user-owned.

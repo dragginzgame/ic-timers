@@ -2,6 +2,35 @@
 
 All notable changes to this project are recorded here.
 
+## [0.16.6]
+
+### Development
+
+- Check that successful hook formatting and direct format checks preserve
+  distinct staged and unstaged lockfile bytes; include Cargo.lock in existing
+  mode-refusal and formatter-failure preservation checks
+  ([#35](https://github.com/dragginzgame/ic-timers/issues/35)).
+- Correct current formatter guidance to include the canonical reporter and
+  Shared 0.2.11's independent MAKEFLAGS/MFLAGS admission.
+- Refresh all three snapshots to committed Shared Tooling 0.2.13. Reject
+  LF/CR directory names before snapshot export/verification can trim them into
+  a different checkout; cover all consumer selections and physical aliases
+  ([adoption owner](docs/shared-tooling.md#shared-tooling-0212-directory-admission),
+  [shared #95](https://github.com/dragginzgame/shared-tooling/issues/95)).
+- Retain the incoming Testkit 0.28.1, Host 0.10.2 and Metrics 0.3.7 selections.
+  Host rejects directory-suffixed publication targets; Metrics arithmetic source
+  is unchanged. No timer adapter or public semantic change is needed
+  ([graph owner](docs/releasing.md#0166-incoming-host-and-metrics-graph)).
+- Prepare the selected Testkit CLI/server after release preflight admission,
+  then check it offline; failed CLI admission names its selection and the local
+  setup command.
+  Add preparation-order/failure, offline-policy and parallel early-refusal cases
+  ([adoption owner](docs/shared-tooling.md#shared-tooling-0213-selected-cli-preparation),
+  [shared #96](https://github.com/dragginzgame/shared-tooling/issues/96)).
+- Record the Host 0.11 review: native Testkit tooling owns adoption; the timer
+  library has no Host dependency. Keep the selected 0.10 graph until Testkit's
+  corresponding release ([upstream #47](https://github.com/dragginzgame/ic-testkit/issues/47)).
+
 ## [0.16.5] - 2026-10-10
 
 ### Development

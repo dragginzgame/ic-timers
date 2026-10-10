@@ -17,6 +17,9 @@ trap 'status=$?; if [[ "$status" == 0 ]]; then rm -rf -- "$fixture";
 git clone -q --no-local --depth 1 "$root" "$fixture/repo"
 mkdir "$fixture/bin" "$fixture/tmp"
 export FETCH_EVENTS="$fixture/fetch-events"
+export PREPARATION_EVENTS="$fixture/preparation-events"
+: > "$PREPARATION_EVENTS"
+export RELEASE_INDEX_REAL_MAKE="$(command -v make)"
 real_bash="$(command -v bash)"
 printf '#!%s\n' "$real_bash" > "$fixture/bin/cargo"
 cat >> "$fixture/bin/cargo" <<'STUB'
@@ -27,6 +30,8 @@ case "$1" in
     metadata) printf '{"packages":[{"name":"ic-timers","version":"%s"}]}\n' "$RELEASE_VERSION" ;;
     fetch)
         printf '%s\n' "$*" >> "$FETCH_EVENTS"
+        printf 'fetch\n' >> "$PREPARATION_EVENTS"
+        printf '%s\n' "${CARGO_NET_OFFLINE:-unset}" > "$FETCH_EVENTS.offline"
         [[ "$*" == 'fetch --manifest-path Cargo.toml --locked' ]]
         if [[ "${FAIL_FETCH_MANIFEST:-}" == "$3" ]]; then
             echo 'fixture locked fetch failure' >&2
@@ -37,6 +42,22 @@ case "$1" in
 esac
 STUB
 chmod +x "$fixture/bin/cargo"
+printf '#!%s\n' "$real_bash" > "$fixture/bin/make"
+cat >> "$fixture/bin/make" <<'STUB'
+set -euo pipefail
+case "$*" in
+    '--no-print-directory install-testkit-server') phase=setup ;;
+    '--no-print-directory pocketic-check') phase=check ;;
+    *) exec "$RELEASE_INDEX_REAL_MAKE" "$@" ;;
+esac
+printf '%s\n' "$phase" >> "$PREPARATION_EVENTS"
+printf '%s\n' "${CARGO_NET_OFFLINE:-unset}" > "$PREPARATION_EVENTS.offline"
+if [[ "${FAIL_TOOL_PHASE:-}" == "$phase" ]]; then
+    echo "fixture selected tool $phase failure" >&2
+    exit 38
+fi
+STUB
+chmod +x "$fixture/bin/make"
 export PATH="$fixture/bin:$PATH" TMPDIR="$fixture/tmp"
 cd "$fixture/repo"
 original_head="$(git rev-parse HEAD)"
@@ -77,6 +98,7 @@ done
 printf '  untracked: %q\n' "$untracked_path" > "$fixture/expected-untracked"
 grep -Fx -f "$fixture/expected-untracked" "$fixture/output" > /dev/null
 [[ ! -s "$FETCH_EVENTS" ]]
+[[ ! -s "$PREPARATION_EVENTS" ]]
 cmp .git/index "$fixture/admission-index"
 cmp "$source_path" "$fixture/admission-source"
 cmp "$working_path" "$fixture/admission-working"
@@ -152,8 +174,8 @@ reject commit-check 'failed index/worktree comparison'
 grep -Fq 'fixture failed index query' "$fixture/output"
 unset FAIL_ADMISSION_QUERY PARTIAL_ADMISSION_OUTPUT
 
-# A clean release preflight prepares the selected lock instead of demanding
-# a warm cache. Fetch failures stop immediately and never mutate release metadata.
+# A clean release preflight fetches, sets up and admits the selected tool, in
+# order. Every failure stops before later effects or release metadata mutation.
 cp CHANGELOG.md "$fixture/original-changelog"
 export RELEASE_VERSION="$(bash "$root/scripts/ci/next-release-version.sh" "$RELEASE_PREVIOUS" patch)"
 # HEAD may already contain an undated draft when CI checks a preparation commit.
@@ -161,17 +183,30 @@ export RELEASE_VERSION="$(bash "$root/scripts/ci/next-release-version.sh" "$RELE
 printf '# Changelog\n\n## [%s]\n\n- Cache preparation fixture.\n\n## [%s] - %s\n\n- Prior fixture.\n' \
     "$RELEASE_VERSION" "$RELEASE_PREVIOUS" "$RELEASE_DATE" > CHANGELOG.md
 cp CHANGELOG.md "$fixture/pending-changelog"
-for failed_manifest in '' Cargo.toml; do
+for failed_phase in '' fetch setup check; do
     : > "$FETCH_EVENTS"
-    export FAIL_FETCH_MANIFEST="$failed_manifest"
-    if [[ -z "$failed_manifest" ]]; then
+    : > "$PREPARATION_EVENTS"
+    export FAIL_FETCH_MANIFEST='' FAIL_TOOL_PHASE=''
+    if [[ "$failed_phase" == fetch ]]; then export FAIL_FETCH_MANIFEST=Cargo.toml;
+    else export FAIL_TOOL_PHASE="$failed_phase"; fi
+    if [[ -z "$failed_phase" ]]; then
         bash "$root/scripts/release/adapter.sh" preflight > "$fixture/output" 2>&1
     else
-        reject preflight "failed $failed_manifest cache preparation"
-        grep -Fq 'fixture locked fetch failure' "$fixture/output"
+        reject preflight "failed $failed_phase preparation"
+        if [[ "$failed_phase" == fetch ]]; then
+            grep -Fq 'fixture locked fetch failure' "$fixture/output"
+        else
+            grep -Fq "fixture selected tool $failed_phase failure" "$fixture/output"
+        fi
     fi
     printf '%s\n' 'fetch --manifest-path Cargo.toml --locked' > "$fixture/expected-fetch"
     cmp "$fixture/expected-fetch" "$FETCH_EVENTS"
+    : > "$fixture/expected-preparation"
+    for phase in fetch setup check; do
+        printf '%s\n' "$phase" >> "$fixture/expected-preparation"
+        [[ "$phase" != "$failed_phase" ]] || break
+    done
+    cmp "$fixture/expected-preparation" "$PREPARATION_EVENTS"
     cmp "$fixture/pending-changelog" CHANGELOG.md
     [[ ! -e .git/release-state && -z "$(ls -A "$fixture/tmp")" ]]
     for path in Cargo.toml Cargo.lock README.md; do
@@ -179,9 +214,17 @@ for failed_manifest in '' Cargo.toml; do
         cmp "$fixture/original-metadata" "$path"
     done
 done
-unset FAIL_FETCH_MANIFEST
+unset FAIL_FETCH_MANIFEST FAIL_TOOL_PHASE
+# Neither fetch nor the selected setup may override explicit offline policy.
+: > "$PREPARATION_EVENTS"
+CARGO_NET_OFFLINE=true bash "$root/scripts/release/adapter.sh" preflight > "$fixture/output" 2>&1
+printf 'fetch\nsetup\ncheck\n' > "$fixture/expected-preparation"
+cmp "$fixture/expected-preparation" "$PREPARATION_EVENTS"
+[[ "$(cat "$PREPARATION_EVENTS.offline")" == true ]]
+[[ "$(cat "$FETCH_EVENTS.offline")" == true ]]
+cmp "$fixture/pending-changelog" CHANGELOG.md
 cp "$fixture/original-changelog" CHANGELOG.md
 [[ "$(git rev-parse HEAD)" == "$original_head" ]]
 git diff --quiet HEAD --
 git diff --cached --quiet
-echo 'Real release-index admission checks passed (reused history; Cargo stubs)'
+echo 'Real release-index admission checks passed (reused history; Cargo/tool stubs)'

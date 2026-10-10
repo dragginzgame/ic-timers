@@ -1448,25 +1448,34 @@ offline and disable rustup automatic installation; setup remains explicit throug
 `make update-dev` or CI. The guard neither formats nor builds. The following
 formatter recipes in `make/rust-format.mk` cover every member of the single root
 workspace with their existing options. The hook's isolated index must include
-both guards, all four Make includes, the current Makefile and `ci/tool-versions.env`.
+both guards, `scripts/ci/run-formatting.sh`, all four Make includes, the current
+Makefile and `ci/tool-versions.env`.
 These formatting entrypoints also bind snapshot routing to their current root;
 an inherited external snapshot cannot replace the indexed prerequisite checker.
 Their pin input is bound to the indexed `ci/tool-versions.env`, preserving the
 previous consumer-owned formatter selection rather than ambient host pin routing.
 Fixture wiring and pending native qualification belong in the
-[adoption owner](shared-tooling.md#shared-tooling-028-make-admission).
+[adoption owner](shared-tooling.md#shared-tooling-0211-formatting-and-make-admission).
 
 The adjacent `make/execution.mk` admits the running Make executable before
-recipes, using the probe beside the selected include. With invocation flags preserved,
-it rejects ignore-errors, dry-run, touch and question modes even when an outer
-Make would hide a failed prerequisite. A command-line `MAKEFLAGS` override can
-still conceal those modes; [Shared #30](https://github.com/dragginzgame/shared-tooling/issues/30#issuecomment-6084901420)
-owns that remaining canonical gap. Recursive `MAKE` arguments stay with the consumer invocation;
+recipes, using the probe beside the selected include. Shared 0.2.11 probes
+MAKEFLAGS and MFLAGS independently through GNU Make's option parser. It rejects
+ignore-errors, dry-run, touch and question modes even when MAKEFLAGS is cleared
+or replaced, and refuses assignments that erase Make's retained MFLAGS evidence.
+[Shared #30](https://github.com/dragginzgame/shared-tooling/issues/30) records the
+completed upstream repair. Recursive `MAKE` arguments stay with the consumer invocation;
 they do not enter the isolated probe. Runtime snapshot/delivery/pin bindings
 remain authoritative at their existing target boundaries. All scratch callers
 copy the execution companion and probe before their first Make parse; the
 index-hook fixture stages them too. This requires no tool installation or Cargo
 selection and does not qualify actual consumer execution until the gate runs.
+
+The consumer hook fixture keeps different index and unstaged `Cargo.lock` bytes.
+Successful selected-file formatting and direct checks must preserve both; existing
+mode-refusal, partial-staging and failed-formatter comparisons also include the
+working lock. This closes #35's missing lock-preservation assertion without
+changing hook behavior. These additional pending 0.16.6 cases remain unexecuted
+by the contributor.
 
 ### Structured dependency checks and host parsers
 
@@ -1544,11 +1553,22 @@ server setup under `.tools/testkit-server`, asset hashes and compatibility.
 `make pocketic-check` invokes both offline admissions and prints the admitted
 absolute server path. No global CLI, local server catalog, client alignment rule
 or Make binary override is retained. Failed admission never invokes setup.
+Missing or invalid CLI admission retains the canonical installer's exact selection
+diagnostic and failure status; the local adapter adds `run make install-testkit-server`.
+
+Standard release preflight now calls `fetch`, `install-testkit-server`, then
+`pocketic-check`, after admitting source/version/notes and before validation or
+version mutation. Each call finishes before the next, including when the outer
+Make is parallel. Existing saved-release reconciliation decides whether this
+preflight is needed; no setup prerequisite bypasses it. Ordinary checks remain
+offline and do not install. Explicit Cargo offline policy is inherited by setup.
 
 Developer update and the Linux/MSRV/native CI preparation sites explicitly set
 up the CLI/server after host prerequisites. `release-verify` runs locked fetch,
 explicit Testkit setup, then offline admission before the complete existing
-product gates. Each watchdog/cohort command rechecks after compiling its probes
+product gates, preserving direct user invocation without a prior preflight.
+Valid selected installations are reused. Each watchdog/cohort command first
+depends on offline `pocketic-check`, then rechecks after compiling its probes
 and passes only the admitted path to the test harness. Product tests still own
 fresh servers/instances and their existing startup deadlines; this handoff adds
 no shared-server reuse or recovery guarantee.
@@ -1802,6 +1822,48 @@ selection and four local 0.16.4 members; it does not execute or qualify the new
 transitive graph. Source-bound release evidence above remains tied to the old
 lock. No contributor Cargo mutation, version change or validation rerun occurs.
 
+### 0.16.5 Linux and tag acceptance
+
+Released **0.16.5** `0d7b85ec6658f91421bd13c44fa19592d8cc029e` selects
+Testkit **0.28.0**, Host **0.10.1**, Metrics **0.3.6**, PocketIC **16.1.0** and
+four local 0.16.5 members, with all three snapshots at committed Shared **0.2.11**
+`83efac446348dea024798a331d77933b24b429dc` (55/30/11 files).
+[Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38036823188)
+passes Linux checks **114168872952**, MSRV **114168873087**, ARM
+**114168873084** and Intel **114168873187**.
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/38036823190)
+**114168872998** passes at the same source.
+
+Actual raw logs `/tmp/ic-timers-0165-linux-job.log` and
+`/tmp/ic-timers-0165-tag-job.log` prove the repaired hook output assertion,
+sorter failure isolation, complete retained-log archive case, cleared/replaced
+Make-mode refusal and release/version-preparation fixtures. Linux additionally
+runs 142 library tests, 14 maintained PocketIC recovery subjects and all four
+policy cohorts under its explicit internal Rust **1.99.0** canister selection.
+This qualifies the released Linux graph, including the Metrics/cc/smallvec/syn
+refresh; it does not alone prove native consumer acceptance. Shared's exact
+0.2.11 upstream Linux/native acceptance is complete
+and its #30/#91/#92 are closed, separately from consumer qualification.
+
+ARM's raw `/tmp/ic-timers-0165-arm-job.log` additionally proves actual hook
+formatting/failure isolation, release/version preparation, 142 library tests,
+14 recovery subjects and all four policy cohorts. Its canister builds explicitly
+select Rust **1.88.0**, while the host test toolchain is 1.99.0. This qualifies
+the released ARM graph; do not compare its cohort values against Linux's
+different canister toolchain as an optimization measurement.
+
+Intel's `/tmp/ic-timers-0165-intel-job.log` now proves the same actual hook,
+release/version, 142 library-test, 14 recovery-subject and four-cohort acceptance
+at this exact source, with explicit Rust 1.88.0 canister builds. This completes
+execution of the released formatting/Make adoption across all three hosts.
+#35 retains the new explicit working/index lock-preservation proof; the 0.16.6
+lock/path/preflight cases and graph remain outside that released evidence.
+
+Pending 0.16.6 adds explicit index/working lock-preservation assertions to the
+consumer fixture and updates formatter prerequisites. Those new assertions are
+unexecuted; the released 0.16.5 evidence does not qualify them. No contributor
+build/test/lint/setup or release runs; observations above inspect existing jobs.
+
 ### Dependency pin exceptions
 
 [Exact exception records](../ci/dependency-pinning-exceptions.json) retain three
@@ -1919,9 +1981,9 @@ gate can also be run directly before committing, tagging and pushing:
 make release-verify
 ```
 
-The gate starts with `make fetch`: `cargo fetch --locked` for both root and
-`testing/` manifests, without restricting the target. This explicitly prepares
-the selected lockfiles' sources, including target-specific dependencies that
+The gate starts with `make fetch`: `cargo fetch --manifest-path Cargo.toml --locked`
+for the single root workspace, without restricting the target. This explicitly prepares
+the selected lockfile's sources, including target-specific dependencies that
 native builds may never download but unfiltered offline metadata needs. Fetching
 uses the configured Cargo registry/cache and network policy; a download failure
 stops before validation and version mutation. No offline failure is retried
@@ -2052,12 +2114,13 @@ disk work and has no crate, Wasm, runtime instruction or heap impact.
 Preflight reads staged, unstaged and untracked paths separately, with NUL records
 and rename detection disabled, before admitting only the four metadata outputs.
 Its existing bump check rejects candidate/changelog conflicts before validation
-or intent creation. After admission, preflight invokes the existing `make fetch`
-owner for the complete locked root graph. It does not require cached archives before
+or intent creation. After admission, preflight invokes the existing `make fetch`,
+`make install-testkit-server` and `make pocketic-check` owners sequentially for
+the complete locked root graph and selected CLI/server. It does not require cached archives before
 that owner can populate them. Fetching retains Cargo's configured network/cache
 policy and the existing lock selection; there is no offline-to-online retry or dependency
 update. The complete gate retains its existing fetch-first ordering, and a
-failed fetch stops preflight before validation or release mutation.
+failed fetch, setup or admission stops preflight before validation or release mutation.
 Locked fetching prepares an already consistent graph; it does not repair stale
 lockfiles after a dependency requirement changes. The maintainer's 0.13.5 attempt
 from `9d10b49851620296b55878b6aafb4ef92db6d45e` passed the root fetch and stopped
@@ -2169,3 +2232,74 @@ Host selection. This requires no timer arithmetic adapter or public semantic cut
 The incoming lock also updates cc, smallvec and syn. Locked offline metadata is
 preparation evidence only; released 0.16.4's tests/cohorts do not qualify the new
 graph. No contributor Cargo mutation, build/test/lint or measurement runs.
+
+### 0.16.6 incoming Host and Metrics graph
+
+The preserved incoming root lock selects Testkit **0.28.1**, all four Host crates
+**0.10.2**, Metrics **0.3.7** and PocketIC **16.1.0**; all four local members
+remain **0.16.5**. Full locked offline metadata is retained at
+`/tmp/ic-timers-0166-incoming-metadata.json`. It proves one resolved package per
+selection, not execution qualification of this incoming graph.
+
+Relative to Host 0.10.1, the three other Host libraries' published Rust sources
+are byte-identical. Host Fs changes only durable pathname writers and their tests:
+reject `/` or `/.` suffixes before normalization, parent creation, staging or the
+producer, preserving existing bytes and BeforePublication/InvalidInput errors.
+[Host 0.10.2](https://github.com/dragginzgame/ic-host-tooling/commit/6b755763aca71b7ea8c3de40edf032093dfdc62c)
+retains that source identity. Our harness uses Testkit's managed startup, whose
+startup/server/provisioning sources match 0.28.0 in the published 0.28.1 package;
+it needs no writer adapter or direct Host dependency. Host belongs to the native
+probe graph and is absent from the production ic-timers package's dependencies.
+
+The selected CLI is independently installed with `cargo install --locked`.
+Testkit 0.28.1's packaged Cargo.lock selects Host **0.10.1**, whereas Testkit 0.28.0
+selected **0.10.0**. Thus CLI setup gains the 0.10.1 competing-parent sync fix by
+selecting the new Testkit package; our root Host 0.10.2 update alone does not put
+the directory-suffix repair into that installed executable. Preserve the owner's
+locked build rather than adding a second catalog, local override or unlocking it.
+The existing ordered release roster already performs explicit selected-CLI setup
+and offline admission before CI; [Shared #96](https://github.com/dragginzgame/shared-tooling/issues/96)
+identifies Timers as an existing prevention example.
+
+All seven published Metrics Rust source files match 0.3.6 exactly; 0.3.7 changes
+its repository formatter/admission tooling. No arithmetic adapter or public
+semantic hard cut is required. New package identities still require the normal
+user-operated gate; no Wasm/instruction improvement is measured or claimed.
+
+[Host exact-source CI](https://github.com/dragginzgame/ic-host-tooling/actions/runs/38037252544)
+passes Linux native, MSRV and Intel, with ARM queued at inspection.
+These upstream results and metadata do not qualify the consumer's new graph.
+No contributor Cargo mutation, build/test/lint/setup, commit or release runs.
+Snapshot directory admission belongs to the
+[0.2.12 adoption owner](shared-tooling.md#shared-tooling-0212-directory-admission).
+
+### Host 0.11 ownership review
+
+Latest committed Host **0.11.0** is
+[`1d768c80a5bb87e3330a6b7bacfdfc543063968f`](https://github.com/dragginzgame/ic-host-tooling/commit/1d768c80a5bb87e3330a6b7bacfdfc543063968f).
+Locked offline trees confirm all four Host crates at **0.10.2** enter this
+workspace through the unpublished `ic-timers-pocketic` harness's Testkit **0.28.1**
+dependency. The published `ic-timers` library graph contains none of them.
+The harness imports only Testkit's PocketIC API and uses its managed-server child
+owner; the CLI additionally uses Host artifact inspection, filesystem publication
+and process admission. Testkit's independently installed CLI still uses its own
+packaged lock, as scoped above. No Host type enters the public timer facade.
+
+The Host 0.11 hard cut unifies output limits, adds per-stream terminate/truncate
+retention and composes cleanup errors. Published Testkit 0.28.1 still uses removed
+`CommunicationLimits`, old output-limit fields and individual execution-error
+cleanup fields. Its 0.10 requirements cannot select Host 0.11. Adoption belongs
+to [Testkit #47](https://github.com/dragginzgame/ic-testkit/issues/47), including
+its public Host reexports and resulting minor compatibility boundary. Timers has
+no direct Host caller to migrate or reason to add a parallel dependency.
+[Consumer feedback](https://github.com/dragginzgame/ic-testkit/issues/47#issuecomment-6095989932)
+records this trace at that existing owner.
+Our probes build through Make/Cargo, not Testkit's Wasm-cache build API; Host's
+bounded live build diagnostics therefore supply no immediate timer optimization.
+
+[Host release CI](https://github.com/dragginzgame/ic-host-tooling/actions/runs/38040092044)
+was queued at inspection. Source review and graph checks do not qualify Host
+0.11 or a future Testkit adoption. Current Shared **0.2.13** remains the adopted
+remote revision; no further snapshot refresh or Cargo mutation is required by
+this inspection. Required native/product gates remain with the future selected
+graph's maintainer-operated validation.

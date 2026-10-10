@@ -5,19 +5,19 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `83efac446348dea024798a331d77933b24b429dc` (0.2.11). Its provenance and
+  from revision `5864f468d39f8f9d1bd26fca1afe0e20f25f1b5e` (0.2.13). Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
 - Apply the [shared audit methods](audits/README.md) from revision
-  `83efac446348dea024798a331d77933b24b429dc`, recorded separately in
+  `5864f468d39f8f9d1bd26fca1afe0e20f25f1b5e`, recorded separately in
   [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). That
   supplemental snapshot also supplies pinned host/IC setup at the same
   reviewed revision. The isolated
   [Cargo helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
   supplies the structured dependency checker, Cargo readers/rewrites,
   annotated-tag checker and release-command adoption checker from
-  `83efac446348dea024798a331d77933b24b429dc`. The root baseline snapshot owns
+  `5864f468d39f8f9d1bd26fca1afe0e20f25f1b5e`. The root baseline snapshot owns
   the formatter guard, Make execution admission and the adopted formatting/release
   Make includes. Apply the
   [dependency pinning rules](rules/dependency-pinning.md) with the exact local
@@ -44,6 +44,7 @@ This file is normative for automated contributors.
   them without an explicit request. Read-only inspection, script syntax, diff,
   documentation and cheap release-metadata checks remain allowed. This preserves
   the maintainer's deployment workflow rather than duplicating its validation.
+  It also applies to the baseline's full-suite-before-delivery requirement.
 - Maintainer-approved contribution exception: all commits remain user-owned,
   including contribution PR commits. The shared contribution rule does not
   supersede this established workflow. Prepare local edits and reviewable PR

@@ -2,7 +2,10 @@
 set -euo pipefail
 
 # Test consumer exports, never corrupt the real checkout or execute changed code.
-root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
+root="${BASH_SOURCE[0]}"
+[[ "$root" == /* ]] || root="$PWD/$root"
+root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
+root="${root%/.}"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/timer-snapshot-test.XXXXXX")"
 trap 'if [[ $? == 0 ]]; then rm -rf "$fixture"; else printf "Snapshot fixtures retained: %s\n" "$fixture" >&2; fi' EXIT
 verifier="$root/scripts/ci/verify-shared-tooling-snapshot.sh"
@@ -24,6 +27,45 @@ for index in 0 1 2; do
         cat "$consumer/unchanged.log" >&2
         exit 1
     fi
+    # The trusted verifier must not trim a forbidden root into this valid
+    # neighbor. Such directory names are deliberate negative fixtures only.
+    cp -p "$consumer/.shared-tooling.snapshot" "$consumer/saved-manifest"
+    for suffix in $'\n' $'\r' $'\r\n'; do
+        forbidden="$consumer$suffix"
+        mkdir "$forbidden"
+        # LF tests the missing-manifest/trimmed-neighbor case. CR variants
+        # contain valid payloads, so admission must refuse the path itself.
+        if [[ "$suffix" != $'\n' ]]; then cp -R "$consumer/." "$forbidden/"; fi
+        alias="$fixture/alias-$index"
+        ln -s "$forbidden" "$alias"
+        for selected in "$forbidden" "$alias"; do
+            status=0
+            CDPATH="$fixture" bash "$verifier" --consumer "$selected" \
+                > "$consumer/forbidden-root.log" 2>&1 || status=$?
+            if [[ "$status" != 1 ]]; then
+                cat "$consumer/forbidden-root.log" >&2
+                echo "Snapshot $index accepted a forbidden directory name" >&2
+                exit 1
+            fi
+            if [[ "$suffix" == $'\n' ]]; then
+                test ! -e "$forbidden/.shared-tooling.snapshot"
+            else
+                cmp "$consumer/saved-manifest" "$forbidden/.shared-tooling.snapshot"
+            fi
+            cmp "$consumer/saved-manifest" "$consumer/.shared-tooling.snapshot"
+        done
+        rm "$alias"
+    done
+    # Ordinary aliases and relative inputs still select the exact snapshot,
+    # including when the caller has CDPATH set.
+    alias="$fixture/alias-$index"
+    ln -s "$consumer" "$alias"
+    (
+        cd "$fixture"
+        CDPATH="$fixture" bash "$verifier" --consumer "alias-$index"
+    ) > "$consumer/alias.log" 2>&1
+    cmp "$consumer/saved-manifest" "$consumer/.shared-tooling.snapshot"
+    rm "$alias"
     payload="$consumer/${payloads[$index]}"
     checksum="$consumer/scripts/ci/verify-file-checksum.sh"
     cp -p "$payload" "$consumer/saved-payload"
@@ -48,4 +90,4 @@ for index in 0 1 2; do
     done
 done
 
-echo 'Consumer snapshot exports and corruption refusals passed'
+echo 'Consumer snapshot exports, directory admission and corruption refusals passed'

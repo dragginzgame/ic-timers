@@ -21,9 +21,11 @@ case "${1:-}" in
         bash "$script_dir/../ci/check-release-source.sh" \
             --allow Cargo.toml --allow Cargo.lock --allow CHANGELOG.md --allow README.md
         IC_TIMERS_RELEASE_DATE="${RELEASE_DATE:?}" bash scripts/release/bump-version.sh --check "${RELEASE_VERSION:?}"
-        # Populate the selected caches before the offline checks. Requiring them
-        # here would prevent the full gate's fetch target from repairing a cold cache.
+        # Prepare only the admitted graph's existing owners, in order. Fetching
+        # sources alone does not install the root-lock-selected executable.
         make --no-print-directory fetch
+        make --no-print-directory install-testkit-server
+        make --no-print-directory pocketic-check
         ;;
     check)
         check_metadata

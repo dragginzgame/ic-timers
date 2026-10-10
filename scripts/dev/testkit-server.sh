@@ -24,5 +24,11 @@ version="$(yq -p toml -o json '.' "$root/Cargo.lock" | jq -er '
 arguments=(--consumer "$root" --package ic-testkit --version "$version"
     --bin ic-testkit-server --profile release)
 [[ "$mode" != check ]] || arguments+=(--check)
-executable="$(bash "$root/scripts/dev/install-rust-tools.sh" "${arguments[@]}")"
+if executable="$(bash "$root/scripts/dev/install-rust-tools.sh" "${arguments[@]}")"; then
+    :
+else
+    status=$?
+    echo 'Testkit CLI preparation/admission failed; run make install-testkit-server' >&2
+    exit "$status"
+fi
 "$executable" "$mode" --directory "$root/.tools/testkit-server"

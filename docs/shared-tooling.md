@@ -1,8 +1,117 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.2.13 selected CLI preparation
+
+The same pending IC Timers **0.16.6** batch now selects committed Shared
+**0.2.13** `5864f468d39f8f9d1bd26fca1afe0e20f25f1b5e` across all three canonical
+snapshots, retaining **55 baseline / 30 audit-setup / 11 helper files**.
+Clean detached source and exports are retained under
+`/tmp/ic-timers-shared0213.7y9utif1/`. No moving sibling bytes or optional tools
+are adopted; Cargo catalogs/lock, both pin files and the real Git index preserve
+their input bytes. The earlier 0.2.12 directory admission and fixture cases below
+remain part of this batch.
+
+The shared selected-Cargo installer now names package, exact version, target
+kind/name, profile and destination when an installation is missing or invalid.
+Our Testkit adapter adds `run make install-testkit-server`, preserves the original
+failure status and never treats a failed command's partial stdout as authority
+to execute the CLI. Successful admission still returns the owner-selected path.
+Receipt checks, immutable installation reuse and failed-build evidence stay with
+the canonical installer; server setup and admission stay with Testkit.
+
+The shared release/dependency contract additionally requires existing selected
+CLI setup at admitted preflight. Our ordered complete release roster already
+prepared Testkit before validation. The local preflight adapter now also calls
+`fetch`, `install-testkit-server`, then `pocketic-check`, after source/version/notes
+admission. No entrypoint prerequisite or parallel sibling setup is added.
+Saved prepared/committed phases retain the runner's existing recovery routing;
+this does not replay preparation against partly written metadata. Standalone
+watchdog/cohort commands retain their offline-admission dependency before builds.
+The [release owner](releasing.md#pinned-ic-tool-setup) records these commands.
+
+Consumer fixtures add selected-version forwarding, explicit offline-policy
+inheritance, failed/partial CLI output isolation, preflight setup/check failure
+ordering and metadata preservation, and actual parallel Make refusal before
+probe builds. The real locked-fetch recipe remains exercised; setup/check effects
+are substituted. Installation reuse, byte receipts, old-installation preservation
+and locks remain tested at their canonical shared owner rather than reproduced
+in another consumer installer. New behavioral cases are written but unexecuted.
+
+The baseline also clarifies virtual workspace layout, final-response-only cleanup
+inventories and full-suite-before-delivery validation. The existing four-member
+root catalog already has the required layout. Our explicit maintainer-approved
+AGENTS validation and release exceptions remain authoritative; this refresh
+does not authorize contributor tests, builds, lint, setup or release execution.
+No timer source/API changes or measured Wasm/instruction/heap changes are claimed.
+
+Permitted preparation checks pass: exact committed source/hash/mode and companion
+closure for 55/30/11 records, actual snapshot integrity, shell syntax (45
+selected/local scripts and ten embedded shell stubs), 250 local documentation
+targets/anchors, whitespace and complete locked offline metadata. The graph is
+retained at `/tmp/ic-timers-0166-shared0213-metadata.json`, with four local 0.16.5
+members and the expected unique incoming package selections. Repository purpose
+and its GitHub description remain aligned. No tests or tool setup were executed.
+
+[Exact-source Shared CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38039035514)
+passes Linux portable and lint/security, with ARM running and Intel queued at
+inspection. Source/integrity/syntax/documentation/locked-metadata checks remain
+preparation evidence; consumer execution and native qualification are pending.
+[#96](https://github.com/dragginzgame/shared-tooling/issues/96) owns shared delivery
+and remaining consumer coordination, independently of directory admission #95.
+[Consumer feedback](https://github.com/dragginzgame/shared-tooling/issues/96#issuecomment-6095895802)
+records the local preparation and its unexecuted behavioral scope.
+
+## Shared Tooling 0.2.12 directory admission
+
+Earlier preparation of IC Timers **0.16.6** refreshed all three canonical snapshots to committed
+Shared **0.2.12** `a8ba9b461b831846eacf64452e6ddcd2acd000f1`:
+**55 baseline / 30 audit-setup / 11 helper files**, with no new selection.
+The root baseline and both verifier copies come from a clean detached source
+through its canonical exporter. The audit methods are byte-identical at the new
+reviewed revision. Moving sibling changes after that commit are excluded.
+
+The new baseline prohibits LF/CR in operational directory names, including
+ancestors and resolved symlink destinations. Deliberate negative fixtures are
+allowed; preserve previously retained artifacts and evidence rather than renaming
+or deleting them. The exporter and trusted verifier validate supplied and physical
+paths before command-substitution trimming can select another checkout. Snapshot
+records additionally reject CR alongside LF/tab. Ordinary spaces, relative paths
+and physical aliases remain supported; no snapshot shape or compatibility reader
+is added. The [upstream issue](https://github.com/dragginzgame/shared-tooling/issues/95)
+retains the wrong-target export and false-verification evidence.
+
+The consumer fixture exercises all three selections. A newline-ending empty
+checkout must refuse even when its trimmed neighbor has a valid snapshot. CR and
+CRLF directories contain valid payloads, so a failure cannot be attributed merely
+to a missing manifest. Direct and aliased forbidden roots must return failure and
+leave both manifests unchanged. Normal relative/aliased roots still verify with
+CDPATH set. These are intentionally negative directory fixtures, not supported
+operational paths. Existing corruption/refusal and untrusted-helper isolation
+checks remain. The new cases are written, not executed by the contributor.
+
+Canonical preparation records are retained under
+`/tmp/ic-timers-shared0212.3kq1myy5/`. Source bytes/modes, companion closure,
+all snapshot integrity records, shell syntax, documentation references, whitespace
+and locked offline metadata are permitted preparation checks. Cargo manifests,
+incoming Cargo.lock and both consumer pin files retain their exact input bytes.
+Tests/builds/lint/setup and all version/release effects remain maintainer-owned;
+no functions, methods or types are removed, and no timer runtime change is made.
+
+[Exact-source Shared CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38037750017)
+passes Linux portable regression and lint/security; Intel is in progress and ARM
+remains queued at inspection. This and canonical export do not qualify the pending consumer
+source. The released 0.16.5 Linux/ARM/MSRV/tag results remain bound to its 0.2.11
+selection, with Intel still in progress. New-source acceptance is separate.
+
+[Consumer feedback](https://github.com/dragginzgame/shared-tooling/issues/95#issuecomment-6095815906)
+records this preparation upstream; [#35's follow-up](https://github.com/dragginzgame/ic-timers/issues/35#issuecomment-6095816387)
+records the released ARM evidence and pending consumer scope. Both issues remain
+open for their respective remaining acceptance, not for a new timer feature.
+
+
 ## Shared Tooling 0.2.11 formatting and Make admission
 
-Pending IC Timers **0.16.5** adopts exact committed Shared
+Released IC Timers **0.16.5** selects exact committed Shared
 `83efac446348dea024798a331d77933b24b429dc` across all three clean canonical
 exports: **55 baseline / 30 audit-setup / 11 helper files**. Its committed
 VERSION is **0.2.11**, despite the commit subject saying 0.2.10; source identity
@@ -50,12 +159,16 @@ source files match 0.3.5 exactly; no arithmetic adapter change is needed. The
 new package identity and cc/smallvec/syn refresh still require their own execution
 qualification; no measured Wasm or instruction delta is claimed for that graph.
 
-[#35](https://github.com/dragginzgame/ic-timers/issues/35) remains open for actual
-consumer fixtures and Linux/native macOS acceptance of this new source. Released
-0.16.4's all-host acceptance does not qualify the new snapshot or incoming lock.
-Shared [#30](https://github.com/dragginzgame/shared-tooling/issues/30) owns upstream
-qualification; committed delivery alone does not prove native acceptance.
-This is repository-only maintenance in the existing undated 0.16.5 batch.
+This adoption was prepared as repository-only maintenance in the 0.16.5 batch.
+The exact Shared source now passes
+[all three hosted profiles](https://github.com/dragginzgame/shared-tooling/actions/runs/38034912323);
+Shared #30/#91/#92 are closed. Released consumer **0.16.5**
+`0d7b85ec6658f91421bd13c44fa19592d8cc029e` passes matching Linux/MSRV/tag checks.
+[The graph owner](releasing.md#0165-linux-and-tag-acceptance) scopes actual hook,
+release, product and collector evidence. Both native consumer jobs now pass.
+[#35](https://github.com/dragginzgame/ic-timers/issues/35) retains the pending .6
+explicit working/index lock-preservation proof; new snapshots/graph/fixtures do
+not inherit released acceptance.
 
 The maintainer's 2026-10-10 release verification of preparation commit
 `71f24df` passes fetch, Testkit server setup and offline admission, then fails
@@ -69,6 +182,21 @@ Full failure log:
 `.git/release-state/validation-failures/20261010T075030Z-2112417-3-ci.log`.
 The repaired fixture remains unexecuted by the contributor; user verification
 and new-source host acceptance are still required.
+
+Subsequent successful tag job **114168872998** and Linux job **114168872952**
+execute the repaired hook, complete retained-log/Make admission fixtures and
+release/version preparation at 0.16.5. Logs are retained as
+`/tmp/ic-timers-0165-tag-job.log` and `/tmp/ic-timers-0165-linux-job.log`.
+That supersedes the failed preparation observation above without rerunning it.
+
+The pending **0.16.6** follow-up adds the explicit lock-preservation obligation
+from #35: distinct index and unstaged Cargo.lock bytes must survive successful
+selected-file hook formatting and direct checks. Existing rejection/failure
+comparisons now include working lock bytes. Current formatter prerequisites in
+[the release guide](releasing.md#formatter-prerequisites) name the new companion
+and independent flag admission, retiring the stale claim that the old bypass
+remains current. No canonical payload or product timer behavior changes. The new
+fixture assertions are unexecuted; prior host results cannot qualify them.
 
 Earlier adoption records retain their source and qualification scope.
 
