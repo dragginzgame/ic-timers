@@ -2,6 +2,18 @@
 
 All notable changes to this project are recorded here.
 
+## [0.17.6]
+
+### Development
+
+- Adopt Shared Tooling 0.3.8 and explicitly stop on failed mandatory Bash 3.2
+  assertions in local release guards and fixtures. Reject mismatched release
+  versions, invalid lockfile outputs and incorrect macOS hosts before later
+  operations, and retain
+  contradictory fixture evidence rather than reporting success
+  ([#41](https://github.com/dragginzgame/ic-timers/issues/41),
+  [Shared #107](https://github.com/dragginzgame/shared-tooling/issues/107)).
+
 ## [0.17.5] - 2026-10-10
 
 ### Development

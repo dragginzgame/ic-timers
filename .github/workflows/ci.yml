@@ -183,10 +183,10 @@ jobs:
           host_os="$(uname -s)"
           host_arch="$(uname -m)"
           host_version="$(sw_vers -productVersion)"
-          [[ "$host_os" == Darwin ]]
-          [[ "$host_arch" == "$EXPECTED_ARCHITECTURE" ]]
-          [[ "$host_version" == 15.* ]]
-          [[ "${BASH_VERSINFO[0]}.${BASH_VERSINFO[1]}" == 3.2 ]]
+          [[ "$host_os" == Darwin ]] || exit 1
+          [[ "$host_arch" == "$EXPECTED_ARCHITECTURE" ]] || exit 1
+          [[ "$host_version" == 15.* ]] || exit 1
+          [[ "${BASH_VERSINFO[0]}.${BASH_VERSINFO[1]}" == 3.2 ]] || exit 1
           # Every env-bash wrapper and Make recipe exercises Apple's Bash 3.2.
           echo /bin >> "$GITHUB_PATH"
       - name: Qualify early failure evidence

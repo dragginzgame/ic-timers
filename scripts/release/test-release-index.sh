@@ -40,7 +40,7 @@ case "$1" in
         printf '%s\n' "$*" >> "$FETCH_EVENTS"
         printf 'fetch\n' >> "$PREPARATION_EVENTS"
         printf '%s\n' "${CARGO_NET_OFFLINE:-unset}" > "$FETCH_EVENTS.offline"
-        [[ "$*" == 'fetch --manifest-path Cargo.toml --locked' ]]
+        [[ "$*" == 'fetch --manifest-path Cargo.toml --locked' ]] || exit 1
         if [[ "${FAIL_FETCH_MANIFEST:-}" == "$3" ]]; then
             echo 'fixture locked fetch failure' >&2
             exit 37
@@ -75,7 +75,7 @@ export RELEASE_DATE="$(sed -n "s/^## \[$RELEASE_VERSION\] - //p" CHANGELOG.md)"
 # CI's main checkout need not contain release tags. Supply the impact owner's
 # prerequisite locally, without fetching history or changing the source repo.
 git tag -f "v$RELEASE_PREVIOUS" "$original_head" > /dev/null
-[[ "$(git rev-parse --is-shallow-repository)" == true ]]
+[[ "$(git rev-parse --is-shallow-repository)" == true ]] || exit 1
 
 reject() {
     if bash "$root/scripts/release/adapter.sh" "$1" > "$fixture/output" 2>&1; then
@@ -105,14 +105,14 @@ for expected in "staged: $source_path" "unstaged: $source_path" "unstaged: $work
 done
 printf '  untracked: %q\n' "$untracked_path" > "$fixture/expected-untracked"
 grep -Fx -f "$fixture/expected-untracked" "$fixture/output" > /dev/null
-[[ ! -s "$FETCH_EVENTS" ]]
-[[ ! -s "$PREPARATION_EVENTS" ]]
+[[ ! -s "$FETCH_EVENTS" ]] || exit 1
+[[ ! -s "$PREPARATION_EVENTS" ]] || exit 1
 cmp .git/index "$fixture/admission-index"
 cmp "$source_path" "$fixture/admission-source"
 cmp "$working_path" "$fixture/admission-working"
 reject commit-check 'implementation in release index'
 cmp .git/index "$fixture/admission-index"
-[[ "$(git write-tree)" == "$staged_tree" ]]
+[[ "$(git write-tree)" == "$staged_tree" ]] || exit 1
 git reset -q HEAD -- "$source_path"
 git show "HEAD:$working_path" > "$working_path"
 rm "$untracked_path"
@@ -122,7 +122,7 @@ git add CHANGELOG.md
 staged_tree="$(git write-tree)"
 git show HEAD:CHANGELOG.md > CHANGELOG.md
 reject commit-check 'index differing from prepared working metadata'
-[[ "$(git write-tree)" == "$staged_tree" ]]
+[[ "$(git write-tree)" == "$staged_tree" ]] || exit 1
 git reset -q HEAD -- CHANGELOG.md
 
 printf '\nPrepared metadata fixture.\n' >> CHANGELOG.md
@@ -181,7 +181,7 @@ for operation in preflight commit-check; do
                 echo 'error: failed Git observation was reported as dirty source' >&2
                 exit 1
             fi
-            [[ -z "$(ls -A "$fixture/tmp")" ]]
+            [[ -z "$(ls -A "$fixture/tmp")" ]] || exit 1
         done
     done
 done
@@ -219,12 +219,12 @@ for output in empty matching mismatch; do
     FAIL_VERSION_READ="$output" "$real_bash" "$root/scripts/release/adapter.sh" preflight \
         > "$fixture/output" 2>&1 || status=$?
     expected=23; [[ "$output" != mismatch ]] || expected=1
-    [[ "$status" == "$expected" ]]
+    [[ "$status" == "$expected" ]] || exit 1
     if [[ "$output" != mismatch ]]; then
         grep -Fq 'fixture failed workspace version read' "$fixture/output"
     fi
     if grep -Fq 'release source refused' "$fixture/output"; then exit 1; fi
-    [[ ! -s "$FETCH_EVENTS" && ! -s "$PREPARATION_EVENTS" && ! -e .git/release-state ]]
+    [[ ! -s "$FETCH_EVENTS" && ! -s "$PREPARATION_EVENTS" && ! -e .git/release-state ]] || exit 1
     cmp .git/index "$fixture/version-read-index"
     for path in Cargo.toml Cargo.lock CHANGELOG.md README.md; do
         cmp "$path" "$fixture/version-read-${path}"
@@ -265,7 +265,7 @@ for failed_phase in '' fetch setup check; do
     done
     cmp "$fixture/expected-preparation" "$PREPARATION_EVENTS"
     cmp "$fixture/pending-changelog" CHANGELOG.md
-    [[ ! -e .git/release-state && -z "$(ls -A "$fixture/tmp")" ]]
+    [[ ! -e .git/release-state && -z "$(ls -A "$fixture/tmp")" ]] || exit 1
     for path in Cargo.toml Cargo.lock README.md; do
         git show "HEAD:$path" > "$fixture/original-metadata"
         cmp "$fixture/original-metadata" "$path"
@@ -277,11 +277,11 @@ unset FAIL_FETCH_MANIFEST FAIL_TOOL_PHASE
 CARGO_NET_OFFLINE=true bash "$root/scripts/release/adapter.sh" preflight > "$fixture/output" 2>&1
 printf 'fetch\nsetup\ncheck\n' > "$fixture/expected-preparation"
 cmp "$fixture/expected-preparation" "$PREPARATION_EVENTS"
-[[ "$(cat "$PREPARATION_EVENTS.offline")" == true ]]
-[[ "$(cat "$FETCH_EVENTS.offline")" == true ]]
+[[ "$(cat "$PREPARATION_EVENTS.offline")" == true ]] || exit 1
+[[ "$(cat "$FETCH_EVENTS.offline")" == true ]] || exit 1
 cmp "$fixture/pending-changelog" CHANGELOG.md
 cp "$fixture/original-changelog" CHANGELOG.md
-[[ "$(git rev-parse HEAD)" == "$original_head" ]]
+[[ "$(git rev-parse HEAD)" == "$original_head" ]] || exit 1
 git diff --quiet HEAD --
 git diff --cached --quiet
 fixture_complete=true

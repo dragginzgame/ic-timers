@@ -41,6 +41,13 @@ their package-specific matrices within this required support policy.
 ## Portable script baseline
 
 The portable scripts target Bash 3.2 or newer and standard Unix userland.
+Mandatory `[[ ... ]]` assertions must explicitly fail with `|| exit 1`,
+`|| return 1` or a diagnostic failure handler: Bash 3.2 does not apply `set -e`
+to a standalone conditional comparison. Keep intentional status-returning
+predicates and branch conditions distinct. A fixture's completion flag protects
+against premature exits, but cannot detect a failed assertion that continued
+through normal completion and cleanup.
+
 Repository CI exercises the offline regression set on:
 
 | Host | Scope |
@@ -53,17 +60,31 @@ The table describes the intended CI contract. Passing qualification for a
 revision requires its matching workflow run; adding a matrix entry does not
 establish that the run passed.
 
-Push CI groups include the source commit so a later main push preserves both
-running and queued qualification of earlier commits. PR updates share their PR
-group and cancel superseded review revisions. This retains more main-commit
-runs when native runners are busy; it does not add runner capacity. Inspect each
-selected commit's result before treating its snapshot as qualified.
+Routine CI keeps only the newest run for each workflow and branch or PR ref.
+Use workflow-level concurrency so a newer run cancels both queued and running
+checks of an older revision, including its native matrix:
+
+```yaml
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+```
+
+Keep source SHA and run ID out of this group; they prevent revisions from
+superseding each other. Different workflows, branches and PRs remain independent.
+Omit `queue: max`: retaining every pending revision defeats this policy, and
+GitHub disallows combining it with `cancel-in-progress: true`.
+Cancellation is asynchronous and does not certify the interrupted revision.
+Inspect the exact selected commit's result before claiming native qualification;
+a newer commit's success does not qualify an older release. Consumers must update
+their owned workflows when adopting this guidance; snapshot refresh alone does
+not change their concurrency settings.
 
 Use the [CI-health task](../tasks/ci-health.md#queued-native-jobs-and-repeated-validation)
-to diagnose persistent native queues and repeated branch/tag gates. Preserve
-each distinct source's required coverage while removing equivalent work;
-queue length alone does not justify dropping a supported architecture or
-cancelling release qualification.
+to diagnose persistent native queues and repeated branch/tag gates. Keep all
+required hosts and checks on the retained run. Release, publication and deployment
+operations with separate effect/recovery obligations keep explicit concurrency
+identities and their own cancellation authorization.
 
 The portable job uses GitHub Actions' default job timeout, allowing long native
 builds to finish without a shorter regression-step deadline. Ordinary failures
@@ -90,7 +111,7 @@ required to run setup. Make targets and CI select this same local tool set.
 | `scripts/dev/cloc.sh` | Git, Cargo, `cloc`, `jq`, `awk`, `find`, `grep`, and `sort` |
 | `scripts/dev/cloc-siblings.sh` | Git and the same prepared tools as `cloc.sh`; read-only root workspace summaries |
 | `scripts/dev/cloc-tooling.pl` | Git, cloc, and core Perl modules including JSON::PP and Digest::SHA; no Cargo or consumer command execution |
-| `scripts/dev/github-siblings.sh` | Git, jq, awk, sort, Perl core POSIX functions, system IANA timezone data (Europe/Monaco), and an authenticated GitHub CLI |
+| `scripts/dev/github-siblings.sh` | Git, jq, awk, sort, Perl core POSIX functions, system IANA timezone data (Europe/Paris), and an authenticated GitHub CLI |
 | `scripts/dev/gh-ci.sh` | Git and an authenticated GitHub CLI |
 | Local maintenance coordinator | Bash 3.2+, Git, prepared/authenticated Codex CLI with `exec --approve-for-me`, and a serial scheduler; the supplied user units require Linux systemd. Task tools remain optional consumer-qualified inputs; see [local scheduling](../tasks/local-schedule.md). The offline fixture substitutes Codex and starts no agent. |
 | `scripts/ci/run-validation-targets.sh` | GNU Make plus `awk`, `grep` or `rg`, `sed`, `tail`, and `tee` |

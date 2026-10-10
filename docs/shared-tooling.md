@@ -1,5 +1,33 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.3.8 mandatory assertions
+
+After released **0.17.5** `d0fbdfb3288205f9f804c1706ed9ffa036dd2ea5`, pending
+**0.17.6** refreshes all three canonical exports to committed Shared **0.3.8**
+`67285b28a98b7c4211ad32de726709d4e87edea4`, confirmed against remote main.
+Selections remain **56 baseline / 30 audit-setup / 11 helpers**. Clean detached
+source, canonical export logs and preserved inputs are at
+`/tmp/ic-timers-shared038.yce385dv/`. The helper export uses an isolated owned
+consumer. Uncommitted sibling changes are excluded; consumer Binaryen **132**
+pins remain unchanged.
+
+[Shared #107](https://github.com/dragginzgame/shared-tooling/issues/107) demonstrates
+that a standalone failed `[[ ... ]]` can continue despite `set -e` on genuine
+Bash 3.2. A final completion marker cannot catch that continuation. Selected
+shared fixtures, the failure-retention action and Cargo installer guards now
+require explicit failure. [Timers #41](https://github.com/dragginzgame/ic-timers/issues/41)
+tracks the corresponding local repair, with the actual guards, cases and
+qualification boundary at the [release owner](releasing.md#mandatory-bash-32-assertions).
+Shared 0.3.8 also supplies reviewed package-archive qualification guidance;
+its optional qualification command is unselected. Latest-only CI concurrency
+was already delivered in 0.17.5 and remains unchanged. No optimizer, Node,
+new server route, scheduler or additional gate is adopted.
+
+All three snapshot integrity checks pass. Syntax and metadata inspection are
+preparation evidence, not fixture execution or native acceptance. Tests, setup,
+Cargo mutation and release effects remain user-owned. This batch changes no
+timer API or product Wasm/instruction behavior.
+
 ## Shared Tooling 0.3.6 hook and lock selection
 
 After released **0.17.4** `d7ae76c8b23ea4b0a868eb86330531ef8bd70116`, pending

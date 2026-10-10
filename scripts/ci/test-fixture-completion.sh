@@ -76,12 +76,65 @@ for entry in "${fixtures[@]}"; do
             exit 1
         fi
         retained="$(cat "$FIXTURE_EXIT_PATH")"
-        [[ -n "$retained" ]]
-        if [[ "$expected" == 0 ]]; then [[ ! -e "$retained" ]]
+        [[ -n "$retained" ]] || exit 1
+        if [[ "$expected" == 0 ]]; then [[ ! -e "$retained" ]] || exit 1
         else
-            [[ -d "$retained" && "$(cat "$retained/exit-evidence")" == evidence ]]
+            [[ -d "$retained" && "$(cat "$retained/exit-evidence")" == evidence ]] || exit 1
         fi
     done
 done
+# A completion marker cannot detect an assertion that Bash 3.2 silently skips.
+# Copy actual mandatory assertions into this fixture's initialization boundary,
+# make their inputs contradictory, and attempt completion only after the check.
+for assertion in retained-path status-match host-os host-architecture host-version; do
+    case "$assertion" in
+        retained-path)
+            assertion_source=scripts/ci/test-fixture-completion.sh
+            assertion_prefix='[[ -n "$retained" ]]'
+            ;;
+        status-match)
+            assertion_source=scripts/ci/test-failure-evidence.sh
+            assertion_prefix='[[ "$status" == "$expected" ]]'
+            ;;
+        host-os)
+            assertion_source=.github/workflows/ci.yml
+            assertion_prefix='[[ "$host_os" == Darwin ]]'
+            ;;
+        host-architecture)
+            assertion_source=.github/workflows/ci.yml
+            assertion_prefix='[[ "$host_arch" == "$EXPECTED_ARCHITECTURE" ]]'
+            ;;
+        host-version)
+            assertion_source=.github/workflows/ci.yml
+            assertion_prefix='[[ "$host_version" == 15.* ]]'
+            ;;
+    esac
+    assertion_line="$(FIXTURE_ASSERTION="$assertion_prefix" awk '
+        { line=$0; sub(/^[[:space:]]*/, "", line) }
+        index(line, ENVIRON["FIXTURE_ASSERTION"]) == 1 { print; found++ }
+        END { if (found != 1) exit 1 }
+    ' "$root/$assertion_source")" || exit 1
+    printf -v injection 'retained=""; status=0; expected=1; host_os=Linux; host_arch=wrong; EXPECTED_ARCHITECTURE=arm64; host_version=14.0\n%s\nfixture_complete=true; exit 0' "$assertion_line"
+    probe="$fixture/probe/scripts/ci/contradictory-assertion.sh"
+    FIXTURE_INJECTION="$injection" awk '
+        { print }
+        /^trap finish EXIT$/ {
+            print "printf \"%s\\n\" \"$fixture\" > \"$FIXTURE_EXIT_PATH\""
+            print "printf evidence > \"$fixture/exit-evidence\""
+            print ENVIRON["FIXTURE_INJECTION"]
+            injected=1
+            exit
+        }
+        END { if (!injected) exit 1 }
+    ' "$root/scripts/ci/test-fixture-completion.sh" > "$probe"
+    rm -f -- "$FIXTURE_EXIT_PATH"
+    status=0
+    TMPDIR="$fixture/owned scratch" "$BASH" "$probe" \
+        > "$fixture/contradictory-$assertion.log" 2>&1 || status=$?
+    [[ "$status" == 1 ]] || exit 1
+    retained="$(cat "$FIXTURE_EXIT_PATH")"
+    [[ -n "$retained" && -d "$retained" && "$(cat "$retained/exit-evidence")" == evidence ]] || exit 1
+    grep -Fq "Failed fixture-completion checks retained: $retained" "$fixture/contradictory-$assertion.log"
+done
 fixture_complete=true
-echo 'Local fixture completion, failure status and evidence retention checks passed'
+echo 'Local fixture completion, mandatory assertions, failure status and evidence retention checks passed'

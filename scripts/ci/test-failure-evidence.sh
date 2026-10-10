@@ -59,12 +59,12 @@ for failure in nounset command nonzero premature completed failed-completion; do
     RUNNER_TEMP="$fixture/collector scratch" \
         "$BASH" "$fixture/collector-probe/scripts/ci/collect-failure-evidence.sh" \
         > "$fixture/collector-exit-$failure.log" 2>&1 || status=$?
-    [[ "$status" == "$expected" ]]
+    [[ "$status" == "$expected" ]] || exit 1
     retained="$(cat "$CI_EVIDENCE_EXIT_PATH")"
-    [[ -n "$retained" ]]
-    if [[ "$expected" == 0 ]]; then [[ ! -e "$retained" ]]
+    [[ -n "$retained" ]] || exit 1
+    if [[ "$expected" == 0 ]]; then [[ ! -e "$retained" ]] || exit 1
     else
-        [[ -d "$retained" && "$(cat "$retained/exit-evidence")" == evidence ]]
+        [[ -d "$retained" && "$(cat "$retained/exit-evidence")" == evidence ]] || exit 1
         grep -Fq "Failed evidence collection retained: $retained" "$fixture/collector-exit-$failure.log"
     fi
 done

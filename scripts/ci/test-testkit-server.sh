@@ -119,7 +119,7 @@ for argument in "$@"; do
     [[ "$argument" != --package ]] || selected=true
 done
 if [[ "$selected" == true ]]; then
-    [[ "${MAKEFLAGS:-}" =~ --jobserver-(auth|fds)=([0-9]+),([0-9]+) ]]
+    [[ "${MAKEFLAGS:-}" =~ --jobserver-(auth|fds)=([0-9]+),([0-9]+) ]] || exit 1
     reader="${BASH_REMATCH[2]}"; writer="${BASH_REMATCH[3]}"
     : <&"$reader"
     : >&"$writer"
@@ -142,7 +142,7 @@ cat > "$fixture/owner" <<'EOF'
 set -euo pipefail
 step="server-$1"
 printf '%s\n' "$step" >> "$TESTKIT_AGGREGATE_LOG"
-[[ "$1" != check || "$CARGO_NET_OFFLINE" == true ]]
+[[ "$1" != check || "$CARGO_NET_OFFLINE" == true ]] || exit 1
 [[ "${TESTKIT_AGGREGATE_FAIL:-}" != "$step" ]] || exit 23
 printf '%s\n' "$TESTKIT_ADAPTER_FIXTURE/admitted-server"
 EOF

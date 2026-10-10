@@ -5,7 +5,7 @@ script_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 semver='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
 [[ "$2" =~ $semver && "$3" =~ $semver ]] || exit 2
 lockfile="$1"
-[[ -f "$lockfile" && ! -L "$lockfile" ]]
+[[ -f "$lockfile" && ! -L "$lockfile" ]] || exit 1
 output="$(mktemp "${TMPDIR:-/tmp}/timers-local-lock.XXXXXX")"
 trap 'rm -f "$output"' EXIT
 # Cargo supplies the actual member inventory after the manifest bump. The

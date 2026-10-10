@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.3.6
+# version	0.3.8
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	0604bfd730ec7ec288cd2cfdad217a0d42bf256b
+revision	67285b28a98b7c4211ad32de726709d4e87edea4
 file	faa9a62257ecdfd6532ac2225b3fd053012dfe9c35b8bc2ddc95288d8626a518	-	audits/README.md
 file	518d890bf485bef06c316b4cf26ac6bf357ed52bcce995e8d9b1232a103d0ea3	-	audits/code-hygiene.md
 file	35fd87d36a09ed0971841abf28535d43470c713a82581c2251b924da1ab8f484	-	audits/flow-convergence-and-duplication.md
@@ -20,16 +20,16 @@ file	457fd38e0073c91ba470b918d4facd9faac3c5200ebd38c97e9d6b76acdaea55	-	docs/pri
 file	4c981184847462ab3c01cac087e28309f8e054253fd95c7bbe56f643877aa708	x	scripts/ci/verify-file-checksum.sh
 file	71d1c69a25f190bc4b2b1df66d3359f172638371caa722142e820a8294d1938e	x	scripts/ci/verify-shared-tooling-snapshot.sh
 file	5ce26182b709a900ab1d957569c4ace0d89c8947198a896e8284c5952f413ccb	x	scripts/dev/install-host-tools.sh
-file	9574e55bfb00077ac1d5b6e4b2126e2f137c4fb5b889feeec20d3bf90d5065ba	x	scripts/ci/test-host-tools.sh
+file	d509b74f8c8864abe84a440af6c7cca97cd9b11ff77102305bdefd648813a5e1	x	scripts/ci/test-host-tools.sh
 file	2493607c508b016a9a869bb18cd65b6c8ab534b77554a5465fa0b97bc1fc15a5	x	scripts/dev/install-ic-tools.sh
-file	e6dd9df2d707e61cc969ffd28e6b304d98a87c3dd8ae2ccc32a30d1abb778cf0	x	scripts/ci/test-ic-tools.sh
+file	fe2c149109d53721296c2f79d6c11dd7e56b4d0a6ef022db19a024c55cf682e2	x	scripts/ci/test-ic-tools.sh
 file	ab2202f89a077373fffac29f57527b88ccc65998f5c85c60a32081edd8338150	x	scripts/ci/verify-evidence-checksums.sh
 file	32ddc6af301567fce4d1d78cea5fe53450e7cffede28d5ad08d9c033ffb9d62d	x	scripts/ci/test-evidence-checksums.sh
 file	94a934651d5cb0c6f77fa429df277856dbda4c1a7441b2b8563e678c416258f6	-	audits/ic-canister-applications.md
-file	7c4baff72e88db260c3d15a2c90595d8d5c711233cb23bf67790c8a6c91a807f	x	scripts/dev/install-rust-tools.sh
-file	bf14fcc97ea32c0df0ebb06cc9df53dd205ba9de0ab11b077c19d50f2fbc2937	x	scripts/ci/test-rust-tools.sh
+file	fd96b899926fc0cb7cebab8c5cfdb22757429205a2e5f2877d394df8896d033a	x	scripts/dev/install-rust-tools.sh
+file	d1d2bb5d63c823e160c8fc61b5eba4bff2f2ad1179c8dc2875511e5e06c0f1c7	x	scripts/ci/test-rust-tools.sh
 file	775da89f655a3781059f433f80470ee6db9675e08942a805c111614183322fe1	-	scripts/ci/ic-tool-pins.awk
-file	0a1c5562105600c576580b6aacf59eef0195d63d65df47903f6c5f6fa8b9247c	x	scripts/ci/test-tool-evidence.sh
+file	d40d4ee4c2b3a32c99f682c5acf26e2abb0151b993de1c1b7fd0451de4f495f1	x	scripts/ci/test-tool-evidence.sh
 file	511f775a9dd7d0248541fa5f80a41d17718d1a7d8f25bb1b4f92502fd23c4e72	x	scripts/ci/select-tool-evidence.sh
 file	5be336cb3e8045b2d2d536542a94944b376ee812b03f786a90b9d962ab697f13	x	scripts/ci/archive-evidence.sh
-file	13dbb6e80cb1a7f7dd83197318873ece86110c2c4551266225d6354ed972292f	-	.github/actions/retain-failure-evidence/action.yml
+file	a48d8bbf364bb042c061b619f958009980969928bcfb398aa28b23f15539453e	-	.github/actions/retain-failure-evidence/action.yml

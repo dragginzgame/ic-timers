@@ -176,9 +176,9 @@ for observation in 1 2 3; do
             HOOK_TREE_OBSERVATION="$observation" HOOK_TREE_OUTPUT="$output" \
             "$BASH" "$repository_root/.githooks/pre-commit" \
             > "$state/output.log" 2>&1 || status=$?
-        [[ "$status" == 23 && "$(cat "$state/count")" == "$observation" ]]
+        [[ "$status" == 23 && "$(cat "$state/count")" == "$observation" ]] || exit 1
         grep -Fq 'injected write-tree observation failure' "$state/output.log"
-        [[ "$(tail -n 1 "$state/commands")" == write-tree ]]
+        [[ "$(tail -n 1 "$state/commands")" == write-tree ]] || exit 1
         git ls-files --stage -z > "$state/index-after"
         cmp "$state/index-after" "$state/index-before"
         assert_unchanged

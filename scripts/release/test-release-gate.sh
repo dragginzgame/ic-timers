@@ -342,13 +342,13 @@ done
 # Failures in the actual adapter keep unique raw logs across subsequent attempts.
 failure_root="$fixture_root/.git/release-state/validation-failures"
 failure_logs=("$failure_root"/*-0-fetch.log)
-[[ -f "${failure_logs[0]}" ]]
+[[ -f "${failure_logs[0]}" ]] || exit 1
 cp "${failure_logs[0]}" retained-fetch-log
 "${fixture_make[@]}" release-verify >/dev/null 2>&1
 cmp retained-fetch-log "${failure_logs[0]}"
 if "${fixture_make[@]}" release-verify FAIL_TARGET=fetch > retained-failure-output 2>&1; then exit 1; fi
 new_failure_logs=("$failure_root"/*-0-fetch.log)
-[[ "${#new_failure_logs[@]}" -gt "${#failure_logs[@]}" ]]
+[[ "${#new_failure_logs[@]}" -gt "${#failure_logs[@]}" ]] || exit 1
 grep -Fq 'failed fetch' "$failure_root/latest.log"
 cmp retained-fetch-log "${failure_logs[0]}"
 

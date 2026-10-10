@@ -124,6 +124,31 @@ assert_metadata_unchanged() {
 }
 
 capture_metadata original-files
+# The actual lock updater must reject invalid outputs before Cargo, temporary
+# output creation or writes, even when Bash 3.2 ignores a bare [[ ... ]] failure.
+mkdir -p lock-admission-bin lock-admission-tmp rejected-lock-directory
+printf '%s\n' 'Preserve the symlink target.' > rejected-lock-target
+ln -s rejected-lock-target rejected-lock-alias
+cat > lock-admission-bin/cargo <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' invoked >> "$LOCK_ADMISSION_EVENTS"
+exit 91
+EOF
+chmod +x lock-admission-bin/cargo
+for invalid_lock in missing-lock rejected-lock-directory rejected-lock-alias; do
+    status=0
+    LOCK_ADMISSION_EVENTS="$temporary_root/lock-admission-events" \
+        PATH="$temporary_root/lock-admission-bin:$PATH" \
+        TMPDIR="$temporary_root/lock-admission-tmp" \
+        "$BASH" scripts/release/update-local-lock.sh "$invalid_lock" 0.1.0 0.1.1 \
+        > "lock-admission-$invalid_lock.log" 2>&1 || status=$?
+    [[ "$status" == 1 && ! -e lock-admission-events ]] || exit 1
+    [[ -z "$(ls -A lock-admission-tmp)" ]] || exit 1
+    [[ ! -e missing-lock && -d rejected-lock-directory && -L rejected-lock-alias ]] || exit 1
+    printf '%s\n' 'Preserve the symlink target.' > expected-lock-target
+    cmp expected-lock-target rejected-lock-target
+    assert_metadata_unchanged original-files
+done
 # Reject malformed invocation before metadata reads, gates or mutation. A
 # misplaced --check must never be silently ignored by a real bump.
 for invocation in no-arguments missing-version extra-argument extra-version misplaced-check duplicate-check; do
@@ -288,7 +313,7 @@ EOF
 cat > scripts/release/commit-release.sh <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-[[ "$#:$*" == '1:--check-before-bump' ]]
+[[ "$#:$*" == '1:--check-before-bump' ]] || exit 1
 printf '%s\n' worktree >> release-events
 if [[ "${FIXTURE_FAIL_WORKTREE:-0}" == 1 ]]; then exit 1; fi
 EOF

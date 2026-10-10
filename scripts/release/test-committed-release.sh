@@ -102,7 +102,7 @@ check() {
 }
 reject() {
     if check "$1"; then echo "error: committed check accepted $2" >&2; exit 1; fi
-    [[ -z "$(ls -A "$fixture/tmp")" ]]
+    [[ -z "$(ls -A "$fixture/tmp")" ]] || exit 1
 }
 
 for target in release-committed-check release-tagged-check release-push-check; do
@@ -111,14 +111,14 @@ for target in release-committed-check release-tagged-check release-push-check; d
     for manifest in Cargo.toml; do
         grep -Fqx "cargo metadata --manifest-path $manifest --locked --offline --format-version 1" "$EVENTS"
     done
-    [[ -z "$(ls -A "$fixture/tmp")" ]]
+    [[ -z "$(ls -A "$fixture/tmp")" ]] || exit 1
 done
 # Documentation need not contain canonical fields or exist in a release tree.
 printf '%s\n' 'An ordinary README without version fields.' > "$SELECTED_TREE/README.md"
 check release-push-check
 rm "$SELECTED_TREE/README.md"
 check release-push-check
-[[ -z "$(ls -A "$fixture/tmp")" ]]
+[[ -z "$(ls -A "$fixture/tmp")" ]] || exit 1
 # All three metadata outputs must be checked in the selected tree, not HEAD.
 for path in Cargo.toml CHANGELOG.md Cargo.lock; do
     cp "$SELECTED_TREE/$path" "$fixture/saved"

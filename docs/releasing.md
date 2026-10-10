@@ -1943,6 +1943,56 @@ Timers' probes retain managed startup through Testkit and no direct Host import.
 is queued at observation. No contributor tests, builds, setup, dependency update
 or sibling mutation run; native acceptance remains source-bound and user-owned.
 
+### Mandatory Bash 3.2 assertions
+
+Released **0.17.5** `d0fbdfb3288205f9f804c1706ed9ffa036dd2ea5` selects Metrics
+**0.5.5**, Testkit **0.33.1**, Host **0.12.8**, PocketIC **16.1.0** and four local
+0.17.5 packages. Its [tag run](https://github.com/dragginzgame/ic-timers/actions/runs/38071494892)
+passes; [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38071495004)
+remains queued at observation. These states do not close the native-evidence
+obligations of [#38](https://github.com/dragginzgame/ic-timers/issues/38),
+[#39](https://github.com/dragginzgame/ic-timers/issues/39) or
+[#40](https://github.com/dragginzgame/ic-timers/issues/40).
+
+Pending **0.17.6** adopts the [Shared 0.3.8 exports](shared-tooling.md#shared-tooling-038-mandatory-assertions)
+and repairs [#41](https://github.com/dragginzgame/ic-timers/issues/41). The
+production release adapter explicitly refuses a successfully read but mismatching
+workspace version before source admission, fetch or setup. The local lock updater
+explicitly refuses missing, directory and symlink outputs before temporary output
+creation or Cargo. Successful behavior and failure status 1 remain unchanged.
+Intentional boolean predicates, including `semver_greater_than`, retain their
+return semantics. Mandatory assertions in eight local fixtures and their embedded
+stubs also exit explicitly, so completion cannot override a skipped assertion.
+The macOS workflow explicitly refuses the wrong OS, architecture, OS version or
+Bash version before selecting its native execution path.
+
+The existing fixture-completion check extracts actual retained-path/status
+assertions and the three workflow host-value assertions, supplies contradictory
+inputs in disposable initialization/trap
+copies, and attempts completion afterward. It requires status 1 and preserved
+evidence. The version-preparation fixture exercises the actual lock updater
+against missing/directory/symlink outputs, requiring status 1, no Cargo call,
+empty output scratch and unchanged metadata/target. Existing preflight mismatch
+cases now have explicit assertions. Cases are written, not run; acceptance needs
+source-bound current Bash and native macOS Bash 3.2 logs from the existing full
+gate. No contributor test, setup or release command runs. Preparation
+checks pass: 56/30/11 snapshot integrity, syntax for 70 shell scripts, 56 embedded
+Bash bodies, 96 completion prefixes, five contradiction prefixes and 28 workflow
+run bodies, plus diff whitespace and locked offline metadata. Generated prefixes
+and workflow bodies are inspected, not executed. Catalog/pin bytes and the raw
+index remain unchanged; the external Metrics lock has a separate preserved copy.
+
+During preparation an external update advances the selected Metrics lock to
+**0.5.6**; preserve it rather than restoring the initial 0.5.5 bytes. Published
+Metrics 0.5.6's sibling source comparison changes no library Rust source. The
+workspace Host 0.12.8 selection differs from the cached published Testkit 0.33.1
+CLI's shipped lock, which selects Host **0.12.7**; root selection alone does not
+update that installed executable. No direct Host dependency or CLI override is
+introduced. Dependency qualification remains separate from this tooling repair.
+The batch is repository-only, with no timer/API change or product Wasm/instruction
+delta. Keep it untagged for bundling unless the maintainer explicitly selects a
+release; the complete user-operated gate remains required.
+
 ### 0.17.4 delivery and Shared 0.3.6 preparation
 
 Current released source is **0.17.4**

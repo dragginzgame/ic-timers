@@ -17,7 +17,7 @@ check_metadata() {
 case "${1:-}" in
     preflight)
         previous_version="$(bash scripts/release/workspace-version.sh)" || exit $?
-        [[ "$previous_version" == "${RELEASE_PREVIOUS:?}" ]]
+        [[ "$previous_version" == "${RELEASE_PREVIOUS:?}" ]] || exit 1
         bash "$script_dir/../ci/check-release-source.sh" \
             --allow Cargo.toml --allow Cargo.lock --allow CHANGELOG.md
         IC_TIMERS_RELEASE_DATE="${RELEASE_DATE:?}" bash scripts/release/bump-version.sh --check "${RELEASE_VERSION:?}"
