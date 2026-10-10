@@ -1513,7 +1513,7 @@ checkout-local PATH. No separate system jq/yq/ripgrep/cloc installation is
 required. The repository fixture still supplies an explicit local yq path.
 PocketIC keeps its separate exact audited admission owner. Follow the
 [bootstrap prerequisites](local-setup.md#bootstrap-prerequisites) for Linux and
-macOS and prepare this repository's Rust toolchains/cargo-sort separately.
+macOS and prepare this repository's Rust toolchain before the common aggregate.
 The reviewed installer itself requires no sudo.
 
 `make cloc` reports all four members of the root workspace, including the
@@ -1528,10 +1528,13 @@ savings.
 
 The [0.1.18 adoption owner](shared-tooling.md#shared-tooling-0118-refresh)
 records source inspection and pending Linux/native macOS consumer qualification.
-The shared include's optional Rust-set commands are exported with their helper
-but are not added to aggregate setup. Established explicit cargo-sort setup is
-retained pending the [upstream path repair](https://github.com/dragginzgame/shared-tooling/issues/54)
-and [consumer adoption](https://github.com/dragginzgame/ic-timers/issues/28).
+Current [Shared 0.3 adoption](shared-tooling.md#shared-tooling-030-complete-toolset)
+includes the complete Cargo toolset in both aggregates. `update-dev` bootstraps
+the pinned Rust toolchain, calls `install-tools` then `tools-check`, and installs
+the formatting hook. CI prepares its declared toolchain before the same ordered
+aggregate, exposing `.tools/rust/bin` alongside host and IC paths. There is no
+separate global cargo-sort installation. The selected pin file already contains
+cargo-sort 2.1.4, cargo-sort-derives 0.13.0 and candid-extractor 0.1.6.
 No install, test/build/lint or formatter runs during contributor preparation.
 Ordinary checks never download tools.
 
@@ -1540,8 +1543,11 @@ Ordinary checks never download tools.
 `make install-ic-tools` explicitly prepares Quill 0.5.4, ICP CLI 1.6.0, didc
 0.6.2, ic-wasm 0.11.1 and wasm-opt 132 from
 [`ci/ic-tools.tsv`](../ci/ic-tools.tsv). `make ic-tools-check` verifies this
-five-tool bundle offline. `make install-tools` / `make tools-check` select host
-and IC bundles. Shared Tooling 0.2.0 removes PocketIC from that policy. An existing
+five-tool bundle offline. `make install-tools` / `make tools-check` run host,
+IC and Cargo tools, then `install-testkit-server` / `pocketic-check` through the
+ordered local target lists. Standalone owner targets remain available, and the
+ordered release preflight/validation rosters retain their established boundaries.
+Shared Tooling 0.2.0 removes PocketIC from its IC policy. An existing
 six-tool bundle fails admission until explicit setup selects a new bundle;
 previous bundles, pins and receipts are retained.
 
@@ -1875,22 +1881,29 @@ The separately installed Testkit CLI uses its packaged lock, including Host
 0.10.1; the root graph does not change that installation contract.
 
 [Matching main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38041494927)
-passes MSRV **114182479493**. Linux checks **114182479646** remain in progress;
-Intel **114182479613** and ARM **114182479680** are queued at inspection.
+passes MSRV **114182479493**, Linux checks **114182479646**,
+Intel **114182479613** and ARM **114182479680**.
 [Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/38041495172)
 **114182480244** passes at the same SHA, with duplicate full tag jobs skipped.
 Release availability, metadata and tag truth do not qualify the new execution
-paths. Full consumer acceptance remains pending.
+paths. The completed execution evidence below establishes consumer acceptance
+for this released graph, independently of the new incoming selections.
 
 This source adds explicit staged/working lock-preservation assertions, forbidden
 directory cases, selected-CLI failure isolation and ordered preflight preparation.
 The [Shared adoption owner](shared-tooling.md#shared-tooling-0213-selected-cli-preparation)
 records their scope; prior 0.16.5 logs qualify only that earlier source.
-[#35](https://github.com/dragginzgame/ic-timers/issues/35) remains open until
-the released lock-preservation proof executes on all three hosts. No contributor
-build/test/lint/setup or release commands ran; this records existing hosted jobs.
-[Delivery feedback](https://github.com/dragginzgame/ic-timers/issues/35#issuecomment-6096203471)
-retains that remaining acceptance boundary.
+Downloaded `/tmp/ic-timers-0166-{linux,intel,arm}-job.log` files now prove actual
+hook formatting and failure isolation, directory admission, Testkit adapter
+failure handling, release/version preparation, 142 library tests, 14 maintained
+recovery subjects and all four cohorts on each host. The delivered hook fixture
+contains the explicit staged/working lock-preservation assertions, so these
+logs complete [#35](https://github.com/dragginzgame/ic-timers/issues/35)'s remaining
+three-host proof. This does not qualify the later Shared 0.3 or incoming graph.
+No contributor build/test/lint/setup or release commands ran; this records
+existing hosted jobs.
+[Completion feedback](https://github.com/dragginzgame/ic-timers/issues/35#issuecomment-6096552698)
+closes #35 with its source-bound all-host proof.
 
 ### Dependency pin exceptions
 

@@ -54,6 +54,11 @@ mkdir -p "$GITHUB_WORKSPACE/.tools/rust/build/failed-cli" \
 printf 'failed Cargo build\n' > "$GITHUB_WORKSPACE/.tools/rust/build/failed-cli/install.log"
 printf 'failed server download\n' > "$GITHUB_WORKSPACE/.tools/testkit-server/.setup-v1-failed/failure.txt"
 printf 'admitted server bytes\n' > "$GITHUB_WORKSPACE/.tools/testkit-server/admitted/pocket-ic"
+for phase in install check; do
+    printf 'aggregate %s stdout\naggregate %s stderr\n' "$phase" "$phase" \
+        > "$RUNNER_TEMP/tools-$phase.log"
+    chmod 0640 "$RUNNER_TEMP/tools-$phase.log"
+done
 # A real reporter failure preserves its original status and both streams. The
 # consumer archive must contain those exact diagnostic bytes and mode.
 format_status=0
@@ -81,6 +86,13 @@ perl -e 'my @a=stat $ARGV[0]; my @b=stat $ARGV[1];
     @a && @b && ($a[2]&07777)==($b[2]&07777) or die "archive lost formatter log mode\n";' \
     "$format_log" "$fixture/extracted/${format_log##*/}"
 rm "$format_log"
+for phase in install check; do
+    cmp "$RUNNER_TEMP/tools-$phase.log" "$fixture/extracted/tools-$phase.log"
+    perl -e 'my @a=stat $ARGV[0]; my @b=stat $ARGV[1];
+        @a && @b && ($a[2]&07777)==($b[2]&07777) or die "archive lost aggregate log mode\n";' \
+        "$RUNNER_TEMP/tools-$phase.log" "$fixture/extracted/tools-$phase.log"
+    rm "$RUNNER_TEMP/tools-$phase.log"
+done
 for path in .tools/rust/build/failed-cli/install.log .tools/testkit-server/.setup-v1-failed/failure.txt; do
     cmp "$GITHUB_WORKSPACE/$path" "$fixture/extracted/$path"
 done

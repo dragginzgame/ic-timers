@@ -2,6 +2,31 @@
 
 All notable changes to this project are recorded here.
 
+## [0.17.0]
+
+### Breaking
+
+- Adopt Shared Tooling 0.3.0's complete ordered setup/check: host, IC and Cargo
+  tools, then the selected Testkit CLI/server. Prepare the Rust toolchain before
+  `make install-tools`, then run `make tools-check`. Direct host-installer callers
+  must remove the retired optional ripgrep/cloc flags; existing installations
+  and failure evidence are retained
+  ([#36](https://github.com/dragginzgame/ic-timers/issues/36),
+  [shared #98](https://github.com/dragginzgame/shared-tooling/issues/98),
+  [adoption owner](docs/shared-tooling.md#shared-tooling-030-complete-toolset)).
+- Align public measurement summaries with Metrics 0.4. Consumers exchanging
+  these types must select Metrics 0.4 or use `ic_timers::MeasurementSummary`;
+  arithmetic and timer lifecycle behavior are unchanged
+  ([#37](https://github.com/dragginzgame/ic-timers/issues/37),
+  [identity owner](docs/design/callback-delivery-ownership.md#ic-metrics-04-adoption)).
+
+### Development
+
+- Use Testkit 0.30 for native qualification and selected CLI setup, retaining
+  its managed PocketIC startup contract. Keep complete setup/check logs in CI
+  failure archives and check the local Testkit extension's ordering under
+  parallel Make.
+
 ## [0.16.7] - 2026-10-10
 
 ### Development

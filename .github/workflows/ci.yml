@@ -53,15 +53,16 @@ jobs:
         run: echo "RUSTUP_TOOLCHAIN=$IC_TIMERS_MSRV" >> "$GITHUB_ENV"
       # Swatinem/rust-cache v2
       - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
-      - name: Prepare the pinned formatter and tool bundles
+      - name: Prepare and check the complete toolset
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: |
-          source ci/tool-versions.env
-          cargo install cargo-sort --version "$SHARED_TOOLING_CARGO_SORT_VERSION" --locked
-          make install-tools
-          make tools-check
-          make install-testkit-server
-          echo "$GITHUB_WORKSPACE/.tools/host/bin" >> "$GITHUB_PATH"
-          echo "$GITHUB_WORKSPACE/.tools/ic/bin" >> "$GITHUB_PATH"
+          make install-tools 2>&1 | tee "$RUNNER_TEMP/tools-install.log"
+          make tools-check 2>&1 | tee "$RUNNER_TEMP/tools-check.log"
+          {
+            echo "$GITHUB_WORKSPACE/.tools/host/bin"
+            echo "$GITHUB_WORKSPACE/.tools/ic/bin"
+            echo "$GITHUB_WORKSPACE/.tools/rust/bin"
+          } >> "$GITHUB_PATH"
       - name: Check MSRV, provider visibility and nested probes
         run: |
           bash scripts/ci/test-repository-checks.sh
@@ -115,15 +116,16 @@ jobs:
         run: echo "RUSTUP_TOOLCHAIN=$IC_TIMERS_INTERNAL_TOOLCHAIN" >> "$GITHUB_ENV"
       # Swatinem/rust-cache v2
       - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
-      - name: Prepare the pinned formatter and tool bundles
+      - name: Prepare and check the complete toolset
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: |
-          source ci/tool-versions.env
-          cargo install cargo-sort --version "$SHARED_TOOLING_CARGO_SORT_VERSION" --locked
-          make install-tools
-          make tools-check
-          make install-testkit-server
-          echo "$GITHUB_WORKSPACE/.tools/host/bin" >> "$GITHUB_PATH"
-          echo "$GITHUB_WORKSPACE/.tools/ic/bin" >> "$GITHUB_PATH"
+          make install-tools 2>&1 | tee "$RUNNER_TEMP/tools-install.log"
+          make tools-check 2>&1 | tee "$RUNNER_TEMP/tools-check.log"
+          {
+            echo "$GITHUB_WORKSPACE/.tools/host/bin"
+            echo "$GITHUB_WORKSPACE/.tools/ic/bin"
+            echo "$GITHUB_WORKSPACE/.tools/rust/bin"
+          } >> "$GITHUB_PATH"
       - name: Run CI gate
         run: make ci
       - name: Lint unpublished probes with internal toolchain
@@ -209,16 +211,16 @@ jobs:
         run: echo "RUSTUP_TOOLCHAIN=$IC_TIMERS_INTERNAL_TOOLCHAIN" >> "$GITHUB_ENV"
       # Swatinem/rust-cache v2
       - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
-      - name: Prepare the pinned formatter and tool bundles
+      - name: Prepare and check the complete toolset
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: |
-          source ci/tool-versions.env
-          cargo install cargo-sort --version "$SHARED_TOOLING_CARGO_SORT_VERSION" --locked
-          make install-tools
-          make tools-check
-          make install-testkit-server
-          echo "$GITHUB_WORKSPACE/.tools/host/bin" >> "$GITHUB_PATH"
-          echo "$GITHUB_WORKSPACE/.tools/ic/bin" >> "$GITHUB_PATH"
+          make install-tools 2>&1 | tee "$RUNNER_TEMP/tools-install.log"
+          make tools-check 2>&1 | tee "$RUNNER_TEMP/tools-check.log"
+          {
+            echo "$GITHUB_WORKSPACE/.tools/host/bin"
+            echo "$GITHUB_WORKSPACE/.tools/ic/bin"
+            echo "$GITHUB_WORKSPACE/.tools/rust/bin"
+          } >> "$GITHUB_PATH"
       - name: Run the complete native release gate
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: make release-verify
@@ -317,9 +319,9 @@ jobs:
         shell: bash
         run: |
           # The shared version reader needs the explicitly prepared parsers.
-          make install-tools
-          make tools-check
-          export PATH="$GITHUB_WORKSPACE/.tools/host/bin:$GITHUB_WORKSPACE/.tools/ic/bin:$PATH"
+          make install-tools 2>&1 | tee "$RUNNER_TEMP/tools-install.log"
+          make tools-check 2>&1 | tee "$RUNNER_TEMP/tools-check.log"
+          export PATH="$GITHUB_WORKSPACE/.tools/host/bin:$GITHUB_WORKSPACE/.tools/ic/bin:$GITHUB_WORKSPACE/.tools/rust/bin:$PATH"
           expected_tag="v$(make --no-print-directory version)"
           if [[ "$GITHUB_REF_NAME" != "$expected_tag" ]]; then
             echo "error: event tag $GITHUB_REF_NAME does not match $expected_tag" >&2
@@ -332,8 +334,6 @@ jobs:
           make release-tag-check
           make fetch
           bash scripts/release/check-lockfiles.sh
-          source ci/tool-versions.env
-          cargo install cargo-sort --version "$SHARED_TOOLING_CARGO_SORT_VERSION" --locked
           make release-check
       - name: Archive failure evidence
         if: ${{ failure() }}

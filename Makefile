@@ -7,6 +7,8 @@
 
 MSRV ?= 1.88.0
 VERSION ?=
+LOCAL_TOOL_INSTALL_TARGETS := install-testkit-server
+LOCAL_TOOL_CHECK_TARGETS := pocketic-check
 include make/tools.mk
 include make/rust-format.mk
 
@@ -39,7 +41,7 @@ help:
 	@echo "  install-ic-tools    Explicitly install the reviewed five-tool IC bundle"
 	@echo "  install-testkit-server  Prepare the locked Testkit CLI and its admitted server"
 	@echo "  ic-tools-check      Verify the installed IC bundle offline"
-	@echo "  install-tools / tools-check  Prepare or verify both tool bundles"
+	@echo "  install-tools / tools-check  Prepare or verify host, IC, Cargo tools, then Testkit"
 	@echo "  cloc                Report root-workspace Rust LOC and test counts"
 	@echo "  shell-check         Check repository shell-script syntax"
 	@echo "  msrv                Check with the minimum supported Rust version"

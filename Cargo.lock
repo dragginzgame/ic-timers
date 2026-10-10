@@ -870,15 +870,15 @@ dependencies = [
 
 [[package]]
 name = "ic-metrics"
-version = "0.3.7"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7c2d679bec5d4473761ddca27d77cbbfc5aae277a3a9634f90f63bbcc7b8bcb2"
+checksum = "6bdcedba0e995c3c57f1f608d9f1664b8ec56c0d437d330c13004e78dbce434d"
 
 [[package]]
 name = "ic-testkit"
-version = "0.29.0"
+version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0e849b35f13239f44c02e9fa1b6aeda7ddda1ed30f56d9479f2a062212802213"
+checksum = "d1f639412105b6f5c909ac7342c94a22c07ccbeb5285112fc123e78fcb3b24d8"
 dependencies = [
  "candid",
  "fs2",
@@ -897,7 +897,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers"
-version = "0.16.7"
+version = "0.16.6"
 dependencies = [
  "ic-cdk-timers",
  "ic-metrics",
@@ -907,7 +907,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers-pocketic"
-version = "0.16.7"
+version = "0.16.6"
 dependencies = [
  "candid",
  "ic-testkit",
@@ -916,7 +916,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers-runtime-probe"
-version = "0.16.7"
+version = "0.16.6"
 dependencies = [
  "candid",
  "ic-cdk",
@@ -925,7 +925,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers-size-probe"
-version = "0.16.7"
+version = "0.16.6"
 dependencies = [
  "candid",
  "ic-cdk",

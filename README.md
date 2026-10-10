@@ -404,10 +404,10 @@ remain defined in [AGENTS.md](AGENTS.md).
 
 | Command | Purpose |
 | --- | --- |
-| `make update-dev` | Install the pinned toolchain, components, host/IC tools and Testkit server, Wasm target, and formatting hook |
+| `make update-dev` | Install the pinned toolchain, components, host/IC/Cargo tools and Testkit server, Wasm target, and formatting hook |
 | `make install-host-tools` / `make host-tools-check` | Install pinned jq/yq/ripgrep/cloc or verify the complete bundle offline |
 | `make install-ic-tools` / `make ic-tools-check` | Install the pinned five-tool IC bundle or verify it offline |
-| `make install-tools` / `make tools-check` | Prepare or verify both host and IC bundles |
+| `make install-tools` / `make tools-check` | Prepare or verify host, IC and Cargo tools, then the selected Testkit CLI/server |
 | `make install-testkit-server` / `make pocketic-check` | Prepare the root-lock selected Testkit CLI/server or check admission offline |
 | `make cloc` | Report Rust LOC/test counts for all root workspace members |
 | `make fmt` / `make fmt-check` | Sort manifests and format or check Rust for all workspace members |
@@ -421,8 +421,8 @@ remain defined in [AGENTS.md](AGENTS.md).
 
 Normal development and hosted CI use Rust 1.99.0. Hosted CI also lints every
 supported probe configuration with both Rust 1.99.0 and Rust 1.88.0.
-Prepare the complete pinned host bundle through `make update-dev` or `make install-host-tools`
-before validation. `make actions-check` verifies the bundle offline and delegates
+Prepare the complete pinned toolsets through `make update-dev`, or prepare the
+Rust toolchain and run `make install-tools` followed by `make tools-check`. `make actions-check` verifies the bundle offline and delegates
 Actions and Cargo declaration checks to the reviewed shared parser; it never
 downloads tools. See the [setup and pin boundaries](docs/releasing.md#structured-dependency-checks-and-host-parsers).
 Both `fmt` and `fmt-check` first require the exact cargo-sort pin and prepared

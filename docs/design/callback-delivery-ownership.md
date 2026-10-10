@@ -218,6 +218,38 @@ larger than AfterCompletion in this build; deleting its distinct prearmed recove
 semantics is not justified by that size difference. No further runtime change
 or performance release is supported by this review.
 
+## IC Metrics 0.4 adoption
+
+Incoming maintainer catalog/lock edits after released **0.16.7** select Metrics
+**0.4.0**. Its reviewed published release is
+[`97ec991776bb16efbab59faeb43bc72ce9ebcefa`](https://github.com/dragginzgame/ic-metrics/commit/97ec991776bb16efbab59faeb43bc72ce9ebcefa).
+All seven published Rust source files match that commit and 0.3.7 byte for byte.
+The dependency-free arithmetic and consumer-owned instruction reader require no
+adapter. [#37](https://github.com/dragginzgame/ic-timers/issues/37) records the
+real downstream mixed 0.3/0.4 graph that motivates package convergence.
+
+IC Timers publicly re-exports `MeasurementSummary`; its 0.3 and 0.4 identities
+are different Rust types despite identical arithmetic. Pending **0.17.0** covers
+that public hard cut as well as the independent tooling-contract change.
+Consumers exchanging these values with Metrics must select 0.4 or use
+`ic_timers::MeasurementSummary`. There is one selected Metrics package, with no
+alias, second dependency route, persisted layout or timer lifecycle change.
+
+Complete locked offline metadata at `/tmp/ic-timers-shared030.roCrPG/metadata.json`
+selects Metrics 0.4.0, Testkit 0.30.0, Host 0.11.0 and PocketIC 16.1.0. The incoming
+catalog and all four local lock entries report 0.16.6 although the released HEAD
+is 0.16.7; these maintainer-owned bytes are preserved. Contributor preparation
+does not resolve that release metadata difference or bump package versions.
+The user-operated minor preparation must select 0.17.0 before release.
+
+Source equality gives no expected algorithmic instruction or heap change, but
+no Wasm/instruction delta is measured for the new package graph. Source/metadata
+review is not execution qualification; the normal user-operated gate retains
+library, MSRV, probe, recovery/cohort and native host checks. #37 stays open for
+delivery and qualification; no product test/build/lint ran for this review.
+[Alignment feedback](https://github.com/dragginzgame/ic-timers/issues/37#issuecomment-6096552294)
+records the preserved incoming selections and minor boundary.
+
 ## IC Metrics 0.3 adoption
 
 The incoming root catalog selects registry `ic-metrics 0.3`; the one root lock

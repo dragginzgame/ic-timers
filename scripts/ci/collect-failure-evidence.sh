@@ -34,7 +34,7 @@ if [[ -d "$temporary/ic-timers-fixtures" ]]; then
 fi
 # The canonical formatter inherits RUNNER_TEMP in CI. Retain complete failed
 # stdout/stderr logs from that selected root; successful logs remove themselves.
-for log in "$temporary"/formatting.*; do
+for log in "$temporary"/formatting.* "$temporary"/tools-*.log; do
     [[ -f "$log" && ! -L "$log" ]] || continue
     selections+=("$temporary" "${log#"$temporary"/}")
 done

@@ -5,19 +5,19 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `fd11692f31e7dfd44dcc2ca56634eaeab3569825` (0.2.14). Its provenance and
+  from revision `88a73139a0f083344c41a6f6f4b5c3a8aca7dc1d` (0.3.0). Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
 - Apply the [shared audit methods](audits/README.md) from revision
-  `fd11692f31e7dfd44dcc2ca56634eaeab3569825`, recorded separately in
+  `88a73139a0f083344c41a6f6f4b5c3a8aca7dc1d`, recorded separately in
   [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). That
   supplemental snapshot also supplies pinned host/IC setup at the same
   reviewed revision. The isolated
   [Cargo helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
   supplies the structured dependency checker, Cargo readers/rewrites,
   annotated-tag checker and release-command adoption checker from
-  `fd11692f31e7dfd44dcc2ca56634eaeab3569825`. The root baseline snapshot owns
+  `88a73139a0f083344c41a6f6f4b5c3a8aca7dc1d`. The root baseline snapshot owns
   the formatter guard, Make execution admission and the adopted formatting/release
   Make includes. Apply the
   [dependency pinning rules](rules/dependency-pinning.md) with the exact local
@@ -29,7 +29,8 @@ This file is normative for automated contributors.
   the local adapter selects its CLI from the one root lockfile. The paired baseline and maintenance
   rule are adopted together; all three snapshots use the same reviewed revision.
   Common setup/check/LOC commands come from [make/tools.mk](make/tools.mk);
-  Make, update-dev and CI select the complete pinned host bundle.
+  Make, update-dev and CI select the complete host, IC and Cargo toolsets,
+  followed by the existing Testkit setup/check targets in the ordered local lists.
   The consumer-owned [IC pin matrix](ci/ic-tools.tsv) selects the five shared
   tools and is excluded from the immutable audit export. It contains no PocketIC
   policy. Shared installers receive that explicit matrix; a snapshot refresh

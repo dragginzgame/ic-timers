@@ -4,68 +4,59 @@
 
 Last updated: 2026-10-10
 
-This is the compact session handoff. Historical implementation and acceptance
-belong with their [release owner](../releasing.md), [adoption owner](../shared-tooling.md)
-and [safety boundary](../../SAFETY.md). The previous handoff is preserved verbatim
-in [the historical archive](archive-2026-10-10.md).
+This compact handoff links the [release evidence](../releasing.md),
+[Shared adoption](../shared-tooling.md) and [safety boundary](../../SAFETY.md).
+The earlier accumulated handoff remains in [its historical archive](archive-2026-10-10.md).
 
-## Released 0.16.6
+## Released source and acceptance
 
-The maintainer reports **0.16.6** live. Its release commit is
-`0b929539686a5c428a6a3af96c2a88139cc5553d`; all four local members are 0.16.6.
-The single root graph selects Testkit **0.28.1**, Host **0.10.2**, Metrics
-**0.3.7** and PocketIC **16.1.0**. All three released snapshots select Shared
-**0.2.13** `5864f468d39f8f9d1bd26fca1afe0e20f25f1b5e`, **55/30/11** files.
+Latest release commit **0.16.7** is `999d9b5c3a84ec5abd729ca72b8f259abbb060e1`.
+The finalized notes and matching tag job exist. Its released graph selects
+Testkit 0.29.0, Host 0.11.0, Metrics 0.3.7 and PocketIC 16.1.0, four local 0.16.7
+members and Shared 0.2.14 snapshots (55/30/11). Matching
+[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38042864177) passes
+Linux/MSRV, with Intel running and ARM queued at inspection;
+[tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/38042864373) passes.
+Do not count this source as complete native acceptance or redispatch jobs.
 
-Matching main MSRV and tag-truth jobs pass. Linux is running; both native macOS
-jobs are queued at inspection. The [0.16.6 acceptance owner](../releasing.md#0166-release-acceptance)
-records exact jobs and remaining scope. Do not reuse the completed
-[0.16.5 three-host evidence](../releasing.md#0165-linux-and-tag-acceptance) for
-0.16.6's new lock/path/preflight cases or graph, or dispatch duplicate jobs.
+Released **0.16.6** now has all-host and tag acceptance. Downloaded raw logs
+prove its actual lock-preservation, directory/preflight/adapter cases, library
+and product gates. [The source-bound owner](../releasing.md#0166-release-acceptance)
+records that scope; #35 is closed with its remaining proof complete. Earlier results do not
+qualify the new Shared selection or incoming dependency graph.
 
-Only [#35](https://github.com/dragginzgame/ic-timers/issues/35) remains open
-locally, for the released explicit staged/working Cargo.lock preservation
-assertions on all three hosts. Original Make/format adoption acceptance is
-complete. #34 and #30 remain closed with their separate completed qualification.
+## Pending 0.17.0
 
-## Pending 0.16.7
+The undated draft adopts committed Shared **0.3.0**
+`88a73139a0f083344c41a6f6f4b5c3a8aca7dc1d` through all three canonical snapshots,
+retaining 55/30/11 files. The [adoption owner](../shared-tooling.md#shared-tooling-030-complete-toolset)
+records complete host → IC → Cargo aggregates, followed by existing Testkit
+setup/check targets. CI/update-dev prepare Rust first; the separate global
+cargo-sort route is removed. CI retains complete aggregate failure logs.
+Local parallel-Make extension and collector assertions are written, not run.
+[#36](https://github.com/dragginzgame/ic-timers/issues/36) owns delivery/qualification.
 
-The undated changelog batch adopts committed Shared **0.2.14**
-`fd11692f31e7dfd44dcc2ca56634eaeab3569825`, retaining **55/30/11** selections.
-The [adoption owner](../shared-tooling.md#shared-tooling-0214-ci-inspection)
-records the clean canonical exports and CI inspection fix. Empty failed-step
-logs now produce an explicit evidence gap for failed/unfinished runs; failed
-fetches retain partial logs and their original status. This adds no timer API,
-runtime change or local copy of producer tests. The same batch records incoming
-Testkit 0.29 / Host 0.11 dependency selections separately below.
+Incoming maintainer Cargo edits select Metrics **0.4.0**, Testkit **0.30.0**,
+Host **0.11.0** and PocketIC **16.1.0**. They also report local version **0.16.6**,
+although HEAD is the 0.16.7 release; preserve those user-owned bytes. Contributor
+preparation does not repair or bump Cargo metadata. The next user-operated minor
+preparation must select **0.17.0**.
 
-Cargo versions remain 0.16.6. Incoming maintainer catalog/lock edits and unchanged
-consumer pins/index are preserved. Snapshot integrity, source/mode/companion,
-syntax, documentation and locked offline metadata checks are preparation only.
-Contributor tests/builds/lint/setup and all Cargo/release effects remain
-user-owned. The normal user-operated gate qualifies the pending adoption.
+The minor boundary covers the changed tooling contract and Metrics' public Rust
+package identity. Consumers exchanging public summaries must use Metrics 0.4 or
+`ic_timers::MeasurementSummary`. [The identity/graph owner](../design/callback-delivery-ownership.md#ic-metrics-04-adoption)
+records unchanged arithmetic, published source comparisons and remaining execution
+qualification. [#37](https://github.com/dragginzgame/ic-timers/issues/37) stays open
+for delivered alignment. Testkit's existing startup/CLI calls need no adapter;
+its packaged CLI lock selects Host 0.11, and the timer library has no Host/Testkit
+edge. No timer runtime mechanism, persistence or optimization is added.
 
-## Upstream ownership and next action
+## Next action and authority
 
-Timers uses all four Host crates through the unpublished native Testkit harness;
-the timer library has no Host/Testkit dependency. Testkit's separately installed
-CLI uses its own packaged lock, independently of the root graph.
-[The earlier Host ownership review](../releasing.md#host-011-ownership-review)
-traced the migration to its Testkit owner. No direct Timers dependency is needed.
-
-Testkit **0.29.0** is now published and on remote main at
-`e15cc2acfd9324f6877f854415005f91d169a031`. Maintainer edits select it and all four
-Host **0.11.0** packages. Its packaged CLI lock also selects Host 0.11.0, while
-PocketIC remains 16.1.0. The existing harness's public startup calls and CLI
-setup/check contract need no adapter. The
-[preparation owner](../releasing.md#testkit-029-and-host-011-preparation) records
-published source equality, the locked graph and remaining execution qualification.
-[Testkit #47](https://github.com/dragginzgame/ic-testkit/issues/47) owns upstream
-migration acceptance. Metrics remains 0.3.7; no metric adapter or timer feature is
-justified by this pass.
-
-Next: finish source-bound 0.16.6 all-host acceptance and close #35 when its
-remaining proof passes; qualify the newly selected Testkit/Host graph through the
-normal user-operated gate.
-Pending 0.16.7 is repository-only maintenance and normally bundles with the next
-code-bearing release; an explicit maintainer release still retains the full gate.
+Permitted integrity/source/syntax/documentation/locked-metadata checks pass.
+Leave the normal full gate to the maintainer. New source has no hosted result;
+Linux/Bash source inspection does
+not qualify macOS. All tests/builds/lint/setup and Cargo/release effects remain
+user-owned. Preserve pins, index, existing installations and failure evidence.
+The tooling alone is repository-only work; incoming Metrics identity alignment
+is crate-impacting and must not be published as a 0.16 patch.

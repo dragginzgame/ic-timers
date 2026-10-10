@@ -1,9 +1,72 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.3.0 complete toolset
+
+Pending **0.17.0** adopts committed Shared **0.3.0**
+`88a73139a0f083344c41a6f6f4b5c3a8aca7dc1d` after released 0.16.7
+`999d9b5c3a84ec5abd729ca72b8f259abbb060e1`. All three canonical exports retain
+**55 baseline / 30 audit-setup / 11 helper files**. Clean detached source,
+canonical export logs and preserved inputs are retained under
+`/tmp/ic-timers-shared030.roCrPG/`. The dirty sibling dashboard is excluded;
+no fleet caller or additional snapshot file is selected. All pin values remain
+unchanged; the consumer-owned IC matrix is not overwritten.
+
+The host installer always authenticates/adopts jq, yq, ripgrep with PCRE2 and
+cloc. Its removed optional flags have no aliases. Both common aggregates now
+run host → five IC executables → cargo-sort/cargo-sort-derives/candid-extractor,
+stopping on failure. This consumer registers its existing `install-testkit-server`
+and `pocketic-check` as the matching ordered product extensions. Those targets
+do not call the aggregate; Testkit retains CLI/server selection, receipts and
+offline admission. The admitted release preflight and complete release roster
+retain their existing fetch/setup/check boundaries.
+
+`update-dev` prepares the pinned Rust toolchain before aggregate setup and offline
+check, then installs the formatting hook. All four hosted setup sites likewise
+prepare their declared toolchain first. Separate global cargo-sort installation
+and repeated Testkit setup are removed. CI uses explicit Bash pipefail while
+teeing complete aggregate logs into RUNNER_TEMP; the existing local collector
+retains `tools-*.log` with formatter failures and failed builds/bundles. The
+canonical selector uses complete host admission; selected shared fixtures and
+the retained-evidence action refresh with their owners.
+
+The existing local Testkit adapter fixture gains actual root-Make aggregate
+coverage under `-j4`: common steps must precede CLI/server setup and check, and
+failure at each boundary must stop later effects while preserving the fixture
+lock. The collector fixture compares retained aggregate log bytes/modes. Shared
+fixtures retain ownership of common downloads, receipts, reuse and generic
+ordering; this consumer does not implement another installer or pin catalog.
+These new behavioral assertions are written but unexecuted under the approved
+local validation exception. Native macOS execution is still required separately.
+
+The changed setup/host-installer contract requires a minor boundary. The same
+0.17.0 batch preserves incoming Metrics 0.4 and Testkit 0.30 selections; their
+[public identity and graph review](design/callback-delivery-ownership.md#ic-metrics-04-adoption)
+is separate from Shared setup. Cargo/pin/index inputs are preserved; no package
+version or release effect is performed. Existing installations, receipts and
+failure artifacts remain intact. No timer runtime optimization is claimed.
+
+[#36](https://github.com/dragginzgame/ic-timers/issues/36) owns consumer delivery
+and qualification; [Shared #98](https://github.com/dragginzgame/shared-tooling/issues/98)
+owns producer acceptance. At inspection,
+[matching Shared CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38044218125)
+passes lint/security, with Linux running and both native jobs queued. Committed
+source, producer results and local integrity checks do not qualify consumer
+setup or its new graph. Tests/builds/lint/setup and release execution remain
+maintainer-owned; the full normal gate is retained.
+
+Permitted preparation checks pass: exact source/hash/mode/companion closure,
+all three actual snapshot checks, syntax for 42 selected/changed shell scripts,
+six embedded fixture stubs and all 28 workflow shell steps, parsed workflow
+pipeline/PATH review, 279 documentation targets/anchors, whitespace and complete
+locked offline metadata. Incoming Cargo bytes, both pin files and real index
+are unchanged. These checks do not execute the new aggregate or its fixtures.
+[Consumer feedback](https://github.com/dragginzgame/ic-timers/issues/36#issuecomment-6096551930)
+records this preparation; native/delivery acceptance remains open at that owner.
+
 ## Shared Tooling 0.2.14 CI inspection
 
 After released IC Timers **0.16.6** `0b929539686a5c428a6a3af96c2a88139cc5553d`,
-pending compatible **0.16.7** refreshes all three canonical snapshots to committed
+subsequently released **0.16.7** refreshed all three canonical snapshots to committed
 Shared **0.2.14** `fd11692f31e7dfd44dcc2ca56634eaeab3569825`, retaining
 **55 baseline / 30 audit-setup / 11 helper files**. Clean detached source and
 canonical export records are retained at `/tmp/ic-timers-shared0214.axid05wo/`.

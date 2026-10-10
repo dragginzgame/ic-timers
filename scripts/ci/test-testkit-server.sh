@@ -99,4 +99,68 @@ for invalid in missing duplicate unqualified; do
     test ! -e "$fixture/installer-arguments"
     test ! -e "$fixture/owner-arguments"
 done
-echo 'Testkit adapter setup/offline admission, lock selection and failure propagation passed'
+
+# Exercise this consumer's actual aggregate wiring with substitute common tools
+# and owner effects. Upstream tests own tool downloads/receipts; this proves the
+# local Testkit extension runs after common setup/check even under parallel Make.
+unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
+mkdir -p "$consumer/make" "$consumer/scripts/ci"
+cp "$root/Makefile" "$consumer/"
+cp "$root/make/tools.mk" "$root/make/rust-format.mk" "$root/make/release.mk" \
+    "$root/make/execution.mk" "$consumer/make/"
+cp "$root/scripts/ci/check-make-execution.sh" "$consumer/scripts/ci/"
+cp "$fixture/next-lock" "$consumer/Cargo.lock"
+export TESTKIT_AGGREGATE_LOG="$fixture/aggregate-commands"
+cat > "$fixture/common-installer" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+phase=setup
+selected=false
+for argument in "$@"; do
+    [[ "$argument" != --check ]] || phase=check
+    [[ "$argument" != --package ]] || selected=true
+done
+case "${0##*/}" in
+    install-host-tools.sh) step=host ;;
+    install-ic-tools.sh) step=ic ;;
+    install-rust-tools.sh) step=rust; [[ "$selected" != true ]] || step=cli ;;
+esac
+step="$step-$phase"
+printf '%s\n' "$step" >> "$TESTKIT_AGGREGATE_LOG"
+[[ "${TESTKIT_AGGREGATE_FAIL:-}" != "$step" ]] || exit 23
+[[ "$selected" != true ]] || printf '%s\n' "$TESTKIT_ADAPTER_FIXTURE/owner"
+EOF
+for tool in host ic rust; do
+    cp "$fixture/common-installer" "$consumer/scripts/dev/install-$tool-tools.sh"
+done
+cat > "$fixture/owner" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+step="server-$1"
+printf '%s\n' "$step" >> "$TESTKIT_AGGREGATE_LOG"
+[[ "$1" != check || "$CARGO_NET_OFFLINE" == true ]]
+[[ "${TESTKIT_AGGREGATE_FAIL:-}" != "$step" ]] || exit 23
+printf '%s\n' "$TESTKIT_ADAPTER_FIXTURE/admitted-server"
+EOF
+for target in install-tools tools-check; do
+    phase=setup; [[ "$target" != tools-check ]] || phase=check
+    steps=("host-$phase" "ic-$phase" "rust-$phase" "cli-$phase" "server-$phase")
+    : > "$TESTKIT_AGGREGATE_LOG"
+    make --no-print-directory -j4 -C "$consumer" "$target" \
+        > "$fixture/$target.log" 2>&1
+    printf '%s\n' "${steps[@]}" > "$fixture/expected-aggregate"
+    cmp "$fixture/expected-aggregate" "$TESTKIT_AGGREGATE_LOG"
+    cmp "$fixture/next-lock" "$consumer/Cargo.lock"
+    for index in 0 1 2 3 4; do
+        : > "$TESTKIT_AGGREGATE_LOG"
+        status=0
+        TESTKIT_AGGREGATE_FAIL="${steps[$index]}" \
+            make --no-print-directory -j4 -C "$consumer" "$target" \
+            > "$fixture/$target-failure.log" 2>&1 || status=$?
+        test "$status" -eq 2
+        printf '%s\n' "${steps[@]:0:index+1}" > "$fixture/expected-aggregate"
+        cmp "$fixture/expected-aggregate" "$TESTKIT_AGGREGATE_LOG"
+        cmp "$fixture/next-lock" "$consumer/Cargo.lock"
+    done
+done
+echo 'Testkit adapter admission and ordered consumer setup/check failure propagation passed'
