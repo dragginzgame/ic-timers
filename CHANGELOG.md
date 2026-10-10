@@ -15,6 +15,10 @@ All notable changes to this project are recorded here.
   reject selection changes during installation
   ([Shared #96](https://github.com/dragginzgame/shared-tooling/issues/96)).
 
+- Keep only the newest CI run per workflow and branch or PR, cancelling older
+  queued and running checks while retaining the existing host matrix and gates
+  ([Shared #108](https://github.com/dragginzgame/shared-tooling/issues/108)).
+
 ## [0.17.4] - 2026-10-10
 
 ### Development

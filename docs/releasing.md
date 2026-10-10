@@ -1100,8 +1100,12 @@ scratch Make recipe, preserving Make status 2 and raw/combined failure logs.
 This proves workflow retention ordering with controlled substitutes, not a real
 network outage or a canister failure. The original jobs stay failed; the driver never
 uses `continue-on-error`. Existing final failure-only collector/upload steps own
-the artifacts. Manual dispatches have separate concurrency groups by stage and
-do not cancel normal source qualification. PR/main gates retain their normal
+the artifacts. CI keeps only the newest run per workflow and branch or PR ref,
+including manual dispatches, under
+[the shared policy](https://github.com/dragginzgame/shared-tooling/issues/108).
+A manual observation can therefore supersede normal validation or another stage
+on the same ref; dispatch observations sequentially when both stages are needed.
+Cancelled runs do not qualify their source. PR/main gates retain their normal
 scope; manual evidence runs skip the duplicate MSRV/tag jobs.
 
 The [driver](../scripts/ci/qualify-failure-evidence.sh) retains
