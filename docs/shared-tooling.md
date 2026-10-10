@@ -15,7 +15,7 @@ temporary Git consumer; no sibling file is modified or uncommitted byte copied.
 repair. Initial, post-snapshot and post-format tree observations admit command
 status before comparing values. The consumer hook fixture injects status 23
 with empty or matching tree output at each boundary, checking the diagnostic,
-exact status, stopped later Git commands, raw index and working-file preservation,
+exact status, stopped later Git commands, staged entries and working-file preservation,
 and whether formatting ran. Existing successful formatting, mode rejection,
 partial staging and formatter-failure cases remain. Cases are written, not run;
 source-bound current/native qualification remains outstanding, so #40 stays open.
@@ -48,6 +48,19 @@ Cargo, lock, pin catalogs and raw index compare exactly with preserved copies.
 The [exact-source producer CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38061078001)
 is queued at observation; producer delivery supplies no consumer execution or
 native-host proof. The maintainer's existing full gate retains qualification.
+
+The maintainer's later release validation passed the Testkit adapter fixture,
+then stopped in the first empty-output hook case because its raw-index assertion
+rejected a harmless `TREE` cache refresh. Retained fixture
+`/tmp/timer-hook-test.lcNSLP/` contains identical 263 entry records and staged
+maps before/after, with the cache extension growing from 1357 to 1644 bytes.
+The local fixture now compares NUL-delimited `git ls-files --stage` output, so
+paths, object IDs, modes and stages remain checked independently of cache bytes.
+Failure status, stopped commands, working files and full staged diff checks
+remain. Original fixture/logs are preserved; diagnosis and incoming inputs are
+at `/tmp/ic-timers-hook-index-cache.nbhv05iq/`. This repair changes no shared hook
+or snapshot bytes. Syntax and diff inspection are preparation evidence; the
+contributor does not rerun the fixture or gate under the validation exception.
 
 ## Shared Tooling 0.3.5 review and pending hook repair
 

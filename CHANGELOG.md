@@ -10,6 +10,9 @@ All notable changes to this project are recorded here.
   pre-commit hook can copy or stage files, with consumer failure-isolation cases
   ([#40](https://github.com/dragginzgame/ic-timers/issues/40),
   [Shared #106](https://github.com/dragginzgame/shared-tooling/issues/106)).
+- Avoid false hook-test failures when Git refreshes its internal index cache;
+  continue checking staged content and working-file preservation
+  ([#40](https://github.com/dragginzgame/ic-timers/issues/40)).
 - Delegate Testkit CLI lock selection to the shared Cargo installer, removing
   the local parser. Setup and offline checks share strict package admission and
   reject selection changes during installation

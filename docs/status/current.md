@@ -40,6 +40,12 @@ is queued at observation; that is not consumer/native qualification.
 The shared hook preserves failed initial/post-snapshot/post-format tree reads
 before copying or staging, including matching output with failed status. The
 consumer fixture adds empty/matching failure cases at all three boundaries.
+The maintainer's gate reached the first hook case and exposed an overly strict
+raw-index assertion: only Git's `TREE` cache changed, with all 263 entries intact.
+The fixture now checks staged paths/objects/modes/stages, plus its existing file,
+diff, failure-status and stopped-command assertions. Failed fixture
+`/tmp/timer-hook-test.lcNSLP/` remains; diagnosis and inputs are at
+`/tmp/ic-timers-hook-index-cache.nbhv05iq/`. No contributor rerun occurs.
 The Testkit adapter now delegates its absolute root lock to the shared Cargo
 installer, removing the duplicate parser and parser-specific local cases.
 Shared fixtures own strict package/source/version admission and selection changes;

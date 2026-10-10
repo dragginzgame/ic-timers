@@ -167,7 +167,8 @@ for observation in 1 2 3; do
         state="$temporary_root/tree-failure-$observation-$output"
         mkdir "$state"
         capture_before_hook
-        cp .git/index "$state/index-before"
+        # write-tree may populate the TREE cache without changing staged data.
+        git ls-files --stage -z > "$state/index-before"
         status=0
         CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 \
             PATH="$temporary_root/tree-failure-bin:$PATH" \
@@ -178,7 +179,8 @@ for observation in 1 2 3; do
         [[ "$status" == 23 && "$(cat "$state/count")" == "$observation" ]]
         grep -Fq 'injected write-tree observation failure' "$state/output.log"
         [[ "$(tail -n 1 "$state/commands")" == write-tree ]]
-        cmp .git/index "$state/index-before"
+        git ls-files --stage -z > "$state/index-after"
+        cmp "$state/index-after" "$state/index-before"
         assert_unchanged
         if [[ "$observation" == 3 ]]; then
             grep -Fxq 'Formatting... ok' "$state/output.log"
