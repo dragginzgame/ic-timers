@@ -77,6 +77,15 @@ Tests/builds/lint/setup and all Cargo/release effects remain user-owned. The
 incoming Metrics/cc/smallvec/syn graph likewise does not inherit released qualification.
 No new timer defect or feature is evidenced by these tooling issues.
 
+The maintainer's latest release verification passes fetch, Testkit server setup
+and PocketIC admission, then fails the hook fixture's exact-output assertion.
+The retained output proves the concise formatter succeeds and the hook adds its
+existing selected-file refresh confirmation. The fixture now expects both lines;
+direct `fmt-check` keeps its one-line assertion. The
+[adoption owner](../shared-tooling.md#shared-tooling-0211-formatting-and-make-admission)
+records the exact failure log and scratch input. Contributor syntax/diff checks
+are permitted; the repaired fixture and complete gate remain user-owned.
+
 **#30 is closed with completed compact transport qualification.** All six frozen v0.14.23
 producers reach the intended failure and archive/upload successfully; all six
 hosted verifiers and actual downloaded archives pass. The [evidence owner](../releasing.md#compact-hosted-qualification-at-01423)

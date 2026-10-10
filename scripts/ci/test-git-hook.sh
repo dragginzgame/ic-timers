@@ -132,7 +132,10 @@ if ! CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 \
     cat "${temporary_root}/format.log" >&2
     exit 1
 fi
-printf 'Formatting... ok\n' > "${temporary_root}/expected-format-output"
+# The formatter owns one success line; the hook separately confirms index refresh.
+printf '%s\n' 'Formatting... ok' \
+    'Pre-commit formatting passed; refreshed only the selected files.' \
+    > "${temporary_root}/expected-format-output"
 cmp "${temporary_root}/expected-format-output" "${temporary_root}/format.log"
 for path in crates/hook-fixture/src/lib.rs testing/crates/hook-probe/src/lib.rs; do
     formatted="$(git show ":${path}")"

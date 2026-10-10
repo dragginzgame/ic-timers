@@ -6,6 +6,8 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Correct the hook fixture's concise-output assertion to include the existing
+  selected-file refresh confirmation after the formatter's one success line.
 - Refresh all three snapshots to committed Shared Tooling 0.2.11, retaining
   source-version/revision diagnostics and consumer dependency/tool selections
   ([adoption owner](docs/shared-tooling.md#shared-tooling-0211-formatting-and-make-admission)).

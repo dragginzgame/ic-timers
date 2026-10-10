@@ -57,6 +57,19 @@ Shared [#30](https://github.com/dragginzgame/shared-tooling/issues/30) owns upst
 qualification; committed delivery alone does not prove native acceptance.
 This is repository-only maintenance in the existing undated 0.16.5 batch.
 
+The maintainer's 2026-10-10 release verification of preparation commit
+`71f24df` passes fetch, Testkit server setup and offline admission, then fails
+the hook fixture's exact-output comparison. Retained
+`/tmp/timer-hook-test.EouiJS/format.log` contains the correct formatter success
+line followed by the hook's existing selected-file refresh confirmation. The
+fixture incorrectly applied the formatter's one-line contract to the whole hook.
+Its expected output now includes both lines; direct `fmt-check` still requires
+exactly its one formatter line. The canonical hook and formatter are unchanged.
+Full failure log:
+`.git/release-state/validation-failures/20261010T075030Z-2112417-3-ci.log`.
+The repaired fixture remains unexecuted by the contributor; user verification
+and new-source host acceptance are still required.
+
 Earlier adoption records retain their source and qualification scope.
 
 ## Shared Tooling 0.2.9 snapshot diagnostics
