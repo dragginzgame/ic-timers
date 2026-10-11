@@ -1,13 +1,13 @@
 # Shared Tooling snapshot v1
-# version	0.6.1
+# version	0.6.2
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	731909525038c58d6f80b498e80f8630b11c685d
+revision	7f1ca16b0dfa98021d2671017ecb7de767409b0e
 file	e0e2b283d0bece7ad63bc21b0fca1495865ef04c0a522ac303c4d96cfd384685	-	DRAGGINZGAME.md
 file	e7c1c56549860efff6a579913a1632eb19868d5e2e5e5e1ed2ba3ea7171db881	-	rules/changelogs.md
 file	bb2c1617f9171f96363f2fc6bb3955d34d8dce305c6b43961fbe08a7536d24f7	-	rules/cargo-dependencies.md
 file	7e23ade4da49d8318f6d6da87f8c0dbe2dabf5981c9a560fe0215ca508cf823d	-	rules/git-hooks.md
-file	786abdd7653a2e49a3b9237438b4c516b37c1455f1f0845458d165cb69fedf66	-	docs/releases.md
+file	a11c5304d3bb8cd78af81b1c1f046c56e7f677bd0c9302a1f65e09cbffef6254	-	docs/releases.md
 file	59f6cb0b47fcfa698396776bbb391737292ebf34457ad7c65803fe7b36961499	-	docs/principles/README.md
 file	9315c9faffa4f36cfab496342535bf49d728ddd2111e8e127cbc44b3fac89ce7	-	docs/principles/decision-artifact-discipline.md
 file	2b3961ce271d95c2b8d93dcd92cfee42481aa9cb3d5d4eae0d867f2b52fa69fb	-	docs/principles/reviewable-changes.md
@@ -16,10 +16,10 @@ file	457fd38e0073c91ba470b918d4facd9faac3c5200ebd38c97e9d6b76acdaea55	-	docs/pri
 file	065c124c604efd5ab77967e2615ffe3f4d365fb941d806836947df0f7b11e25c	-	docs/supported-hosts.md
 file	4c981184847462ab3c01cac087e28309f8e054253fd95c7bbe56f643877aa708	x	scripts/ci/verify-file-checksum.sh
 file	71d1c69a25f190bc4b2b1df66d3359f172638371caa722142e820a8294d1938e	x	scripts/ci/verify-shared-tooling-snapshot.sh
-file	fc689ff5d636be1049a527f6cafa74a768005211dcbecb074b8b327d8e6bab04	x	scripts/ci/run-release.sh
+file	e1d40984915456fb5b0837462f5ee9c88e1bd7798620b49d34a8e1926ae3cec0	x	scripts/ci/run-release.sh
 file	37e028e2d9fee271ffdc06d06fc15d7a148ec524def3d9ed2afcd9910c0ec642	x	scripts/ci/next-release-version.sh
 file	e7f4c82566858b89b50c5c2f929097bdde85345a2c0c1bf553bb1170cc4f5960	-	scripts/ci/finalize-release-changelog.awk
-file	6e48da795503f730fe9a90e14635d73133719f901ba7baea899007cd196722b4	x	scripts/ci/test-release-runner.sh
+file	d744acdce6cec8407df521387dfb805d8a482e5b11e20ae517d7402a9e7f00cf	x	scripts/ci/test-release-runner.sh
 file	04dff6e105d04e0341dc9dc134db8d0300fd00e3795119bf3a103fd297dcf8e7	x	.githooks/pre-commit
 file	c1fcf72754976d3d2e5203226e97ef5f50eff4b5c0dabeb2a9b00cfcf0326645	x	scripts/dev/install-git-hooks.sh
 file	2930a9d74c1d0d10964900ed56a002cc21869dcbfd1339a1d3fb78f2c5e79201	-	rules/agent-maintenance.md

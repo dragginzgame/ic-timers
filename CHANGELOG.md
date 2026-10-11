@@ -2,6 +2,27 @@
 
 All notable changes to this project are recorded here.
 
+## [0.17.12]
+
+### Fixed
+
+- Release the native substitute's task-map borrow before dropping cancelled or
+  discarded futures. Captured-value destructors can inspect and schedule timers
+  during removal, matching the production provider's removal boundary. Cover
+  queued cancellation, suspended cancellation and queued discard. Production
+  timer behavior is unchanged
+  ([#45](https://github.com/dragginzgame/ic-timers/issues/45)).
+
+### Development
+
+- Adopt Shared Tooling 0.6.2. Interrupted releases now report the saved plan,
+  phase, candidate and both source commits, with guarded recovery guidance
+  ([Shared #126](https://github.com/dragginzgame/shared-tooling/issues/126)).
+  Document the local version helper's temporary-backup limits before retiring
+  preparation intent. Source-bound validation and complete release gates remain
+  required.
+- Refresh the locked native test graph to Host 0.13.5 through Testkit.
+
 ## [0.17.11] - 2026-10-11
 
 ### Development

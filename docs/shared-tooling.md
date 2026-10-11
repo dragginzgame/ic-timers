@@ -1,5 +1,41 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.6.2 release diagnostics adoption
+
+Pending **0.17.12** adopts committed Shared **0.6.2**
+`7f1ca16b0dfa98021d2671017ecb7de767409b0e` through the same **56/33/11** exports.
+Remote main and committed `VERSION` agree. Clean detached source, previews,
+apply logs and preserved inputs are at `/tmp/ic-timers-shared062.7tp4y5tp/`.
+The selected changes are the release runner's source-conflict diagnostics and
+regressions, guarded recovery documentation and Cargo extension guidance.
+The exporter requires no new companions or optional caller adoption.
+
+[Shared #126](https://github.com/dragginzgame/shared-tooling/issues/126) now reports
+plan/phase/base/candidate/saved/current source before refusing stale validation.
+Prepare-phase refusal links the canonical guarded maintainer procedure. It does
+not automatically retire intent, relabel validation or relax effects admission.
+[The local preparation boundary](releasing.md#changed-source-at-preparation-intent)
+records why Timers' temporary backups cannot supply missing durable-journal proof.
+Common setup paths and build policy are unchanged since 0.6.1; this refresh adds
+no forced reinstall. Machete/Audit remain optional and have no new local caller.
+
+Host 0.13.5 is already selected by incoming maintainer lock changes. Its committed
+Rust product source is unchanged from 0.13.4; it adopts contributor-tooling fixes.
+The released 0.17.11 graph uses Metrics 0.6.4, Testkit 0.33.7 and Host 0.13.4;
+the current graph differs only in the four Host selections. Keep the incoming
+lock/catalog, consumer pins and raw index intact. Root Host selection still does
+not replace Testkit's packaged CLI lock or introduce Host into the timer library.
+
+[Upstream 0.6.2 CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38143010876)
+has lint/security passing with portable/native qualification in progress at
+inspection. The previous 0.6.1 source passes Linux/lint; its native jobs were
+cancelled by the newer run, not accepted. Released
+[Timers 0.17.11](https://github.com/dragginzgame/ic-timers/actions/runs/38143223594)
+full CI has Linux/MSRV running and both native jobs queued. Keep [#44](https://github.com/dragginzgame/ic-timers/issues/44)
+open for actual exact-source native and controlled artifact evidence. Snapshot
+integrity, syntax, docs/diff and cheap metadata are preparation only; no setup,
+behavioral fixtures, tests, builds, lint, workflow dispatch or release runs here.
+
 ## Shared Tooling 0.6.1 failure and native-fixture corrections
 
 Pending **0.17.11** adopts reviewed committed Shared **0.6.1**

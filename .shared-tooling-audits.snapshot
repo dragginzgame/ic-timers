@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.6.1
+# version	0.6.2
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	731909525038c58d6f80b498e80f8630b11c685d
+revision	7f1ca16b0dfa98021d2671017ecb7de767409b0e
 file	faa9a62257ecdfd6532ac2225b3fd053012dfe9c35b8bc2ddc95288d8626a518	-	audits/README.md
 file	518d890bf485bef06c316b4cf26ac6bf357ed52bcce995e8d9b1232a103d0ea3	-	audits/code-hygiene.md
 file	35fd87d36a09ed0971841abf28535d43470c713a82581c2251b924da1ab8f484	-	audits/flow-convergence-and-duplication.md
@@ -12,7 +12,7 @@ file	b33ecebfb524f9af496c0f4f4b24650b97833e20f1fca56eedb8604a0660e109	-	audits/m
 file	fceba7f0b7e523517fa06c1e2cfed5965147a771b3348e99b3b743cf21466e51	-	docs/consuming-snapshots.md
 file	15315edad497b9b165671c3f57e9f56e6ba1d206bbc635eb0ff51afaa8456bb3	-	docs/provenance.md
 file	bc9014d8e70a309cf2f65658a7c1ea29303375bbe5087150a4087a187efd9b41	-	docs/ic-tools.md
-file	6659598f12a44d58ed0ca1cef6bcabf0b275a6a9ecdd998734c70707b5403443	-	docs/local-setup.md
+file	87f826b16f1078f2d905cb02a8d78582d44654acfaa6b26492214ac4f07dad4c	-	docs/local-setup.md
 file	82892e25292fe47c26035a0031aa4ad1996fcf181732163e75039bd657f2f84b	-	ci/tool-versions.env
 file	4692d760ea97861b52c183bb69e24c929d9baf7c292795c61d65ea3166368787	-	rules/dependency-pinning.md
 file	90eb28392912af63593a3773eff903c5ef77ebab2b9199e3c720be25a3fcbbbf	-	docs/principles/rust-code-hygiene.md

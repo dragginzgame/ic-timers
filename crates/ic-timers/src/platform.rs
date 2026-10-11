@@ -165,9 +165,10 @@ mod fake {
     )]
     pub(crate) fn clear_timer(handle: TimerHandle) {
         advance_instructions(2);
-        TASKS.with(|tasks| {
-            tasks.borrow_mut().remove(&handle.0);
-        });
+        let removed = TASKS.with(|tasks| tasks.borrow_mut().remove(&handle.0));
+        // Match provider removal: consumer future destructors run after the
+        // task-map borrow ends and may inspect or schedule other timers.
+        drop(removed);
     }
 
     pub(crate) fn time_ns() -> u64 {
@@ -255,7 +256,8 @@ mod fake {
         let Some(next_handle) = next_due_handle(time_ns()) else {
             return false;
         };
-        TASKS.with(|tasks| tasks.borrow_mut().remove(&next_handle).is_some())
+        let removed = TASKS.with(|tasks| tasks.borrow_mut().remove(&next_handle));
+        removed.is_some()
     }
 
     fn next_due_handle(now_ns: u64) -> Option<u64> {
@@ -273,5 +275,47 @@ mod fake {
                 .min_by_key(|(handle, scheduled)| (scheduled.deadline_ns, **handle))
                 .map(|(handle, _)| *handle)
         })
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use std::rc::Rc;
+
+        struct ScheduleOnDrop(Rc<Cell<bool>>);
+
+        impl Drop for ScheduleOnDrop {
+            fn drop(&mut self) {
+                assert_eq!(timer_count(), 0);
+                let _handle = set_timer(Duration::ZERO, async {});
+                self.0.set(true);
+            }
+        }
+
+        #[test]
+        fn removed_futures_can_schedule_from_their_destructors() {
+            for (discard, started) in [(false, false), (false, true), (true, false)] {
+                reset(0, 0);
+                let dropped = Rc::new(Cell::new(false));
+                let captured = ScheduleOnDrop(Rc::clone(&dropped));
+                let handle = set_timer(Duration::ZERO, async move {
+                    std::future::pending::<()>().await;
+                    drop(captured);
+                });
+                if started {
+                    assert!(run_next_due());
+                }
+                if discard {
+                    assert!(discard_next_due());
+                } else {
+                    clear_timer(handle);
+                }
+                assert!(dropped.get());
+                assert_eq!(timer_count(), 1);
+                assert!(run_next_due());
+                assert_eq!(timer_count(), 0);
+                clear_tasks();
+            }
+        }
     }
 }

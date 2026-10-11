@@ -388,6 +388,32 @@ cases use recording phase substitutes; they do not commit, tag or push.
 Release metadata and the root lockfile are checked before the release commit;
 unstaged and untracked work is rejected before committing or tagging.
 
+### Changed source at preparation intent
+
+Shared Tooling 0.6.2 reports the saved plan, phase, base/candidate and both source
+commits when validated source changes. Follow its
+[guarded recovery procedure](releases.md#source-changes-after-saved-preparation-intent)
+without editing the saved source, deleting an uncertain plan or reusing validation.
+Any recovery and release execution remains maintainer-owned.
+
+Timers' current preparation owner is `scripts/release/bump-version.sh`.
+It captures exact incoming `Cargo.toml`, `Cargo.lock` and `CHANGELOG.md` bytes in
+`ic-timers-bump.*` under the selected temporary root, installs catchable-signal
+rollback, then finalizes notes, changes the workspace version and rewrites local
+lock identities. Successful completion or successful rollback removes those
+backups. This is temporary rollback, **not a durable pre-mutation journal**;
+process termination or host loss can interrupt it. No generic `VERSION.metadata`
+file is maintained. Its absence, unchanged Cargo version or clean index cannot
+establish that preparation never began or authorize retirement of a prepare plan.
+
+For a real source conflict, inspect the exact adapter revision, retained attempt
+logs/backups, all three metadata files, index/worktree, intervening history,
+release commit and local/remote tags under the canonical release lock. Use the
+shared procedure only if positive evidence establishes all its no-effect
+conditions. Otherwise retain intent and reconcile the exact candidate with the
+metadata owner. This adoption performs no real recovery and adds no guessed
+no-effect checker or second release-state machine.
+
 If a standard release stops after the version bump, rerun the same standard
 target. The local exact-version `release-x` has no shared journal; finish its
 prepared version with the phase targets:
