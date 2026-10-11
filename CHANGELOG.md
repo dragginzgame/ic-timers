@@ -21,6 +21,8 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Fix the watchdog invariant-failure fixture's registration binding so its
+  transient cancellation assertion compiles.
 - Update runtime and size probes to exercise scheduled creation directly. Add
   native input, capacity and provider-failure cases plus a real-canister invalid
   initial-schedule subject. Qualification and Wasm/instruction measurements

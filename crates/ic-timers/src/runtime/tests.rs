@@ -2172,7 +2172,7 @@ fn watchdog_invariant_failure_overrides_nested_cancellation_and_clears_handles()
     ] {
         let _fixture = setup();
         let timer = identity("watchdog-cancel-invariant");
-        let _registration = register_watchdog(
+        let registration = register_watchdog(
             timer.clone(),
             TimerCadence::from_nanos(5).unwrap(),
             lifetime,
