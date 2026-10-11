@@ -1,9 +1,9 @@
 # Shared Tooling snapshot v1
-# version	0.5.0
+# version	0.6.0
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	a306180ce534227fcb98b882fba9a526d5d747e0
-file	171bca85b53827998df56e361954af4fe642a18d23c700adc73a30159bba10e5	-	DRAGGINZGAME.md
+revision	75180980a0c4e4252d8a915aaecfaefd92bf9a4e
+file	e0e2b283d0bece7ad63bc21b0fca1495865ef04c0a522ac303c4d96cfd384685	-	DRAGGINZGAME.md
 file	e7c1c56549860efff6a579913a1632eb19868d5e2e5e5e1ed2ba3ea7171db881	-	rules/changelogs.md
 file	bb2c1617f9171f96363f2fc6bb3955d34d8dce305c6b43961fbe08a7536d24f7	-	rules/cargo-dependencies.md
 file	7e23ade4da49d8318f6d6da87f8c0dbe2dabf5981c9a560fe0215ca508cf823d	-	rules/git-hooks.md
@@ -13,7 +13,7 @@ file	9315c9faffa4f36cfab496342535bf49d728ddd2111e8e127cbc44b3fac89ce7	-	docs/pri
 file	2b3961ce271d95c2b8d93dcd92cfee42481aa9cb3d5d4eae0d867f2b52fa69fb	-	docs/principles/reviewable-changes.md
 file	90eb28392912af63593a3773eff903c5ef77ebab2b9199e3c720be25a3fcbbbf	-	docs/principles/rust-code-hygiene.md
 file	457fd38e0073c91ba470b918d4facd9faac3c5200ebd38c97e9d6b76acdaea55	-	docs/principles/simplicity-and-maintainability.md
-file	350644f28bc2537d5242747edf9bc3627a85324c62deb5760a9a0ad7ebb83051	-	docs/supported-hosts.md
+file	065c124c604efd5ab77967e2615ffe3f4d365fb941d806836947df0f7b11e25c	-	docs/supported-hosts.md
 file	4c981184847462ab3c01cac087e28309f8e054253fd95c7bbe56f643877aa708	x	scripts/ci/verify-file-checksum.sh
 file	71d1c69a25f190bc4b2b1df66d3359f172638371caa722142e820a8294d1938e	x	scripts/ci/verify-shared-tooling-snapshot.sh
 file	fc689ff5d636be1049a527f6cafa74a768005211dcbecb074b8b327d8e6bab04	x	scripts/ci/run-release.sh
@@ -24,7 +24,7 @@ file	04dff6e105d04e0341dc9dc134db8d0300fd00e3795119bf3a103fd297dcf8e7	x	.githook
 file	c1fcf72754976d3d2e5203226e97ef5f50eff4b5c0dabeb2a9b00cfcf0326645	x	scripts/dev/install-git-hooks.sh
 file	2930a9d74c1d0d10964900ed56a002cc21869dcbfd1339a1d3fb78f2c5e79201	-	rules/agent-maintenance.md
 file	ad6a1edf04aca341040b7d4cc1b068a2c5dbe7ab34c6374c5ab2332944e8c6dd	x	scripts/ci/run-validation-targets.sh
-file	3569957c219ccb19be530e128d1a81550cc09815a9d253ab9fc90acb555e2253	-	docs/verification-helpers.md
+file	063d456f2e8b07340537c4e2943e591c140fee85bfaecb256b893be2d915dae2	-	docs/verification-helpers.md
 file	1063002468575e2f821cfec71524bde06a64634bf30455d64d2d9fed872969d6	-	docs/tag-maintenance.md
 file	af5b07687010864336277406f2a3faf06c868765897b4ab046acc05918ad60a2	-	scripts/distribution/governance-files.txt
 file	24130b81f25fe6f60d2074cb8b932dc7874e2f7088933fc87095f3a9e00c5df3	x	scripts/dev/gh-ci.sh
@@ -33,7 +33,7 @@ file	9e32385247296ce95d2b15b1290c64e6b6dff15716c1c139f21ab5e5128f4be3	x	scripts/
 file	29fec7ae242dbb88e97c9631f3987f4f2645d503d05a518b446bfcaf3debfbf6	-	make/tools.mk
 file	8a14c80cec16a2cb07454c4e0f741150bc8385cd51ebc720a84ee3af1cc63043	x	scripts/dev/cloc.sh
 file	aa9ad7cbac6fe5cef0aa78a322be56a71d07011749c05af5992277b8409798c9	x	scripts/ci/test-cloc.sh
-file	1fe8daffc7ebfd5c2fa742abca7770d7717954d07714445e5db8ffdde1ab8413	x	scripts/ci/test-tool-commands.sh
+file	2a1d4b41b41e09523b44033211810fb89590a8a2ad7a86305fa5c67566ea1098	x	scripts/ci/test-tool-commands.sh
 file	8d32526932bdaf88a6c78ccc2358fb92a49bd89b7631572766deea51923d8f58	-	rules/contributions.md
 file	fc40c8ad1c4ab850fda0e60b8cb0b3201724d020966e4d7e5d07620781f5e814	-	scripts/ci/release-pr.sh
 file	5be336cb3e8045b2d2d536542a94944b376ee812b03f786a90b9d962ab697f13	x	scripts/ci/archive-evidence.sh

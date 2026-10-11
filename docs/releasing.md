@@ -1024,9 +1024,11 @@ failure status is never turned into success by collection.
 
 [The collector](../scripts/ci/collect-failure-evidence.sh) selects that scratch
 tree, `.git/release-state/validation-failures`, `target/validation-failures` and
-failed `.tools/host-set.*` / `.tools/ic-set.*` installer candidates. It excludes
-fixture `.git` entries and does not select the checkout's installed tool trees
-or general build caches. Tar records symlinks without following them and
+the physical `.tools/rust` tree and Testkit provisioning attempts. Shared selection
+owns retention/compaction of referenced host/IC bundles; on store rejection,
+[local retention](#shared-store-rejection-and-local-failure-retention) remains
+available with explicit incomplete status. General build caches, successful Testkit
+server bundles and fixture `.git` entries are excluded. Tar records symlinks without following them and
 preserves modes, including the metadata modes used by release regressions.
 `identity.txt` records actual checkout and event SHAs, job, host, run and attempt.
 If no diagnostic payload exists yet, the archive still records that identity.
@@ -1986,9 +1988,42 @@ completed logs only, without rerunning tests, setup, CI or release commands.
 This acceptance-record update does not warrant another release or changelog
 entry; keep it untagged for the next code-bearing batch.
 
+### Shared 0.6.0 Cargo storage adoption
+
+Pending **0.17.10** adopts committed Shared **0.6.0**
+`75180980a0c4e4252d8a915aaecfaefd92bf9a4e` through **56/33/11** exports.
+[The adoption owner](shared-tooling.md#shared-tooling-060-cargo-storage-adoption)
+records exact source, required companion, preserved inputs and previews. Cargo
+storage now follows the same per-user owner as host/IC tools, through exact source,
+packaged-lock, compiler and native-environment identities. Common command PATH
+and the Testkit adapter's returned executable remain the only local selections;
+old local Cargo slots are retained evidence, not reusable installation authority.
+Run `make install-tools` then `make tools-check` with the same store setting.
+Source cache preparation is explicit; offline checks must not provision tools.
+
+The shared selector now supplies local Rust evidence plus referenced physical
+Rust generations. The collector selects that tree only through successful owner
+output, avoiding overlapping archive paths, while keeping its independent safe
+local selection on failure. A new local case constructs a failed generation and
+reference through the canonical store helper, and compares extracted logs/build
+bytes, modes and links. Rejected-store cases exclude shared Rust payloads as well
+as host/IC payloads. The shared Rust fixture remains selected by `release-check`
+and owns compiler/package/native changes, two-checkout reuse and failure retention;
+no alternate builder or store manager is introduced.
+
+The prepared [local rejection repair](#shared-store-rejection-and-local-failure-retention)
+remains in the same draft. Upstream also repairs its action, including archive
+upload before incomplete collection fails. That owner behavior does not replace
+Timers' existing checkout/event identity and manual artifact verifier. The normal
+complete CI/MSRV/probe/recovery/cohort gate and Linux/Intel/ARM qualification remain
+required under [#44](https://github.com/dragginzgame/ic-timers/issues/44).
+No tests/builds/lint/setup or release execution runs during preparation. This
+repository-only adoption leaves the library API, dependencies and consumer build
+requirements unchanged; no measured product Wasm/instruction saving is claimed.
+
 ### Shared 0.5.0 storage adoption
 
-Pending **0.17.9** adopts committed Shared **0.5.0**
+Released **0.17.9** adopts committed Shared **0.5.0**
 `a306180ce534227fcb98b882fba9a526d5d747e0` through the **56/32/11** canonical
 exports. The supplemental export adds the required store helper and fixture;
 [the adoption record](shared-tooling.md#shared-tooling-050-storage-adoption)
@@ -2027,9 +2062,46 @@ Cargo/version mutation, staging, commits and release execution remain user-owned
 
 The [package-impact rules](../rules/changelogs.md#classify-the-released-packages-own-impact)
 classify this as contributor tooling, compatible for the IC Timers library.
-The pending version remains 0.17.9; no consumer API/runtime/build requirement
+The adoption was delivered in 0.17.9; no consumer API/runtime/build requirement
 changes or measured Wasm/instruction saving are claimed. Keep the normal complete
 release gate rather than weakening it for a tooling-only subject.
+
+Released source is `46785c3830786ccb17da1987cc9519c046b900d9`.
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/38134351101)
+passes; [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38134350782)
+is queued at inspection. Tag-only success does not qualify the new shared-store
+fixtures or native hosts and cannot close #44.
+
+### Shared-store rejection and local failure retention
+
+Pending **0.17.10** repairs the local consumer impact of
+[Shared #121](https://github.com/dragginzgame/shared-tooling/issues/121).
+The 0.17.9 collector exits before archiving local evidence if the shared selector
+cannot admit the configured store, even when no host/IC tools exist yet.
+The repair captures selector status and diagnostics, ignores all partial selection
+output on failure, and archives the independently selected local logs, Rust tree,
+Testkit attempts and fixture scratch. A physical local `.tools` directory also
+contributes host/IC references and candidates; links are recorded without following
+their targets. A redirected `.tools` root is excluded. No rejected store payload
+is selected, and installer/check/store admission and shared snapshot bytes are unchanged.
+
+An incomplete archive contains `tool-evidence/selection-status.txt` with the
+original status and `shared_collection=incomplete`, `selection.log` and the raw
+`partial-selections.nul` diagnostic. Collection exits with the original selector
+status after producing the archive, retains metadata scratch, and emits no complete
+collection measurements. Existing failure-only workflow upload steps still upload
+the archive and collection log. Archiver failure remains a separate failure and
+does not overwrite any previously retained output.
+
+Maintained cases cover injected partial selector output and actual symlinked-store
+rejection with physical, absent and redirected local tool roots. They compare
+extracted local logs/build bytes and references, retain the rejection/status and
+exclude physical shared bundles and external targets. Existing valid compact/full
+retention, archive failure and occupied-output cases remain. These cases are
+prepared, not executed: tests/builds/lint and native Linux/Intel/ARM qualification
+remain user-owned under [#44](https://github.com/dragginzgame/ic-timers/issues/44).
+The upstream composite action and its full/compact acceptance remain owned by
+Shared #121; this change repairs only Timers' local collector.
 
 ### 0.17.8 release evidence
 

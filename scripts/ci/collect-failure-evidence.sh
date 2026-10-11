@@ -55,30 +55,48 @@ fi
 if [[ -d "$root/target/validation-failures" ]]; then
     selections+=("$root" target/validation-failures)
 fi
-# Preserve the physical Rust tool tree: completed slots own their build logs,
-# receipts and admitted bytes; failed candidates remain under build/. The shared
-# archiver retains links without following them. Select only physical evidence roots.
-if [[ ! -L "$root/.tools" && ! -L "$root/.tools/rust" && -d "$root/.tools/rust" ]]; then
-    selections+=("$root" .tools/rust)
-fi
 # Preserve Testkit provisioning attempts, never its admitted server bundles.
 # Testkit owns the attempt prefix and preserves those directories.
-for attempt in "$root"/.tools/testkit-server/.setup-v1-*; do
-    [[ -d "$attempt" && ! -L "$attempt" ]] || continue
-    selections+=("$root" "${attempt#"$root"/}")
-done
-# The shared selector freshly checks the exact managed selections with our pins.
+if [[ ! -L "$root/.tools" && ! -L "$root/.tools/testkit-server" ]]; then
+    for attempt in "$root"/.tools/testkit-server/.setup-v1-*; do
+        [[ -d "$attempt" && ! -L "$attempt" ]] || continue
+        selections+=("$root" "${attempt#"$root"/}")
+    done
+fi
+# The shared selector owns local Rust evidence and referenced shared generations,
+# and freshly checks the exact managed host/IC selections with our pins.
 # Failed, changed and unselected bundles stay full; verified sets retain checks
 # and receipts. Keep selection output on disk so producer failure cannot be lost
 # in a process substitution or mistaken for an empty successful selection.
 mkdir "$metadata/tool-evidence"
+selection_status=0
 bash "$script_root/scripts/ci/select-tool-evidence.sh" compact "$root" \
     "$metadata/tool-evidence" "$root/ci/tool-versions.env" "$root/ci/ic-tools.tsv" \
-    > "$metadata/tool-selections.nul"
-while IFS= read -r -d '' selected_root && IFS= read -r -d '' selected_path; do
-    selections+=("$selected_root" "$selected_path")
-done < "$metadata/tool-selections.nul"
-if [[ -d "$metadata/tool-evidence/host" || -d "$metadata/tool-evidence/ic" ]]; then
+    > "$metadata/tool-selections.nul" 2> "$metadata/tool-evidence/selection.log" || selection_status=$?
+cat "$metadata/tool-evidence/selection.log" >&2
+if [[ "$selection_status" == 0 ]]; then
+    while IFS= read -r -d '' selected_root && IFS= read -r -d '' selected_path; do
+        selections+=("$selected_root" "$selected_path")
+    done < "$metadata/tool-selections.nul"
+else
+    # An unadmitted store must not prevent safe local evidence retention. Ignore
+    # all partial selector output; preserve local references without traversing
+    # them. Only the shared owner may admit physical store payloads.
+    printf 'status=%s\nshared_collection=incomplete\n' "$selection_status" \
+        > "$metadata/tool-evidence/selection-status.txt"
+    cp -p "$metadata/tool-selections.nul" "$metadata/tool-evidence/partial-selections.nul"
+    if [[ ! -L "$root/.tools" && -d "$root/.tools" ]]; then
+        if [[ ! -L "$root/.tools/rust" && -d "$root/.tools/rust" ]]; then
+            selections+=("$root" .tools/rust)
+        fi
+        for candidate in "$root"/.tools/host "$root"/.tools/ic \
+            "$root"/.tools/host-set.* "$root"/.tools/ic-set.*; do
+            [[ -e "$candidate" || -L "$candidate" ]] || continue
+            selections+=("$root" "${candidate#"$root"/}")
+        done
+    fi
+fi
+if [[ "$selection_status" != 0 || -d "$metadata/tool-evidence/host" || -d "$metadata/tool-evidence/ic" ]]; then
     selections+=("$metadata" tool-evidence)
 fi
 archive_started=$SECONDS
@@ -86,6 +104,11 @@ bash "$script_root/scripts/ci/archive-evidence.sh" "$archive" "${selections[@]}"
 archive_seconds=$((SECONDS - archive_started))
 archive_bytes="$(wc -c < "$archive")"
 archive_bytes="${archive_bytes//[[:space:]]/}"
+if [[ "$selection_status" != 0 ]]; then
+    printf 'Partial CI failure evidence archived at: %s; shared collection incomplete (exit %s)\n' \
+        "$archive" "$selection_status" >&2
+    exit "$selection_status"
+fi
 printf 'CI failure evidence measurements: archive_bytes=%s archive_seconds=%s\n' \
     "$archive_bytes" "$archive_seconds"
 printf 'CI failure evidence archived at: %s\n' "$archive"

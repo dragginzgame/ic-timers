@@ -5,19 +5,19 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `a306180ce534227fcb98b882fba9a526d5d747e0` (0.5.0). Its provenance and
+  from revision `75180980a0c4e4252d8a915aaecfaefd92bf9a4e` (0.6.0). Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
 - Apply the [shared audit methods](audits/README.md) from revision
-  `a306180ce534227fcb98b882fba9a526d5d747e0`, recorded separately in
+  `75180980a0c4e4252d8a915aaecfaefd92bf9a4e`, recorded separately in
   [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). That
   supplemental snapshot also supplies pinned host/IC setup at the same
   reviewed revision. The isolated
   [Cargo helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
   supplies the structured dependency checker, Cargo readers/rewrites,
   annotated-tag checker and release-command adoption checker from
-  `a306180ce534227fcb98b882fba9a526d5d747e0`. The root baseline snapshot owns
+  `75180980a0c4e4252d8a915aaecfaefd92bf9a4e`. The root baseline snapshot owns
   the formatter guard, Make execution admission and the adopted formatting/release
   Make includes. Apply the
   [dependency pinning rules](rules/dependency-pinning.md) with the exact local
@@ -31,9 +31,12 @@ This file is normative for automated contributors.
   Common setup/check/LOC commands come from [make/tools.mk](make/tools.mk);
   Make, update-dev and CI select the complete host, IC and Cargo toolsets,
   followed by the existing Testkit setup/check targets in the ordered local lists.
-  Shared Tooling owns common executable storage: host/IC setup selects verified
-  shared bundles through local `.tools/host` and `.tools/ic` references. Cargo
-  tools remain local. Adopt only canonical installers; keep one store setting
+  Shared Tooling owns common executable storage: host/IC and Cargo setup selects
+  verified shared bundles through checkout-local references. Cargo tools use the
+  standard tool-build environment and exact compiler/native/package/packaged-lock
+  identities; application flags and wrappers remain repository-owned. The shared
+  selector owns local Rust evidence and referenced physical generations. Adopt
+  only canonical installers; keep one store setting
   across setup, checks and evidence. Retain earlier installations without an
   old-bundle fallback, independent store manager or automatic deletion.
   The consumer-owned [IC pin matrix](ci/ic-tools.tsv) selects the five shared

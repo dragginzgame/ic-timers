@@ -1,37 +1,38 @@
 # Shared Tooling snapshot v1
-# version	0.5.0
+# version	0.6.0
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	a306180ce534227fcb98b882fba9a526d5d747e0
+revision	75180980a0c4e4252d8a915aaecfaefd92bf9a4e
 file	faa9a62257ecdfd6532ac2225b3fd053012dfe9c35b8bc2ddc95288d8626a518	-	audits/README.md
 file	518d890bf485bef06c316b4cf26ac6bf357ed52bcce995e8d9b1232a103d0ea3	-	audits/code-hygiene.md
 file	35fd87d36a09ed0971841abf28535d43470c713a82581c2251b924da1ab8f484	-	audits/flow-convergence-and-duplication.md
 file	ffdca09602c44c8aff8fc2a17588b20eb6a56e2e71fb6d42ad75087fdd65819b	-	audits/complexity-and-technical-debt.md
 file	1b64cf2ba0393ab329ec29eb05a696d47ef5933f5ab9bff6e1fe4a7e7b294075	-	audits/module-surface-hardening.md
 file	b33ecebfb524f9af496c0f4f4b24650b97833e20f1fca56eedb8604a0660e109	-	audits/module-cleanup.md
-file	28d97bfbf8d301c86dc6681cb3d3985d43166226ec41da2fcec6f8324286a2dc	-	docs/consuming-snapshots.md
+file	fceba7f0b7e523517fa06c1e2cfed5965147a771b3348e99b3b743cf21466e51	-	docs/consuming-snapshots.md
 file	15315edad497b9b165671c3f57e9f56e6ba1d206bbc635eb0ff51afaa8456bb3	-	docs/provenance.md
-file	f4e4905bead04417e2695424eb2f17fac7ff825446700a3c2fa65b84901b33fb	-	docs/ic-tools.md
-file	5e3663202c9620aaaf55ec365fdbe0dfad6eeb2b6cc8d7a895867a79af29f953	-	docs/local-setup.md
+file	bc9014d8e70a309cf2f65658a7c1ea29303375bbe5087150a4087a187efd9b41	-	docs/ic-tools.md
+file	6659598f12a44d58ed0ca1cef6bcabf0b275a6a9ecdd998734c70707b5403443	-	docs/local-setup.md
 file	82892e25292fe47c26035a0031aa4ad1996fcf181732163e75039bd657f2f84b	-	ci/tool-versions.env
 file	4692d760ea97861b52c183bb69e24c929d9baf7c292795c61d65ea3166368787	-	rules/dependency-pinning.md
 file	90eb28392912af63593a3773eff903c5ef77ebab2b9199e3c720be25a3fcbbbf	-	docs/principles/rust-code-hygiene.md
 file	457fd38e0073c91ba470b918d4facd9faac3c5200ebd38c97e9d6b76acdaea55	-	docs/principles/simplicity-and-maintainability.md
 file	4c981184847462ab3c01cac087e28309f8e054253fd95c7bbe56f643877aa708	x	scripts/ci/verify-file-checksum.sh
 file	71d1c69a25f190bc4b2b1df66d3359f172638371caa722142e820a8294d1938e	x	scripts/ci/verify-shared-tooling-snapshot.sh
-file	c113a315c6cd559be6f747ca1b5e82a789cb8840e341b95c9b8733833328fba4	x	scripts/dev/install-host-tools.sh
+file	ef7259172673b035dc2cd8d4f231469d5d3f03a2edd3dacfac75458d3655e3ad	x	scripts/dev/install-host-tools.sh
 file	03a23ba6ec31750e7aa46526d2d52c86515572950a0ddffe2d0730a183fe29bb	x	scripts/ci/test-host-tools.sh
-file	72557fca1b44ea08e2031564580cbe148a30d302dcb0defb84b528c81543d59d	x	scripts/dev/install-ic-tools.sh
+file	590dfb56f85a6e8d7f0a6705488ef8655f78416f3baef635a0d504ecab237f96	x	scripts/dev/install-ic-tools.sh
 file	2bd56f477722c03d820259397a0ca9b2aca27a4216be61c254a745bfe79be4a0	x	scripts/ci/test-ic-tools.sh
 file	ab2202f89a077373fffac29f57527b88ccc65998f5c85c60a32081edd8338150	x	scripts/ci/verify-evidence-checksums.sh
 file	32ddc6af301567fce4d1d78cea5fe53450e7cffede28d5ad08d9c033ffb9d62d	x	scripts/ci/test-evidence-checksums.sh
 file	94a934651d5cb0c6f77fa429df277856dbda4c1a7441b2b8563e678c416258f6	-	audits/ic-canister-applications.md
-file	52d00955d0c717482eec8a13a35cfaf38b9776c68d5a36a9359c0bdac24a4d5c	x	scripts/dev/install-rust-tools.sh
-file	c014c248a10c5ce7ea1f916702400db8da8bd5c7cf873ca2cd15bfe2e8740bb5	x	scripts/ci/test-rust-tools.sh
+file	c7ba68be7e4a058a036c73147a80e3731aea3637315656887d9f721885488251	x	scripts/dev/install-rust-tools.sh
+file	869a921aab99c6d5ac46c7aa5bf863d2ab0c17584e8122825e0e95fb80eee557	x	scripts/ci/test-rust-tools.sh
 file	775da89f655a3781059f433f80470ee6db9675e08942a805c111614183322fe1	-	scripts/ci/ic-tool-pins.awk
-file	dce19f81098d343a25ba833d552bad6c1f3273b2ace3fdf9b0c89fdf0363a846	x	scripts/ci/test-tool-evidence.sh
-file	f84c0e3b03b552b1692bc7e172b204cb5fdacb075b4b87be9fe3f966697fe369	x	scripts/ci/select-tool-evidence.sh
+file	2c1d5d40d481790aaa9c10a5cf29ec061cdc0c4840824851140b4c9c8e7d455b	x	scripts/ci/test-tool-evidence.sh
+file	50875aa80c211f8f5fded06bf75c7a9fc1fc99aac7590480de9be17d4753bf7f	x	scripts/ci/select-tool-evidence.sh
 file	5be336cb3e8045b2d2d536542a94944b376ee812b03f786a90b9d962ab697f13	x	scripts/ci/archive-evidence.sh
-file	845e1a7713675563eb8b8d5a810be781370b95c31161db2e624e4d30707002eb	-	.github/actions/retain-failure-evidence/action.yml
-file	66d3500777a54174f75957a693968d68a8141d4b19d4de29eb66b09a61e1b005	-	scripts/dev/tool-store.sh
-file	a1262487b6f37c2a329c47f6c47e53a20f5c17899fd0ceb128d16a257fdd4963	-	scripts/ci/test-tool-store.sh
+file	820c46f7fbbf3d4790f8bbce5b646c6506a3c4750ebab9525360fbc75c115b01	-	.github/actions/retain-failure-evidence/action.yml
+file	1cf93faf09a8e4afe9e165b5bf6fb0884119165d38c7d0726c67a685b07e1d1a	-	scripts/dev/tool-store.sh
+file	7011492452420a3cc651ffb52a559b6c36f9158936b96ea5652ee6a520b0871f	-	scripts/ci/test-tool-store.sh
+file	e0767020f19949ad5ff35855a83fa94549486ff614cf5d1f044c3688db3576d0	-	scripts/dev/cargo-tool-build.sh

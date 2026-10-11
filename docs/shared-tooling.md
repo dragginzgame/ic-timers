@@ -1,8 +1,70 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.6.0 Cargo storage adoption
+
+Pending **0.17.10** adopts reviewed committed Shared **0.6.0**
+`75180980a0c4e4252d8a915aaecfaefd92bf9a4e` through all three canonical exports:
+**56 baseline / 33 audit-setup / 11 helpers**. Remote main and committed `VERSION`
+agree. Clean detached source, previews, apply logs and preserved incoming dirty
+work/catalog/lock/pins/index are at `/tmp/ic-timers-shared060.g0xadlzs/`.
+Preview identifies one required companion, `scripts/dev/cargo-tool-build.sh`;
+the completed audit export adds it explicitly. No uncommitted sibling bytes,
+consumer pin changes or optional producer drivers are imported.
+
+The [canonical 0.6 adoption contract](consuming-snapshots.md#shared-cargo-storage-adoption-in-060)
+now shares Cargo generations as well as host/IC bundles. Cargo source and packaged
+lock checks, compiler/native/build-environment identities and selected executable
+receipts remain owned by the installer. Tool builds exclude project flags,
+wrappers and arbitrary environment; application builds keep their own settings.
+Prepare the selected Rust compiler, run `make install-tools` then `make tools-check`,
+and use the same shared-store setting for both and for evidence collection.
+Both setup and offline checks require the managed source cache. Existing tool
+installations and failed attempts remain intact but are not an admission fallback.
+
+Common PATH remains `.tools/rust/common/bin`. The existing Testkit adapter already
+uses the installer's returned root-lock-selected executable, so it needs no slot
+parser or path reconstruction. Testkit keeps server and packaged-lock admission;
+no direct Host dependency or alternate PocketIC setup is added. This contributor
+storage hard cut changes no published Timers API or application build requirement;
+the draft remains the compatible **0.17.10** patch under package-impact rules.
+
+The selector now owns the physical local Rust tree and referenced shared Rust
+payloads. The local collector removes its duplicate successful-path selection;
+its prepared store-rejection repair still retains safe local Rust evidence when
+selection fails and reports incomplete collection with the original status.
+A local fixture uses the canonical store owner to create a failed Rust generation
+and reference, then checks extracted build/log bytes, mode and link retention.
+It creates no successful build identity or receipt. Rejected stores preserve the
+reference but never collect its target. The shared Rust installer fixture owns
+compiler/package matching, standard environment and same-host two-checkout reuse.
+
+The upstream action/selector include the repair for
+[Shared #121](https://github.com/dragginzgame/shared-tooling/issues/121); Timers keeps
+its own identity/upload adapter and incomplete-status contract. Optional distribution
+fixture changes ([Shared #122](https://github.com/dragginzgame/shared-tooling/issues/122))
+and Cargo extension guidance ([Shared #123](https://github.com/dragginzgame/shared-tooling/issues/123))
+do not introduce new consumer callers.
+[Exact-source upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38136593268)
+is queued at inspection. [Timers #44](https://github.com/dragginzgame/ic-timers/issues/44)
+remains open for complete Linux/MSRV/Intel/ARM qualification and its existing
+manual artifact acceptance boundary. Source availability, canonical refresh and
+syntax/integrity checks are not behavioral acceptance.
+
+Catalog/lock, Binaryen 132 and other consumer pins, incoming local repairs and
+index are preserved. Tests/builds/lint/setup and release effects remain user-owned.
+The [release owner](releasing.md#shared-060-cargo-storage-adoption) records exact
+scope and qualification; no measured Wasm or runtime instruction delta is claimed.
+
+Preparation passes all three snapshot integrity checks, changed Bash and embedded
+stub syntax, new owner anchors, diff whitespace and complete locked offline Cargo
+metadata. Catalog/lock/tool pins and raw index compare unchanged with the preserved
+inputs. Results are recorded at the preparation path above; no behavioral fixture,
+installation, build or lint is executed. Progress is recorded on
+[#44](https://github.com/dragginzgame/ic-timers/issues/44#issuecomment-6108726659).
+
 ## Shared Tooling 0.5.0 storage adoption
 
-Pending **0.17.9** adopts reviewed committed Shared **0.5.0**
+Released **0.17.9** adopts reviewed committed Shared **0.5.0**
 `a306180ce534227fcb98b882fba9a526d5d747e0` through all three canonical exports:
 **56 baseline / 32 audit-setup / 11 helpers**. Source `VERSION` and annotations
 agree. Clean detached source, previews, apply logs and preserved incoming inputs

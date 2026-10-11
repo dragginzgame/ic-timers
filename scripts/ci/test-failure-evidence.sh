@@ -117,6 +117,27 @@ printf 'selected Cargo receipt\n' > "$rust_slot/selection.json"
 printf 'admitted Rust executable\n' > "$rust_slot/bin/cargo-sort"
 chmod 0751 "$rust_slot/bin/cargo-sort"
 ln -s cargo-sort-2.1.4-bin-cargo-sort-release/installed "$GITHUB_WORKSPACE/.tools/rust/common"
+# Create a failed shared Rust generation and reference through the canonical
+# store owner. No successful Cargo receipt or reusable build identity is forged;
+# owner installer tests qualify compiler/package matching and two-checkout reuse.
+(
+    source "$root/scripts/dev/tool-store.sh"
+    consumer="$GITHUB_WORKSPACE"
+    tool_root="$consumer/.tools/rust"
+    tool_store_init rust timer-evidence-fixture
+    tool_store_acquire
+    trap tool_store_release EXIT
+    tool_store_new
+    mkdir "$stage/build"
+    printf 'failed shared Cargo compilation\n' > "$stage/install.log"
+    printf 'shared failed build bytes\n' > "$stage/build/object"
+    chmod 0640 "$stage/build/object"
+    printf '%s\n' "$stage" > "$fixture/shared-rust-path"
+    printf '%s\n' "$store_reference" > "$fixture/shared-rust-reference"
+)
+shared_rust="$(cat "$fixture/shared-rust-path")"
+shared_rust_relative="${shared_rust#"$SHARED_TOOLING_STORE/"}"
+shared_rust_reference="$(cat "$fixture/shared-rust-reference")"
 mkdir "$fixture/external-rust"
 printf 'outside Rust evidence root\n' > "$fixture/external-rust/not-selected"
 ln -s "$fixture/external-rust" "$GITHUB_WORKSPACE/.tools/rust/external"
@@ -178,6 +199,13 @@ test -L "$fixture/extracted/.tools/rust/external"
 test "$(readlink "$fixture/extracted/.tools/rust/external")" = "$fixture/external-rust"
 tar -tzf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" > "$fixture/archive-paths"
 if grep -Fq '/not-selected' "$fixture/archive-paths"; then exit 1; fi
+cmp "$shared_rust/install.log" "$fixture/extracted/$shared_rust_relative/install.log"
+cmp "$shared_rust/build/object" "$fixture/extracted/$shared_rust_relative/build/object"
+perl -e 'my @a=stat $ARGV[0]; my @b=stat $ARGV[1];
+    @a && @b && ($a[2]&07777)==($b[2]&07777) or die "archive lost shared Rust build mode\n";' \
+    "$shared_rust/build/object" "$fixture/extracted/$shared_rust_relative/build/object"
+test -L "$fixture/extracted/.tools/rust/$shared_rust_reference"
+test "$(readlink "$fixture/extracted/.tools/rust/$shared_rust_reference")" = "$shared_rust"
 test ! -e "$fixture/extracted/.tools/testkit-server/admitted"
 
 for path in scenario.log before "$unusual"; do
@@ -396,13 +424,14 @@ for kind in host ic; do
 done
 mv "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" "$fixture/changed-evidence.tar.gz"
 
-# A failed selector must not turn partial NUL output into a smaller archive.
+# A failed selector must retain local evidence, ignore partial NUL selections
+# and expose the original failure instead of reporting complete collection.
 mkdir "$fixture/selection-bin"
 printf '#!%s\n' "$BASH" > "$fixture/selection-bin/bash"
 cat >> "$fixture/selection-bin/bash" <<'SCRIPT'
 case "${1:-}" in
     */select-tool-evidence.sh)
-        printf 'partial-selection\0'
+        printf '%s\0%s\0partial-selection\0' "$EVIDENCE_OUTSIDE_ROOT" not-selected
         echo 'injected selection failure' >&2
         exit 23 ;;
 esac
@@ -410,17 +439,83 @@ exec "$EVIDENCE_REAL_BASH" "$@"
 SCRIPT
 chmod +x "$fixture/selection-bin/bash"
 collection_status=0
-EVIDENCE_REAL_BASH="$BASH" PATH="$fixture/selection-bin:$PATH" \
+EVIDENCE_REAL_BASH="$BASH" EVIDENCE_OUTSIDE_ROOT="$fixture/external-rust" PATH="$fixture/selection-bin:$PATH" \
     "$BASH" "$root/scripts/ci/collect-failure-evidence.sh" \
     > "$fixture/failed-selection.log" 2>&1 || collection_status=$?
 test "$collection_status" -eq 23
-test ! -e "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz"
 grep -Fq 'injected selection failure' "$fixture/failed-selection.log"
+grep -Fq 'shared collection incomplete (exit 23)' "$fixture/failed-selection.log"
+if grep -Fq 'CI failure evidence measurements:' "$fixture/failed-selection.log"; then exit 1; fi
+mkdir "$fixture/failed-selection-extracted"
+tar -xzpf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" -C "$fixture/failed-selection-extracted"
+cmp "$GITHUB_WORKSPACE/target/validation-failures/raw.log" \
+    "$fixture/failed-selection-extracted/target/validation-failures/raw.log"
+cmp "$rust_slot/install.log" \
+    "$fixture/failed-selection-extracted/.tools/rust/cargo-sort-2.1.4-bin-cargo-sort-release/installed/install.log"
+printf 'status=23\nshared_collection=incomplete\n' > "$fixture/expected-selection-status"
+cmp "$fixture/expected-selection-status" "$fixture/failed-selection-extracted/tool-evidence/selection-status.txt"
+grep -Fxq 'injected selection failure' "$fixture/failed-selection-extracted/tool-evidence/selection.log"
 retained_selections=("$RUNNER_TEMP"/ic-timers-evidence.*)
 test "${#retained_selections[@]}" -eq 1
-printf 'partial-selection\0' > "$fixture/expected-selection-output"
+printf '%s\0%s\0partial-selection\0' "$fixture/external-rust" not-selected > "$fixture/expected-selection-output"
 cmp "$fixture/expected-selection-output" "${retained_selections[0]}/tool-selections.nul"
+cmp "$fixture/expected-selection-output" "$fixture/failed-selection-extracted/tool-evidence/partial-selections.nul"
 cmp "$fixture/extracted/identity.txt" "${retained_selections[0]}/identity.txt"
+tar -tzf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" > "$fixture/failed-selection-paths"
+if grep -Eq '(^|/)not-selected$' "$fixture/failed-selection-paths"; then exit 1; fi
+mv "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" "$fixture/failed-selection-evidence.tar.gz"
+
+# Exercise actual store admission, including failure before any tools exist.
+# A redirected .tools root must not cause collection to traverse outside links.
+ln -s "$SHARED_TOOLING_STORE" "$fixture/redirected-store"
+for layout in physical no-tools redirected; do
+    if [[ "$layout" != physical ]]; then
+        mv "$GITHUB_WORKSPACE/.tools" "$fixture/retained-tools"
+        if [[ "$layout" == redirected ]]; then
+            ln -s "$fixture/retained-tools" "$GITHUB_WORKSPACE/.tools"
+        fi
+    fi
+    collection_status=0
+    SHARED_TOOLING_STORE="$fixture/redirected-store" \
+        "$BASH" "$root/scripts/ci/collect-failure-evidence.sh" \
+        > "$fixture/rejected-store-$layout.log" 2>&1 || collection_status=$?
+    test "$collection_status" -ne 0
+    grep -Fq 'tool store root may not be a symlink' "$fixture/rejected-store-$layout.log"
+    mkdir "$fixture/rejected-store-$layout-extracted"
+    tar -xzpf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" -C "$fixture/rejected-store-$layout-extracted"
+    extracted="$fixture/rejected-store-$layout-extracted"
+    cmp "$GITHUB_WORKSPACE/target/validation-failures/raw.log" "$extracted/target/validation-failures/raw.log"
+    cmp "$GITHUB_WORKSPACE/.git/release-state/validation-failures/raw.log" "$extracted/validation-failures/raw.log"
+    printf 'status=%s\nshared_collection=incomplete\n' "$collection_status" > "$fixture/expected-rejection-status"
+    cmp "$fixture/expected-rejection-status" "$extracted/tool-evidence/selection-status.txt"
+    grep -Fxq 'shared_collection=incomplete' "$extracted/tool-evidence/selection-status.txt"
+    grep -Fq 'tool store root may not be a symlink' "$extracted/tool-evidence/selection.log"
+    if [[ "$layout" == physical ]]; then
+        cmp "$rust_slot/install.log" \
+            "$extracted/.tools/rust/cargo-sort-2.1.4-bin-cargo-sort-release/installed/install.log"
+        cmp "$GITHUB_WORKSPACE/.tools/testkit-server/.setup-v1-failed/failure.txt" \
+            "$extracted/.tools/testkit-server/.setup-v1-failed/failure.txt"
+        test -L "$extracted/.tools/rust/$shared_rust_reference"
+        test "$(readlink "$extracted/.tools/rust/$shared_rust_reference")" = "$shared_rust"
+        perl -e 'my @a=stat $ARGV[0]; my @b=stat $ARGV[1];
+            @a && @b && ($a[2]&07777)==($b[2]&07777) or die "rejection archive lost executable mode\n";' \
+            "$rust_slot/bin/cargo-sort" \
+            "$extracted/.tools/rust/cargo-sort-2.1.4-bin-cargo-sort-release/installed/bin/cargo-sort"
+        for kind in host ic; do
+            selected="$(readlink "$GITHUB_WORKSPACE/.tools/$kind")"
+            test -L "$extracted/.tools/$kind"
+            test -L "$extracted/.tools/$selected"
+            test "$(readlink "$extracted/.tools/$selected")" = "$(readlink "$GITHUB_WORKSPACE/.tools/$selected")"
+        done
+    else
+        test ! -e "$extracted/.tools"
+        if [[ "$layout" == redirected ]]; then rm "$GITHUB_WORKSPACE/.tools"; fi
+        mv "$fixture/retained-tools" "$GITHUB_WORKSPACE/.tools"
+    fi
+    tar -tzf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" > "$fixture/rejected-store-$layout-paths"
+    if grep -Eq '/not-selected|^\./(host|ic|rust)-[[:xdigit:]]{64}/' "$fixture/rejected-store-$layout-paths"; then exit 1; fi
+    mv "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" "$fixture/rejected-store-$layout-evidence.tar.gz"
+done
 
 # Collection errors must remain failures and leave the diagnostic inputs intact.
 mkdir "$fixture/bin"

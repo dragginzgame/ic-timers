@@ -2,6 +2,26 @@
 
 All notable changes to this project are recorded here.
 
+## [0.17.10]
+
+### Development
+
+- Adopt Shared Tooling 0.6.0 so common Cargo tools and the root-lock-selected
+  Testkit CLI reuse verified shared builds. Run `make install-tools` followed by
+  `make tools-check`; tool builds use the standard environment while application
+  build settings remain local. Retain referenced shared Cargo build evidence
+  without selecting the local Rust tree twice
+  ([#44](https://github.com/dragginzgame/ic-timers/issues/44),
+  [Shared #120](https://github.com/dragginzgame/shared-tooling/issues/120)).
+
+### Fixed
+
+- Preserve local CI failure logs, Rust build evidence and tool references when
+  shared-store admission fails. Archive the rejection diagnostic and mark shared
+  collection incomplete while retaining its original failure status
+  ([Shared #121](https://github.com/dragginzgame/shared-tooling/issues/121),
+  [#44](https://github.com/dragginzgame/ic-timers/issues/44)).
+
 ## [0.17.9] - 2026-10-11
 
 ### Development
