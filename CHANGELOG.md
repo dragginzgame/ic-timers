@@ -2,6 +2,26 @@
 
 All notable changes to this project are recorded here.
 
+## [0.17.13]
+
+### Fixed
+
+- Release retained and inactive callback captures before native test-fixture TLS
+  teardown. Drop detached registry ownership outside its borrow while keeping an
+  empty initialized runtime available to capture destructors. Extend cleanup
+  coverage to both declaration lifetimes and inactive, queued and suspended work
+  ([#46](https://github.com/dragginzgame/ic-timers/issues/46)).
+
+### Development
+
+- Adopt Shared Tooling 0.6.3. Normal direct release targets restart superseded
+  preparation intent from a clean descendant commit, archive the original plan,
+  select the requested increment from current metadata and repeat complete
+  validation. Exact resume and staged/later recovery retain their existing
+  boundaries ([Shared #126](https://github.com/dragginzgame/shared-tooling/issues/126)).
+- Refresh the locked native test graph to Testkit 0.33.8. Its packaged CLI lock
+  now selects Host 0.13.5, matching the workspace graph.
+
 ## [0.17.12] - 2026-10-11
 
 ### Fixed

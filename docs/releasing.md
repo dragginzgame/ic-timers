@@ -390,11 +390,17 @@ unstaged and untracked work is rejected before committing or tagging.
 
 ### Changed source at preparation intent
 
-Shared Tooling 0.6.2 reports the saved plan, phase, base/candidate and both source
-commits when validated source changes. Follow its
-[guarded recovery procedure](releases.md#source-changes-after-saved-preparation-intent)
-without editing the saved source, deleting an uncertain plan or reusing validation.
-Any recovery and release execution remains maintainer-owned.
+Shared Tooling 0.6.3 lets a normal direct release target restart saved `prepare`
+intent after a newer clean descendant commit. The runner requires an empty saved
+index tree, no preparation file set, clean index/worktree/untracked inventory,
+matching destination and canonical metadata at the saved previous or candidate
+version. It archives the original plan unchanged under `release-state`, then
+computes the requested increment from current metadata and repeats preflight and
+the complete gate. See the
+[canonical restart contract](releases.md#source-changes-after-saved-preparation-intent).
+Unchanged HEAD and explicit resume retain exact-source recovery; staged/later
+phases, conflicts and occupied locks still refuse unsafe restart. Release
+execution remains maintainer-owned.
 
 Timers' current preparation owner is `scripts/release/bump-version.sh`.
 It captures exact incoming `Cargo.toml`, `Cargo.lock` and `CHANGELOG.md` bytes in
@@ -403,16 +409,20 @@ rollback, then finalizes notes, changes the workspace version and rewrites local
 lock identities. Successful completion or successful rollback removes those
 backups. This is temporary rollback, **not a durable pre-mutation journal**;
 process termination or host loss can interrupt it. No generic `VERSION.metadata`
-file is maintained. Its absence, unchanged Cargo version or clean index cannot
-establish that preparation never began or authorize retirement of a prepare plan.
+file is maintained. Those facts do not establish that preparation never began.
+The adopted restart contract instead relies on local-only preparation and the
+newer clean commit recording the metadata disposition. The helper does not stage,
+commit, tag, publish or deploy. Reconcile any incomplete rollback against its
+retained originals before fresh preparation; never relabel earlier validation.
 
-For a real source conflict, inspect the exact adapter revision, retained attempt
-logs/backups, all three metadata files, index/worktree, intervening history,
-release commit and local/remote tags under the canonical release lock. Use the
-shared procedure only if positive evidence establishes all its no-effect
-conditions. Otherwise retain intent and reconcile the exact candidate with the
-metadata owner. This adoption performs no real recovery and adds no guessed
-no-effect checker or second release-state machine.
+Timers has no per-candidate validation receipt or saved-notes file overwritten by
+fresh verification. The shared logger allocates a unique directory per invocation
+and retains failures under distinct run identities; its `latest` files are views
+of retained evidence. Existing optional persistent log selection is also unique
+per invocation. Host's
+[receipt-preservation finding](https://github.com/dragginzgame/ic-host-tooling/issues/67)
+therefore has no matching local replacement path. This adoption performs no real
+recovery, changes no log-retention policy and adds no second release-state machine.
 
 If a standard release stops after the version bump, rerun the same standard
 target. The local exact-version `release-x` has no shared journal; finish its
@@ -2013,6 +2023,62 @@ artifact round trip is claimed. The contributor downloads and inspects existing
 completed logs only, without rerunning tests, setup, CI or release commands.
 This acceptance-record update does not warrant another release or changelog
 entry; keep it untagged for the next code-bearing batch.
+
+### 0.17.12 source and native cleanup follow-up
+
+Released 0.17.12 is `549d1f5e9e69ec2d58d37c72760ffd93b88b175f`, with Shared
+0.6.2 `7f1ca16b0dfa98021d2671017ecb7de767409b0e`, Metrics 0.6.4,
+Testkit 0.33.7, all four Host packages at 0.13.5 and PocketIC 16.1.0.
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/38144421659)
+passes. [Full CI](https://github.com/dragginzgame/ic-timers/actions/runs/38144421665)
+has Linux/MSRV/ARM passing and Intel running at inspection.
+Downloaded Linux job **114484683406** actually executes
+`platform::fake::tests::removed_futures_can_schedule_from_their_destructors`
+and passes all 145 library tests, doctest/compiler-frontier checks, 14 PocketIC
+recovery subjects and four policy cohorts. Its raw log is retained at
+`/tmp/ic-timers-01713.mgzz1bha/released-linux.log`, SHA-256
+`bc04c2a390e19cd98b3f99c893dd704cf8df49547f4d51bf370a45de2c25f042`.
+The previous 0.17.11 Linux/MSRV jobs passed but both native jobs were cancelled;
+those different inputs cannot establish current source acceptance.
+[#45](https://github.com/dragginzgame/ic-timers/issues/45) has source-bound Linux
+execution of its released removal regression. Keep
+[#44](https://github.com/dragginzgame/ic-timers/issues/44) open for complete native
+and controlled artifact acceptance.
+
+[Shared 0.6.2 CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38143010876)
+passes Linux portable, lint/security and ARM portable; Intel is still queued.
+That source describes the released graph. Pending 0.17.13 now adopts
+[Shared 0.6.3](shared-tooling.md#shared-tooling-063-committed-preparation-restart);
+qualification is not inferred from moving sibling status or publication alone.
+
+Incoming maintainer Cargo.lock selects Testkit **0.33.8**, with Host **0.13.5**,
+Metrics **0.6.4**, PocketIC **16.1.0** and all four local packages at **0.17.12**.
+Cheap locked offline metadata resolves one ID per selected package. Testkit's
+released source `f17892332f4b100ffea4b28528927bfb0b4e1c5c` has no product Rust
+change from 0.33.7. Its selected registry package's shipped Cargo.lock now selects
+all four Host packages at 0.13.5; the prior distinction between root and packaged
+CLI graphs remains part of setup admission. No new direct Host dependency,
+server policy or alternate setup path is introduced. Published Host 0.14.0
+changes completed-process and observer APIs, while this Testkit release still
+requires Host 0.13. Adoption waits for the Testkit owner's
+[#61](https://github.com/dragginzgame/ic-testkit/issues/61) minor release; do not
+force the transitive graph with a direct dependency or local patch.
+
+Pending 0.17.13 repairs only native fixture ownership under
+[#46](https://github.com/dragginzgame/ic-timers/issues/46). After clearing queued
+futures while TLS is live, fixture cleanup detaches the remaining registry and
+provides an empty initialized native runtime before dropping callback captures
+outside the borrow. Both declaration lifetimes now exercise inactive, queued and
+suspended captures. This teardown is test-only and proves no IC persistence,
+upgrade or trap recovery behavior. Production implementation and Wasm are unchanged.
+
+Prepared source, incoming lock/index identities, metadata and review outputs are
+retained at `/tmp/ic-timers-01713.mgzz1bha/`. Incoming catalog/lock/pins/index are
+preserved byte-for-byte. Diff, links and cheap metadata are the preparation checks;
+no native regression, test/build/lint, setup, workflow dispatch or release is run.
+The additional Shared 0.6.3 refresh preserves these inputs and prepared native
+changes at `/tmp/ic-timers-shared063.dfz0hesa/` and updates release guidance to the
+canonical committed-preparation restart contract.
 
 ### Shared 0.6.1 correction and Host 0.13.4 selection
 

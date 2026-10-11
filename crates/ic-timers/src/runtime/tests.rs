@@ -683,6 +683,17 @@ impl Drop for RuntimeFixture {
         // The production delivery guard must run while runtime TLS is available.
         // Native thread teardown is not an IC lifecycle or rollback event.
         platform::clear_tasks();
+        // Retained declarations also own callback captures, even when inactive.
+        // Detach them while TLS is live, exposing an empty initialized registry
+        // to their destructors without holding the runtime borrow.
+        let retired = RUNTIME.with(|runtime| {
+            let mut runtime = runtime.borrow_mut();
+            let empty = runtime
+                .as_ref()
+                .map(|registry| TimerRegistry::new(registry.epoch()));
+            std::mem::replace(&mut *runtime, empty)
+        });
+        drop(retired);
     }
 }
 
@@ -708,7 +719,14 @@ fn fixture_cleanup_drops_queued_and_suspended_work_before_tls_teardown() {
         }
     }
 
-    for started in [false, true] {
+    for (lifetime, scheduled, started) in [
+        (DeclarationLifetime::RemoveWhenStopped, false, false),
+        (DeclarationLifetime::RemoveWhenStopped, true, false),
+        (DeclarationLifetime::RemoveWhenStopped, true, true),
+        (DeclarationLifetime::Retained, false, false),
+        (DeclarationLifetime::Retained, true, false),
+        (DeclarationLifetime::Retained, true, true),
+    ] {
         let dropped = Rc::new(Cell::new(false));
         {
             let _fixture = setup();
@@ -716,7 +734,7 @@ fn fixture_cleanup_drops_queued_and_suspended_work_before_tls_teardown() {
             let captured = Rc::new(CaptureDropCheck(Rc::clone(&dropped)));
             let registration = register_once(
                 identity("fixture-cleanup"),
-                DeclarationLifetime::RemoveWhenStopped,
+                lifetime,
                 move |_| {
                     let gate = gate.clone();
                     let captured = Rc::clone(&captured);
@@ -728,9 +746,11 @@ fn fixture_cleanup_drops_queued_and_suspended_work_before_tls_teardown() {
                 },
             )
             .unwrap();
-            registration
-                .ensure_scheduled(TimerSchedule::At(10))
-                .unwrap();
+            if scheduled {
+                registration
+                    .ensure_scheduled(TimerSchedule::At(10))
+                    .unwrap();
+            }
             if started {
                 assert!(run_next_due());
             }

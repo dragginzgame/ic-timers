@@ -1,5 +1,45 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.6.3 committed-preparation restart
+
+Pending **0.17.13** adopts committed Shared **0.6.3**
+`4fd979d13c32adb3cb2f51f213ebfc4f98339b3d` through the same **56/33/11** exports.
+Committed `VERSION` and remote main agree. Clean detached source, all three
+previews/apply logs and preserved inputs are at
+`/tmp/ic-timers-shared063.dfz0hesa/`. No companions or optional callers are added;
+all shared payloads come from the canonical exporter. AGENTS retains the approved
+validation, contribution and release exceptions. Pins and setup/build policy are
+unchanged; this refresh requires no reinstall of admitted 0.6.1 installations.
+
+[Shared #126](https://github.com/dragginzgame/shared-tooling/issues/126) now permits
+normal direct targets to archive superseded preparation intent from a clean
+descendant commit, recompute the requested increment from current metadata and
+repeat full validation. Unchanged-HEAD preparation, explicit resume, staging and
+later phases retain their exact recovery contracts. The
+[local adapter review](releasing.md#changed-source-at-preparation-intent) confirms
+local-only metadata preparation and no per-version receipt replacement path.
+No real plan, release state or evidence is retired during this adoption.
+
+Host **0.14.0** is published at
+`4723befe8d65c760c00e05c42652759d691fbd5e`. Its required-status completed process
+results and fallible observers are a public hard cut. Testkit **0.33.8**
+`f17892332f4b100ffea4b28528927bfb0b4e1c5c` still requires all four Host crates on
+**0.13**, so the current graph remains **Host 0.13.5**. The Testkit owner must
+complete [#61](https://github.com/dragginzgame/ic-testkit/issues/61) and publish its
+minor boundary before Timers can adopt Host 0.14 transitively. Keep Testkit's
+admitted CLI/server path; add no direct Host requirement or parallel identity.
+
+[Shared 0.6.3 CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38145666246)
+passes Linux portable and lint/security; both native jobs are queued at inspection.
+[Timers 0.17.12 CI](https://github.com/dragginzgame/ic-timers/actions/runs/38144421665)
+passes Linux/MSRV/ARM, with Intel running. Neither run qualifies this dirty batch
+or the incoming Testkit 0.33.8 graph. Keep
+[#44](https://github.com/dragginzgame/ic-timers/issues/44) open for complete native
+and controlled artifact acceptance. Snapshot integrity, syntax/diff and cheap
+metadata are preparation checks; tests/builds/lint/setup and releases remain
+user-owned. Delivered adoption issues are reconciled against exact sources and
+their acceptance criteria under the new shared maintenance rule.
+
 ## Shared Tooling 0.6.2 release diagnostics adoption
 
 Pending **0.17.12** adopts committed Shared **0.6.2**
