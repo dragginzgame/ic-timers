@@ -10,6 +10,11 @@ temporary="${TMPDIR:-/tmp}"
 temporary="$(cd -P "$temporary" && printf '%s/.' "$PWD")"
 temporary="${temporary%/.}"
 fixture="$(mktemp -d "$temporary/timer-evidence-test.XXXXXX")"
+fixture="$(cd -P "$fixture" && printf '%s/.' "$PWD")"
+fixture="${fixture%/.}"
+# All actual installer/check/collector calls in this fixture share an isolated
+# store; no developer installation can be read, mutated or reused accidentally.
+export SHARED_TOOLING_STORE="$fixture/shared-store"
 # Bash 3.2 can report zero on nounset; cleanup also requires completion.
 fixture_complete=false
 finish() {
@@ -102,9 +107,19 @@ printf 'unusual filename bytes\n' > "$scratch/$unusual"
 chmod 0640 "$scratch/$unusual"
 
 mkdir -p "$GITHUB_WORKSPACE/.tools/rust/build/failed-cli" \
+    "$GITHUB_WORKSPACE/.tools/rust/cargo-sort-2.1.4-bin-cargo-sort-release/installed/bin" \
     "$GITHUB_WORKSPACE/.tools/testkit-server/.setup-v1-failed" \
     "$GITHUB_WORKSPACE/.tools/testkit-server/admitted"
 printf 'failed Cargo build\n' > "$GITHUB_WORKSPACE/.tools/rust/build/failed-cli/install.log"
+rust_slot="$GITHUB_WORKSPACE/.tools/rust/cargo-sort-2.1.4-bin-cargo-sort-release/installed"
+printf 'completed Cargo build\n' > "$rust_slot/install.log"
+printf 'selected Cargo receipt\n' > "$rust_slot/selection.json"
+printf 'admitted Rust executable\n' > "$rust_slot/bin/cargo-sort"
+chmod 0751 "$rust_slot/bin/cargo-sort"
+ln -s cargo-sort-2.1.4-bin-cargo-sort-release/installed "$GITHUB_WORKSPACE/.tools/rust/common"
+mkdir "$fixture/external-rust"
+printf 'outside Rust evidence root\n' > "$fixture/external-rust/not-selected"
+ln -s "$fixture/external-rust" "$GITHUB_WORKSPACE/.tools/rust/external"
 printf 'failed server download\n' > "$GITHUB_WORKSPACE/.tools/testkit-server/.setup-v1-failed/failure.txt"
 printf 'admitted server bytes\n' > "$GITHUB_WORKSPACE/.tools/testkit-server/admitted/pocket-ic"
 for phase in install check; do
@@ -146,9 +161,23 @@ for phase in install check; do
         "$RUNNER_TEMP/tools-$phase.log" "$fixture/extracted/tools-$phase.log"
     rm "$RUNNER_TEMP/tools-$phase.log"
 done
-for path in .tools/rust/build/failed-cli/install.log .tools/testkit-server/.setup-v1-failed/failure.txt; do
+for path in .tools/rust/build/failed-cli/install.log \
+    .tools/rust/cargo-sort-2.1.4-bin-cargo-sort-release/installed/install.log \
+    .tools/rust/cargo-sort-2.1.4-bin-cargo-sort-release/installed/selection.json \
+    .tools/rust/cargo-sort-2.1.4-bin-cargo-sort-release/installed/bin/cargo-sort \
+    .tools/testkit-server/.setup-v1-failed/failure.txt; do
     cmp "$GITHUB_WORKSPACE/$path" "$fixture/extracted/$path"
 done
+perl -e 'my @a=stat $ARGV[0]; my @b=stat $ARGV[1];
+    @a && @b && ($a[2]&07777)==($b[2]&07777) or die "archive lost Rust executable mode\n";' \
+    "$rust_slot/bin/cargo-sort" \
+    "$fixture/extracted/.tools/rust/cargo-sort-2.1.4-bin-cargo-sort-release/installed/bin/cargo-sort"
+test -L "$fixture/extracted/.tools/rust/common"
+test "$(readlink "$fixture/extracted/.tools/rust/common")" = cargo-sort-2.1.4-bin-cargo-sort-release/installed
+test -L "$fixture/extracted/.tools/rust/external"
+test "$(readlink "$fixture/extracted/.tools/rust/external")" = "$fixture/external-rust"
+tar -tzf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" > "$fixture/archive-paths"
+if grep -Fq '/not-selected' "$fixture/archive-paths"; then exit 1; fi
 test ! -e "$fixture/extracted/.tools/testkit-server/admitted"
 
 for path in scenario.log before "$unusual"; do
@@ -207,9 +236,9 @@ for tool in jq yq cloc; do
     fi
 done
 case "$(uname -s):$(uname -m)" in
-    Linux:x86_64|Linux:amd64) host=LINUX_AMD64; target=x86_64-unknown-linux-musl; ic_host=linux-x86_64 ;;
-    Darwin:x86_64|Darwin:amd64) host=DARWIN_AMD64; target=x86_64-apple-darwin; ic_host=darwin-x86_64 ;;
-    Darwin:arm64|Darwin:aarch64) host=DARWIN_ARM64; target=aarch64-apple-darwin; ic_host=darwin-arm64 ;;
+    Linux:x86_64|Linux:amd64) host=LINUX_AMD64; target=x86_64-unknown-linux-musl; ic_host=linux-x86_64; ic_target=x86_64-unknown-linux-gnu; ic_os=linux; ic_arch=x86_64 ;;
+    Darwin:x86_64|Darwin:amd64) host=DARWIN_AMD64; target=x86_64-apple-darwin; ic_host=darwin-x86_64; ic_target=x86_64-apple-darwin; ic_os=macos; ic_arch=x86_64 ;;
+    Darwin:arm64|Darwin:aarch64) host=DARWIN_ARM64; target=aarch64-apple-darwin; ic_host=darwin-arm64; ic_target=aarch64-apple-darwin; ic_os=macos; ic_arch=arm64 ;;
     *) echo 'no complete native evidence fixture for this host' >&2; exit 1 ;;
 esac
 cat > "$GITHUB_WORKSPACE/.tools/host-set.active/bin/rg" <<'SCRIPT'
@@ -228,9 +257,13 @@ tar -czf "$GITHUB_WORKSPACE/.tools/host-set.active/ripgrep.tar.gz" \
 digest="$(bash "$root/scripts/ci/verify-file-checksum.sh" --print sha256 "$GITHUB_WORKSPACE/.tools/host-set.active/ripgrep.tar.gz")"
 printf 'export SHARED_TOOLING_RIPGREP_SHA256_%s=%s\n' "$host" "$digest" >> "$host_pins"
 cp "$root/ci/ic-tools.tsv" "$GITHUB_WORKSPACE/ci/ic-tools.tsv"
-cp "$GITHUB_WORKSPACE/ci/ic-tools.tsv" "$GITHUB_WORKSPACE/.tools/ic-set.active/pins.tsv"
-printf '%s\n' "$ic_host" > "$GITHUB_WORKSPACE/.tools/ic-set.active/host"
-: > "$GITHUB_WORKSPACE/.tools/ic-set.active/files.sha256"
+mkdir "$fixture/assets" "$fixture/payloads" "$fixture/installer-bin"
+export TIMER_EVIDENCE_ASSETS="$fixture/assets"
+for tool in jq yq cloc; do
+    cp -p "$GITHUB_WORKSPACE/.tools/host-set.active/bin/$tool" "$fixture/assets/$tool"
+done
+cp "$GITHUB_WORKSPACE/.tools/host-set.active/ripgrep.tar.gz" "$fixture/assets/ripgrep.tar.gz"
+: > "$fixture/ic-archive-digests"
 while IFS=$'\t' read -r tool version selected_host _; do
     [[ "$tool" != \#* && "$selected_host" == "$ic_host" ]] || continue
     report="$tool $version"
@@ -238,15 +271,75 @@ while IFS=$'\t' read -r tool version selected_host _; do
     payload="$GITHUB_WORKSPACE/.tools/ic-set.active/bin/$tool"
     printf '#!/bin/sh\nprintf "%%s\\n" "%s"\n' "$report" > "$payload"
     chmod 0751 "$payload"
-    digest="$(bash "$root/scripts/ci/verify-file-checksum.sh" --print sha256 "$payload")"
-    printf '%s  bin/%s\n' "$digest" "$tool" >> "$GITHUB_WORKSPACE/.tools/ic-set.active/files.sha256"
+    case "$tool" in
+        quill)
+            asset="quill-$ic_os-$ic_arch"
+            cp -p "$payload" "$fixture/assets/$asset" ;;
+        wasm-opt)
+            asset="binaryen-version_$version-$ic_arch-$ic_os.tar.gz"
+            member="binaryen-version_$version"
+            mkdir -p "$fixture/payloads/$member/bin" "$fixture/payloads/$member/lib"
+            cp -p "$payload" "$fixture/payloads/$member/bin/wasm-opt"
+            printf 'fixture native library\n' > "$fixture/payloads/$member/lib/libfixture.so"
+            tar -czf "$fixture/assets/$asset" -C "$fixture/payloads" "$member" ;;
+        *)
+            package="$tool"; [[ "$tool" != icp ]] || package=icp-cli
+            asset="$package-$ic_target.tar.xz"
+            member="$package-$ic_target"
+            mkdir "$fixture/payloads/$member"
+            cp -p "$payload" "$fixture/payloads/$member/$tool"
+            tar -cJf "$fixture/assets/$asset" -C "$fixture/payloads" "$member" ;;
+    esac
+    digest="$(bash "$root/scripts/ci/verify-file-checksum.sh" --print sha256 "$fixture/assets/$asset")"
+    printf '%s\t%s\n' "$tool" "$digest" >> "$fixture/ic-archive-digests"
 done < "$GITHUB_WORKSPACE/ci/ic-tools.tsv"
+awk -F '\t' -v OFS='\t' -v host="$ic_host" '
+    NR==FNR { digests[$1]=$2; next }
+    $3==host { $4=digests[$1] }
+    { print }
+' "$fixture/ic-archive-digests" "$GITHUB_WORKSPACE/ci/ic-tools.tsv" > "$fixture/authenticated-ic-pins"
+mv "$fixture/authenticated-ic-pins" "$GITHUB_WORKSPACE/ci/ic-tools.tsv"
+cat > "$fixture/installer-bin/curl" <<'SCRIPT'
+#!/usr/bin/env bash
+set -euo pipefail
+output=''; url=''
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -o) output="$2"; shift 2 ;;
+        https://*) url="$1"; shift ;;
+        *) shift ;;
+    esac
+done
+[[ -n "$output" && -n "$url" ]] || exit 2
+asset="${url##*/}"
+case "$asset" in
+    jq-*) asset=jq ;;
+    yq_*) asset=yq ;;
+    cloc-*) asset=cloc ;;
+    ripgrep-*) asset=ripgrep.tar.gz ;;
+esac
+cp -p "$TIMER_EVIDENCE_ASSETS/$asset" "$output"
+SCRIPT
+chmod +x "$fixture/installer-bin/curl"
+# Use the actual canonical installers to generate admitted references, identities
+# and receipts. Only their download boundary is substituted with tiny archives.
+PATH="$fixture/installer-bin:$PATH" bash "$root/scripts/dev/install-host-tools.sh" \
+    --consumer "$GITHUB_WORKSPACE" --versions "$host_pins" > "$fixture/host-store-install.log" 2>&1
+PATH="$fixture/installer-bin:$PATH" bash "$root/scripts/dev/install-ic-tools.sh" \
+    --consumer "$GITHUB_WORKSPACE" --pins "$GITHUB_WORKSPACE/ci/ic-tools.tsv" > "$fixture/ic-store-install.log" 2>&1
+host_bundle="$(cd -P "$GITHUB_WORKSPACE/.tools/host" && printf '%s' "$PWD")"
+ic_bundle="$(cd -P "$GITHUB_WORKSPACE/.tools/ic" && printf '%s' "$PWD")"
+host_stored="${host_bundle#"$SHARED_TOOLING_STORE/"}"
+ic_stored="${ic_bundle#"$SHARED_TOOLING_STORE/"}"
+# This unreferenced store entry must never enter a checkout's failure artifact.
+mkdir "$SHARED_TOOLING_STORE/unrelated"
+printf 'unrelated store bytes\n' > "$SHARED_TOOLING_STORE/unrelated/not-selected"
 # Preserve installed provenance while the caller adds notes/reorders the same
 # admitted records. Compaction must retain both distinct inputs without downloads.
 awk '{ rows[NR]=$0 } END { print "# updated caller notes"; for (i=NR; i>0; i--) print rows[i] }' \
     "$GITHUB_WORKSPACE/ci/ic-tools.tsv" > "$fixture/reordered-caller-pins"
 mv "$fixture/reordered-caller-pins" "$GITHUB_WORKSPACE/ci/ic-tools.tsv"
-if cmp -s "$GITHUB_WORKSPACE/ci/ic-tools.tsv" "$GITHUB_WORKSPACE/.tools/ic-set.active/pins.tsv"; then
+if cmp -s "$GITHUB_WORKSPACE/ci/ic-tools.tsv" "$ic_bundle/pins.tsv"; then
     echo 'fixture needs distinct caller/installed pin provenance' >&2
     exit 1
 fi
@@ -258,16 +351,19 @@ grep -Eq "^CI failure evidence measurements: archive_bytes=${archive_bytes} arch
 mkdir "$fixture/compact-extracted"
 tar -xzpf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" -C "$fixture/compact-extracted"
 for kind in host ic; do
-    test ! -e "$fixture/compact-extracted/.tools/$kind-set.active"
+    selected="$(readlink "$GITHUB_WORKSPACE/.tools/$kind")"
+    test ! -e "$fixture/compact-extracted/.tools/$selected"
+    stored="$host_stored"; [[ "$kind" != ic ]] || stored="$ic_stored"
+    test ! -e "$fixture/compact-extracted/$stored"
     cmp "$GITHUB_WORKSPACE/.tools/$kind-set.failed/tool" "$fixture/compact-extracted/.tools/$kind-set.failed/tool"
     test -s "$fixture/compact-extracted/tool-evidence/$kind/check.log"
-    printf '%s\n' "$GITHUB_WORKSPACE/.tools/$kind-set.active" > "$fixture/expected-selection"
+    printf '%s\n' "$GITHUB_WORKSPACE/.tools/$selected" > "$fixture/expected-selection"
     cmp "$fixture/expected-selection" "$fixture/compact-extracted/tool-evidence/$kind/selection.txt"
 done
 cmp "$host_pins" "$fixture/compact-extracted/tool-evidence/host/caller-pins"
 cmp "$GITHUB_WORKSPACE/ci/ic-tools.tsv" "$fixture/compact-extracted/tool-evidence/ic/caller-pins"
 for receipt in pins.tsv host files.sha256; do
-    cmp "$GITHUB_WORKSPACE/.tools/ic-set.active/$receipt" "$fixture/compact-extracted/tool-evidence/ic/$receipt"
+    cmp "$ic_bundle/$receipt" "$fixture/compact-extracted/tool-evidence/ic/$receipt"
 done
 cmp "$fixture/extracted/identity.txt" "$fixture/compact-extracted/identity.txt"
 cmp "$scratch/scenario.log" "$fixture/compact-extracted/ic-timers-fixtures/failed case/scenario.log"
@@ -275,15 +371,25 @@ cmp "$GITHUB_WORKSPACE/.git/release-state/validation-failures/raw.log" "$fixture
 mv "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" "$fixture/compact-evidence.tar.gz"
 
 # Prior installation success must not hide an actively corrupted selection.
-printf '\nchanged\n' >> "$GITHUB_WORKSPACE/.tools/host-set.active/bin/yq"
-printf '\nchanged\n' >> "$GITHUB_WORKSPACE/.tools/ic-set.active/bin/quill"
+printf '\nchanged\n' >> "$host_bundle/bin/yq"
+printf '\nchanged\n' >> "$ic_bundle/bin/quill"
 bash "$root/scripts/ci/collect-failure-evidence.sh" > "$fixture/changed-collection.log" 2>&1
 mkdir "$fixture/changed-extracted"
 tar -xzpf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" -C "$fixture/changed-extracted"
+cmp "$host_bundle/bin/yq" "$fixture/changed-extracted/$host_stored/bin/yq"
+cmp "$ic_bundle/bin/quill" "$fixture/changed-extracted/$ic_stored/bin/quill"
+cmp "$ic_bundle/lib/libfixture.so" "$fixture/changed-extracted/$ic_stored/lib/libfixture.so"
 for path in .tools/host-set.active/bin/yq .tools/ic-set.active/bin/quill \
     .tools/host-set.failed/tool .tools/ic-set.failed/tool; do
     cmp "$GITHUB_WORKSPACE/$path" "$fixture/changed-extracted/$path"
 done
+for kind in host ic; do
+    selected="$(readlink "$GITHUB_WORKSPACE/.tools/$kind")"
+    test -L "$fixture/changed-extracted/.tools/$selected"
+    test "$(readlink "$fixture/changed-extracted/.tools/$selected")" = "$(readlink "$GITHUB_WORKSPACE/.tools/$selected")"
+done
+tar -tzf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" > "$fixture/shared-archive-paths"
+if grep -Fq 'unrelated/not-selected' "$fixture/shared-archive-paths"; then exit 1; fi
 for kind in host ic; do
     test ! -e "$fixture/changed-extracted/tool-evidence/$kind/selection.txt"
     grep -Fq 'Full bundle retained:' "$fixture/changed-extracted/tool-evidence/$kind/check.log"
@@ -408,7 +514,7 @@ mkdir -p "$GITHUB_WORKSPACE/scripts/ci" "$GITHUB_WORKSPACE/scripts/dev" "$GITHUB
 for script in qualify-failure-evidence run-validation-targets check-make-execution verify-file-checksum; do
     cp "$root/scripts/ci/$script.sh" "$GITHUB_WORKSPACE/scripts/ci/"
 done
-cp "$root/scripts/dev/install-host-tools.sh" "$GITHUB_WORKSPACE/scripts/dev/"
+cp "$root/scripts/dev/install-host-tools.sh" "$root/scripts/dev/tool-store.sh" "$GITHUB_WORKSPACE/scripts/dev/"
 cp "$root/ci/tool-versions.env" "$GITHUB_WORKSPACE/ci/"
 status=0
 GITHUB_ACTIONS=true GITHUB_EVENT_NAME=workflow_dispatch \
@@ -453,13 +559,18 @@ for scenario in "$RUNNER_TEMP/ic-timers-fixtures"/hosted-*; do
     for file in before.txt after.txt scenario.log status.txt; do
         cmp "$scenario/$file" "$fixture/qualification-extracted/${scenario#"$RUNNER_TEMP/"}/$file"
     done
+    if [[ "${scenario##*/}" == hosted-early.* ]]; then
+        candidates=("$scenario/consumer/.tools/host-set."*)
+        candidate="$(cd -P "${candidates[0]}" && printf '%s' "$PWD")"
+        cmp "$candidate/bin/jq" "$fixture/qualification-extracted/${candidate#"$RUNNER_TEMP/"}/bin/jq"
+    fi
 done
 # Bootstrap regression: invoke copied consumer entrypoints by relative name
-# with inherited CDPATH and physical checkout/workspace/temp roots ending in
-# newlines. Select the repaired canonical installer/logger and their companions
-# so these paths exercise the same owners as the normal-path cases above.
-copied="$fixture/"$'copied-checkout\n'
-export RUNNER_TEMP="$fixture/"$'copied-runner\n'
+# with inherited CDPATH, spaces and physical checkout/workspace/temp aliases.
+# CR/LF roots are rejected by shared storage admission, not positive callers.
+# Select the canonical installer/logger and their declared companions.
+copied="$fixture/copied checkout"
+export RUNNER_TEMP="$fixture/copied runner"
 mkdir -p "$copied/scripts/ci" "$copied/scripts/dev" "$copied/ci" "$RUNNER_TEMP"
 git init -q "$copied"
 mkdir -p "$copied/.git/objects/info"
@@ -473,7 +584,8 @@ done
 cp "$root/ci/tool-versions.env" "$copied/ci/"
 cp "$root/ci/ic-tools.tsv" "$copied/ci/"
 cp "$root/scripts/ci/ic-tool-pins.awk" "$copied/scripts/ci/"
-cp "$root/scripts/dev/install-host-tools.sh" "$root/scripts/dev/install-ic-tools.sh" "$copied/scripts/dev/"
+cp "$root/scripts/dev/install-host-tools.sh" "$root/scripts/dev/install-ic-tools.sh" \
+    "$root/scripts/dev/tool-store.sh" "$copied/scripts/dev/"
 # The selected workspace alias must compare equal to the physical script root.
 ln -s "$copied" "$fixture/selected-checkout"
 export GITHUB_WORKSPACE="$fixture/selected-checkout" CDPATH="$copied"

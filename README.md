@@ -436,7 +436,11 @@ remain defined in [AGENTS.md](AGENTS.md).
 Normal development and hosted CI use Rust 1.99.0. Hosted CI also lints every
 supported probe configuration with both Rust 1.99.0 and Rust 1.88.0.
 Prepare the complete pinned toolsets through `make update-dev`, or prepare the
-Rust toolchain and run `make install-tools` followed by `make tools-check`. `make actions-check` verifies the bundle offline and delegates
+Rust toolchain and run `make install-tools` followed by `make tools-check`.
+Common Cargo tools use `.tools/rust/common/bin`; update interactive shell PATH
+exports when adopting the
+[new installation contract](docs/shared-tooling.md#shared-tooling-050-storage-adoption).
+`make actions-check` verifies the bundle offline and delegates
 Actions and Cargo declaration checks to the reviewed shared parser; it never
 downloads tools. See the [setup and pin boundaries](docs/releasing.md#structured-dependency-checks-and-host-parsers).
 Both `fmt` and `fmt-check` first require the exact cargo-sort pin and prepared

@@ -1,5 +1,75 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.5.0 storage adoption
+
+Pending **0.17.9** adopts reviewed committed Shared **0.5.0**
+`a306180ce534227fcb98b882fba9a526d5d747e0` through all three canonical exports:
+**56 baseline / 32 audit-setup / 11 helpers**. Source `VERSION` and annotations
+agree. Clean detached source, previews, apply logs and preserved incoming inputs
+are retained at `/tmp/ic-timers-shared050.g43abln2/`. The initial supplemental
+preview explicitly identified two missing companions; the completed preview and
+canonical refresh add `scripts/dev/tool-store.sh` and
+`scripts/ci/test-tool-store.sh`. Optional producer qualification drivers remain
+unselected. No sibling dirty bytes or local patches to shared payloads are copied.
+
+The preceding 0.4 Rust installation preparation remains at
+`/tmp/ic-timers-shared040.pn3CNYA9/`; the interrupted 0.4.2 policy refresh remains
+at `/tmp/ic-timers-shared042.p89v2m94/`. This refresh supersedes its planned-store
+policy with the implemented host/IC storage contract. Original annotations and
+prior source-bound evidence are retained, not relabelled.
+
+Host and IC setup now reuse exact verified bundles in the per-user store while
+checkout-local `.tools/host/bin` and `.tools/ic/bin` still select their own pins.
+The default store is `${XDG_DATA_HOME:-$HOME/.local/share}/shared-tooling/tools`;
+if overriding `SHARED_TOOLING_STORE`, use the same absolute setting for setup,
+checks and evidence. Adopt the [canonical storage boundary](local-setup.md#shared-executable-storage)
+and [Shared #120](https://github.com/dragginzgame/shared-tooling/issues/120).
+Run `make install-tools` then `make tools-check`; older physical checkout-local
+host/IC bundles are retained but no longer admitted as active installations.
+Do not relocate/copy binaries, select a mutable sibling PATH or delete evidence.
+The store owner supplies selection locks, byte/receipt admission and immutable
+bundle generations; this consumer adds no cache or link manager.
+
+Cargo tools and build evidence remain local under `.tools/rust`, with common
+commands at `.tools/rust/common/bin`. Cross-repository compiled-tool reuse is
+outside this batch. Testkit still owns its installed CLI's packaged lock and
+PocketIC admission; no new direct Host runtime route or server installer is added.
+
+The refreshed shared selector admits only this checkout's referenced physical
+host/IC bundles, retaining failed/unselected bundles and compacting freshly
+verified active ones. The local collector already delegates to that owner. Its
+maintained fixture now uses actual canonical installers with authenticated tiny
+fake downloads in an isolated store; it covers compact pin/receipt provenance,
+corrupt shared payload/library retention, local references and exclusion of an
+unreferenced store entry. The intentional early failure driver uses an isolated
+store inside its archived scenario so a cached valid bundle cannot bypass the
+controlled failure. Copied entrypoints include the new helper; positive path
+cases use supported spaces/aliases, while shared fixtures own CR/LF refusal.
+These are prepared cases, not executed qualification.
+
+[Timers #44](https://github.com/dragginzgame/ic-timers/issues/44) keeps actual
+setup/check, corruption/interruption, formatting and Linux/Intel/ARM consumer
+acceptance open. The [exact-source upstream run](https://github.com/dragginzgame/shared-tooling/actions/runs/38132790945)
+was queued at inspection; availability and earlier evidence do not qualify it.
+The [release owner](releasing.md#shared-050-storage-adoption) owns acceptance.
+The [package-impact rules](../rules/changelogs.md#classify-the-released-packages-own-impact)
+classify this contributor-only adoption as a compatible library patch; no timer
+API, runtime semantics or consumer build requirement changes. No measured Wasm
+or instruction delta is claimed.
+
+Incoming Metrics **0.6.2**, Testkit **0.33.5** and all four Host **0.13.1**
+lock selections remain preserved, separate from released 0.17.8 evidence. Catalog, lock, Binaryen **132**
+and other consumer pins, raw index and staging are unchanged by adoption. Only
+source review, canonical refresh, integrity, shell syntax, documentation/diff and
+cheap locked metadata checks are permitted; no tests/builds/lint/setup or release
+commands run. Native and PocketIC product gates retain their complete contracts.
+
+Preparation passes all three integrity checks, changed/new shell and embedded
+stub syntax, local documentation paths/anchors, diff whitespace and full locked
+offline Cargo metadata. Preserved catalog/lock/pins, raw index and staged records
+compare unchanged. Results are retained with the refresh inputs; these checks
+do not execute the prepared cases or close #44.
+
 ## Shared Tooling 0.3.11 portability, setup and diagnostics
 
 Released **0.17.7** includes all three canonical exports from committed Shared

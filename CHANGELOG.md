@@ -2,6 +2,27 @@
 
 All notable changes to this project are recorded here.
 
+## [0.17.9]
+
+### Development
+
+- Adopt Shared Tooling 0.5.0 and its canonical Rust installation contract. Common
+  formatters and the Candid extractor use verified versioned slots and
+  `.tools/rust/common/bin`; update shell PATH exports and run `make install-tools`
+  followed by `make tools-check`. Retain previous installations without an old
+  PATH fallback ([#44](https://github.com/dragginzgame/ic-timers/issues/44)).
+
+- Retain completed Rust tool slots, receipts and build logs alongside failed
+  candidates in CI failure archives; cover byte/mode retention and links without
+  following external targets ([#44](https://github.com/dragginzgame/ic-timers/issues/44)).
+- Reuse verified host/IC bundles across checkouts through Shared Tooling's per-user
+  store while retaining each repository's pins and command paths. Run explicit
+  setup to replace active local selections; previous bundles remain retained.
+  Keep failed shared-installation evidence and exclude unrelated store entries;
+  isolate intentional failure qualification from cached valid bundles
+  ([#44](https://github.com/dragginzgame/ic-timers/issues/44),
+  [Shared #120](https://github.com/dragginzgame/shared-tooling/issues/120)).
+
 ## [0.17.8] - 2026-10-11
 
 ### Development

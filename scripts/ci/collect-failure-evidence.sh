@@ -55,11 +55,14 @@ fi
 if [[ -d "$root/target/validation-failures" ]]; then
     selections+=("$root" target/validation-failures)
 fi
-# Preserve failed CLI builds and Testkit provisioning attempts, never its admitted
-# server bundles. Testkit owns the attempt prefix and preserves those directories.
-if [[ -d "$root/.tools/rust/build" ]]; then
-    selections+=("$root" .tools/rust/build)
+# Preserve the physical Rust tool tree: completed slots own their build logs,
+# receipts and admitted bytes; failed candidates remain under build/. The shared
+# archiver retains links without following them. Select only physical evidence roots.
+if [[ ! -L "$root/.tools" && ! -L "$root/.tools/rust" && -d "$root/.tools/rust" ]]; then
+    selections+=("$root" .tools/rust)
 fi
+# Preserve Testkit provisioning attempts, never its admitted server bundles.
+# Testkit owns the attempt prefix and preserves those directories.
 for attempt in "$root"/.tools/testkit-server/.setup-v1-*; do
     [[ -d "$attempt" && ! -L "$attempt" ]] || continue
     selections+=("$root" "${attempt#"$root"/}")

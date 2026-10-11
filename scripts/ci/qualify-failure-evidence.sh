@@ -55,7 +55,10 @@ echo 'error: controlled early installer download failure' >&2
 exit 22
 SCRIPT
         chmod 0755 "$scenario/bin/curl"
-        PATH="$scenario/bin:$PATH" bash "$root/scripts/dev/install-host-tools.sh" \
+        # A previously cached real bundle must not bypass the controlled download
+        # failure. Keep this scenario's store inside its retained scratch root.
+        SHARED_TOOLING_STORE="$scenario/tool-store" PATH="$scenario/bin:$PATH" \
+            bash "$root/scripts/dev/install-host-tools.sh" \
             --consumer "$scenario/consumer" --versions "$root/ci/tool-versions.env" \
             > "$scenario/scenario.log" 2>&1 || status=$?
         expected=22

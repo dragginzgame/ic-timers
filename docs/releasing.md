@@ -1986,6 +1986,112 @@ completed logs only, without rerunning tests, setup, CI or release commands.
 This acceptance-record update does not warrant another release or changelog
 entry; keep it untagged for the next code-bearing batch.
 
+### Shared 0.5.0 storage adoption
+
+Pending **0.17.9** adopts committed Shared **0.5.0**
+`a306180ce534227fcb98b882fba9a526d5d747e0` through the **56/32/11** canonical
+exports. The supplemental export adds the required store helper and fixture;
+[the adoption record](shared-tooling.md#shared-tooling-050-storage-adoption)
+owns previews, source and preserved inputs. This replaces the interrupted 0.4.2
+policy-only adoption. No local store manager or executable relocation is added.
+
+Run `make install-tools` then `make tools-check`. Host/IC payloads now use the
+[canonical per-user store](local-setup.md#shared-executable-storage), with local
+`.tools/host/bin` / `.tools/ic/bin` command selections unchanged. If setting
+`SHARED_TOOLING_STORE`, use the same absolute location for setup, offline checks
+and failure collection. Older local host/IC bundles remain retained but fail
+active admission until explicit setup selects a shared bundle. Different pins
+and platforms select independent bundles; updating one checkout cannot retarget
+another. Cargo tool slots stay local, with `.tools/rust/common/bin` on PATH;
+compiled-tool sharing remains outside this release. Testkit keeps its own server
+and packaged-lock admission. Consumer Binaryen 132 and all other pins are retained.
+
+Failure collection delegates shared bundle selection/admission to the refreshed
+owner, retaining only referenced physical bundles rather than scanning the store.
+The local fixture uses canonical installers with isolated authenticated fake
+archives and checks compact provenance, corrupted shared payload/library bytes,
+reference retention and exclusion of unrelated store data. Intentional early
+failure uses a separate scenario store, so cached successful setup cannot bypass
+the injected failure; that physical scratch and its logs are archived together.
+Copied adapters include the new helper and use supported space/alias paths.
+Existing formatting and full Rust-tree retention remain part of the same batch.
+
+[Timers #44](https://github.com/dragginzgame/ic-timers/issues/44) remains open for
+actual setup/offline reuse, selected two-checkout/partial-failure/corruption
+fixtures, local retention cases, formatting-hook checks and complete Linux/native
+Intel/ARM consumer acceptance with the incoming Metrics 0.6.2 / Testkit 0.33.5 / Host 0.13.1 graph.
+Producer CI, mocks and previous 0.17.8 acceptance cannot replace those gates.
+A live early/late artifact round trip retains its explicit manual-dispatch scope.
+No tests/builds/lint/setup or release runs during preparation. Artifact deletion,
+Cargo/version mutation, staging, commits and release execution remain user-owned.
+
+The [package-impact rules](../rules/changelogs.md#classify-the-released-packages-own-impact)
+classify this as contributor tooling, compatible for the IC Timers library.
+The pending version remains 0.17.9; no consumer API/runtime/build requirement
+changes or measured Wasm/instruction saving are claimed. Keep the normal complete
+release gate rather than weakening it for a tooling-only subject.
+
+### 0.17.8 release evidence
+
+Released source **0.17.8** is
+`afb773f20ed7bf4e11d86f8d2e5db916fe9f1654`. Its root lock selects Metrics
+**0.6.1**, Testkit **0.33.3**, all four Host packages at **0.13.0** and PocketIC
+**16.1.0**, with four local 0.17.8 packages. Shared selections remain **0.3.11**
+`db143ae9ae140eb66826c413360723d23c078f66`, **56/30/11** files. These are
+the maintainer's delivered selections; evidence inspection changes no Cargo input.
+
+[Main run 38125888063](https://github.com/dragginzgame/ic-timers/actions/runs/38125888063)
+binds that SHA to successful Linux checks **114430051840** and MSRV
+**114430052089**. Intel macOS **114430052061** and ARM macOS **114430052077**
+both complete successfully. [Tag run 38125888250](https://github.com/dragginzgame/ic-timers/actions/runs/38125888250)
+passes tag-truth **114430050032** at the same SHA; other tag jobs are deliberately
+skipped. Downloaded native logs establish acceptance for
+[#42](https://github.com/dragginzgame/ic-timers/issues/42) and
+[#43](https://github.com/dragginzgame/ic-timers/issues/43) at this released source,
+independently of tag-only success.
+
+Downloaded plaintext logs, exact run/job metadata and SHA-256 hashes are retained
+at `/tmp/ic-timers-0178-acceptance.ncHCWdZo/`. Matched Linux evidence includes:
+
+- `linux.log:1091` invokes the actual release-gate fixture and line 1092 reports
+  its completed checks, including the committed separated diagnostic cases.
+- `linux.log:1234` passes the measurement/registration-lifetime sequence;
+  lines 1272–1273 pass both new Metrics boundary tests; line 1288 reports all
+  **144** library tests passing.
+- `linux.log:1485` reports **14** maintained recovery subjects passing;
+  lines 1811–1814 emit all **four** cohort subjects and line 1817 passes their
+  comparison gate. Measurements remain bound to this graph and Linux execution;
+  no cross-host or historical regression conclusion is drawn from them here.
+- The successful MSRV log identifies Rust **1.88.0** and completes the selected
+  library checks plus the maintained documentation tests.
+
+The completed Intel/ARM logs and refreshed run/job metadata are retained in the
+same evidence directory, with SHA-256 hashes. Both native host-admission steps
+complete under Apple's Bash 3.2 on their selected macOS 15 architectures.
+
+- Intel `macos-intel.log:1377` completes the actual diagnostic fixture; line 1516
+  passes registration identity; lines 1555–1556 pass both Metrics boundaries;
+  line 1570 reports **144** library tests. Line 1777 passes **14** recovery
+  subjects, lines 2106–2109 emit all **four** cohorts and line 2127 ends the gate
+  with `VALIDATION PASSED`.
+- ARM `macos-arm.log:1382` completes the diagnostic fixture; line 1520 passes
+  identity; lines 1560–1561 pass both Metrics boundaries; line 1575 reports
+  **144** library tests. Line 1780 passes **14** recovery subjects, lines
+  2109–2112 emit all **four** cohorts and line 2130 ends the successful gate.
+
+This pass downloads and inspects existing hosted evidence only. No local test,
+build, lint, setup, CI redispatch or release runs. The superseded 0.17.7 Intel job
+is cancelled and supplies no missing qualification. Intentional early/late
+live-artifact failure dispatches are skipped; no fresh artifact round trip is
+claimed. These results qualify the released graph, not incoming Host 0.13.1 /
+Testkit 0.33.4 or the new Shared installer bytes. Evidence maintenance alone does
+not justify another release; pending 0.17.9 separately contains compatible contributor-tooling adoption.
+
+Local preparation checks pass for edited document paths, diff whitespace and full
+locked offline metadata, including one selected Metrics 0.6.1 package identity.
+Catalog, lock, pin catalogs, all snapshot manifests and staging are unchanged.
+No Rust or shell source is changed by the acceptance-record update.
+
 ### Metrics 0.6 consumer qualification
 
 Released **0.17.7** `1d21b9f55a8d9121355d216471495f92b0db7865` already selects
@@ -1994,7 +2100,7 @@ Shared **0.3.11**. The [identity owner](design/callback-delivery-ownership.md#ic
 records the public Metrics identity/mean change delivered in a patch in error;
 future public hard cuts require a minor boundary, with no compatibility shim.
 
-Pending **0.17.8** prepares [#43](https://github.com/dragginzgame/ic-timers/issues/43)
+Preparation for released **0.17.8** addressed [#43](https://github.com/dragginzgame/ic-timers/issues/43)
 without another dependency update or public semantic change. The snapshot
 performance tests drive both real recording methods with synthetic instruction
 values: empty versus completed zero, exact `u64::MAX`, a zero sample at that cap,
@@ -2012,9 +2118,11 @@ This tests native wiring and identity, not IC rollback or upgrade semantics.
 Existing normal-completion/trap rejection, watchdog recovery, policy-cohort and
 native host/MSRV gates retain their original responsibilities.
 
-New cases are written, not run. The complete user-operated gate must qualify the
-committed source on Linux and both supported native macOS hosts, with the selected
-Metrics graph and existing PocketIC evidence. No new production recording logic,
+At preparation, new cases were written without execution. The
+[released-source evidence](#0178-release-evidence) now proves execution on Linux
+and both supported native macOS hosts, with the selected Metrics graph and
+existing PocketIC evidence. This closes the consumer qualification for #43;
+new dependency/tool selections retain their own gate. No new production recording logic,
 platform reads, public item, persisted format, tool pin or claimed measured Wasm/
 instruction delta is introduced. Cargo/catalog/lock mutation remains user-owned.
 

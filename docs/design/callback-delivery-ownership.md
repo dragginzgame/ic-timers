@@ -239,18 +239,21 @@ by larger values. These are inert observations, not runtime mutation authority.
 The change of public Metrics identity and mean semantics was delivered in the
 **0.17.7 patch**, contrary to the local pre-1.0 minor-boundary rule. Record this
 mistake without restoring a shim or rewriting released history. Future public
-type or semantic hard cuts require the next minor line. Pending **0.17.8** adds
-tests and accurate guidance for the behavior already selected; it does not make
-another public change or alter Cargo metadata.
+type or semantic hard cuts require the next minor line. Released **0.17.8** adds
+tests and accurate guidance for the behavior already selected; preparation did
+not make another public change or alter Cargo metadata. The maintainer's delivered
+lock selects Metrics **0.6.1**, Testkit **0.33.3** and Host **0.13.0**.
 
 [Issue #43](https://github.com/dragginzgame/ic-timers/issues/43) owns consumer
 qualification, with synthetic instruction-accumulator boundaries and a native
 completion/control/replacement/reset sequence. Metrics owns private count-overflow
 construction and arithmetic internals. Native runtime reset is deterministic
 test evidence, not an IC upgrade/recovery guarantee. Existing PocketIC recovery
-and cohort gates remain required for their own claims. New cases are written,
-not executed here; no Wasm or instruction measurement is claimed for the changed
-dependency graph. Earlier Metrics 0.5 qualification remains source-bound below.
+and cohort gates remain required for their own claims. The
+[0.17.8 release evidence](../releasing.md#0178-release-evidence) records actual
+execution of the new cases on Linux and both native macOS architectures. No local
+tests are rerun during inspection; earlier Metrics 0.5 qualification remains
+source-bound below.
 
 ## IC Metrics 0.5 released graph
 
