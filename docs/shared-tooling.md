@@ -1,8 +1,50 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.6.1 failure and native-fixture corrections
+
+Pending **0.17.11** adopts reviewed committed Shared **0.6.1**
+`731909525038c58d6f80b498e80f8630b11c685d` through the same
+**56 baseline / 33 audit-setup / 11 helper** exports. Clean detached source,
+all three previews/apply logs and preserved incoming files are at
+`/tmp/ic-timers-shared061.ynyutnkh/`. Remote main and committed `VERSION` agree;
+no dirty sibling bytes, optional producer drivers or consumer pin changes enter
+this refresh. AGENTS retains the approved validation and release exceptions.
+
+The canonical Cargo installer now explicitly stops at failed source preparation,
+lock acquisition, receipt admission, reference creation and activation. Its early
+EXIT handler releases only acquired locks, preserves the primary failure status
+and retains failed generations. Activation requires both acquired checkout and
+store locks ([Shared #120](https://github.com/dragginzgame/shared-tooling/issues/120)).
+The common Cargo fixture uses numeric counts and injects BSD-style padded `wc -l`
+on every host, with held-lock, receipt, reference and publication failure cases
+([Shared #124](https://github.com/dragginzgame/shared-tooling/issues/124)).
+The tag-maintenance alias fixture correction is outside our selected callers;
+no extra producer fixture is adopted.
+
+Run `make install-tools`, then `make tools-check`. The changed Cargo build-policy
+hash selects new verified generations; previous installations remain retained.
+Common paths, root-lock-selected Testkit execution and PocketIC admission are
+unchanged. The consumer Testkit adapter already stops before owner execution
+when shared admission fails, and the collector ignores failed selector output.
+No extra local adapter or direct Host dependency is needed.
+
+All three snapshot integrity checks, changed Bash/embedded stub syntax, diff and
+locked offline metadata pass. Incoming Cargo.lock already selects Metrics 0.6.4,
+Testkit 0.33.6 and all four Host packages at 0.13.4; it is preserved byte-for-byte,
+as are the catalog, consumer pins and raw index. No setup, tests, builds, lint or
+release execution is run. This contributor-only patch changes no timer API,
+Wasm runtime or supported application build requirement.
+
+[Exact-source upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38141614488)
+has passed lint/security; portable Linux is running and both native jobs are queued
+at inspection. [#44](https://github.com/dragginzgame/ic-timers/issues/44) remains
+open for complete consumer/native acceptance, including its existing controlled
+artifact boundary. Earlier released source remains separately qualified at
+[the release owner](releasing.md#01710-release-qualification).
+
 ## Shared Tooling 0.6.0 Cargo storage adoption
 
-Pending **0.17.10** adopts reviewed committed Shared **0.6.0**
+Released **0.17.10** adopts reviewed committed Shared **0.6.0**
 `75180980a0c4e4252d8a915aaecfaefd92bf9a4e` through all three canonical exports:
 **56 baseline / 33 audit-setup / 11 helpers**. Remote main and committed `VERSION`
 agree. Clean detached source, previews, apply logs and preserved incoming dirty
@@ -26,7 +68,7 @@ uses the installer's returned root-lock-selected executable, so it needs no slot
 parser or path reconstruction. Testkit keeps server and packaged-lock admission;
 no direct Host dependency or alternate PocketIC setup is added. This contributor
 storage hard cut changes no published Timers API or application build requirement;
-the draft remains the compatible **0.17.10** patch under package-impact rules.
+the adoption is the compatible **0.17.10** patch under package-impact rules.
 
 The selector now owns the physical local Rust tree and referenced shared Rust
 payloads. The local collector removes its duplicate successful-path selection;
@@ -45,7 +87,7 @@ fixture changes ([Shared #122](https://github.com/dragginzgame/shared-tooling/is
 and Cargo extension guidance ([Shared #123](https://github.com/dragginzgame/shared-tooling/issues/123))
 do not introduce new consumer callers.
 [Exact-source upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38136593268)
-is queued at inspection. [Timers #44](https://github.com/dragginzgame/ic-timers/issues/44)
+now passes Linux/lint and fails both macOS portable jobs. [Timers #44](https://github.com/dragginzgame/ic-timers/issues/44)
 remains open for complete Linux/MSRV/Intel/ARM qualification and its existing
 manual artifact acceptance boundary. Source availability, canonical refresh and
 syntax/integrity checks are not behavioral acceptance.
@@ -61,6 +103,13 @@ metadata. Catalog/lock/tool pins and raw index compare unchanged with the preser
 inputs. Results are recorded at the preparation path above; no behavioral fixture,
 installation, build or lint is executed. Progress is recorded on
 [#44](https://github.com/dragginzgame/ic-timers/issues/44#issuecomment-6108726659).
+
+The [released 0.17.10 qualification record](releasing.md#01710-release-qualification)
+now establishes Linux/MSRV acceptance and an ordinary Intel failure-artifact round
+trip, while native acceptance remains open. Shared #124 has actual Intel consumer
+corroboration; Shared #120 tracks additional Cargo installer failure/lock corrections
+in the subsequently committed 0.6.1 correction adopted above. Keep the failed
+0.6.0 evidence separate from acceptance of the corrected source.
 
 ## Shared Tooling 0.5.0 storage adoption
 

@@ -1988,9 +1988,45 @@ completed logs only, without rerunning tests, setup, CI or release commands.
 This acceptance-record update does not warrant another release or changelog
 entry; keep it untagged for the next code-bearing batch.
 
+### Shared 0.6.1 correction and Host 0.13.4 selection
+
+The pending 0.17.11 contributor-tooling patch adopts Shared 0.6.1
+`731909525038c58d6f80b498e80f8630b11c685d` through 56/33/11 canonical exports.
+[The adoption owner](shared-tooling.md#shared-tooling-061-failure-and-native-fixture-corrections)
+records the reviewed source, preserved inputs, failure semantics and required
+setup. No local installer patch or reduced validation gate is introduced.
+Source-bound consumer native qualification remains under
+[#44](https://github.com/dragginzgame/ic-timers/issues/44).
+
+The incoming maintainer lock already selects Metrics **0.6.4**, Testkit **0.33.6**,
+all four Host packages **0.13.4**, PocketIC **16.1.0** and four local members at
+**0.17.10**. Locked offline metadata resolves exactly one ID per selected package.
+The unchanged root catalog owns all direct dependencies; Host remains transitive
+through Testkit and absent from the timer library's normal dependency closure.
+Requested precise Host updates require no version changes; unrelated Cargo
+edge-normalization edits are discarded to preserve the incoming lock bytes.
+
+Host's annotated `v0.13.4` tag resolves to committed source
+`46483b96c21419aa41ee2cbcdfa2e8efbbfdab21`. Its new
+`durable::open_private_regular_lock_file` admits a no-follow, nonblocking regular
+sidecar in an existing parent, with owner-only creation and caller-owned locking.
+Timers has no product caller for this filesystem API; no direct dependency,
+sidecar adapter or parallel lock owner is added. Existing opener behavior is
+preserved by the reviewed common descriptor path. Source review and metadata
+are not execution qualification; [Host CI](https://github.com/dragginzgame/ic-host-tooling/actions/runs/38139845295)
+is still running. The separately installed Testkit CLI uses its packaged lock,
+so root Host selection alone does not upgrade that executable's Host dependencies.
+
+The completed released 0.17.10 ARM job **114465681030** also fails at the canonical
+Cargo fixture immediately after common setup, matching Intel's boundary. Its raw
+log is retained in `/tmp/ic-timers-shared061.ynyutnkh/timers-01710-arm.log`.
+This does not qualify the new 0.6.1 payload or incoming graph. No local behavioral
+checks or release effects run; snapshot integrity, Bash/stub syntax, documentation,
+diff and cheap locked offline metadata are the preparation checks.
+
 ### Shared 0.6.0 Cargo storage adoption
 
-Pending **0.17.10** adopts committed Shared **0.6.0**
+Released **0.17.10** adopts committed Shared **0.6.0**
 `75180980a0c4e4252d8a915aaecfaefd92bf9a4e` through **56/33/11** exports.
 [The adoption owner](shared-tooling.md#shared-tooling-060-cargo-storage-adoption)
 records exact source, required companion, preserved inputs and previews. Cargo
@@ -2011,8 +2047,8 @@ as host/IC payloads. The shared Rust fixture remains selected by `release-check`
 and owns compiler/package/native changes, two-checkout reuse and failure retention;
 no alternate builder or store manager is introduced.
 
-The prepared [local rejection repair](#shared-store-rejection-and-local-failure-retention)
-remains in the same draft. Upstream also repairs its action, including archive
+The [local rejection repair](#shared-store-rejection-and-local-failure-retention)
+is delivered in the same release. Upstream also repairs its action, including archive
 upload before incomplete collection fails. That owner behavior does not replace
 Timers' existing checkout/event identity and manual artifact verifier. The normal
 complete CI/MSRV/probe/recovery/cohort gate and Linux/Intel/ARM qualification remain
@@ -2020,6 +2056,50 @@ required under [#44](https://github.com/dragginzgame/ic-timers/issues/44).
 No tests/builds/lint/setup or release execution runs during preparation. This
 repository-only adoption leaves the library API, dependencies and consumer build
 requirements unchanged; no measured product Wasm/instruction saving is claimed.
+
+### 0.17.10 release qualification
+
+Released source is `c4ce6480a2cbc656b35bde832d70c21befcf56db` with Shared 0.6.0
+`75180980a0c4e4252d8a915aaecfaefd92bf9a4e`, Metrics 0.6.2, Testkit 0.33.5, all
+four Host packages at 0.13.1 and PocketIC 16.1.0. In
+[main run 38137975076](https://github.com/dragginzgame/ic-timers/actions/runs/38137975076),
+Linux job **114465680937** and MSRV job **114465680861** pass. The downloaded
+Linux log actually runs the canonical shared Cargo fixture, local failure-evidence
+cases, 144 library tests, 14 PocketIC recovery subjects and four policy cohorts.
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/38137975652) passes
+at the same SHA. These results qualify this released Linux graph, not incoming
+lock changes or complete native adoption.
+
+Intel macOS job **114465681015** fails in the shared Cargo fixture immediately
+after its first common setup. The downloaded
+[artifact 11701608183](https://github.com/dragginzgame/ic-timers/actions/runs/38137975076/artifacts/11701608183)
+matches uploaded ZIP SHA-256
+`c077dd2d2ffd963adfe190aad28eeaf883545e33d3e51c3972a0602effd54239`.
+Its identity records the exact source/event SHA, macOS/X64, job/run/attempt.
+Retained `ic-timers-fixtures/rust-tools-test.LAjs0s/builds` has exactly three
+completed common builds, corroborating the next statement's padded-count failure
+reported in [Shared #124](https://github.com/dragginzgame/shared-tooling/issues/124#issuecomment-6109107469).
+The original failure is preserved. ARM macOS remains running at inspection;
+complete native acceptance under [#44](https://github.com/dragginzgame/ic-timers/issues/44#issuecomment-6109107659)
+remains open. This ordinary-failure artifact round trip does not substitute for
+the explicit controlled early/late qualification scenario.
+
+Logs, job metadata, downloaded ZIP, selected archive bytes and digest records are
+retained at `/tmp/ic-timers-01710-qualification.y69x5ito/`. Member inspection reads
+selected regular files without extracting or following links. Shared's exact-source
+0.6.0 run also passes Linux/lint and fails both macOS portable jobs. Its pending
+0.6.1 working tree addresses #124 and the common Cargo setup failure/lock propagation
+tracked in [Shared #120](https://github.com/dragginzgame/shared-tooling/issues/120#issuecomment-6108988869).
+Remote main remains `7518098`; adopt the reviewed committed owner correction before
+claiming repair, without patching snapshot bytes or weakening native gates.
+
+The incoming maintainer lock selects Metrics 0.6.3, Testkit 0.33.6 and all four
+Host packages at 0.13.3, with PocketIC still 16.1.0. Locked offline metadata
+resolves one package ID for each and leaves that lock byte-for-byte unchanged.
+These selections remain separate from released-source qualification. No tests,
+builds, lint, setup, workflow dispatch or release execution runs during this
+inspection; downloaded execution evidence and metadata reads are the only checks.
+This acceptance/feedback record creates no new changelog or release subject.
 
 ### Shared 0.5.0 storage adoption
 

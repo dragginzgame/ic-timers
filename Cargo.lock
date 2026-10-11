@@ -812,9 +812,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-artifacts"
-version = "0.13.1"
+version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2d8ee5a96a64b08af3e2384eee27d4a555802e0b3f303f66b0b57fc28fe61933"
+checksum = "5b064d9265304be9f4377128372c4c4bf6dd5903d95dd60a23575462d2f893c4"
 dependencies = [
  "flate2",
  "sha2",
@@ -824,9 +824,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-fs"
-version = "0.13.1"
+version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "254f8c207892e05624580f8d01a362e698ddfdaf0fb88ef9cff75a5cc82c5a75"
+checksum = "952bf86810c02a1874062e8db11f8e8e5ccf55a775e74f8095141bc6a488430e"
 dependencies = [
  "ic-host-artifacts",
  "rustix",
@@ -834,9 +834,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-process"
-version = "0.13.1"
+version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1d0b01180e3bcd8fe739ff418f2a1baa193c18406c1f085e845de58feb0768b0"
+checksum = "a14284ccd5024344f409285689a48a38464fed07a780f7c135f9d22ea6f03a8e"
 dependencies = [
  "ic-host-artifacts",
  "ic-host-fs",
@@ -846,9 +846,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-tools"
-version = "0.13.1"
+version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "70617ab6af3b2708eda982d2ff722f004950c36b56f4c6216c72985cb177be29"
+checksum = "c49f0322a4296233b415401cddd0c0e019db3bc43bf22f28bfe50124efa6bee4"
 dependencies = [
  "ic-host-artifacts",
  "ic-host-fs",
@@ -870,15 +870,15 @@ dependencies = [
 
 [[package]]
 name = "ic-metrics"
-version = "0.6.2"
+version = "0.6.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0189d4569ebf5ffac826e6dac889571b0c3b920cfaf94fb215649866659e3f78"
+checksum = "7d9ec32a3dc0bad6bc936befac7ade5bad7bba2720d0aa429e53a95e2c14ceb2"
 
 [[package]]
 name = "ic-testkit"
-version = "0.33.5"
+version = "0.33.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "238bbd015b93bfaf27cd033425e7ac939e82488ca895d9973016c34d123a2d8d"
+checksum = "54b942dd89e09fe524467040c4d1725b169a18835cd5955fc75d96cbe6a52a2b"
 dependencies = [
  "candid",
  "fs2",

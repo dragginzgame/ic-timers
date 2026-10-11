@@ -2,6 +2,24 @@
 
 All notable changes to this project are recorded here.
 
+## [0.17.11]
+
+### Development
+
+- Refresh the locked graph to Metrics 0.6.4, Testkit 0.33.6 and Host 0.13.4.
+  Host stays transitive through Testkit; the timer API and PocketIC selection
+  remain unchanged.
+- Adopt Shared Tooling 0.6.1. Cargo setup now stops on failed lock acquisition,
+  receipt admission or activation, preserves the original failure and evidence,
+  and cleans up only locks it acquired
+  ([Shared #120](https://github.com/dragginzgame/shared-tooling/issues/120)).
+  Run `make install-tools`, then `make tools-check`; updated build-policy
+  identities select verified generations while retaining previous installations.
+- Correct the shared Cargo fixture's macOS padded build-count comparisons and
+  exercise padded counts on every host
+  ([Shared #124](https://github.com/dragginzgame/shared-tooling/issues/124),
+  [#44](https://github.com/dragginzgame/ic-timers/issues/44)).
+
 ## [0.17.10] - 2026-10-11
 
 ### Development
