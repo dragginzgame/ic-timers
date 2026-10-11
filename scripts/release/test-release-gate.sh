@@ -356,7 +356,7 @@ cmp retained-fetch-log "${failure_logs[0]}"
 mkdir -p stock-bin
 # Make can execute simple recipes directly, so printf/echo need external binaries.
 # type -P resolves executables even when Bash supplies a builtin of the same name.
-for tool in bash sh make git cp mktemp rm mkdir date tee sed grep awk tail dirname echo printf; do
+for tool in bash sh make git cp mktemp rm mkdir date tee sed grep awk tail dirname echo printf cat; do
     ln -s "$(type -P "$tool")" "stock-bin/$tool"
 done
 if PATH="$fixture_root/stock-bin" "${fixture_make[@]}" release-verify \
@@ -420,6 +420,67 @@ for backend in prepared stock; do
     grep -Fxq 'test error::tests::context ... ok' "$failure_root/latest.log"
     grep -Fxq 'error:no-space-marker' "$failure_root/latest.log"
     if grep -Fq '[ERR:' "$failure_root/latest.log"; then exit 1; fi
+done
+
+# Diagnostics are separated beyond the retained context window so neighboring
+# compiler errors cannot accidentally preserve a missing fatal/LLVM/file family.
+# Exercise the real release adapter, its raw log and its GitHub summary together.
+cat > diagnostic-families <<'EOF'
+error: ordinary-error
+error[E0308]: compiler-error
+rustc-LLVM ERROR: llvm-error
+test result: FAILED. test-result
+test error::tests::actual ... FAILED
+fatal: early-fatal
+FAILED: command-failure
+Target failed: target-failure
+No such file or directory: missing-input
+❌ failed-check
+🚨 failed-check
+make[17]: *** nested-failure
+event[unit].*+?: product-failure
+EOF
+cat > diagnostic-context <<'EOF'
+test error::tests::passing ... ok
+test error::tests::ignored ... ignored
+ordinary event[unit].*+?: not-a-prefix
+eventuZZ: not-a-literal-match
+EOF
+cat >> overrides.mk <<'EOF'
+logging-diagnostic-families:
+	@cat diagnostic-context
+	@while IFS= read -r line; do printf '%s\n' "$$line"; \
+		i=0; while [ $$i -lt 9 ]; do echo ordinary-spacing; i=$$((i + 1)); done; \
+		done < diagnostic-families
+	@i=0; while [ $$i -lt 200 ]; do echo ordinary-tail; i=$$((i + 1)); done
+	@exit 7
+EOF
+command -v rg >/dev/null
+for backend in prepared stock; do
+    logger_path="$PATH"
+    [[ "$backend" != stock ]] || logger_path="$fixture_root/stock-bin"
+    status=0
+    PATH="$logger_path" VALIDATION_FAILURE_EVENT_PREFIX='event[unit].*+?:' \
+        GITHUB_STEP_SUMMARY="$fixture_root/$backend-diagnostic-summary.md" \
+        "${fixture_make[@]}" release-verify RELEASE_TARGETS=logging-diagnostic-families \
+        > "$backend-diagnostic-output" 2>&1 || status=$?
+    [[ "$status" == 2 ]] || exit 1
+    while IFS= read -r diagnostic; do
+        for output in "$backend-diagnostic-output" "$failure_root/latest-errors.log" \
+            "$backend-diagnostic-summary.md"; do
+            grep -Fxq "[ERR:logging-diagnostic-families] $diagnostic" "$output"
+        done
+        grep -Fxq "$diagnostic" "$failure_root/latest.log"
+        grep -Fxq "$diagnostic" "$failure_root/latest-combined.log"
+    done < diagnostic-families
+    while IFS= read -r context; do
+        for output in "$backend-diagnostic-output" "$failure_root/latest-errors.log" \
+            "$backend-diagnostic-summary.md"; do
+            grep -Fxq "[logging-diagnostic-families] $context" "$output"
+            if grep -Fxq "[ERR:logging-diagnostic-families] $context" "$output"; then exit 1; fi
+        done
+    done < diagnostic-context
+    if grep -Fq '[ERR:' "$failure_root/latest.log" "$failure_root/latest-combined.log"; then exit 1; fi
 done
 
 # A child logger must select its own checkout while retaining release identity.

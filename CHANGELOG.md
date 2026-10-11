@@ -2,6 +2,29 @@
 
 All notable changes to this project are recorded here.
 
+## [0.17.7]
+
+### Development
+
+- Adopt Shared Tooling 0.3.11 so Rust tool setup and offline
+  checks use the selected repository's toolchain and Cargo configuration when
+  invoked elsewhere
+  ([Shared #101](https://github.com/dragginzgame/shared-tooling/issues/101)).
+- Keep early fatal, LLVM and missing-file diagnostics in retained release summaries
+  and GitHub summaries as well as live output; exercise both search backends with
+  isolated diagnostics and neutral Rust test names
+  ([#42](https://github.com/dragginzgame/ic-timers/issues/42),
+  [Shared #110](https://github.com/dragginzgame/shared-tooling/issues/110)).
+- Normalize shared host-tool fixture paths and release-command temporary roots,
+  including nested Make checks, for symlink aliases and relative `TMPDIR`
+  ([Shared #111](https://github.com/dragginzgame/shared-tooling/issues/111),
+  [Shared #112](https://github.com/dragginzgame/shared-tooling/issues/112)).
+- Refresh all shared snapshots from the corrected producer version so their
+  source annotation reports 0.3.11 without a local metadata rewrite
+  ([Shared #114](https://github.com/dragginzgame/shared-tooling/issues/114)).
+- Record the incoming IC Host 0.12.10 lock selection and retain Testkit as its
+  sole consumer; this Host release changes setup tooling, not library Rust code.
+
 ## [0.17.6] - 2026-10-10
 
 ### Development

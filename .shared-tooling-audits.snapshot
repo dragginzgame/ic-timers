@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.3.8
+# version	0.3.11
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	67285b28a98b7c4211ad32de726709d4e87edea4
+revision	db143ae9ae140eb66826c413360723d23c078f66
 file	faa9a62257ecdfd6532ac2225b3fd053012dfe9c35b8bc2ddc95288d8626a518	-	audits/README.md
 file	518d890bf485bef06c316b4cf26ac6bf357ed52bcce995e8d9b1232a103d0ea3	-	audits/code-hygiene.md
 file	35fd87d36a09ed0971841abf28535d43470c713a82581c2251b924da1ab8f484	-	audits/flow-convergence-and-duplication.md
@@ -12,7 +12,7 @@ file	b33ecebfb524f9af496c0f4f4b24650b97833e20f1fca56eedb8604a0660e109	-	audits/m
 file	a825ee270d5a9adefa7fec56e9c506ba2a62a7dd021c6e55b3590d8632a953c8	-	docs/consuming-snapshots.md
 file	15315edad497b9b165671c3f57e9f56e6ba1d206bbc635eb0ff51afaa8456bb3	-	docs/provenance.md
 file	95124b998fd786ed86190c78167ec4934655d1cca63c020cecaed61b9bec1d6b	-	docs/ic-tools.md
-file	2d83b2e50cda638a5fa1d2ee7fb674bd0e60b899f6041cf9c5ec0f8242dbf526	-	docs/local-setup.md
+file	57651f19930aba203b53f800ba11419366b2936d808e021a35635e78113f3c3f	-	docs/local-setup.md
 file	82892e25292fe47c26035a0031aa4ad1996fcf181732163e75039bd657f2f84b	-	ci/tool-versions.env
 file	4692d760ea97861b52c183bb69e24c929d9baf7c292795c61d65ea3166368787	-	rules/dependency-pinning.md
 file	90eb28392912af63593a3773eff903c5ef77ebab2b9199e3c720be25a3fcbbbf	-	docs/principles/rust-code-hygiene.md
@@ -20,14 +20,14 @@ file	457fd38e0073c91ba470b918d4facd9faac3c5200ebd38c97e9d6b76acdaea55	-	docs/pri
 file	4c981184847462ab3c01cac087e28309f8e054253fd95c7bbe56f643877aa708	x	scripts/ci/verify-file-checksum.sh
 file	71d1c69a25f190bc4b2b1df66d3359f172638371caa722142e820a8294d1938e	x	scripts/ci/verify-shared-tooling-snapshot.sh
 file	5ce26182b709a900ab1d957569c4ace0d89c8947198a896e8284c5952f413ccb	x	scripts/dev/install-host-tools.sh
-file	d509b74f8c8864abe84a440af6c7cca97cd9b11ff77102305bdefd648813a5e1	x	scripts/ci/test-host-tools.sh
+file	99746c3e01402cd1c1a1e417fbd39eae2b14b5056525e4fcf3c6f2e0a1528ba7	x	scripts/ci/test-host-tools.sh
 file	2493607c508b016a9a869bb18cd65b6c8ab534b77554a5465fa0b97bc1fc15a5	x	scripts/dev/install-ic-tools.sh
 file	fe2c149109d53721296c2f79d6c11dd7e56b4d0a6ef022db19a024c55cf682e2	x	scripts/ci/test-ic-tools.sh
 file	ab2202f89a077373fffac29f57527b88ccc65998f5c85c60a32081edd8338150	x	scripts/ci/verify-evidence-checksums.sh
 file	32ddc6af301567fce4d1d78cea5fe53450e7cffede28d5ad08d9c033ffb9d62d	x	scripts/ci/test-evidence-checksums.sh
 file	94a934651d5cb0c6f77fa429df277856dbda4c1a7441b2b8563e678c416258f6	-	audits/ic-canister-applications.md
-file	fd96b899926fc0cb7cebab8c5cfdb22757429205a2e5f2877d394df8896d033a	x	scripts/dev/install-rust-tools.sh
-file	d1d2bb5d63c823e160c8fc61b5eba4bff2f2ad1179c8dc2875511e5e06c0f1c7	x	scripts/ci/test-rust-tools.sh
+file	052ba97c1148adcc46df4d6d0f82a6113fddc2801fe8763f9d29c794a9440519	x	scripts/dev/install-rust-tools.sh
+file	cb57929a2195adbc09bd79ae9be846dfb4f5ef331638091f7f4dd67a2196c9ad	x	scripts/ci/test-rust-tools.sh
 file	775da89f655a3781059f433f80470ee6db9675e08942a805c111614183322fe1	-	scripts/ci/ic-tool-pins.awk
 file	d40d4ee4c2b3a32c99f682c5acf26e2abb0151b993de1c1b7fd0451de4f495f1	x	scripts/ci/test-tool-evidence.sh
 file	511f775a9dd7d0248541fa5f80a41d17718d1a7d8f25bb1b4f92502fd23c4e72	x	scripts/ci/select-tool-evidence.sh

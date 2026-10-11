@@ -1,5 +1,80 @@
 # Shared Tooling adoption
 
+## Shared Tooling 0.3.11 portability, setup and diagnostics
+
+Pending **0.17.7** refreshes all three canonical exports to committed Shared
+**0.3.11** `db143ae9ae140eb66826c413360723d23c078f66`, confirmed against remote main.
+Committed `VERSION` now agrees with the source label, correcting
+[Shared #114](https://github.com/dragginzgame/shared-tooling/issues/114). All three
+annotations come from the canonical exporter, with no local metadata rewrite.
+The previous 0.3.10 commit's truthful 0.3.9 annotation remains in its preserved
+export evidence at `/tmp/ic-timers-shared0310.2pI56T14/`.
+Selections remain **56 baseline / 30 audit-setup / 11 helpers**. Clean detached
+source, export logs and preserved incoming Cargo/pins/index and already-dirty
+acceptance records are at `/tmp/ic-timers-shared0311.IIBZGj5v/`. All exports use
+that same revision, including payloads whose bytes did not change. No sibling
+file or uncommitted source is copied. Optional helpers and consumer pins remain
+unchanged.
+
+[Shared #111](https://github.com/dragginzgame/shared-tooling/issues/111) physically
+normalizes the selected host-tool fixture root before installer path assertions.
+[Shared #112](https://github.com/dragginzgame/shared-tooling/issues/112) anchors
+the selected release-command checker and its child `TMPDIR` before changing
+directories. Both are already called by Timers' complete release check; no new
+gate or optional producer integration fixture is selected. The upstream
+[exact-source CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38121526696)
+has a successful lint job at observation; Linux and both native macOS jobs remain
+running. The superseded 0.3.10 run was cancelled and is not a complete native
+qualification. Producer and consumer qualification remain separate.
+
+The adopted [derive-macro guidance](../rules/git-hooks.md#derive-macros-and-dollar-prefixed-paths)
+from [Shared #113](https://github.com/dragginzgame/shared-tooling/issues/113)
+applies to formatter rewrites of dollar-prefixed macro tokens. Maintained Timers
+Rust sources contain no `macro_rules!` or `$crate` usage. No suppression markers,
+formatter pin change or frontend fixture is needed. The upstream diagnostic
+fixture spacing correction is now committed at the adopted revision. It separates
+all 13 families with nine ordinary lines, matching Timers' existing consumer
+coverage and resolving our reported context-window weakness. That producer-only
+integration fixture remains unselected; no new consumer fixture or gate is added.
+The selected payload bytes are unchanged from our preceding canonical export;
+this refresh advances exact provenance and the truthful version annotation.
+
+[Shared #101](https://github.com/dragginzgame/shared-tooling/issues/101)'s selected
+Rust installer now enters the consumer before every preflight/probe/install
+path. Caller-relative catalogs are resolved first; consumer-relative lock paths
+retain their existing meaning. Explicit toolchain overrides remain authoritative.
+The selected shared fixture covers relative consumers/catalogs, installation,
+offline probes and package/lock-selected executables with a toolchain override.
+Timers' existing Testkit adapter passes the absolute root; it gains the owner fix
+without another parser, configuration route or installer.
+
+[Shared #110](https://github.com/dragginzgame/shared-tooling/issues/110) gives live
+and retained validation diagnostics one predicate; context headings remain
+explicit. [Timers #42](https://github.com/dragginzgame/ic-timers/issues/42) owns
+consumer adoption and the strengthened real-release-adapter cases at the
+[release owner](releasing.md#shared-0311-portability-diagnostic-and-setup-adoption).
+The producer's [exact-source CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38075978465)
+has successful Linux, Intel/ARM macOS and lint jobs at observation. That result is separate from consumer native
+qualification; no existing 0.17.6 evidence admits these new bytes.
+
+Host **0.12.10** adopts the same Rust setup fix and changes no library Rust
+source from 0.12.9. Timers gains it through the shared script owner rather than
+a new direct Host dependency. The maintainer's incoming root lock now selects all
+four Host packages at **0.12.10**, preserved byte-for-byte during adoption.
+The reviewed Host source is `5074de1792f920112c6539629605a6624f573863`; its
+[exact-source CI](https://github.com/dragginzgame/ic-host-tooling/actions/runs/38120032068)
+passes Linux, MSRV and both native macOS jobs. That does not qualify the incoming
+consumer graph. Root Testkit **0.33.1**, Metrics **0.5.6** and PocketIC **16.1.0**
+remain selected. Testkit's installed CLI still owns its own packaged lock;
+workspace Host selection does not override it. This batch has no timer API or measured
+product Wasm/instruction change. Tests/setup/release effects remain user-owned.
+
+All three refreshed manifests verify against their selected payloads. Shell
+syntax, diff whitespace and full locked offline Cargo metadata pass. Catalog,
+incoming lock, consumer pins and raw index compare with the preserved inputs.
+No fixture, build, lint or installation is executed here. Consumer current/native
+qualification remains required for these bytes and the incoming graph.
+
 ## Shared Tooling 0.3.8 mandatory assertions
 
 After released **0.17.5** `d0fbdfb3288205f9f804c1706ed9ffa036dd2ea5`, pending
@@ -27,6 +102,14 @@ All three snapshot integrity checks pass. Syntax and metadata inspection are
 preparation evidence, not fixture execution or native acceptance. Tests, setup,
 Cargo mutation and release effects remain user-owned. This batch changes no
 timer API or product Wasm/instruction behavior.
+
+Consumer acceptance is now established for released **0.17.6**
+`3174935874796c3ffae30b0dfcf9c0c8f4557322`: completed exact-source Linux and both
+native macOS logs execute the mandatory assertion, hook, collector and fixture
+cases against these exports. The [release acceptance owner](releasing.md#0176-release-acceptance)
+records job identities, raw evidence and scope, including closure of Timers
+#38–#41. Inspection of existing logs does not execute a new gate or qualify
+unadopted upstream source.
 
 ## Shared Tooling 0.3.6 hook and lock selection
 

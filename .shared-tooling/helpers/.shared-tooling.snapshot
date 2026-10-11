@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.3.8
+# version	0.3.11
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	67285b28a98b7c4211ad32de726709d4e87edea4
+revision	db143ae9ae140eb66826c413360723d23c078f66
 file	4c981184847462ab3c01cac087e28309f8e054253fd95c7bbe56f643877aa708	x	scripts/ci/verify-file-checksum.sh
 file	71d1c69a25f190bc4b2b1df66d3359f172638371caa722142e820a8294d1938e	x	scripts/ci/verify-shared-tooling-snapshot.sh
 file	de68acd7ba25355c73fa3e9a32cbde5525debf081862c1f1a52eccb4a66c48de	x	scripts/ci/check-dependency-pins.sh
@@ -13,4 +13,4 @@ file	e1b8e9dfbcc7524065d7597e643a3157a80450fa2d477457ad8d8e8fa5b985bd	x	scripts/
 file	236f9b2d7fe391a73d03cfe355c0d26fa73de8db1553c7e670f7b19aeb65d086	x	scripts/ci/rewrite-local-lock-versions.pl
 file	d4b498337bfd681466e7b541cb2783779aad2a8b326e927450d98f3b570fb5c6	x	scripts/ci/test-local-lock-versions.pl
 file	d7b179f9ceaec6e11c690c975b61f91bedc80526415f71571615064db14f0c9c	x	scripts/ci/check-release-tag.sh
-file	eea5a0604ae646ce98402f7494c79e26c6a77f539db2da8ac8f1d583b23cd825	x	scripts/ci/check-release-commands.sh
+file	6fe7da8acbeb862b26047d08c63a95a5d2b93223bb9c929d65c56dd2f30551ac	x	scripts/ci/check-release-commands.sh

@@ -1,12 +1,12 @@
 # Shared Tooling snapshot v1
-# version	0.3.8
+# version	0.3.11
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	67285b28a98b7c4211ad32de726709d4e87edea4
+revision	db143ae9ae140eb66826c413360723d23c078f66
 file	429b7f96a30b4d890c6e7cd4e95db9d38af24d918c032b6232eba0c9f214ce8c	-	DRAGGINZGAME.md
 file	b5a6e8fb723a861b722834675e27b4b16f3d296112622c1b40cdc8714f575404	-	rules/changelogs.md
 file	bb2c1617f9171f96363f2fc6bb3955d34d8dce305c6b43961fbe08a7536d24f7	-	rules/cargo-dependencies.md
-file	dae76214fb4c8c698530b141a418ceab44f4c14fc8452b7a545bfe2e0c0c84fd	-	rules/git-hooks.md
+file	a2e8db2345679ff76696d0a92d325d9f4a516c66c2be49c0e98a75b0c59d3139	-	rules/git-hooks.md
 file	8b302f055416e2cce84cd036811e1e1c39311e890bc9cfca592201992abd4839	-	docs/releases.md
 file	59f6cb0b47fcfa698396776bbb391737292ebf34457ad7c65803fe7b36961499	-	docs/principles/README.md
 file	9315c9faffa4f36cfab496342535bf49d728ddd2111e8e127cbc44b3fac89ce7	-	docs/principles/decision-artifact-discipline.md
@@ -23,7 +23,7 @@ file	6e48da795503f730fe9a90e14635d73133719f901ba7baea899007cd196722b4	x	scripts/
 file	29e1b926f5374bac5e4ac8ff4bf76e69fb61dfc6cb09f30bb140462ce00094e6	x	.githooks/pre-commit
 file	c1fcf72754976d3d2e5203226e97ef5f50eff4b5c0dabeb2a9b00cfcf0326645	x	scripts/dev/install-git-hooks.sh
 file	c8a327fff520f3bb0cdabf1a402b3bcb6de6831d7992f6685fe4dccf292f0d51	-	rules/agent-maintenance.md
-file	8063c47b5249ec6d20680485026f6f77df7d48e2645343b8cbd5ef6d09a9c542	x	scripts/ci/run-validation-targets.sh
+file	ad6a1edf04aca341040b7d4cc1b068a2c5dbe7ab34c6374c5ab2332944e8c6dd	x	scripts/ci/run-validation-targets.sh
 file	189bcff0279a6729dd9c9cef6d8b506bf07bfb33d6d10b0cd0f5b11730638a8d	-	docs/verification-helpers.md
 file	1063002468575e2f821cfec71524bde06a64634bf30455d64d2d9fed872969d6	-	docs/tag-maintenance.md
 file	af5b07687010864336277406f2a3faf06c868765897b4ab046acc05918ad60a2	-	scripts/distribution/governance-files.txt

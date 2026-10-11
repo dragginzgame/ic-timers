@@ -1943,6 +1943,116 @@ Timers' probes retain managed startup through Testkit and no direct Host import.
 is queued at observation. No contributor tests, builds, setup, dependency update
 or sibling mutation run; native acceptance remains source-bound and user-owned.
 
+### 0.17.6 release acceptance
+
+Released source is **0.17.6** `3174935874796c3ffae30b0dfcf9c0c8f4557322`.
+The committed root graph selects four local 0.17.6 packages, Metrics **0.5.6**,
+Testkit **0.33.1**, all four Host packages at **0.12.9**, and PocketIC **16.1.0**.
+The installed Testkit CLI retains its separately packaged locked build graph;
+workspace Host selection does not override that executable. All three Shared
+snapshots select reviewed **0.3.8** `67285b28a98b7c4211ad32de726709d4e87edea4`
+with **56/30/11** files.
+
+[Exact-source main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38073888597)
+completes successfully, including Linux checks
+[114276787241](https://github.com/dragginzgame/ic-timers/actions/runs/38073888597/job/114276787241),
+MSRV [114276787355](https://github.com/dragginzgame/ic-timers/actions/runs/38073888597/job/114276787355),
+Intel [114276787367](https://github.com/dragginzgame/ic-timers/actions/runs/38073888597/job/114276787367)
+and ARM [114276787456](https://github.com/dragginzgame/ic-timers/actions/runs/38073888597/job/114276787456).
+[Matching tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/38073888232/job/114276723092)
+also passes at the same SHA. Run/job metadata, all five raw logs, their SHA-256
+identities and matched line references are retained at
+`/tmp/ic-timers-0176-acceptance.EkYVSQ/` (`inspection.json` owns the readback).
+
+Linux and both macOS logs show completed local fixture-boundary and mandatory
+assertion checks, collector exit/retention and full archive cases, real-index
+release admission, version-preparation rejection/rollback, ordered Testkit
+admission and actual shared-hook failure-isolation cases. The macOS host step
+explicitly admits Darwin 15, the selected architecture and Apple's Bash 3.2
+before adding `/bin` to the execution path. Both native release gates end with
+`VALIDATION PASSED`; all three hosts execute 142 library tests, 14 maintained
+PocketIC recovery subjects and all four policy cohorts. This establishes
+consumer acceptance for the committed repair and graph, not just producer
+acceptance or availability of a release.
+
+This evidence closes [#38](https://github.com/dragginzgame/ic-timers/issues/38),
+[#39](https://github.com/dragginzgame/ic-timers/issues/39),
+[#40](https://github.com/dragginzgame/ic-timers/issues/40) and
+[#41](https://github.com/dragginzgame/ic-timers/issues/41). Interrupted older runs
+are not counted. Intentional early/late live-workflow artifact qualification
+steps are skipped in this ordinary run; no fresh manual failure dispatch or
+artifact round trip is claimed. The contributor downloads and inspects existing
+completed logs only, without rerunning tests, setup, CI or release commands.
+This acceptance-record update does not warrant another release or changelog
+entry; keep it untagged for the next code-bearing batch.
+
+### Shared 0.3.11 portability, diagnostic and setup adoption
+
+Pending **0.17.7** adopts reviewed Shared **0.3.11**
+`db143ae9ae140eb66826c413360723d23c078f66` through all three exports;
+[the adoption owner](shared-tooling.md#shared-tooling-0311-portability-setup-and-diagnostics)
+records exact source and the corrected version annotation from Shared #114.
+The incoming root lock selects Host 0.12.10;
+the adoption preserves that maintainer change without selecting another version.
+Shared #111/#112 physically anchor the selected host fixture and release-command
+checker, including child temporary directories. Existing complete release checks
+exercise both owners; optional producer portability fixtures are not imported.
+[Timers #42](https://github.com/dragginzgame/ic-timers/issues/42) applies
+[Shared #110](https://github.com/dragginzgame/shared-tooling/issues/110)'s reproduced
+summary-loss defect to our real release adapter. Fatal/LLVM/missing-file
+classifications previously existed only in live output; the selected runner now
+uses the same diagnostic predicate for retained selection. Raw log handling,
+bounded context, original failure status and literal consumer prefixes remain.
+[Shared #101](https://github.com/dragginzgame/shared-tooling/issues/101)'s Rust
+setup fix also keeps preflight, installed-tool probes and Cargo in the same
+consumer configuration context, preserving explicit toolchain selection.
+
+The existing local release-gate fixture exercises all diagnostic families through
+its actual Make adapter with both prepared ripgrep and stock grep paths. Nine
+ordinary lines separate each family, exceeding the four-line context window, so
+neighboring matching errors cannot mask an omitted classifier rule. A 200-line
+tail forces the early diagnostic retention path. Cases require status 2 and each
+diagnostic in live output, highlighted retained output and the GitHub summary;
+raw and combined logs stay undecorated. Passing/ignored `error::` names and
+literal-prefix near matches remain neutral context. All summary paths are owned
+by the fixture. The selected shared Rust fixture owns external-caller and
+explicit-toolchain setup cases. Cases are written, not executed here. Our
+source-inspection feedback on the upstream adjacent diagnostic block is now
+addressed in committed 0.3.11: nine ordinary lines separate each family. The
+producer's reported controlled regression probe rejects a deliberately missing
+retained fatal rule with the spaced cases, while the old adjacent cases accepted
+it. That is upstream evidence, not a consumer execution. The producer integration
+fixture remains unselected; Timers retains its actual-adapter coverage.
+
+Permitted preparation checks pass: all 56/30/11 snapshot identities, syntax for
+70 shell scripts and 57 embedded Bash bodies plus the new Make recipe, diff
+whitespace, local links and full locked offline metadata. No recipe/fixture body
+is executed. These initial setup/diagnostic preparation checks compared catalog,
+lock, both pin catalogs and raw index with the then-incoming inputs at
+`/tmp/ic-timers-shared039.0vht4_71/`. The later canonical portability refresh
+preserves the newly incoming Host 0.12.10 lock and records source/export logs and
+inputs at `/tmp/ic-timers-shared0310.2pI56T14/`. Earlier dirty
+0.17.6 acceptance records are retained rather than rolled back.
+The portability refresh passes all three integrity checks, shell syntax, diff
+whitespace and full locked offline metadata, preserving its own incoming catalog,
+lock, pins and raw index. No fixture or recipe body is executed.
+The final canonical 0.3.11 refresh retains unchanged selected payload bytes and
+records source, export logs and preserved inputs at
+`/tmp/ic-timers-shared0311.IIBZGj5v/`. Its manifests now report the corrected
+producer version. All three integrity checks, syntax, diff whitespace and locked
+offline metadata pass; incoming catalog, lock, pins and raw index are preserved.
+
+Current/native qualification must come from the existing full user-operated gate
+for committed consumer source. Earlier 0.17.6 native evidence remains valid for
+its source and cannot close #42 or admit the pending Shared/Host changes. Shared's
+0.3.11 exact-source lint job passes; Linux and both macOS jobs are still running
+at observation. The superseded 0.3.10 run was cancelled. Host's exact-source
+Linux/MSRV and both macOS jobs pass. Those
+producer results do not qualify consumer adoption. This is repository tooling
+only; normally bundle it untagged into code-bearing work. A maintainer-selected
+release retains the complete gate. No timer/API, dependency mutation, optimizer
+change, extra server route or claimed product Wasm/instruction delta is introduced.
+
 ### Mandatory Bash 3.2 assertions
 
 Released **0.17.5** `d0fbdfb3288205f9f804c1706ed9ffa036dd2ea5` selects Metrics
