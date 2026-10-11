@@ -2,7 +2,7 @@
 
 ## Shared Tooling 0.6.3 committed-preparation restart
 
-Pending **0.17.13** adopts committed Shared **0.6.3**
+Released **0.17.13** (`e6ac645aac1b185bfaa3b146c2b8e1dd38b3299f`) adopts committed Shared **0.6.3**
 `4fd979d13c32adb3cb2f51f213ebfc4f98339b3d` through the same **56/33/11** exports.
 Committed `VERSION` and remote main agree. Clean detached source, all three
 previews/apply logs and preserved inputs are at
@@ -18,7 +18,11 @@ repeat full validation. Unchanged-HEAD preparation, explicit resume, staging and
 later phases retain their exact recovery contracts. The
 [local adapter review](releasing.md#changed-source-at-preparation-intent) confirms
 local-only metadata preparation and no per-version receipt replacement path.
-No real plan, release state or evidence is retired during this adoption.
+The contributor adoption retired no real plan, release state or evidence.
+The subsequent maintainer release journal is complete for source
+`560c9a55f0679380fa6933222acfac564da9ebec`; the release commit is its sole child.
+[Current consumer qualification](releasing.md#01713-delivery-and-remaining-issue-acceptance)
+keeps hosted/native and controlled artifact acceptance separate from delivery.
 
 Host **0.14.0** is published at
 `4723befe8d65c760c00e05c42652759d691fbd5e`. Its required-status completed process

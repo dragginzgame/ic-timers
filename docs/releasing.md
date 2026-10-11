@@ -1151,8 +1151,11 @@ The [driver](../scripts/ci/qualify-failure-evidence.sh) retains
 `scenario.log` and `status.txt`. Review each downloaded archive's identity against
 its actual source, job, host, run and attempt; compare before/after bytes and 0640
 modes, and require the selected stage and expected status in `status.txt`. Early
-artifacts must include the real retained `consumer/.tools/host-set.*/bin/jq`
-candidate containing the controlled rejected bytes. Late artifacts must include
+artifacts must include the real retained
+`tool-store/host-<64-hex-identity>/set.<generation>/bin/jq` within the scenario,
+containing the controlled rejected bytes as a regular file. The checkout's
+`consumer/.tools/host-set.*` entry is a reference, not that physical payload.
+Late artifacts must include
 the controlled error in `target/validation-failures/latest-combined.log` and its
 raw per-target log. A generic setup/runner failure or missing controlled marker
 does not qualify the scenario. Record both run links and all six host/stage
@@ -2023,6 +2026,91 @@ artifact round trip is claimed. The contributor downloads and inspects existing
 completed logs only, without rerunning tests, setup, CI or release commands.
 This acceptance-record update does not warrant another release or changelog
 entry; keep it untagged for the next code-bearing batch.
+
+### 0.17.13 delivery and remaining issue acceptance
+
+Released **0.17.13** is `e6ac645aac1b185bfaa3b146c2b8e1dd38b3299f`, selecting
+Shared **0.6.3** `4fd979d13c32adb3cb2f51f213ebfc4f98339b3d`, Metrics **0.6.4**,
+Testkit **0.33.8**, all four Host **0.13.5** and PocketIC **16.1.0**.
+The maintainer's local release journal records `complete` for source
+`560c9a55f0679380fa6933222acfac564da9ebec`. The exact release commit has that sole
+parent; native runtime test bytes are identical, and local `v0.17.13` resolves to
+the release commit. This records delivery through the normal release contract,
+not an independently downloaded test-execution log or native macOS acceptance.
+Read-only journal/source comparisons are retained at
+`/tmp/ic-timers-01713-issues.3zinjt3e/`.
+
+[Full CI](https://github.com/dragginzgame/ic-timers/actions/runs/38149582052)
+passes Linux/MSRV with both native jobs queued at inspection.
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/38149582074)
+passes separately and cannot substitute for those gates.
+[#46](https://github.com/dragginzgame/ic-timers/issues/46)'s six-case native fixture
+cleanup correction and its formatting repair are delivered. Downloaded Linux job
+**114500137818** actually executes
+`runtime::tests::fixture_cleanup_drops_queued_and_suspended_work_before_tls_teardown`
+and passes 145 library tests, one doctest, seven frontier checks, 14 PocketIC
+recovery subjects and four policy cohorts. The raw log is retained at
+`/tmp/ic-timers-01713-qualification.n07_3uur/released-linux.log`, SHA-256
+`3bfee2dcd411dc9b3e346982cba8033343a4d806f703c1c149caddc5ba1d2ce8`.
+This supplies #46's source-bound execution evidence; complete native and artifact
+acceptance remain separately owned by #44.
+[#44](https://github.com/dragginzgame/ic-timers/issues/44) retains complete native
+and controlled early/late artifact qualification. No additional runtime repair
+is justified by these two issues.
+
+For #44, the maintainer can select frozen `v0.17.13` in the existing CI manual
+dispatch, first `failure_stage=early`, then `late` **after the first completes**.
+Use the [existing qualification procedure](#ci-failure-evidence) and
+record both source-bound run links and all six host/stage verification results.
+The original jobs must fail at the selected controlled boundary and all three
+download-verification jobs must pass per stage. Queued jobs, setup failures or
+ordinary successful CI do not satisfy this artifact boundary. No workflow is
+dispatched or validation run by the initial issue-maintenance pass. These
+acceptance records warrant no new changelog draft or package release.
+
+The maintainer subsequently authorized both qualification stages at frozen
+`v0.17.13`, sequentially after tag CI finished. Tag CI passes. The authorized
+[early run](https://github.com/dragginzgame/ic-timers/actions/runs/38150377457)
+selects the exact release SHA. Its Linux producer reaches controlled exit 22,
+archives and uploads successfully; both native producers remain queued. Late qualification must
+wait for this run to complete, preserving its original failing producer results
+and verification observations. Dispatch identity, source tag and observations
+are retained at `/tmp/ic-timers-01713-qualification.n07_3uur/`. Neither dispatch
+acceptance nor queued jobs count as successful artifact qualification.
+
+### Early verifier shared-store path correction
+
+The authorized early run exposed a local verifier defect under
+[#44](https://github.com/dragginzgame/ic-timers/issues/44). Linux artifact
+**11706432177**, uploaded ZIP SHA-256
+`c673b3502a05f8207002274a3f561ff4ae32d2fd69f2e9b18f411e8afcde83df`, contains the
+correct rejected download bytes under the scenario's physical shared host
+generation. The frozen 0.17.13 verifier instead requires an obsolete physical
+checkout slot and rejects the valid archive. Its synthetic rejection fixture
+still constructs that old layout; the collector fixture resolves and compares
+physical bytes but had not passed its actual archive to the download verifier.
+The collector and canonical Shared installer require no patch.
+
+Pending compatible **0.17.14** replaces the old candidate path match with the
+current `tool-store/host-<64-hex>/set.<alphanumeric>/bin/jq` shape. It keeps exact
+source/job/host/run/attempt, input mode/bytes, controlled status and one regular
+candidate admission. Updated negative cases reject obsolete/malformed paths,
+multiple physical candidates and linked payloads. The existing Ubuntu-only
+download-verifier suite now runs the actual early driver and collector in an
+isolated checkout/store, then verifies their archive with matching source
+identity. This adds no Python prerequisite to native macOS or the Make release
+gate. No legacy reader, link traversal or recovery bypass is added.
+
+The corrected local verifier admits the exact downloaded Linux artifact that
+the frozen verifier rejects; both outputs and the original ZIP are retained at
+`/tmp/ic-timers-01713-qualification.n07_3uur/`. Python/Bash syntax and diff checks
+pass. The new synthetic/producer fixtures are prepared, not locally executed;
+the explicit authorization covers the two frozen hosted stages and their artifact
+inspection. The fixed dirty verifier is not the hosted verifier of 0.17.13 and
+does not make that early run accepted. Native producers/hosted verification and
+late qualification retain their own pending observations. Qualify the delivered
+correction at its frozen source through the existing maintainer workflow before
+closing #44. Crate APIs, production behavior, dependencies and Wasm are unchanged.
 
 ### 0.17.12 source and native cleanup follow-up
 

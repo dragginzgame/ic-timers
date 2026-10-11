@@ -60,7 +60,7 @@ def verify_archive(path, stage, identity, tool_pins):
         if stage == "early":
             candidates = [name for name in members
                           if re.fullmatch(re.escape(scenario)
-                                          + r"/consumer/\.tools/host-set\.[^/]+/bin/jq", name)]
+                                          + r"/tool-store/host-[0-9a-f]{64}/set\.[A-Za-z0-9]+/bin/jq", name)]
             if len(candidates) != 1 or read(candidates[0]) != b"controlled rejected download bytes\n":
                 raise ValueError("rejected installer candidate bytes were not retained")
         else:

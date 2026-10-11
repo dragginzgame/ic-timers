@@ -2,8 +2,10 @@
 
 import io
 from contextlib import contextmanager
+import os
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -25,6 +27,48 @@ def fixture_directory():
 
 
 class DownloadedEvidenceTests(unittest.TestCase):
+    def test_collected_early_qualification(self):
+        # Exercise maintained producers as well as synthetic archive rejection.
+        # This suite runs in the Ubuntu download-verification job; it adds no
+        # Python requirement to native macOS or the Make release gate.
+        root = Path(__file__).resolve().parents[2]
+        with fixture_directory() as temporary:
+            workspace, runner = temporary / "checkout", temporary / "runner"
+            subprocess.run(["git", "clone", "--quiet", "--shared", "--no-checkout",
+                            str(root), str(workspace)], check=True)
+            for name in (
+                "scripts/ci/qualify-failure-evidence.sh",
+                "scripts/ci/verify-file-checksum.sh",
+                "scripts/dev/install-host-tools.sh",
+                "scripts/dev/tool-store.sh",
+                "ci/tool-versions.env", "ci/ic-tools.tsv",
+            ):
+                target = workspace / name
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(root / name, target)
+            runner.mkdir()
+            sha = subprocess.check_output(
+                ["git", "-C", str(workspace), "rev-parse", "HEAD"], text=True).strip()
+            identity = dict(checkout_sha=sha, event_sha=sha, job="checks",
+                            host="Linux/X64", run="123", attempt="2")
+            env = dict(os.environ, GITHUB_WORKSPACE=str(workspace), RUNNER_TEMP=str(runner),
+                       TMPDIR=str(runner), SHARED_TOOLING_STORE=str(temporary / "shared-store"),
+                       GITHUB_ACTIONS="true", GITHUB_EVENT_NAME="workflow_dispatch",
+                       GITHUB_SHA=sha, GITHUB_JOB="checks", RUNNER_OS="Linux", RUNNER_ARCH="X64",
+                       GITHUB_RUN_ID="123", GITHUB_RUN_ATTEMPT="2")
+            for command, expected, log in (
+                (["bash", str(workspace / "scripts/ci/qualify-failure-evidence.sh"), "early"],
+                 22, "early.log"),
+                (["bash", str(root / "scripts/ci/collect-failure-evidence.sh")],
+                 0, "collection.log"),
+            ):
+                result = subprocess.run(command, env=env, capture_output=True)
+                (temporary / log).write_bytes(result.stdout + result.stderr)
+                self.assertEqual(result.returncode, expected, (result.stdout, result.stderr))
+            tool_pins = {kind: (root / "ci" / name).read_bytes() for kind, name in
+                         (("host", "tool-versions.env"), ("ic", "ic-tools.tsv"))}
+            verify_archive(runner / "ic-timers-failure-evidence.tar.gz", "early", identity, tool_pins)
+
     def test_qualification_and_rejections(self):
         identity = dict(checkout_sha="selected", event_sha="selected", job="macos",
                         host="macOS/X64", run="123", attempt="2")
@@ -49,7 +93,7 @@ class DownloadedEvidenceTests(unittest.TestCase):
             for name in ("before.txt", "after.txt", "consumer/input.txt"):
                 files[scenario + "/" + name] = (f"controlled {stage} input\n".encode(), 0o640)
             if stage == "early":
-                payload = scenario + "/consumer/.tools/host-set.ABC123/bin/jq"
+                payload = scenario + "/tool-store/host-" + "0" * 64 + "/set.ABC123/bin/jq"
                 files[payload] = (b"controlled rejected download bytes\n", 0o644)
             else:
                 payload = "target/validation-failures/latest-combined.log"
@@ -77,6 +121,29 @@ class DownloadedEvidenceTests(unittest.TestCase):
 
                 write(files)
                 verify_archive(archive, stage, identity, tool_pins)
+                if stage == "early":
+                    # Earlier physical checkout slots cannot stand in for the
+                    # current retained shared generation. Reject malformed or
+                    # ambiguous candidates and links without following them.
+                    for wrong_path in (
+                        scenario + "/consumer/.tools/host-set.ABC123/bin/jq",
+                        scenario + "/tool-store/host-invalid/set.ABC123/bin/jq",
+                        scenario + "/tool-store/host-" + "0" * 64 + "/set.invalid-name/bin/jq",
+                    ):
+                        entries = {key: value for key, value in files.items() if key != payload}
+                        entries[wrong_path] = files[payload]
+                        write(entries)
+                        with self.assertRaises(ValueError):
+                            verify_archive(archive, stage, identity, tool_pins)
+                    other_candidate = payload.replace("set.ABC123", "set.DEF456")
+                    write(dict(files, **{other_candidate: files[payload]}))
+                    with self.assertRaises(ValueError):
+                        verify_archive(archive, stage, identity, tool_pins)
+                    link = tarfile.TarInfo(payload)
+                    link.type, link.linkname = tarfile.SYMTYPE, "elsewhere"
+                    write({key: value for key, value in files.items() if key != payload}, link)
+                    with self.assertRaises(ValueError):
+                        verify_archive(archive, stage, identity, tool_pins)
                 write({"./" + name: value for name, value in files.items()})
                 verify_archive(archive, stage, identity, tool_pins)
                 if stage == "late":

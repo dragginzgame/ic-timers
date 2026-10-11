@@ -2,6 +2,16 @@
 
 All notable changes to this project are recorded here.
 
+## [0.17.14]
+
+### Development
+
+- Verify controlled early-failure download evidence at its current Shared tool
+  store generation, replacing the obsolete checkout-local path check. Reject
+  malformed, duplicate and linked candidates, and pass actual producer/collector
+  output through the existing Ubuntu download-verifier suite
+  ([#44](https://github.com/dragginzgame/ic-timers/issues/44)).
+
 ## [0.17.13] - 2026-10-11
 
 ### Fixed
