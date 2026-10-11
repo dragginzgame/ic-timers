@@ -732,19 +732,15 @@ fn fixture_cleanup_drops_queued_and_suspended_work_before_tls_teardown() {
             let _fixture = setup();
             let gate = SuspendedWork::default();
             let captured = Rc::new(CaptureDropCheck(Rc::clone(&dropped)));
-            let registration = register_once(
-                identity("fixture-cleanup"),
-                lifetime,
-                move |_| {
-                    let gate = gate.clone();
-                    let captured = Rc::clone(&captured);
-                    async move {
-                        gate.wait().await;
-                        std::hint::black_box(captured);
-                        OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
-                    }
-                },
-            )
+            let registration = register_once(identity("fixture-cleanup"), lifetime, move |_| {
+                let gate = gate.clone();
+                let captured = Rc::clone(&captured);
+                async move {
+                    gate.wait().await;
+                    std::hint::black_box(captured);
+                    OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
+                }
+            })
             .unwrap();
             if scheduled {
                 registration
