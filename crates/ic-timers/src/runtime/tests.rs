@@ -422,28 +422,25 @@ fn suspended_once_work_allows_other_timers_and_arbitrates_external_commands() {
                     *callback_slot.borrow_mut() = Some(context);
                     async move {
                         gate.wait().await;
-                        OnceRunResult::new(
-                            TimerCompletion::success(1),
-                            OnceDecision::ScheduleAt(80),
-                        )
+                        let completion = TimerCompletion::success(1);
+                        OnceRunResult::new(completion, OnceDecision::ScheduleAt(80))
                     }
                 },
             )
             .unwrap();
             let unrelated_calls = Rc::new(Cell::new(0));
             let callback_calls = Rc::clone(&unrelated_calls);
-            let unrelated = register_watchdog(
+            let _unrelated = register_watchdog(
                 identity("unrelated-watchdog"),
                 TimerCadence::from_nanos(5).unwrap(),
                 DeclarationLifetime::Retained,
-                None,
+                Some(TimerSchedule::At(15)),
                 move |_| {
                     callback_calls.set(callback_calls.get() + 1);
                     WatchdogRunResult::new(TimerCompletion::success(1), WatchdogDecision::Stop)
                 },
             )
             .unwrap();
-            unrelated.ensure_scheduled().unwrap();
             set_time(15);
             assert!(run_next_due()); // Ordinary work suspends without an armed handle.
             assert!(!registration.has_armed_wakeup().unwrap());

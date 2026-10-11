@@ -650,17 +650,17 @@ fn register_initial(
         };
         Ok((register(registry)?, requested))
     })?;
-    if let Some((schedule, now_ns)) = requested {
-        if let Err(error) = apply_claim_transition(&claim, None, |registry| {
+    if let Some((schedule, now_ns)) = requested
+        && let Err(error) = apply_claim_transition(&claim, None, |registry| {
             reconcile(registry, &claim, now_ns, Some(schedule))
-        }) {
-            // Unlike later control, failed creation must retire retained
-            // declarations too. Provider cleanup can already have removed a
-            // transient entry; treat only that exact claim's expiry as done.
-            match unregister_claim(&claim) {
-                Ok(()) | Err(TimerError::RegistrationExpired) => return Err(error),
-                Err(cleanup_error) => return Err(cleanup_error),
-            }
+        })
+    {
+        // Unlike later control, failed creation must retire retained
+        // declarations too. Provider cleanup can already have removed a
+        // transient entry; treat only that exact claim's expiry as done.
+        match unregister_claim(&claim) {
+            Ok(()) | Err(TimerError::RegistrationExpired) => return Err(error),
+            Err(cleanup_error) => return Err(cleanup_error),
         }
     }
     Ok(claim)
