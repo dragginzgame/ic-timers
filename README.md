@@ -272,10 +272,24 @@ the removed bare-vector `timer_snapshots` function.
 | Registration identity | Runtime epoch plus registration sequence; changes when counters are replaced, including within one epoch |
 
 Before subtracting cumulative measurements, compare `registration_id()` within
-the same canister and require advancing source times. Cancellation preserves the
-identifier; unregister/re-register changes it. Neither endpoint may be
-`u64::MAX`: saturation makes exact deltas unavailable. Callback `generation()`
-does not identify a counter lifetime.
+the same canister, compare the same callback role and units, and require advancing
+source times and append-only continuity. Cancellation preserves the identifier;
+unregister/re-register changes it. Increasing numbers alone cannot detect a reset.
+Callback `generation()` does not identify a counter lifetime.
+
+Event counters and memory sample counts conservatively treat `u64::MAX` as
+saturated. Instruction measurements use Metrics 0.6 ordered `MeasurementSummary`
+values: an exactly reached cap remains exact, while actual count/total overflow
+is recorded by `aggregate().samples_saturated()` and `total_saturated()`.
+`mean()` returns `Ok(None)` for no completed samples, `Ok(Some(0))` for a completed
+zero measurement, and an error after actual overflow. Latest and maximum samples
+remain available after overflow. Preserve the tracked summary when computing a
+mean or an admitted interval; clipped count/total fields alone lose overflow
+provenance. Numeric interval admission does not establish registration continuity.
+
+Use `ic_timers::MeasurementSummary` or the same Metrics 0.6 package when exchanging
+these values with other libraries; a direct Metrics 0.5 dependency has a distinct
+Rust type.
 
 Each instruction measurement covers the accepted `ic-timers` execution
 interval: it begins immediately before callback acceptance and ends after

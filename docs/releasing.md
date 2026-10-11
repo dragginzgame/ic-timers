@@ -1986,9 +1986,55 @@ completed logs only, without rerunning tests, setup, CI or release commands.
 This acceptance-record update does not warrant another release or changelog
 entry; keep it untagged for the next code-bearing batch.
 
+### Metrics 0.6 consumer qualification
+
+Released **0.17.7** `1d21b9f55a8d9121355d216471495f92b0db7865` already selects
+Metrics **0.6.0**, Testkit **0.33.2**, Host **0.12.10**, PocketIC **16.1.0** and
+Shared **0.3.11**. The [identity owner](design/callback-delivery-ownership.md#ic-metrics-06-released-graph)
+records the public Metrics identity/mean change delivered in a patch in error;
+future public hard cuts require a minor boundary, with no compatibility shim.
+
+Pending **0.17.8** prepares [#43](https://github.com/dragginzgame/ic-timers/issues/43)
+without another dependency update or public semantic change. The snapshot
+performance tests drive both real recording methods with synthetic instruction
+values: empty versus completed zero, exact `u64::MAX`, a zero sample at that cap,
+actual total overflow, sticky overflow after another zero, retained latest/maximum
+and copied pre-overflow observations. The other callback role remains empty.
+Metrics owns unreachable private sample-count overflow seeding; no test-only
+production mutation path or count constructor is added here.
+
+The existing native registration-identity test now records seven instructions
+per completed callback and checks the measurement lifetime through retained stop,
+cancellation, replacement and deterministic runtime reset. A replacement with
+numerically larger readings admits arithmetic subtraction while its registration
+identity differs; callers must reject that comparison before trusting an interval.
+This tests native wiring and identity, not IC rollback or upgrade semantics.
+Existing normal-completion/trap rejection, watchdog recovery, policy-cohort and
+native host/MSRV gates retain their original responsibilities.
+
+New cases are written, not run. The complete user-operated gate must qualify the
+committed source on Linux and both supported native macOS hosts, with the selected
+Metrics graph and existing PocketIC evidence. No new production recording logic,
+platform reads, public item, persisted format, tool pin or claimed measured Wasm/
+instruction delta is introduced. Cargo/catalog/lock mutation remains user-owned.
+
+Preparation inspection passes: diff whitespace, edited document paths, all three
+unchanged Shared snapshot identities and full locked offline metadata. The root
+catalog/lock, tool pins, snapshot selections and staging are unchanged. The diff,
+metadata and integrity logs are retained at
+`/tmp/ic-timers-0178-metrics.A8nru6af/`. These checks do not compile or execute the
+new Rust tests and cannot replace the user-operated gate.
+
+[0.17.7 main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38123424231)
+has successful MSRV/Linux checks and queued macOS jobs at observation.
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/38123424158)
+passes at its exact SHA; that smaller job cannot close
+[#42](https://github.com/dragginzgame/ic-timers/issues/42) or qualify pending #43
+tests. Earlier 0.17.6 evidence remains bound to its original graph.
+
 ### Shared 0.3.11 portability, diagnostic and setup adoption
 
-Pending **0.17.7** adopts reviewed Shared **0.3.11**
+Released **0.17.7** includes reviewed Shared **0.3.11**
 `db143ae9ae140eb66826c413360723d23c078f66` through all three exports;
 [the adoption owner](shared-tooling.md#shared-tooling-0311-portability-setup-and-diagnostics)
 records exact source and the corrected version annotation from Shared #114.

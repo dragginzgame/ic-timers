@@ -10,82 +10,53 @@ The earlier accumulated handoff remains in [its historical archive](archive-2026
 
 ## Released source and qualification
 
-Current released source is **0.17.6**
-`3174935874796c3ffae30b0dfcf9c0c8f4557322`. Its committed graph selects four local
-0.17.6 packages, Metrics **0.5.6**, Testkit **0.33.1**, all four Host packages at
-**0.12.9** and PocketIC **16.1.0**. That release's Shared exports select
-**0.3.8** `67285b28a98b7c4211ad32de726709d4e87edea4`, with **56/30/11** files.
-[Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38073888597)
-and [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/38073888232)
-complete successfully at that exact SHA.
+Current released source is **0.17.7**
+`1d21b9f55a8d9121355d216471495f92b0db7865`. Its committed graph selects four local
+0.17.7 packages, Metrics **0.6.0**, Testkit **0.33.2**, all four Host packages at
+**0.12.10** and PocketIC **16.1.0**. All three Shared exports select **0.3.11**
+`db143ae9ae140eb66826c413360723d23c078f66`, with **56/30/11** files.
 
-The [0.17.6 acceptance owner](../releasing.md#0176-release-acceptance) records
-source-bound Linux/MSRV and both complete native macOS gates. Downloaded raw
-logs, run/job metadata, hashes and matched line references remain at
-`/tmp/ic-timers-0176-acceptance.EkYVSQ/`. Linux and both macOS logs execute the
-fixture completion/contradiction, collector exit/retention/archive, actual-hook
-failure isolation and release-admission cases, plus 142 library tests, 14
-maintained recovery subjects and four policy cohorts. Both macOS gates admit
-Apple's Bash 3.2 and end with `VALIDATION PASSED`.
+[Tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/38123424158)
+passes for that exact SHA. In
+[main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38123424231), MSRV
+and Linux checks pass and both macOS jobs are queued at observation.
+Tag-only success does not qualify the complete gate.
+[Issue #42](https://github.com/dragginzgame/ic-timers/issues/42) remains open until
+source-bound Linux/current and both native macOS gates qualify its diagnostic
+cases. Existing 0.17.6 acceptance closes #38–#41 only and remains at
+[its release owner](../releasing.md#0176-release-acceptance), with downloaded
+source-bound raw evidence at `/tmp/ic-timers-0176-acceptance.EkYVSQ/`.
 
-This closes the consumer qualification obligations in
-[#38](https://github.com/dragginzgame/ic-timers/issues/38),
-[#39](https://github.com/dragginzgame/ic-timers/issues/39),
-[#40](https://github.com/dragginzgame/ic-timers/issues/40) and
-[#41](https://github.com/dragginzgame/ic-timers/issues/41). Older cancelled runs
-are excluded. This ordinary CI run skips intentional early/late live-workflow
-failure qualification; no new artifact round trip is claimed.
+Public measurement identity and the already-released Metrics 0.6 boundary are
+recorded by the [identity owner](../design/callback-delivery-ownership.md#ic-metrics-06-released-graph).
+The public Metrics identity/mean change landed in a patch in error; future such
+hard cuts require a minor release. Do not restore shims or rewrite history.
+Testkit owns its installed CLI's packaged lock and server admission; workspace
+Host selection does not override it. No direct Host dependency is needed.
+Consumer-owned Binaryen **132** pins remain unchanged. Shared **0.3.12** changes
+unselected formatting integration helpers; no local caller adoption is justified.
+Host **0.13.0** removes a lock helper Timers does not call; retain the existing
+Testkit owner rather than adding a new Host route.
 
-Public measurement identity remains with the selected Metrics package or
-`ic_timers::MeasurementSummary`, recorded by the
-[identity owner](../design/callback-delivery-ownership.md#ic-metrics-05-released-graph).
-Testkit's installed CLI has its own packaged locked graph; workspace Host
-selection does not override it. Retain the existing Testkit owner and no direct
-Host dependency. Consumer-owned Binaryen **132** pins remain unchanged.
+## Pending 0.17.8
 
-## Pending 0.17.7
+[Issue #43](https://github.com/dragginzgame/ic-timers/issues/43) owns focused
+qualification of the already-selected Metrics 0.6 behavior. New tests cover empty
+and completed-zero instruction summaries, an exactly reached numeric cap, actual
+sticky total overflow, retained latest/maximum values, copied snapshots and both
+callback roles. The existing native registration-identity sequence now checks
+completed measurements, preservation through cancellation, empty replacement/reset
+summaries and a numerically admitted interval across different identities.
+That admission demonstrates why callers must establish continuity separately.
 
-The three canonical exports now select reviewed Shared **0.3.11**
-`db143ae9ae140eb66826c413360723d23c078f66`, retaining **56/30/11** files.
-The producer corrected its version annotation in
-[Shared #114](https://github.com/dragginzgame/shared-tooling/issues/114); the
-canonical exporter now reports 0.3.11 with no local relabelling.
-The [adoption record](../shared-tooling.md#shared-tooling-0311-portability-setup-and-diagnostics)
-records clean detached source, preserved inputs and export logs at
-`/tmp/ic-timers-shared0311.IIBZGj5v/`. Existing dirty 0.17.6 acceptance records
-are preserved. Optional commands, Binaryen **132** and all Cargo/lock selections
-remain unchanged, including the incoming Host 0.12.10 lock selection.
-Shared #111/#112 repair physical fixture paths and relative child temporary
-directories in already-selected release checks. Producer lint passes; Linux and
-both macOS jobs are still running at observation. The cancelled 0.3.10 run does
-not qualify its complete host matrix. Shared 0.3.11 commits the diagnostic
-fixture spacing correction prompted by Timers' feedback; our consumer already
-has spaced cases, and that producer integration fixture remains unselected.
-Selected payload bytes are unchanged by this last provenance/version refresh.
-The derive-macro formatter defect
-has no affected maintained Timers macro; no markers or pin change are needed.
+README and public performance guidance distinguish tracked instruction overflow
+from conservatively saturated event/page counters. Ordered summaries stay in place;
+no API, production recording path, dependency selection or persistence changes.
+Tests are written, not run. Native reset is not simulated IC recovery.
+[The release owner](../releasing.md#metrics-06-consumer-qualification) records
+preparation checks and the remaining full user-operated qualification.
 
-[Timers #42](https://github.com/dragginzgame/ic-timers/issues/42) tracks retained
-release-summary diagnostics, applying Shared #110's reproduced gap. The existing
-release-gate fixture covers the actual adapter, both search backends, separated
-diagnostic families, long ordinary tails, literal-prefix and Rust-name controls,
-raw/combined logs and GitHub summaries. The selected shared Rust installer and
-fixture adopt Shared #101's consistent consumer/toolchain configuration. See
-[the release owner](../releasing.md#shared-0311-portability-diagnostic-and-setup-adoption).
-Snapshot integrity, shell/embedded/recipe syntax, links, diff whitespace and
-locked offline metadata checks pass, with catalog/lock/pins/index preserved.
-Cases are written, not run; #42 remains open for committed consumer current/native
-qualification. Producer CI success and earlier 0.17.6 evidence cannot replace it.
-
-Host **0.12.10** changes setup tooling, with no library Rust source change from
-0.12.9. Timers adopts the shared fix directly, retaining Testkit **0.33.1**,
-the incoming Host **0.12.10**, Metrics **0.5.6** and PocketIC **16.1.0** root lock
-selections. Exact-source Host CI passes Linux/MSRV and both native macOS jobs;
-consumer qualification of the changed graph remains separate.
-No direct Host dependency or new CLI/server route is needed.
-
-One undated **0.17.7** changelog covers this compatible repository tooling batch;
-Cargo remains 0.17.6. There is no timer/API change or measured product Wasm or
-instruction delta. Normally bundle repository work into code-bearing changes;
-a maintainer-selected release retains the complete gate. Tests/builds/lint,
-setup, Cargo mutation, staging/commits and release execution remain user-owned.
+One undated **0.17.8** changelog covers this test/documentation batch; Cargo remains
+0.17.7. Normally bundle repository-only work into code-bearing changes; a
+maintainer-selected release retains the complete gate. Tests/builds/lint, setup,
+Cargo mutation, staging/commits and release execution remain user-owned.

@@ -2,7 +2,7 @@
 
 ## Shared Tooling 0.3.11 portability, setup and diagnostics
 
-Pending **0.17.7** refreshes all three canonical exports to committed Shared
+Released **0.17.7** includes all three canonical exports from committed Shared
 **0.3.11** `db143ae9ae140eb66826c413360723d23c078f66`, confirmed against remote main.
 Committed `VERSION` now agrees with the source label, correcting
 [Shared #114](https://github.com/dragginzgame/shared-tooling/issues/114). All three
@@ -64,8 +64,12 @@ four Host packages at **0.12.10**, preserved byte-for-byte during adoption.
 The reviewed Host source is `5074de1792f920112c6539629605a6624f573863`; its
 [exact-source CI](https://github.com/dragginzgame/ic-host-tooling/actions/runs/38120032068)
 passes Linux, MSRV and both native macOS jobs. That does not qualify the incoming
-consumer graph. Root Testkit **0.33.1**, Metrics **0.5.6** and PocketIC **16.1.0**
-remain selected. Testkit's installed CLI still owns its own packaged lock;
+consumer graph. Preparation retained Testkit **0.33.1**, Metrics **0.5.6** and
+PocketIC **16.1.0**. The maintainer's released 0.17.7 graph subsequently selects
+Testkit **0.33.2** and Metrics **0.6.0**;
+[the current identity owner](design/callback-delivery-ownership.md#ic-metrics-06-released-graph)
+records that separate public dependency boundary. Testkit's installed CLI still
+owns its own packaged lock;
 workspace Host selection does not override it. This batch has no timer API or measured
 product Wasm/instruction change. Tests/setup/release effects remain user-owned.
 

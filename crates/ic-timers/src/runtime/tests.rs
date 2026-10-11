@@ -3716,6 +3716,7 @@ fn registration_identity_survives_control_but_changes_on_replacement_and_restart
     let timer = identity("continuity");
     let create = || {
         register_once(timer.clone(), DeclarationLifetime::Retained, |_| async {
+            advance_instructions(7);
             OnceRunResult::new(TimerCompletion::success(1), OnceDecision::Stop)
         })
         .unwrap()
@@ -3729,13 +3730,30 @@ fn registration_identity_survives_control_but_changes_on_replacement_and_restart
         first.ensure_scheduled(TimerSchedule::At(10)).unwrap();
         assert!(run_next_due());
     }
+    let completed = snapshot().observability().performance();
+    assert_eq!(completed.work_instructions().samples(), 2);
+    assert_eq!(completed.work_instructions().total(), 14);
+    assert_eq!(completed.work_instructions().mean(), Ok(Some(7)));
+    assert_eq!(completed.work_instructions().latest(), Some(7));
+    assert_eq!(completed.work_instructions().maximum(), Some(7));
+    assert_eq!(
+        completed.scheduler_instructions(),
+        crate::MeasurementSummary::EMPTY
+    );
     first.cancel().unwrap();
     let before = snapshot();
     assert_eq!(before.registration_id(), original);
+    assert_eq!(before.observability().performance(), completed);
     first.unregister().unwrap();
     let replacement = create();
     assert_ne!(snapshot().registration_id(), original);
     assert_eq!(snapshot().registration_id().epoch(), epoch);
+    let fresh = snapshot().observability().performance();
+    assert_eq!(fresh.work_instructions(), crate::MeasurementSummary::EMPTY);
+    assert_eq!(
+        fresh.scheduler_instructions(),
+        crate::MeasurementSummary::EMPTY
+    );
     for _ in 0..3 {
         replacement.ensure_scheduled(TimerSchedule::At(10)).unwrap();
         assert!(run_next_due());
@@ -3746,12 +3764,33 @@ fn registration_identity_survives_control_but_changes_on_replacement_and_restart
             > before.observability().counters().work_completed()
     );
     assert_ne!(regrown.registration_id(), before.registration_id());
+    let regrown_work = regrown.observability().performance().work_instructions();
+    assert_eq!(regrown_work.samples(), 3);
+    assert_eq!(regrown_work.total(), 21);
+    assert_eq!(regrown_work.mean(), Ok(Some(7)));
+    // Arithmetic alone accepts a reset followed by larger measurements.
+    // Different registration identities forbid treating this as one interval.
+    let misleading_interval = regrown_work
+        .aggregate()
+        .interval_since(completed.work_instructions().aggregate())
+        .unwrap();
+    assert_eq!(misleading_interval.samples(), 1);
+    assert_eq!(misleading_interval.total(), 7);
     reset_for_test(20, 8);
     initialize_runtime().unwrap();
     let _reconstructed = create();
     assert_eq!(snapshot().registration_id().sequence(), original.sequence());
     assert_ne!(snapshot().registration_id().epoch(), original.epoch());
     assert_ne!(snapshot().registration_id(), original);
+    let reconstructed = snapshot().observability().performance();
+    assert_eq!(
+        reconstructed.work_instructions(),
+        crate::MeasurementSummary::EMPTY
+    );
+    assert_eq!(
+        reconstructed.scheduler_instructions(),
+        crate::MeasurementSummary::EMPTY
+    );
 }
 
 #[test]

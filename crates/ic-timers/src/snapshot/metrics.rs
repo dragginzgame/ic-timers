@@ -357,6 +357,12 @@ const fn max_u64(left: u64, right: u64) -> u64 {
 /// successor binding. It is not an exclusive measurement of consumer code.
 /// Start/end page reads bracket the instruction interval from outside.
 ///
+/// Instruction summaries retain observation ordering and track actual overflow:
+/// an exactly reached `u64::MAX` is still exact. Use the summary's checked
+/// `mean()` or aggregate saturation flags rather than inferring overflow from
+/// its clipped total. Event counters and page-sample counts remain conservatively
+/// saturated at their numeric cap.
+///
 /// A terminal [`DeclarationLifetime::RemoveWhenStopped`](crate::DeclarationLifetime::RemoveWhenStopped)
 /// callback can remove its declaration before this final record is retained;
 /// no timer then remains in the inventory to expose that sample.
@@ -631,6 +637,92 @@ mod tests {
         assert_eq!(work_latest.stable_growth_pages(), 4);
         assert_eq!(work_memory.maximum_wasm_growth_pages(), Some(3));
         assert_eq!(work_memory.maximum_stable_growth_pages(), Some(4));
+    }
+
+    #[test]
+    fn instruction_summaries_distinguish_empty_from_completed_zero_for_each_role() {
+        let mut performance = TimerPerformance::EMPTY;
+        for summary in [
+            performance.scheduler_instructions(),
+            performance.work_instructions(),
+        ] {
+            assert_eq!(summary.samples(), 0);
+            assert_eq!(summary.mean(), Ok(None));
+            assert_eq!(summary.latest(), None);
+            assert_eq!(summary.maximum(), None);
+        }
+
+        performance.record_scheduler(0, MemoryPageSample::EMPTY);
+        assert_eq!(performance.work_instructions(), MeasurementSummary::EMPTY);
+        performance.record_work(0, MemoryPageSample::EMPTY);
+        for summary in [
+            performance.scheduler_instructions(),
+            performance.work_instructions(),
+        ] {
+            assert_eq!(summary.samples(), 1);
+            assert_eq!(summary.total(), 0);
+            assert_eq!(summary.mean(), Ok(Some(0)));
+            assert_eq!(summary.latest(), Some(0));
+            assert_eq!(summary.maximum(), Some(0));
+            assert!(!summary.aggregate().samples_saturated());
+            assert!(!summary.aggregate().total_saturated());
+        }
+    }
+
+    #[test]
+    fn instruction_overflow_is_tracked_without_losing_order_or_crossing_roles() {
+        for scheduler in [true, false] {
+            let mut performance = TimerPerformance::EMPTY;
+            for (instructions, samples, mean, saturated) in [
+                (u64::MAX, 1, Ok(Some(u64::MAX)), false),
+                (0, 2, Ok(Some(u64::MAX / 2)), false),
+                (
+                    1,
+                    3,
+                    Err(ic_metrics::MeasurementMeanError::SaturatedTotal),
+                    true,
+                ),
+                (
+                    0,
+                    4,
+                    Err(ic_metrics::MeasurementMeanError::SaturatedTotal),
+                    true,
+                ),
+            ] {
+                let previous = performance;
+                if scheduler {
+                    performance.record_scheduler(instructions, MemoryPageSample::EMPTY);
+                } else {
+                    performance.record_work(instructions, MemoryPageSample::EMPTY);
+                }
+                let (summary, other, previous_summary) = if scheduler {
+                    (
+                        performance.scheduler_instructions(),
+                        performance.work_instructions(),
+                        previous.scheduler_instructions(),
+                    )
+                } else {
+                    (
+                        performance.work_instructions(),
+                        performance.scheduler_instructions(),
+                        previous.work_instructions(),
+                    )
+                };
+                assert_eq!(summary.samples(), samples);
+                assert_eq!(summary.total(), u64::MAX);
+                assert_eq!(summary.mean(), mean);
+                assert_eq!(summary.latest(), Some(instructions));
+                assert_eq!(summary.maximum(), Some(u64::MAX));
+                assert!(!summary.aggregate().samples_saturated());
+                assert_eq!(summary.aggregate().total_saturated(), saturated);
+                assert_eq!(other, MeasurementSummary::EMPTY);
+                assert_eq!(previous_summary.samples(), samples - 1);
+                if samples == 3 {
+                    assert_eq!(previous_summary.mean(), Ok(Some(u64::MAX / 2)));
+                    assert!(!previous_summary.aggregate().total_saturated());
+                }
+            }
+        }
     }
 
     #[test]

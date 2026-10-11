@@ -218,6 +218,40 @@ larger than AfterCompletion in this build; deleting its distinct prearmed recove
 semantics is not justified by that size difference. No further runtime change
 or performance release is supported by this review.
 
+## IC Metrics 0.6 released graph
+
+Released IC Timers **0.17.7**
+`1d21b9f55a8d9121355d216471495f92b0db7865` selects one registry Metrics **0.6.0**,
+Testkit **0.33.2**, all four Host packages at **0.12.10** and PocketIC **16.1.0**.
+The root catalog and lock already contain those selections. Consumers exchanging
+instruction summaries use that same Metrics 0.6 identity or
+`ic_timers::MeasurementSummary`; the old Metrics 0.5 type is distinct.
+
+Metrics 0.6 tracks actual count/total overflow in ordered summaries. An exactly
+reached `u64::MAX` can still yield a valid mean. After overflow the checked mean
+fails while latest/maximum observations remain available. Timers retains ordered
+scheduler/work summaries; no unordered aggregate replaces them. Its event counters
+and page-sample counts keep their conservative numeric-cap contract. Comparing
+roles, units, registration identity and append-only continuity is still required
+before deriving an interval; numeric admission cannot detect replacement followed
+by larger values. These are inert observations, not runtime mutation authority.
+
+The change of public Metrics identity and mean semantics was delivered in the
+**0.17.7 patch**, contrary to the local pre-1.0 minor-boundary rule. Record this
+mistake without restoring a shim or rewriting released history. Future public
+type or semantic hard cuts require the next minor line. Pending **0.17.8** adds
+tests and accurate guidance for the behavior already selected; it does not make
+another public change or alter Cargo metadata.
+
+[Issue #43](https://github.com/dragginzgame/ic-timers/issues/43) owns consumer
+qualification, with synthetic instruction-accumulator boundaries and a native
+completion/control/replacement/reset sequence. Metrics owns private count-overflow
+construction and arithmetic internals. Native runtime reset is deterministic
+test evidence, not an IC upgrade/recovery guarantee. Existing PocketIC recovery
+and cohort gates remain required for their own claims. New cases are written,
+not executed here; no Wasm or instruction measurement is claimed for the changed
+dependency graph. Earlier Metrics 0.5 qualification remains source-bound below.
+
 ## IC Metrics 0.5 released graph
 
 Released IC Timers **0.17.0** at

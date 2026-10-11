@@ -2,6 +2,19 @@
 
 All notable changes to this project are recorded here.
 
+## [0.17.8]
+
+### Development
+
+- Cover the already-selected Metrics 0.6 instruction-summary boundaries through
+  both timer roles: empty and completed zero, exact cap, tracked overflow and
+  retained latest/maximum samples. Check measurement continuity across
+  cancellation, registration replacement and native runtime reset
+  ([#43](https://github.com/dragginzgame/ic-timers/issues/43)).
+- Correct observability guidance to distinguish tracked instruction overflow
+  from conservatively saturated event counters; document the Metrics 0.6 public
+  type identity and the 0.17.7 release-boundary mistake.
+
 ## [0.17.7] - 2026-10-11
 
 ### Development
