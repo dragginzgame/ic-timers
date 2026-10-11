@@ -2,6 +2,30 @@
 
 All notable changes to this project are recorded here.
 
+## [0.18.0]
+
+### Changed
+
+- Hard-cut `register_once`, `register_after_completion` and `register_watchdog`
+  to take an explicit initial schedule before the callback. Scheduled creation
+  returns authority only after provider binding; failure retires its exact new
+  declaration and provider handles before releasing callback captures. Inactive
+  construction remains available for retained declarations. Transient
+  `RemoveWhenStopped` creation without a schedule returns the typed
+  `InitialScheduleRequired` error. Update direct callers together; there is no
+  old-signature forwarder.
+- Select the first recurring deadline independently of its configured cadence.
+  Initial `After`/`At` requests use their existing explicit scheduling modes,
+  including zero delay; configured recurrence and callback continuation modes
+  remain unchanged after dispatch.
+
+### Development
+
+- Update runtime and size probes to exercise scheduled creation directly. Add
+  native input, capacity and provider-failure cases plus a real-canister invalid
+  initial-schedule subject. Qualification and Wasm/instruction measurements
+  remain pending under the complete maintainer-operated gate.
+
 ## [0.17.14] - 2026-10-11
 
 ### Development

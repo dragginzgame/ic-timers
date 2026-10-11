@@ -193,8 +193,9 @@ that same exact package version. Mixing this pin with an older exact release
 can resolve two package identities and therefore create two independent timer
 registries.
 
-Initialize the runtime from the canister's existing lifecycle owner, declare a
-timer, retain its non-clone registration capability, and schedule it:
+With the prepared 0.18 construction API, initialize the runtime from the
+canister's existing lifecycle owner, create and schedule a timer in one call,
+and retain its non-clone registration capability:
 
 ```rust
 use ic_timers::{
@@ -210,13 +211,13 @@ fn declare_cleanup_timer() -> Result<OnceRegistration, Box<dyn Error>> {
     let timer = register_once(
         TimerIdentity::try_new("my-canister", "maintenance", "cleanup")?,
         DeclarationLifetime::Retained,
+        Some(TimerSchedule::After(Duration::from_secs(30))),
         |_context| async {
             // Perform one bounded unit of application work.
             OnceRunResult::new(TimerCompletion::success(1), OnceDecision::Stop)
         },
     )?;
 
-    timer.ensure_scheduled(TimerSchedule::After(Duration::from_secs(30)))?;
     Ok(timer)
 }
 ```
@@ -231,6 +232,19 @@ For fixed declarations, use `reconcile_once`,
 `post_upgrade`. Those helpers always create retained declarations, including
 inactive ones. Transient `RemoveWhenStopped` declarations use the direct
 registration functions.
+
+All three registration functions take `initial: Option<TimerSchedule>` before
+the callback. `Some(schedule)` returns a registration only after its first
+wakeup is installed. A returned error retires the failed creation and its
+provider handles before dropping callback captures. `None` deliberately creates
+an inactive retained declaration; using it with `RemoveWhenStopped` returns
+`TimerError::InitialScheduleRequired`. The first deadline is independent of a
+recurring timer's configured cadence. To start at that cadence, pass
+`Some(TimerSchedule::After(Duration::from_nanos(cadence.as_nanos())))`.
+
+This is the prepared 0.18 construction contract. Existing later control and
+lifecycle reconciliation retain their own failure semantics; see the
+[construction decision and qualification scope](docs/design/0.18-atomic-registration.md).
 
 ## Runtime ownership
 

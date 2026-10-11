@@ -9,7 +9,9 @@
 //! watchdog callbacks through one volatile canister-local registry.
 //! Consumers retain durable application authority and synchronously reconstruct
 //! retained registrations during their existing lifecycle hooks. Transient
-//! remove-on-stop callbacks use direct registration. Registration capabilities
+//! remove-on-stop callbacks use direct registration with an initial schedule.
+//! Direct registration returns scheduled authority only after provider binding;
+//! only retained declarations may start inactive. Registration capabilities
 //! can observe exact armed provider-wakeup ownership without making snapshots
 //! or observations into scheduling authority.
 //! [`timer_inventory`] returns the epoch together with the complete ordered

@@ -77,8 +77,7 @@ The current runtime provides:
   bounded inventory capacity before application hooks;
 - direct registration, rather than lifecycle reconciliation, for transient
   `RemoveWhenStopped` declarations whose capability expires on terminal
-  completion or cancellation, including cancellation before the first
-  provider wake-up is armed;
+  completion or cancellation;
 - native boundary evidence that checked terminal control failures also expire
   transient declarations and release capacity, with retained declarations
   staying inactive and observable; a queued-work fixture verifies that actual
@@ -129,7 +128,7 @@ The current runtime provides:
   ensure, and remains subordinate to later cancellation or sticky
   unregistration;
 - fail-closed public and lifecycle effect application: a retained declaration
-  whose provider arm cannot establish canonical ownership becomes inactive
+  whose later provider arm cannot establish canonical ownership becomes inactive
   with `ProviderBindingFailed` rather than remaining falsely scheduled; and
 - claim-scoped observation of whether the exact registration owns an armed
   provider wake-up handle. For watchdogs this counts the cadence successor,
@@ -155,6 +154,17 @@ subjects must qualify this change before extending the evidence claims above.
 See the [0.11.0 verification scope](docs/changelog/0.11.0.md).
 
 ## Limits and consumer obligations
+
+The prepared 0.18 direct-construction boundary accepts an initial schedule in
+the registration call. Failed creation retires its exact claim and handles,
+including a retained declaration, before releasing callback captures. Inactive
+construction is retained-only. Native fault and production PocketIC rejection
+fixtures are prepared but not yet executed; do not treat them as recovery
+evidence. Later control and lifecycle reconciliation keep their existing
+retained-failure observations. A trapping provider call rolls back its current
+IC message rather than returning a Rust error. Capture destructors must remain
+bounded and nontrapping; a destructor's independent registration is not part of
+the failed creation. See the [construction decision](docs/design/0.18-atomic-registration.md).
 
 - Compare registration identities within one canister history before deriving
   counter deltas; require advancing source times and unsaturated endpoints.

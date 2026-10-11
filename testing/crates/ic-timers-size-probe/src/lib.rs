@@ -3,7 +3,7 @@ use ic_timers::{TimerIdentity, initialize_runtime, timer_inventory, timer_snapsh
 use std::cell::Cell;
 
 #[cfg(not(feature = "baseline"))]
-use ic_timers::DeclarationLifetime;
+use ic_timers::{DeclarationLifetime, TimerSchedule};
 #[cfg(not(feature = "baseline"))]
 use std::cell::RefCell;
 
@@ -13,9 +13,7 @@ use ic_timers::{
     TimerCompletion, register_after_completion,
 };
 #[cfg(feature = "once")]
-use ic_timers::{
-    OnceDecision, OnceRegistration, OnceRunResult, TimerCompletion, TimerSchedule, register_once,
-};
+use ic_timers::{OnceDecision, OnceRegistration, OnceRunResult, TimerCompletion, register_once};
 #[cfg(feature = "watchdog")]
 use ic_timers::{
     TimerCadence, TimerCompletion, WatchdogDecision, WatchdogRegistration, WatchdogRunResult,
@@ -251,6 +249,9 @@ fn start_inner() -> bool {
         let registration = match register_once(
             cohort_identity(),
             DeclarationLifetime::Retained,
+            Some(TimerSchedule::After(std::time::Duration::from_nanos(
+                CADENCE_NS,
+            ))),
             |_context| async {
                 CALLBACKS.with(|calls| calls.set(calls.get().saturating_add(1)));
                 OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
@@ -259,14 +260,6 @@ fn start_inner() -> bool {
             Ok(registration) => registration,
             Err(_) => ic_cdk::trap("size-probe Once registration failed"),
         };
-        if registration
-            .ensure_scheduled(TimerSchedule::After(std::time::Duration::from_nanos(
-                CADENCE_NS,
-            )))
-            .is_err()
-        {
-            ic_cdk::trap("size-probe Once scheduling failed");
-        }
         *slot = Some(registration);
         true
     })
@@ -282,6 +275,9 @@ fn start_inner() -> bool {
             cohort_identity(),
             cadence(),
             DeclarationLifetime::Retained,
+            Some(TimerSchedule::After(std::time::Duration::from_nanos(
+                CADENCE_NS,
+            ))),
             |_context| async {
                 CALLBACKS.with(|calls| calls.set(calls.get().saturating_add(1)));
                 AfterCompletionRunResult::new(
@@ -293,9 +289,6 @@ fn start_inner() -> bool {
             Ok(registration) => registration,
             Err(_) => ic_cdk::trap("size-probe after-completion registration failed"),
         };
-        if registration.ensure_scheduled().is_err() {
-            ic_cdk::trap("size-probe after-completion scheduling failed");
-        }
         *slot = Some(registration);
         true
     })
@@ -311,6 +304,9 @@ fn start_inner() -> bool {
             cohort_identity(),
             cadence(),
             DeclarationLifetime::Retained,
+            Some(TimerSchedule::After(std::time::Duration::from_nanos(
+                CADENCE_NS,
+            ))),
             |_context| {
                 CALLBACKS.with(|calls| calls.set(calls.get().saturating_add(1)));
                 WatchdogRunResult::new(watchdog_completion(), WatchdogDecision::Continue)
@@ -319,9 +315,6 @@ fn start_inner() -> bool {
             Ok(registration) => registration,
             Err(_) => ic_cdk::trap("size-probe Watchdog registration failed"),
         };
-        if registration.ensure_scheduled().is_err() {
-            ic_cdk::trap("size-probe Watchdog scheduling failed");
-        }
         *slot = Some(registration);
         true
     })

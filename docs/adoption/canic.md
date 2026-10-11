@@ -130,6 +130,7 @@ timer and delegates as follows:
 
 | Current Canic operation | `ic-timers` operation |
 | --- | --- |
+| create scheduled application or lifecycle work | direct policy registration with `Some(initial_schedule)` |
 | earliest `schedule` / `schedule_at` | `OnceRegistration::ensure_scheduled` or the appropriate callback directive |
 | authoritative `reconcile_at(Some(deadline))` | ordinary registration `reconcile_schedule(Some(TimerSchedule::At(deadline)))` |
 | authoritative `reconcile_at(None)` | ordinary registration `reconcile_schedule(None)` |
@@ -142,7 +143,19 @@ timer and delegates as follows:
 `reconcile_schedule` is authoritative and may move it in either direction.
 Lifecycle reconciliation always creates `Retained` declarations. Public and
 lifecycle timers mapped to `RemoveWhenStopped` use direct registration and must
-not be stored in a reconciliation slot after removal.
+not be stored in a reconciliation slot after removal. Under the prepared 0.18
+contract these registrations require an initial schedule. Fixed retained owners
+can pass `None` when declaration intentionally precedes demand.
+
+Canic's `register_lifecycle_once` currently registers, arms, and unregisters on
+an arm failure. Move its `TimerSchedule::After(delay)` into the registration
+call and delete that arm-failure cleanup branch when adopting 0.18. Callback
+captures, task extraction and identity allocation remain Canic-owned. Its
+`retain_with_rollback` still handles independent owner-custody rejection;
+atomic timer creation does not make that cleanup or `RegistrationRollback`
+obsolete. No Canic source or dependency pin is changed by this Timers batch.
+The coordinated owner feedback is recorded on
+[Canic #33](https://github.com/dragginzgame/canic/issues/33#issuecomment-6111101911).
 The canonical registry is the only pending-command machine. Canic must not
 port its `TimerControl` or pending reconciliation state into the adapter.
 

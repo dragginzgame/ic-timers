@@ -2112,6 +2112,52 @@ late qualification retain their own pending observations. Qualify the delivered
 correction at its frozen source through the existing maintainer workflow before
 closing #44. Crate APIs, production behavior, dependencies and Wasm are unchanged.
 
+### 0.17.14 delivery and frozen failure qualification follow-up
+
+Released **0.17.14** is `cb86d87ce67f7aac1b127bdfaa2c6f8a7f68c2a0`.
+It delivers the verifier correction above and selects Testkit **0.34.0**, all
+four Host **0.14.1**, Metrics **0.6.4** and PocketIC **16.1.0**, with the same
+Shared **0.6.3** revision and canonical 56/33/11 exports. Its
+[full CI](https://github.com/dragginzgame/ic-timers/actions/runs/38153029865)
+passes Linux/MSRV; Intel is in progress and ARM queued at inspection. The
+previous 0.17.13 full run was cancelled by the newer main push. Do not infer
+missing native acceptance from the preserved earlier Linux pass.
+
+The authorized frozen 0.17.13
+[early run](https://github.com/dragginzgame/ic-timers/actions/runs/38150377457)
+is now complete. All three original producers reach controlled exit 22 and
+successfully upload. All three hosted download verifiers fail the already-fixed
+obsolete candidate-path check. Exact downloaded ZIP identities and digests are:
+
+| Host | Artifact | Uploaded/downloaded ZIP SHA-256 |
+| --- | --- | --- |
+| Linux/X64 | 11706432177 | `c673b3502a05f8207002274a3f561ff4ae32d2fd69f2e9b18f411e8afcde83df` |
+| macOS/ARM64 | 11706454805 | `4c150a78e1662de6c229c374380376208c8544f544fea17e437620658fc431be` |
+| macOS/X64 | 11708025680 | `fa2caec47a90d6291ae0163e84ef209fde193129ac2d91a7d48ead3fc82d1dcb` |
+
+The byte-identical released 0.17.14 verifier admits all three actual tar payloads
+locally, with each original source/job/host/run/attempt and unchanged frozen
+caller pin bytes. ZIP inspection retains only the named tar/collector entries;
+archive verification reads members without extraction. Raw logs, archives,
+replay outputs and digest/source checks remain at
+`/tmp/ic-timers-01713-qualification.n07_3uur/`. This qualifies the artifact replay,
+not the frozen hosted verifier. Preserve the original failed observations.
+
+After early completed, the already-approved late stage was dispatched at the
+same annotated `v0.17.13`, dereferenced to the exact original source. Its
+[late run](https://github.com/dragginzgame/ic-timers/actions/runs/38154578484)
+has Linux in progress and both macOS producers queued. Late acceptance remains
+pending. A separate approval request selects corrected frozen `v0.17.14` for
+new sequential early/late stages only after this late run finishes; no such
+approval or new-source dispatch is inferred from the original authorization.
+[#44](https://github.com/dragginzgame/ic-timers/issues/44) stays open for complete
+native and six corrected-source hosted artifact observations. This acceptance
+record introduces no additional tooling/runtime patch or package release.
+
+A separate worktree lock update from `syn` 3.0.7 to 3.0.8 appeared during the
+0.18 preparation and is preserved. It is not part of the released 0.17.14 graph
+or the frozen qualifier inputs; no old CI observation qualifies that new graph.
+
 ### 0.17.12 source and native cleanup follow-up
 
 Released 0.17.12 is `549d1f5e9e69ec2d58d37c72760ffd93b88b175f`, with Shared

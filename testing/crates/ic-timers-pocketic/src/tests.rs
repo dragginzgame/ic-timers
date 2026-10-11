@@ -62,7 +62,8 @@ fn immediate_initial_watchdog_runs_without_advancing_cadence_time() {
     assert!(update_bool(&pic, canister_id, "start_immediately"));
     let initial = snapshot(&pic, canister_id);
     assert_eq!(initial.completed_work, 0);
-    assert!(initial.immediate_scheduling);
+    // Initial After(0) is an explicit request, not a callback continuation.
+    assert!(!initial.immediate_scheduling);
     assert_eq!(initial.latest_requested_delay_ns, Some(0));
     assert_eq!(initial.latest_armed_delay_ns, Some(0));
     assert_eq!(initial.schedule_requests, 1);
@@ -994,4 +995,31 @@ fn armed_callback_removal_releases_captures_with_registry_access() {
         assert_eq!(after_deadline.captures_dropped, 1);
         assert_eq!(after_deadline.inventory_len, 0);
     }
+}
+
+#[test]
+fn rejected_initial_schedules_preserve_ic_inventory_and_release_captures() {
+    let (_server, pic) = fresh_pocket_ic();
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, INIT_CYCLES);
+    pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
+    for policy in 0_u8..3 {
+        for (transient, missing) in [(false, false), (true, false), (true, true)] {
+            let bytes = pic
+                .update_call(
+                    canister_id,
+                    Principal::anonymous(),
+                    "reject_initial_schedule",
+                    Encode!(&policy, &transient, &missing).unwrap(),
+                )
+                .unwrap();
+            assert_eq!(Decode!(&bytes, bool, u64, bool).unwrap(), (true, 1, true));
+        }
+    }
+    pic.advance_time(Duration::from_secs(2));
+    drive_rounds(&pic, 8);
+    let observation = ordinary_observation(&pic, canister_id);
+    assert_eq!(observation.inventory_len, 0);
+    assert_eq!(observation.completed, 0);
+    assert_eq!(observation.captures_dropped, 9);
 }

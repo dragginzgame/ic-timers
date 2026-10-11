@@ -72,11 +72,11 @@ pub enum AfterCompletionDecision {
 /// let direct_once_identity = TimerIdentity::try_new("app", "jobs", "direct-once").unwrap();
 /// let direct_recurring_identity = TimerIdentity::try_new("app", "jobs", "direct-recurring").unwrap();
 /// let cadence = TimerCadence::from_nanos(5)?;
-/// let _once = register_once(direct_once_identity, DeclarationLifetime::Retained, |_| async {
+/// let _once = register_once(direct_once_identity, DeclarationLifetime::Retained, None, |_| async {
 ///     OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
 /// })?;
 /// let _recurring = register_after_completion(direct_recurring_identity, cadence,
-///     DeclarationLifetime::Retained, |_| async {
+///     DeclarationLifetime::Retained, None, |_| async {
 ///         AfterCompletionRunResult::new(TimerCompletion::no_work(),
 ///             AfterCompletionDecision::RecurAfterCompletion)
 ///     })?;

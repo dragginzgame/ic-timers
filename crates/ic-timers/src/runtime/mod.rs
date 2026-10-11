@@ -37,6 +37,9 @@ pub enum TimerError {
     /// Cadence or deadline validation failed.
     #[error(transparent)]
     Schedule(#[from] ScheduleError),
+    /// A remove-on-stop declaration must start with a schedule.
+    #[error("a transient timer requires an initial schedule")]
+    InitialScheduleRequired,
     /// The logical registration was removed or superseded.
     #[error("timer registration is no longer authoritative")]
     RegistrationExpired,
@@ -486,7 +489,12 @@ impl AfterCompletionRegistration {
     }
 }
 
-/// Register one asynchronous `Once` callback without scheduling it.
+/// Register one asynchronous `Once` callback with its initial schedule.
+///
+/// `None` declares an inactive retained timer. A `RemoveWhenStopped` timer
+/// requires `Some(schedule)`. Success returns installed callback authority and,
+/// when requested, a confirmed provider wakeup. A returned error retires this
+/// creation's declaration and handles before releasing callback captures.
 ///
 /// The future must return [`OnceRunResult`]; a recurring policy's result cannot
 /// be used here, even when its decision is Stop:
@@ -495,13 +503,14 @@ impl AfterCompletionRegistration {
 /// use ic_timers::{register_once, TimerIdentity, DeclarationLifetime,
 ///     TimerCompletion, AfterCompletionDecision, AfterCompletionRunResult};
 /// let identity = TimerIdentity::try_new("app", "jobs", "once").unwrap();
-/// let _ = register_once(identity, DeclarationLifetime::Retained, |_| async {
+/// let _ = register_once(identity, DeclarationLifetime::Retained, None, |_| async {
 ///     AfterCompletionRunResult::new(TimerCompletion::no_work(), AfterCompletionDecision::Stop)
 /// });
 /// ```
 pub fn register_once<F, Fut>(
     identity: TimerIdentity,
     lifetime: DeclarationLifetime,
+    initial: Option<TimerSchedule>,
     callback: F,
 ) -> Result<OnceRegistration, TimerError>
 where
@@ -509,17 +518,22 @@ where
     Fut: Future<Output = OnceRunResult> + 'static,
 {
     let callback = erase_ordinary_callback(callback, OnceContext::new, OrdinaryRunResult::from);
-    let claim = with_registry_mut(|registry| {
-        registry
-            .register_once_with_callback(identity, lifetime, Rc::clone(&callback))
-            .map_err(TimerError::from)
-    });
-    // Keep the factory's captures alive through rejected registration too.
+    let claim = register_initial(
+        lifetime,
+        initial,
+        |registry| registry.register_once_with_callback(identity, lifetime, Rc::clone(&callback)),
+        TimerRegistry::reconcile_ordinary,
+    );
+    // Release factory captures only after initial registry/provider cleanup.
     drop(callback);
     Ok(OnceRegistration { claim: claim? })
 }
 
 /// Register one asynchronous callback with configured after-completion recurrence.
+///
+/// The explicit initial schedule selects the first deadline independently of
+/// the recurrence cadence. `None` is valid only for retained declarations.
+/// Initial scheduling failure removes the new declaration and provider handles.
 ///
 /// The future must return [`AfterCompletionRunResult`]:
 ///
@@ -528,7 +542,7 @@ where
 ///     DeclarationLifetime, TimerCompletion, OnceDecision, OnceRunResult};
 /// let identity = TimerIdentity::try_new("app", "jobs", "recurring").unwrap();
 /// let cadence = TimerCadence::from_nanos(5).unwrap();
-/// let _ = register_after_completion(identity, cadence, DeclarationLifetime::Retained, |_| async {
+/// let _ = register_after_completion(identity, cadence, DeclarationLifetime::Retained, None, |_| async {
 ///     OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
 /// });
 /// ```
@@ -536,6 +550,7 @@ pub fn register_after_completion<F, Fut>(
     identity: TimerIdentity,
     cadence: TimerCadence,
     lifetime: DeclarationLifetime,
+    initial: Option<TimerSchedule>,
     callback: F,
 ) -> Result<AfterCompletionRegistration, TimerError>
 where
@@ -547,22 +562,29 @@ where
         AfterCompletionContext::new,
         OrdinaryRunResult::from,
     );
-    let claim = with_registry_mut(|registry| {
-        registry
-            .register_after_completion_with_callback(
+    let claim = register_initial(
+        lifetime,
+        initial,
+        |registry| {
+            registry.register_after_completion_with_callback(
                 identity,
                 cadence,
                 lifetime,
                 Rc::clone(&callback),
             )
-            .map_err(TimerError::from)
-    });
-    // Keep the factory's captures alive through rejected registration too.
+        },
+        TimerRegistry::reconcile_ordinary,
+    );
+    // Release factory captures only after initial registry/provider cleanup.
     drop(callback);
     Ok(AfterCompletionRegistration { claim: claim? })
 }
 
-/// Register one synchronous pre-armed watchdog callback without scheduling it.
+/// Register one synchronous pre-armed watchdog callback with its initial schedule.
+///
+/// The initial schedule selects the first scheduler message, never synchronous
+/// consumer work. `None` is valid only for retained declarations. Initial
+/// scheduling failure removes the new declaration and provider handles.
 ///
 /// The callback cannot be async: it runs only in the work message after a
 /// separate scheduler message has armed the next cadence successor. Its
@@ -572,6 +594,7 @@ pub fn register_watchdog<F>(
     identity: TimerIdentity,
     cadence: TimerCadence,
     lifetime: DeclarationLifetime,
+    initial: Option<TimerSchedule>,
     callback: F,
 ) -> Result<WatchdogRegistration, TimerError>
 where
@@ -581,14 +604,66 @@ where
     let callback: WatchdogCallback = Rc::new(RefCell::new(Box::new(move |token| {
         callback(WatchdogContext::new(token))
     })));
-    let claim = with_registry_mut(|registry| {
-        registry
-            .register_watchdog_with_callback(identity, cadence, lifetime, Rc::clone(&callback))
-            .map_err(TimerError::from)
-    });
-    // Keep the factory's captures alive through rejected registration too.
+    let claim = register_initial(
+        lifetime,
+        initial,
+        |registry| {
+            registry.register_watchdog_with_callback(
+                identity,
+                cadence,
+                lifetime,
+                Rc::clone(&callback),
+            )
+        },
+        TimerRegistry::reconcile_watchdog_schedule,
+    );
+    // Release factory captures only after initial registry/provider cleanup.
     drop(callback);
     Ok(WatchdogRegistration { claim: claim? })
+}
+
+/// Finish creation before exposing a claim. The callback factory retains its
+/// captures until this returns, including through rejected provider binding.
+fn register_initial(
+    lifetime: DeclarationLifetime,
+    initial: Option<TimerSchedule>,
+    register: impl FnOnce(&mut TimerRegistry) -> Result<RegistrationClaim, RegisterError>,
+    reconcile: fn(
+        &mut TimerRegistry,
+        &RegistrationClaim,
+        u64,
+        Option<TimerSchedule>,
+    ) -> Result<RegistryTransition, RegistryError>,
+) -> Result<RegistrationClaim, TimerError> {
+    let (claim, requested) = with_registry_mut(|registry| {
+        let requested = match initial {
+            Some(schedule) => {
+                // Reject invalid deadlines before allocating claim authority.
+                let now_ns = platform::time_ns();
+                schedule.resolve(now_ns)?;
+                Some((schedule, now_ns))
+            }
+            None if lifetime == DeclarationLifetime::RemoveWhenStopped => {
+                return Err(TimerError::InitialScheduleRequired);
+            }
+            None => None,
+        };
+        Ok((register(registry)?, requested))
+    })?;
+    if let Some((schedule, now_ns)) = requested {
+        if let Err(error) = apply_claim_transition(&claim, None, |registry| {
+            reconcile(registry, &claim, now_ns, Some(schedule))
+        }) {
+            // Unlike later control, failed creation must retire retained
+            // declarations too. Provider cleanup can already have removed a
+            // transient entry; treat only that exact claim's expiry as done.
+            match unregister_claim(&claim) {
+                Ok(()) | Err(TimerError::RegistrationExpired) => return Err(error),
+                Err(cleanup_error) => return Err(cleanup_error),
+            }
+        }
+    }
+    Ok(claim)
 }
 
 /// Reconstruct or reconcile one `Once` declaration synchronously.
@@ -621,7 +696,12 @@ where
     Fut: Future<Output = OnceRunResult> + 'static,
 {
     let registration = reconcile_registration(registration, identity, TimerPolicy::Once, || {
-        register_once(identity.clone(), DeclarationLifetime::Retained, callback)
+        register_once(
+            identity.clone(),
+            DeclarationLifetime::Retained,
+            None,
+            callback,
+        )
     })?;
     registration.reconcile_schedule(desired)
 }
@@ -668,6 +748,7 @@ where
                 identity.clone(),
                 cadence,
                 DeclarationLifetime::Retained,
+                None,
                 callback,
             )
         },
@@ -706,6 +787,7 @@ where
                 identity.clone(),
                 cadence,
                 DeclarationLifetime::Retained,
+                None,
                 callback,
             )
         },

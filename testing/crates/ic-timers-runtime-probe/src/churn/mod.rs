@@ -38,6 +38,7 @@ fn replace_distant_deadlines(count: u32) {
                         .expect("fixed identity"),
                     TimerCadence::from_nanos(CADENCE_NS).expect("fixed cadence"),
                     DeclarationLifetime::Retained,
+                    None,
                     |_| {
                         let completed = COMPLETED.with(|count| {
                             let next = count.get() + 1;

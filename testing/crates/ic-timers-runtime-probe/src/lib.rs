@@ -150,6 +150,9 @@ fn install_watchdog_with_initial_schedule(immediate: bool) -> bool {
             identity,
             cadence,
             DeclarationLifetime::Retained,
+            Some(TimerSchedule::After(std::time::Duration::from_nanos(
+                if immediate { 0 } else { CADENCE_NS },
+            ))),
             |context| {
                 let now_ns = ic_cdk::api::time();
                 let should_trap = TRAP_WINDOW
@@ -197,14 +200,6 @@ fn install_watchdog_with_initial_schedule(immediate: bool) -> bool {
             Ok(registration) => registration,
             Err(_) => ic_cdk::trap("watchdog registration failed"),
         };
-        let scheduled = if immediate {
-            registration.ensure_scheduled_immediately()
-        } else {
-            registration.ensure_scheduled()
-        };
-        if scheduled.is_err() {
-            ic_cdk::trap("initial watchdog scheduling failed");
-        }
         *slot = Some(registration);
         true
     })
@@ -268,6 +263,9 @@ fn install_secondary_watchdog() -> bool {
             secondary_identity(),
             cadence,
             DeclarationLifetime::Retained,
+            Some(TimerSchedule::After(std::time::Duration::from_nanos(
+                CADENCE_NS,
+            ))),
             |_context| {
                 SECONDARY_COMPLETED_WORK.with(|completed| {
                     completed.set(completed.get().saturating_add(1));
@@ -278,9 +276,6 @@ fn install_secondary_watchdog() -> bool {
             Ok(registration) => registration,
             Err(_) => ic_cdk::trap("secondary watchdog registration failed"),
         };
-        if registration.ensure_scheduled().is_err() {
-            ic_cdk::trap("secondary watchdog scheduling failed");
-        }
         *slot = Some(registration);
         true
     })
@@ -379,6 +374,7 @@ fn fill_inventory() -> u64 {
             identity,
             cadence,
             DeclarationLifetime::Retained,
+            None,
             |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
         ) {
             Ok(registration) => registration,
