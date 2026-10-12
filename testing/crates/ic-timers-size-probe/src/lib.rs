@@ -3,7 +3,7 @@ use ic_timers::{TimerIdentity, initialize_runtime, timer_inventory, timer_snapsh
 use std::cell::Cell;
 
 #[cfg(not(feature = "baseline"))]
-use ic_timers::{DeclarationLifetime, TimerSchedule};
+use ic_timers::{TimerSchedule, TimerStart};
 #[cfg(not(feature = "baseline"))]
 use std::cell::RefCell;
 
@@ -248,10 +248,11 @@ fn start_inner() -> bool {
         }
         let registration = match register_once(
             cohort_identity(),
-            DeclarationLifetime::Retained,
-            Some(TimerSchedule::After(std::time::Duration::from_nanos(
-                CADENCE_NS,
-            ))),
+            TimerStart::Retained {
+                initial: Some(TimerSchedule::After(std::time::Duration::from_nanos(
+                    CADENCE_NS,
+                ))),
+            },
             |_context| async {
                 CALLBACKS.with(|calls| calls.set(calls.get().saturating_add(1)));
                 OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
@@ -274,10 +275,11 @@ fn start_inner() -> bool {
         let registration = match register_after_completion(
             cohort_identity(),
             cadence(),
-            DeclarationLifetime::Retained,
-            Some(TimerSchedule::After(std::time::Duration::from_nanos(
-                CADENCE_NS,
-            ))),
+            TimerStart::Retained {
+                initial: Some(TimerSchedule::After(std::time::Duration::from_nanos(
+                    CADENCE_NS,
+                ))),
+            },
             |_context| async {
                 CALLBACKS.with(|calls| calls.set(calls.get().saturating_add(1)));
                 AfterCompletionRunResult::new(
@@ -303,10 +305,11 @@ fn start_inner() -> bool {
         let registration = match register_watchdog(
             cohort_identity(),
             cadence(),
-            DeclarationLifetime::Retained,
-            Some(TimerSchedule::After(std::time::Duration::from_nanos(
-                CADENCE_NS,
-            ))),
+            TimerStart::Retained {
+                initial: Some(TimerSchedule::After(std::time::Duration::from_nanos(
+                    CADENCE_NS,
+                ))),
+            },
             |_context| {
                 CALLBACKS.with(|calls| calls.set(calls.get().saturating_add(1)));
                 WatchdogRunResult::new(watchdog_completion(), WatchdogDecision::Continue)

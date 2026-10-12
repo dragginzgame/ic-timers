@@ -21,6 +21,43 @@ thread_local! {
     static RUNTIME: RefCell<Option<TimerRegistry>> = const { RefCell::new(None) };
 }
 
+/// Initial schedule and declaration retention for a direct registration.
+///
+/// Retained declarations may start inactive. A declaration removed when stopped
+/// always starts with a schedule; all three registration policies use this same
+/// configuration. Durations and deadlines are checked when registering.
+///
+/// A remove-on-stop declaration cannot start inactive:
+///
+/// ```compile_fail,E0308
+/// use ic_timers::TimerStart;
+/// let start = TimerStart::RemoveWhenStopped { initial: None };
+/// ```
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum TimerStart {
+    /// Keep callback authority after stopping, optionally starting scheduled.
+    Retained {
+        /// Initial wake-up, or `None` for an inactive declaration.
+        initial: Option<TimerSchedule>,
+    },
+    /// Start scheduled and remove callback authority after stopping.
+    RemoveWhenStopped {
+        /// Required initial wake-up.
+        initial: TimerSchedule,
+    },
+}
+
+impl TimerStart {
+    const fn into_parts(self) -> (DeclarationLifetime, Option<TimerSchedule>) {
+        match self {
+            Self::Retained { initial } => (DeclarationLifetime::Retained, initial),
+            Self::RemoveWhenStopped { initial } => {
+                (DeclarationLifetime::RemoveWhenStopped, Some(initial))
+            }
+        }
+    }
+}
+
 /// Failure from the canister-local timer runtime API.
 #[non_exhaustive]
 #[derive(Debug, Error)]
@@ -37,9 +74,6 @@ pub enum TimerError {
     /// Cadence or deadline validation failed.
     #[error(transparent)]
     Schedule(#[from] ScheduleError),
-    /// A remove-on-stop declaration must start with a schedule.
-    #[error("a transient timer requires an initial schedule")]
-    InitialScheduleRequired,
     /// The logical registration was removed or superseded.
     #[error("timer registration is no longer authoritative")]
     RegistrationExpired,
@@ -491,8 +525,9 @@ impl AfterCompletionRegistration {
 
 /// Register one asynchronous `Once` callback with its initial schedule.
 ///
-/// `None` declares an inactive retained timer. A `RemoveWhenStopped` timer
-/// requires `Some(schedule)`. Success returns installed callback authority and,
+/// [`TimerStart::Retained`] permits an inactive declaration;
+/// [`TimerStart::RemoveWhenStopped`] always supplies its initial schedule.
+/// Success returns installed callback authority and,
 /// when requested, a confirmed provider wakeup. A returned error retires this
 /// creation's declaration and handles before releasing callback captures.
 ///
@@ -500,17 +535,16 @@ impl AfterCompletionRegistration {
 /// be used here, even when its decision is Stop:
 ///
 /// ```compile_fail,E0271
-/// use ic_timers::{register_once, TimerIdentity, DeclarationLifetime,
+/// use ic_timers::{register_once, TimerIdentity, TimerStart,
 ///     TimerCompletion, AfterCompletionDecision, AfterCompletionRunResult};
 /// let identity = TimerIdentity::try_new("app", "jobs", "once").unwrap();
-/// let _ = register_once(identity, DeclarationLifetime::Retained, None, |_| async {
+/// let _ = register_once(identity, TimerStart::Retained { initial: None }, |_| async {
 ///     AfterCompletionRunResult::new(TimerCompletion::no_work(), AfterCompletionDecision::Stop)
 /// });
 /// ```
 pub fn register_once<F, Fut>(
     identity: TimerIdentity,
-    lifetime: DeclarationLifetime,
-    initial: Option<TimerSchedule>,
+    start: TimerStart,
     callback: F,
 ) -> Result<OnceRegistration, TimerError>
 where
@@ -519,9 +553,10 @@ where
 {
     let callback = erase_ordinary_callback(callback, OnceContext::new, OrdinaryRunResult::from);
     let claim = register_initial(
-        lifetime,
-        initial,
-        |registry| registry.register_once_with_callback(identity, lifetime, Rc::clone(&callback)),
+        start,
+        |registry, lifetime| {
+            registry.register_once_with_callback(identity, lifetime, Rc::clone(&callback))
+        },
         TimerRegistry::reconcile_ordinary,
     );
     // Release factory captures only after initial registry/provider cleanup.
@@ -532,25 +567,24 @@ where
 /// Register one asynchronous callback with configured after-completion recurrence.
 ///
 /// The explicit initial schedule selects the first deadline independently of
-/// the recurrence cadence. `None` is valid only for retained declarations.
+/// the recurrence cadence. [`TimerStart::Retained`] may start inactive.
 /// Initial scheduling failure removes the new declaration and provider handles.
 ///
 /// The future must return [`AfterCompletionRunResult`]:
 ///
 /// ```compile_fail,E0271
 /// use ic_timers::{register_after_completion, TimerIdentity, TimerCadence,
-///     DeclarationLifetime, TimerCompletion, OnceDecision, OnceRunResult};
+///     TimerStart, TimerCompletion, OnceDecision, OnceRunResult};
 /// let identity = TimerIdentity::try_new("app", "jobs", "recurring").unwrap();
 /// let cadence = TimerCadence::from_nanos(5).unwrap();
-/// let _ = register_after_completion(identity, cadence, DeclarationLifetime::Retained, None, |_| async {
+/// let _ = register_after_completion(identity, cadence, TimerStart::Retained { initial: None }, |_| async {
 ///     OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
 /// });
 /// ```
 pub fn register_after_completion<F, Fut>(
     identity: TimerIdentity,
     cadence: TimerCadence,
-    lifetime: DeclarationLifetime,
-    initial: Option<TimerSchedule>,
+    start: TimerStart,
     callback: F,
 ) -> Result<AfterCompletionRegistration, TimerError>
 where
@@ -563,9 +597,8 @@ where
         OrdinaryRunResult::from,
     );
     let claim = register_initial(
-        lifetime,
-        initial,
-        |registry| {
+        start,
+        |registry, lifetime| {
             registry.register_after_completion_with_callback(
                 identity,
                 cadence,
@@ -583,7 +616,7 @@ where
 /// Register one synchronous pre-armed watchdog callback with its initial schedule.
 ///
 /// The initial schedule selects the first scheduler message, never synchronous
-/// consumer work. `None` is valid only for retained declarations. Initial
+/// consumer work. [`TimerStart::Retained`] may start inactive. Initial
 /// scheduling failure removes the new declaration and provider handles.
 ///
 /// The callback cannot be async: it runs only in the work message after a
@@ -593,8 +626,7 @@ where
 pub fn register_watchdog<F>(
     identity: TimerIdentity,
     cadence: TimerCadence,
-    lifetime: DeclarationLifetime,
-    initial: Option<TimerSchedule>,
+    start: TimerStart,
     callback: F,
 ) -> Result<WatchdogRegistration, TimerError>
 where
@@ -605,9 +637,8 @@ where
         callback(WatchdogContext::new(token))
     })));
     let claim = register_initial(
-        lifetime,
-        initial,
-        |registry| {
+        start,
+        |registry, lifetime| {
             registry.register_watchdog_with_callback(
                 identity,
                 cadence,
@@ -625,9 +656,11 @@ where
 /// Finish creation before exposing a claim. The callback factory retains its
 /// captures until this returns, including through rejected provider binding.
 fn register_initial(
-    lifetime: DeclarationLifetime,
-    initial: Option<TimerSchedule>,
-    register: impl FnOnce(&mut TimerRegistry) -> Result<RegistrationClaim, RegisterError>,
+    start: TimerStart,
+    register: impl FnOnce(
+        &mut TimerRegistry,
+        DeclarationLifetime,
+    ) -> Result<RegistrationClaim, RegisterError>,
     reconcile: fn(
         &mut TimerRegistry,
         &RegistrationClaim,
@@ -635,6 +668,7 @@ fn register_initial(
         Option<TimerSchedule>,
     ) -> Result<RegistryTransition, RegistryError>,
 ) -> Result<RegistrationClaim, TimerError> {
+    let (lifetime, initial) = start.into_parts();
     let (claim, requested) = with_registry_mut(|registry| {
         let requested = match initial {
             Some(schedule) => {
@@ -643,12 +677,9 @@ fn register_initial(
                 schedule.resolve(now_ns)?;
                 Some((schedule, now_ns))
             }
-            None if lifetime == DeclarationLifetime::RemoveWhenStopped => {
-                return Err(TimerError::InitialScheduleRequired);
-            }
             None => None,
         };
-        Ok((register(registry)?, requested))
+        Ok((register(registry, lifetime)?, requested))
     })?;
     if let Some((schedule, now_ns)) = requested
         && let Err(error) = apply_claim_transition(&claim, None, |registry| {
@@ -671,7 +702,7 @@ fn register_initial(
 /// `Some(schedule)` is authoritative and may move an existing deadline in
 /// either direction. `None` retains an inactive declaration in the canonical
 /// inventory, including on a fresh heap. Lifecycle reconciliation always owns
-/// a [`DeclarationLifetime::Retained`] declaration; transient
+/// a [`TimerStart::Retained`] declaration; transient
 /// `RemoveWhenStopped` callbacks use [`register_once`] directly.
 ///
 /// Lifecycle reconstruction retains the same policy-specific result boundary:
@@ -698,8 +729,7 @@ where
     let registration = reconcile_registration(registration, identity, TimerPolicy::Once, || {
         register_once(
             identity.clone(),
-            DeclarationLifetime::Retained,
-            None,
+            TimerStart::Retained { initial: None },
             callback,
         )
     })?;
@@ -747,8 +777,7 @@ where
             register_after_completion(
                 identity.clone(),
                 cadence,
-                DeclarationLifetime::Retained,
-                None,
+                TimerStart::Retained { initial: None },
                 callback,
             )
         },
@@ -786,8 +815,7 @@ where
             register_watchdog(
                 identity.clone(),
                 cadence,
-                DeclarationLifetime::Retained,
-                None,
+                TimerStart::Retained { initial: None },
                 callback,
             )
         },

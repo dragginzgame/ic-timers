@@ -3,12 +3,10 @@
 # IC Timers code-hygiene overlay
 
 Use the [shared code-hygiene method](../../audits/code-hygiene.md) and
-[common audit contract](../../audits/README.md) from reviewed Shared Tooling
-`db143ae9ae140eb66826c413360723d23c078f66`. The code-hygiene method bytes are
-unchanged; the common contract links the maintenance catalog and scopes standing
-issue writes to verified `dragginzgame` repositories. The
-[audit snapshot](../../.shared-tooling-audits.snapshot) identifies those files;
-[AGENTS.md](../../AGENTS.md) supplies local command authority. This overlay
+[common audit contract](../../audits/README.md) from the reviewed revision
+recorded in the [audit snapshot](../../.shared-tooling-audits.snapshot).
+[AGENTS.md](../../AGENTS.md) identifies the adopted baseline and supplies local
+command authority, including its compile-only development exception. This overlay
 selects product scope for a requested review, including a review before a minor
 release or after a substantial API change. It adds no automatic gate or schedule.
 
@@ -81,7 +79,8 @@ existing package owner and does not authorize packaging/build execution.
 | Verification class | Local selection and authority |
 | --- | --- |
 | Focused native test | A named owner regression with `cargo test --locked -p ic-timers --lib <fully-qualified-test> -- --exact`; requires an explicit request. Record that the intended test actually executed. |
-| Focused lint/build | Select the affected library or nested probe and its current toolchain/features; requires an explicit request, even for a focused check. |
+| Library compile-only development check | After Rust changes, AGENTS.md permits locked, offline `check` / `wasm-check` with already prepared tools, `RUSTUP_AUTO_INSTALL=0` and no owner validation active. Compile library test targets without executing tests; report missing inputs rather than fetching or installing. |
+| Other builds and lint | Select the affected library or workspace probe and its current toolchain/features; tests, doctests, Clippy and other builds still require an explicit request. |
 | Provider or repository lint/fixtures | Existing `provider-check` and applicable `repository-check` owners; requires an explicit request. |
 | Broad gates | `make ci`, `make msrv` and `make release-verify` remain maintainer-owned. |
 | Recovery and performance | Maintained PocketIC subjects and policy cohorts selected through the release guide; requires an explicit request. |

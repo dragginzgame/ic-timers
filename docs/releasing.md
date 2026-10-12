@@ -3772,3 +3772,160 @@ The original log and run/job/artifact observations are retained at
 `/tmp/ic-timers-0191-qualification.IQiwIXf8/`. Both macOS producers remain
 queued and hosted late download verification is incomplete at inspection;
 #44 remains open. No existing approval is repeated or changed to another source.
+
+## 0.19.3 delivery and prepared Shared 0.9.1 cleanup
+
+Timers 0.19.3 is committed, tagged and pushed at
+`1e451ba35613f2efde601073636c63ed97a91c06`, with remote annotated tag object
+`35298ffad70aca7a64ee3ff752e5173a1c72717a` dereferencing to that source.
+The committed graph selects Metrics 0.7.2, Testkit 0.34.5, Host 0.14.9 and
+PocketIC 16.1.0. Tag run 38249543691 passes; main run 38249542866 is queued at
+inspection. Registry publication and full native acceptance are not inferred.
+The incoming lock selection changes Metrics to 0.7.3 and remains untouched.
+
+The requested maintenance continues with reviewed Shared 0.9.1
+`e8a9ea6b660f216166eb00d0af6a32462bdbda4a`. Complete clean-source previews
+precede canonical apply for all three bundles, retaining 67/35/11 files and
+every existing root without additions or retirements. The [adoption owner](shared-tooling.md)
+records common host/IC lifecycle handling, lock cleanup/status preservation and
+selected owner fixtures. Incoming Cargo/pin/index inputs remain identical;
+integrity, Bash syntax, owner-document links and diff checks pass. Evidence is
+at `/tmp/ic-timers-shared091.LNqFhTsF/`. No local tests, builds, lint, setup or
+release commands run for adoption; native/behavioral qualification remains
+user-owned. Undated 0.19.4 notes are compatible repository-only maintenance.
+
+The original /tmp qualification/adoption directories are absent at this later
+inspection. No cause is inferred and no cleanup is performed by this work.
+Available frozen v0.19.1 early and late run/job/artifact JSON, original producer
+logs and exact ZIP archives are re-downloaded into
+`/tmp/ic-timers-0191-qualification.IQiwIXf8/restored-readback-20261012/`.
+All three early ZIP and raw-log hashes match their previously recorded values;
+the early run's source/ref/attempt and three hosted verifier successes are
+checked independently against GitHub again. Linux late ZIP/log hashes also
+match their prior observations. Original local dispatch intent/reply files and
+v0.17.13 archive copies are unavailable; they are not recreated as if original.
+Historical records and approval remain in the existing issue/conversation;
+neither stage is dispatched again or switched to a new source.
+
+ARM late producer **114798745283** passes its complete native release gate,
+reaches controlled exit 2 and archives/uploads successfully. Artifact
+**11751795650** has matching uploaded/downloaded ZIP SHA-256
+`53f924106ed3bc1b4e7958d0f9977a601bc431259baa3928b0438dadbaf91ad5`.
+Its original producer-log SHA-256 is
+`8b71962e7e28ac1231da3f4c4f64202f5d1767303b9d9d8c004e1bee3811442b`.
+The exact frozen verifier admits ARM's named tar payload locally with the
+original source/run/attempt and committed pin inputs. This replay is archive
+inspection, not successful hosted late download verification or new native work.
+Source remains frozen v0.19.1/attempt 1; Intel and hosted late artifact
+verification are incomplete at inspection. #44 remains open, separately from
+the newer released dependency graph and pending 0.9.1 snapshot.
+
+## Prepared Shared 0.9.2 and completed frozen qualification
+
+The same undated 0.19.4 contributor batch selects committed Shared 0.9.2
+`c118062a070a2e238f1eb3989b6fd700f369ce1e`. All three canonical previews
+precede apply, retaining 67/35/11 payloads and recorded roots without additions
+or retirements. The [adoption owner](shared-tooling.md) records NUL admission
+before evidence hashing and CR/LF installer-path rejection before configuration
+or setup. Saved inputs/logs remain at `/tmp/ic-timers-shared092.W81svtKr/`.
+Integrity, changed Bash syntax, owner-document links and diff checks pass;
+Cargo/pin/index inputs match saved bytes/entries. No local tests, build, lint,
+setup or release commands run for adoption. Behavioral/native acceptance of the
+new snapshot is distinct from the completed frozen qualification below.
+
+The approved sequential **early then late** pair is complete at frozen
+v0.19.1 `0c24fac2fc1d38d216f6880a581f5ff9b85020e2`, attempt 1. Main CI
+38231417336 is re-confirmed successful at that exact source. Early run
+38234040990 has all three controlled exit-22 producers/uploads and all three
+successful hosted verifiers. Late run
+[38245658495](https://github.com/dragginzgame/ic-timers/actions/runs/38245658495)
+has successful full Linux and Intel/ARM native gates, followed only by the
+selected controlled exit 2 and successful archives/uploads on every producer.
+Hosted downloaded-artifact verifiers pass: Intel **114854856791**, Linux
+**114854856857**, ARM **114854857036**. Both overall run conclusions remain
+intentional failure; no original producer or old failed attempt is relabelled.
+
+Final late uploaded/downloaded ZIP identities:
+
+| Host | Artifact | SHA-256 |
+| --- | --- | --- |
+| Linux/X64 | 11746077825 | `bcc9ed0393d7d64aa1eb2bba250bbe1fa95a35732f17ba420de19a1efc913f0c` |
+| macOS/ARM64 | 11751795650 | `53f924106ed3bc1b4e7958d0f9977a601bc431259baa3928b0438dadbaf91ad5` |
+| macOS/X64 | 11752557455 | `9e62a54e5e116d21b5884304f28c2c503084b0dd37b473de9cb54afb68fe982a` |
+
+Intel producer **114798745371** completes its full native gate before the
+controlled failure. Raw log SHA-256 is
+`690e490636358928dde96da47a227cc8912e6a59a5b7828ab64180c9ec1287ea`.
+Final run/job/artifact JSON, uploaded/downloaded ZIPs, producer and hosted
+verifier logs are retained in the existing restored-readback directory. Its
+missing original local intent/reply and v0.17.13 copies remain explicitly
+unavailable; no new dispatch or fabricated receipt replaces them. The existing
+approval, original submitted run identities and GitHub source-bound outcomes
+remain authoritative. This closes #44's named acceptance at its delivered
+Shared 0.8.0/59/35/11 graph; it does not qualify the newer pending 0.9.2 bytes.
+
+## Prepared 0.20 typed constructor hard cut
+
+The maintainer approves cleaner registration setup at the next minor boundary.
+The single pending draft is now **0.20.0**, including the previously prepared
+compatible tooling notes. Cargo package versions remain 0.19.3 and the incoming
+Metrics 0.7.3 lock selection is preserved. The source base is released
+`1e451ba35613f2efde601073636c63ed97a91c06`, with uncommitted typed-start changes.
+No bump, staging, commit, tag, push or publication is performed.
+
+`TimerStart` replaces independent lifetime/optional-schedule constructor inputs
+across all direct registration policies. The [design owner](design/0.20-typed-registration.md)
+records valid starts, atomic binding/capture ownership, removed missing-schedule
+rejection and downstream mapping. Library/native fixtures, runtime/size cohorts,
+PocketIC rejection endpoint/caller and public examples use the current contract.
+`DeclarationLifetime` remains an inert observation; lifecycle helper signatures
+and scheduling/recovery contracts remain the same by source inspection.
+
+Approved development commands complete with locked/offline prepared inputs:
+
+```bash
+CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 make check
+CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 cargo +1.88.0 check -p ic-timers --lib --all-features --target wasm32-unknown-unknown --locked --offline
+```
+
+The first compiles library and library test targets with Rust 1.99.0; the second
+compiles the production library Wasm path at Rust 1.88.0. Neither executes tests
+or proves the complete MSRV gate.
+
+The maintainer separately authorizes focused native tests, doctests,
+library/probe Clippy and probe compile checks with locked/offline prepared inputs,
+excluding setup, PocketIC execution and release commands. Those checks pass:
+
+| Subject | Compiler | Result |
+| --- | --- | --- |
+| Library all-target/all-feature native tests | 1.99.0 | 149 passed |
+| Library all-feature doctests | 1.99.0 and 1.88.0 | Nine passed on each compiler, including eight compile-fail subjects |
+| Library all-target/all-feature Clippy, warnings denied | 1.99.0 | Passed |
+| Runtime/PocketIC all-target Clippy, warnings denied | 1.88.0 | Passed; no PocketIC test execution |
+| Size-probe all-target Clippy, warnings denied | 1.88.0 | Baseline/Once/AfterCompletion/Watchdog selections all passed separately |
+| Runtime-probe Wasm compile-only check | 1.88.0 | Passed with `timer-probe` profile |
+| Size-probe Wasm compile-only checks | 1.88.0 | All four separate cohorts passed with `timer-probe` profile |
+
+Every command uses `CARGO_NET_OFFLINE=true`, `RUSTUP_AUTO_INSTALL=0`, `--locked`
+and `--offline`. Full commands and original logs are retained at
+`target/development/typed-start.rFyIOguo/`, with the released base identity,
+before/after source patches, Cargo input hashes and index entries. The patches
+are identical across validation, and Cargo inputs/index entries are unchanged.
+The graph selects incoming Metrics 0.7.3, Testkit 0.34.5, Host 0.14.9 and
+PocketIC 16.1.0. These results belong to the uncommitted typed-start source,
+not the released 0.19.3 commit alone or the forthcoming Metrics 0.8 adoption.
+
+No setup, PocketIC execution or release command runs. Native substitutes and
+probe compilation do not establish IC trap/rollback or recovery qualification.
+Document links and diff checks pass. No measured Wasm, heap or instruction delta
+is claimed. The existing complete release gate remains required before delivery;
+frozen 0.19.1 qualification cannot stand in for it.
+
+Canic is notified in [its existing timer-family owner](https://github.com/dragginzgame/canic/issues/33#issuecomment-6127168880).
+Its current dirty direct-registration adapter needs the argument update upon
+adoption. Jobs uses unchanged lifecycle helpers; all linked owners still select
+one exact Timers identity. Sibling files/pins remain separately owned and are
+not mutated by this preparation.
+The [focused qualification follow-up](https://github.com/dragginzgame/canic/issues/33#issuecomment-6127448281)
+records the new native/doctest/Clippy/probe compile results separately from
+publication and IC acceptance.

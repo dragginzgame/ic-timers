@@ -58,6 +58,7 @@ but it does not promise that a task will happen exactly once.
 | Field | Value |
 | --- | --- |
 | Released API line | `0.19` |
+| Prepared source API line | `0.20` |
 
 The 0.19 line uses Metrics 0.7 instruction summaries with `u128` totals and
 integer means; see the [release notes](CHANGELOG.md#0190) when updating report
@@ -182,14 +183,15 @@ exact reconciliation can discard an invalid callback delay before that check.
 
 ## Minimal `Once` example
 
-The examples below use the policy-specific callback results introduced in 0.12.
+The examples below target the prepared 0.20 constructor API. Released 0.19
+examples remain at [v0.19.3](https://github.com/dragginzgame/ic-timers/blob/v0.19.3/README.md).
 
-Add one exact package version when this crate participates in a shared
-framework/application registry:
+Once 0.20.0 is published, select one exact package version when this crate
+participates in a shared framework/application registry:
 
 ```toml
 [dependencies]
-ic-timers = "=0.19.0"
+ic-timers = "=0.20.0"
 ```
 
 Every framework and application crate linked into the same canister must use
@@ -197,13 +199,13 @@ that same exact package version. Mixing this pin with an older exact release
 can resolve two package identities and therefore create two independent timer
 registries.
 
-With the released 0.18 construction API, initialize the runtime from the
+With typed registration setup, initialize the runtime from the
 canister's existing lifecycle owner, create and schedule a timer in one call,
 and retain its non-clone registration capability:
 
 ```rust
 use ic_timers::{
-    DeclarationLifetime, OnceRegistration, TimerCompletion, OnceDecision,
+    TimerStart, OnceRegistration, TimerCompletion, OnceDecision,
     TimerIdentity, OnceRunResult, TimerSchedule, initialize_runtime,
     register_once,
 };
@@ -214,8 +216,9 @@ fn declare_cleanup_timer() -> Result<OnceRegistration, Box<dyn Error>> {
 
     let timer = register_once(
         TimerIdentity::try_new("my-canister", "maintenance", "cleanup")?,
-        DeclarationLifetime::Retained,
-        Some(TimerSchedule::After(Duration::from_secs(30))),
+        TimerStart::Retained {
+            initial: Some(TimerSchedule::After(Duration::from_secs(30))),
+        },
         |_context| async {
             // Perform one bounded unit of application work.
             OnceRunResult::new(TimerCompletion::success(1), OnceDecision::Stop)
@@ -237,18 +240,24 @@ For fixed declarations, use `reconcile_once`,
 inactive ones. Transient `RemoveWhenStopped` declarations use the direct
 registration functions.
 
-All three registration functions take `initial: Option<TimerSchedule>` before
-the callback. `Some(schedule)` returns a registration only after its first
-wakeup is installed. A returned error retires the failed creation and its
-provider handles before dropping callback captures. `None` deliberately creates
-an inactive retained declaration; using it with `RemoveWhenStopped` returns
-`TimerError::InitialScheduleRequired`. The first deadline is independent of a
-recurring timer's configured cadence. To start at that cadence, pass
-`Some(TimerSchedule::After(Duration::from_nanos(cadence.as_nanos())))`.
+All three registration functions take one `TimerStart` before the callback.
+`Retained { initial: None }` creates an inactive retained declaration;
+`Retained { initial: Some(schedule) }` starts one scheduled.
+`RemoveWhenStopped { initial: schedule }` requires a schedule and removes the
+declaration when it stops. `DeclarationLifetime` remains an observation in
+snapshots, rather than a separate constructor input.
 
-This is the released 0.18 construction contract. Existing later control and
+A scheduled start returns authority only after its first wakeup is installed.
+A returned error retires the failed creation and provider handles before
+dropping callback captures. Durations and deadline arithmetic remain checked.
+The first deadline is independent of recurrence cadence: set `initial` to
+`TimerSchedule::After(Duration::from_nanos(cadence.as_nanos()))` inside the
+chosen start configuration to begin at that cadence.
+
+Typed starts preserve the atomic construction contract introduced in 0.18.
+Existing later control and
 lifecycle reconciliation retain their own failure semantics; see the
-[construction decision and qualification scope](docs/design/0.18-atomic-registration.md).
+[typed setup decision and qualification scope](docs/design/0.20-typed-registration.md).
 
 ## Runtime ownership
 

@@ -44,6 +44,9 @@ impl TimerPolicy {
 }
 
 /// Whether a stopped declaration remains in the bounded registry.
+///
+/// This is an observation of declaration lifetime. Direct registration uses
+/// [`crate::TimerStart`] to couple retention with a valid initial schedule.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum DeclarationLifetime {
     /// Keep callback authority available for a later ensure request.

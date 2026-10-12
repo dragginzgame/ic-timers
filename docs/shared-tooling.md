@@ -1,5 +1,62 @@
 # Shared Tooling adoption
 
+## Prepared Shared Tooling 0.9.2 evidence and path admission
+
+The requested source is committed upstream main
+`c118062a070a2e238f1eb3989b6fd700f369ce1e`, matching VERSION 0.9.2.
+All three complete clean-source previews precede canonical refresh, preserving
+recorded roots and **67/35/11** payloads without additions or retirements.
+Before manifests, incoming Cargo/pin files, index entries and preview/apply logs
+remain at `/tmp/ic-timers-shared092.W81svtKr/`. The helper export uses the
+existing isolated Git consumer boundary; no local exporter is introduced.
+
+Evidence checksum admission rejects NUL bytes before hashing any referenced
+file and parses the same captured bytes, preserving evidence. The selected
+checksum fixture covers NUL in digests, filenames, suffixes and trailing records
+with no hashing-backend execution. Host/IC/Rust installers reject both supplied
+and physically resolved CR/LF consumer paths before configuration, tool probes
+or setup. Upstream's existing script-path fixture covers aliases/ancestors and
+install/check/preflight entrypoints; that centrally owned suite is not added to
+this consumer's root selection. Existing real lifecycle handling from 0.9.1
+remains selected, without a new store or compatibility route.
+
+Canonical integrity, changed Bash syntax, owner-document links and diff checks
+pass; Cargo files, host/IC pins and real index entries match saved inputs.
+Behavioral fixtures, lint, setup and full/native validation are not run locally.
+Exact-source [upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38261553586)
+is queued at inspection. Compatible repository-only notes are bundled into the
+one undated **0.20.0** constructor-cut draft, leaving package versions at 0.19.3.
+
+## Prepared Shared Tooling 0.9.1 installer cleanup
+
+The reviewed source is committed upstream main
+`e8a9ea6b660f216166eb00d0af6a32462bdbda4a`, matching committed VERSION 0.9.1.
+Complete clean-source previews precede canonical apply across all three bundles.
+Existing roots and **67/35/11** payloads remain; no additions or retirements occur.
+The sibling's uncommitted evidence-checksum changes are excluded.
+Saved inputs, before manifests, index entries and all preview/apply logs remain
+at `/tmp/ic-timers-shared091.LNqFhTsF/`.
+
+Host/IC installers now share checkout-lock acquisition, verified-cache reuse
+and cleanup through the existing tool-store owner. Cleanup attempts shared-lock
+release even when checkout cleanup fails, keeps the original installation error
+and failed candidate, and reports nonzero for cleanup-only failure. Lock conflicts
+still refuse before registering cleanup for another installer's lock.
+Existing real-entrypoint fixtures cover cached activation, simultaneous cleanup
+and download failure, retained candidates and retry; the IC fixture follows the
+common failure diagnostic. No second store manager, fallback or setup route is
+introduced. Pins, prepared tool selections and product runtime are unchanged.
+
+Canonical integrity, changed Bash syntax, owner-document links and diff checks
+pass. Cargo files, host/IC pins and real index entries match the saved inputs,
+including the incoming Metrics 0.7.3 lock selection. Tests, installer fixtures,
+tool admission, setup and full/native gates are not run locally. Exact-source
+[upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38249073151)
+is queued at inspection; source review and integrity do not establish behavioral
+or native acceptance. Compatible repository-only notes are bundled into undated
+**0.20.0**, with package versions left at 0.19.3. This tooling refresh itself
+claims no library feature or timer API change.
+
 ## Prepared corrected Shared Tooling 0.9.0 provenance
 
 After Timers 0.19.2 is committed, tagged and pushed at

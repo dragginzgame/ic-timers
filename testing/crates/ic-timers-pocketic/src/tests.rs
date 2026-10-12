@@ -1011,13 +1011,13 @@ fn rejected_initial_schedules_preserve_ic_inventory_and_release_captures() {
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
     for policy in 0_u8..3 {
-        for (transient, missing) in [(false, false), (true, false), (true, true)] {
+        for transient in [false, true] {
             let bytes = pic
                 .update_call(
                     canister_id,
                     Principal::anonymous(),
                     "reject_initial_schedule",
-                    Encode!(&policy, &transient, &missing).unwrap(),
+                    Encode!(&policy, &transient).unwrap(),
                 )
                 .unwrap();
             assert_eq!(Decode!(&bytes, bool, u64, bool).unwrap(), (true, 1, true));
@@ -1028,5 +1028,5 @@ fn rejected_initial_schedules_preserve_ic_inventory_and_release_captures() {
     let observation = ordinary_observation(&pic, canister_id);
     assert_eq!(observation.inventory_len, 0);
     assert_eq!(observation.completed, 0);
-    assert_eq!(observation.captures_dropped, 9);
+    assert_eq!(observation.captures_dropped, 6);
 }

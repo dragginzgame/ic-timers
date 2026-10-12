@@ -3,11 +3,11 @@
 use candid::CandidType;
 use ic_timers::{
     AfterCompletionContext, AfterCompletionDecision, AfterCompletionRegistration,
-    AfterCompletionRunResult, DeclarationLifetime, InactiveReason, OnceContext, OnceDecision,
-    OnceRegistration, OnceRunResult, TimerCadence, TimerCompletion, TimerError, TimerIdentity,
-    TimerRegistrationStatus, TimerRuntimeStateSnapshot, TimerSchedule, WatchdogDecision,
-    WatchdogRunResult, register_after_completion, register_once, register_watchdog,
-    timer_inventory, timer_snapshot,
+    AfterCompletionRunResult, InactiveReason, OnceContext, OnceDecision, OnceRegistration,
+    OnceRunResult, TimerCadence, TimerCompletion, TimerError, TimerIdentity,
+    TimerRegistrationStatus, TimerRuntimeStateSnapshot, TimerSchedule, TimerStart,
+    WatchdogDecision, WatchdogRunResult, register_after_completion, register_once,
+    register_watchdog, timer_inventory, timer_snapshot,
 };
 use std::{
     cell::{Cell, RefCell},
@@ -82,10 +82,13 @@ fn identity() -> TimerIdentity {
 
 #[ic_cdk::update]
 fn start_ordinary(after_completion: bool, transient: bool) {
-    let lifetime = if transient {
-        DeclarationLifetime::RemoveWhenStopped
+    let initial = TimerSchedule::At(ic_cdk::api::time());
+    let start = if transient {
+        TimerStart::RemoveWhenStopped { initial }
     } else {
-        DeclarationLifetime::Retained
+        TimerStart::Retained {
+            initial: Some(initial),
+        }
     };
     REGISTRATION.with_borrow_mut(|slot| {
         assert!(slot.is_none(), "one probe registration");
@@ -95,8 +98,7 @@ fn start_ordinary(after_completion: bool, transient: bool) {
                 register_after_completion(
                     identity(),
                     TimerCadence::from_nanos(super::CADENCE_NS).expect("fixed cadence"),
-                    lifetime,
-                    Some(TimerSchedule::At(ic_cdk::api::time())),
+                    start,
                     move |context| {
                         WORK_CONTEXT.with_borrow_mut(|slot| {
                             *slot = Some(WorkContext::AfterCompletion(context))
@@ -116,21 +118,15 @@ fn start_ordinary(after_completion: bool, transient: bool) {
             )
         } else {
             Registration::Once(
-                register_once(
-                    identity(),
-                    lifetime,
-                    Some(TimerSchedule::At(ic_cdk::api::time())),
-                    move |context| {
-                        WORK_CONTEXT
-                            .with_borrow_mut(|slot| *slot = Some(WorkContext::Once(context)));
-                        let captured = Rc::clone(&captured);
-                        async move {
-                            let completion = work().await;
-                            std::hint::black_box(captured);
-                            OnceRunResult::new(completion, OnceDecision::Stop)
-                        }
-                    },
-                )
+                register_once(identity(), start, move |context| {
+                    WORK_CONTEXT.with_borrow_mut(|slot| *slot = Some(WorkContext::Once(context)));
+                    let captured = Rc::clone(&captured);
+                    async move {
+                        let completion = work().await;
+                        std::hint::black_box(captured);
+                        OnceRunResult::new(completion, OnceDecision::Stop)
+                    }
+                })
                 .expect("register Once"),
             )
         };
@@ -329,8 +325,9 @@ fn remove_armed_callback(policy: u8) {
         0 => {
             let timer = register_once(
                 identity(),
-                DeclarationLifetime::Retained,
-                Some(TimerSchedule::At(deadline)),
+                TimerStart::Retained {
+                    initial: Some(TimerSchedule::At(deadline)),
+                },
                 move |_| {
                     std::hint::black_box(&captured);
                     async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
@@ -343,8 +340,9 @@ fn remove_armed_callback(policy: u8) {
             let timer = register_after_completion(
                 identity(),
                 TimerCadence::from_nanos(super::CADENCE_NS).expect("cadence"),
-                DeclarationLifetime::RemoveWhenStopped,
-                Some(TimerSchedule::At(deadline)),
+                TimerStart::RemoveWhenStopped {
+                    initial: TimerSchedule::At(deadline),
+                },
                 move |_| {
                     std::hint::black_box(&captured);
                     async {
@@ -362,8 +360,9 @@ fn remove_armed_callback(policy: u8) {
             let timer = register_watchdog(
                 identity(),
                 TimerCadence::from_nanos(super::CADENCE_NS).expect("cadence"),
-                DeclarationLifetime::Retained,
-                Some(TimerSchedule::At(deadline)),
+                TimerStart::Retained {
+                    initial: Some(TimerSchedule::At(deadline)),
+                },
                 move |_| {
                     std::hint::black_box(&captured);
                     WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
@@ -378,23 +377,20 @@ fn remove_armed_callback(policy: u8) {
 
 /// A rejected initial request must not leave callback authority in the IC heap.
 #[ic_cdk::update]
-fn reject_initial_schedule(policy: u8, transient: bool, missing: bool) -> (bool, u64, bool) {
+fn reject_initial_schedule(policy: u8, transient: bool) -> (bool, u64, bool) {
     let before = timer_inventory().expect("initial inventory");
     let dropped_before = CAPTURES_DROPPED.with(Cell::get);
-    let lifetime = if transient {
-        DeclarationLifetime::RemoveWhenStopped
+    let initial = TimerSchedule::After(std::time::Duration::MAX);
+    let start = if transient {
+        TimerStart::RemoveWhenStopped { initial }
     } else {
-        DeclarationLifetime::Retained
-    };
-    let initial = if missing {
-        assert!(transient, "only transient declarations require a schedule");
-        None
-    } else {
-        Some(TimerSchedule::After(std::time::Duration::MAX))
+        TimerStart::Retained {
+            initial: Some(initial),
+        }
     };
     let captured = CapturedState;
     let result = match policy {
-        0 => register_once(identity(), lifetime, initial, move |_| {
+        0 => register_once(identity(), start, move |_| {
             std::hint::black_box(&captured);
             async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
         })
@@ -402,8 +398,7 @@ fn reject_initial_schedule(policy: u8, transient: bool, missing: bool) -> (bool,
         1 => register_after_completion(
             identity(),
             TimerCadence::from_nanos(super::CADENCE_NS).expect("cadence"),
-            lifetime,
-            initial,
+            start,
             move |_| {
                 std::hint::black_box(&captured);
                 async {
@@ -418,8 +413,7 @@ fn reject_initial_schedule(policy: u8, transient: bool, missing: bool) -> (bool,
         2 => register_watchdog(
             identity(),
             TimerCadence::from_nanos(super::CADENCE_NS).expect("cadence"),
-            lifetime,
-            initial,
+            start,
             move |_| {
                 std::hint::black_box(&captured);
                 WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
@@ -428,16 +422,12 @@ fn reject_initial_schedule(policy: u8, transient: bool, missing: bool) -> (bool,
         .map(|_| ()),
         _ => ic_cdk::trap("unknown initial policy"),
     };
-    let rejected = if missing {
-        matches!(result, Err(TimerError::InitialScheduleRequired))
-    } else {
-        matches!(
-            result,
-            Err(TimerError::Schedule(
-                ic_timers::ScheduleError::DelayOutOfRange
-            ))
-        )
-    };
+    let rejected = matches!(
+        result,
+        Err(TimerError::Schedule(
+            ic_timers::ScheduleError::DelayOutOfRange
+        ))
+    );
     assert!(rejected, "typed initial rejection");
     (
         timer_inventory().expect("rejected inventory") == before,

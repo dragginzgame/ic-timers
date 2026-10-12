@@ -24,6 +24,13 @@ The sections below describe these boundaries in implementation-level detail.
 
 ## Current runtime
 
+Direct registration uses one inert `TimerStart` configuration. Retained starts
+carry an optional initial schedule; remove-on-stop starts carry a required one.
+The existing initial-registration owner decodes that configuration once,
+validates requested time before allocating a claim, and returns scheduled
+authority only after provider binding and confirmation. `DeclarationLifetime`
+remains a snapshot observation. See the [typed setup contract](design/0.20-typed-registration.md).
+
 The crate root is the only public facade. It re-exports runtime operations and
 provider-neutral values directly; every implementation and value-grouping
 module is private. In particular, neither `callback`, `platform`, `registry`, `schedule`,

@@ -5,19 +5,19 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `aec7a149f581a42b9531fc747b46024fc0314fcf` (0.9.0). Its provenance and
+  from revision `c118062a070a2e238f1eb3989b6fd700f369ce1e` (0.9.2). Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
 - Apply the [shared audit methods](audits/README.md) from revision
-  `aec7a149f581a42b9531fc747b46024fc0314fcf`, recorded separately in
+  `c118062a070a2e238f1eb3989b6fd700f369ce1e`, recorded separately in
   [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). That
   supplemental snapshot also supplies pinned host/IC setup at the same
   reviewed revision. The isolated
   [Cargo helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
   supplies the structured dependency checker, Cargo readers/rewrites,
   annotated-tag checker and release-command adoption checker from
-  `aec7a149f581a42b9531fc747b46024fc0314fcf`. All three manifests record explicit
+  `c118062a070a2e238f1eb3989b6fd700f369ce1e`. All three manifests record explicit
   entrypoints and their complete derived payloads; future refreshes reuse those
   roots. Review local callers and other bundles before changing root selection.
   The exporter automatically retires only verified, unchanged owned payloads

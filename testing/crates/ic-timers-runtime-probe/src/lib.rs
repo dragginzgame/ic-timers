@@ -1,7 +1,7 @@
 use candid::CandidType;
 use ic_timers::{
-    DeclarationLifetime, MAX_TIMER_REGISTRATIONS, MemoryPageSummary, TimerCadence, TimerCompletion,
-    TimerIdentity, TimerLastOutcome, TimerSchedule, TimerSchedulingMode, WatchdogDecision,
+    MAX_TIMER_REGISTRATIONS, MemoryPageSummary, TimerCadence, TimerCompletion, TimerIdentity,
+    TimerLastOutcome, TimerSchedule, TimerSchedulingMode, TimerStart, WatchdogDecision,
     WatchdogRegistration, WatchdogRunResult, initialize_runtime, register_watchdog,
     timer_inventory, timer_snapshot,
 };
@@ -149,10 +149,11 @@ fn install_watchdog_with_initial_schedule(immediate: bool) -> bool {
         let registration = match register_watchdog(
             identity,
             cadence,
-            DeclarationLifetime::Retained,
-            Some(TimerSchedule::After(std::time::Duration::from_nanos(
-                if immediate { 0 } else { CADENCE_NS },
-            ))),
+            TimerStart::Retained {
+                initial: Some(TimerSchedule::After(std::time::Duration::from_nanos(
+                    if immediate { 0 } else { CADENCE_NS },
+                ))),
+            },
             |context| {
                 let now_ns = ic_cdk::api::time();
                 let should_trap = TRAP_WINDOW
@@ -262,10 +263,11 @@ fn install_secondary_watchdog() -> bool {
         let registration = match register_watchdog(
             secondary_identity(),
             cadence,
-            DeclarationLifetime::Retained,
-            Some(TimerSchedule::After(std::time::Duration::from_nanos(
-                CADENCE_NS,
-            ))),
+            TimerStart::Retained {
+                initial: Some(TimerSchedule::After(std::time::Duration::from_nanos(
+                    CADENCE_NS,
+                ))),
+            },
             |_context| {
                 SECONDARY_COMPLETED_WORK.with(|completed| {
                     completed.set(completed.get().saturating_add(1));
@@ -373,8 +375,7 @@ fn fill_inventory() -> u64 {
         let registration = match register_watchdog(
             identity,
             cadence,
-            DeclarationLifetime::Retained,
-            None,
+            TimerStart::Retained { initial: None },
             |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
         ) {
             Ok(registration) => registration,

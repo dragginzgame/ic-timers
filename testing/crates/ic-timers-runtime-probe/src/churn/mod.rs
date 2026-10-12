@@ -2,8 +2,8 @@
 
 use candid::CandidType;
 use ic_timers::{
-    DeclarationLifetime, TimerCadence, TimerCompletion, TimerIdentity, TimerSchedule,
-    WatchdogDecision, WatchdogRegistration, WatchdogRunResult, register_watchdog, timer_inventory,
+    TimerCadence, TimerCompletion, TimerIdentity, TimerSchedule, TimerStart, WatchdogDecision,
+    WatchdogRegistration, WatchdogRunResult, register_watchdog, timer_inventory,
 };
 use std::cell::{Cell, RefCell};
 
@@ -37,8 +37,7 @@ fn replace_distant_deadlines(count: u32) {
                     TimerIdentity::try_new("ic-timers", "churn-probe", "watchdog")
                         .expect("fixed identity"),
                     TimerCadence::from_nanos(CADENCE_NS).expect("fixed cadence"),
-                    DeclarationLifetime::Retained,
-                    None,
+                    TimerStart::Retained { initial: None },
                     |_| {
                         let completed = COMPLETED.with(|count| {
                             let next = count.get() + 1;

@@ -2,6 +2,34 @@
 
 All notable changes to this project are recorded here.
 
+## [0.20.0]
+
+### Breaking
+
+- All direct registration functions take `TimerStart` instead of separate
+  lifetime and optional schedule arguments. `Retained { initial }` permits
+  inactive declarations; `RemoveWhenStopped { initial }` requires a schedule.
+  Remove `TimerError::InitialScheduleRequired`; an inactive transient start is
+  unrepresentable. Lifetime observations, lifecycle reconciliation and callback
+  execution semantics retain their existing contracts.
+
+### Testing
+
+- Update native and canister-probe constructor subjects, capture-release and
+  provider-failure coverage, and policy cohorts to use typed starts. Cover the
+  invalid inactive-transient construction at the compile-time boundary.
+
+### Development
+
+- Adopt Shared Tooling 0.9.1's common host/IC installation lifecycle. Attempt
+  shared-lock release even if checkout cleanup fails, preserve the original
+  installation status and failed candidates, and fail on cleanup-only errors.
+- Refresh to Shared Tooling 0.9.2: reject NUL bytes in evidence checksum
+  manifests before hashing, and reject supplied/resolved installer paths
+  containing CR/LF before configuration loading or setup.
+- Align the audit overlay with its reviewed snapshot and the approved locked,
+  offline compile-only development exception; other validation stays user-owned.
+
 ## [0.19.3] - 2026-10-12
 
 ### Development

@@ -64,7 +64,7 @@ pub enum AfterCompletionDecision {
 /// use ic_timers::{register_once, register_after_completion, reconcile_once,
 ///     reconcile_after_completion, OnceDecision, OnceRunResult,
 ///     AfterCompletionDecision, AfterCompletionRunResult, TimerIdentity,
-///     TimerCadence, TimerCompletion, TimerReconcileState, DeclarationLifetime, initialize_runtime};
+///     TimerCadence, TimerCompletion, TimerReconcileState, TimerStart, initialize_runtime};
 /// # fn main() -> Result<(), ic_timers::TimerError> {
 /// initialize_runtime()?;
 /// let once_identity = TimerIdentity::try_new("app", "jobs", "once").unwrap();
@@ -72,11 +72,11 @@ pub enum AfterCompletionDecision {
 /// let direct_once_identity = TimerIdentity::try_new("app", "jobs", "direct-once").unwrap();
 /// let direct_recurring_identity = TimerIdentity::try_new("app", "jobs", "direct-recurring").unwrap();
 /// let cadence = TimerCadence::from_nanos(5)?;
-/// let _once = register_once(direct_once_identity, DeclarationLifetime::Retained, None, |_| async {
+/// let _once = register_once(direct_once_identity, TimerStart::Retained { initial: None }, |_| async {
 ///     OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
 /// })?;
 /// let _recurring = register_after_completion(direct_recurring_identity, cadence,
-///     DeclarationLifetime::Retained, None, |_| async {
+///     TimerStart::Retained { initial: None }, |_| async {
 ///         AfterCompletionRunResult::new(TimerCompletion::no_work(),
 ///             AfterCompletionDecision::RecurAfterCompletion)
 ///     })?;

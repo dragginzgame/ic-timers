@@ -11,8 +11,9 @@
 //! retained registrations during their existing lifecycle hooks. Transient
 //! remove-on-stop callbacks use direct registration with an initial schedule.
 //! Direct registration returns scheduled authority only after provider binding;
-//! only retained declarations may start inactive. Registration capabilities
-//! can observe exact armed provider-wakeup ownership without making snapshots
+//! only retained declarations may start inactive. [`TimerStart`] selects
+//! retention together with the initial schedule. Registration capabilities can
+//! observe exact armed provider-wakeup ownership without making snapshots
 //! or observations into scheduling authority.
 //! [`timer_inventory`] returns the epoch together with the complete ordered
 //! timer set, including for an initialized empty registry.
@@ -34,7 +35,7 @@ pub use callback::{
 pub use registry::{MAX_TIMER_REGISTRATIONS, RegisterError};
 pub use runtime::{
     AfterCompletionContext, AfterCompletionRegistration, OnceContext, OnceRegistration, TimerError,
-    TimerReconcileState, WatchdogContext, WatchdogReconcileState, WatchdogRegistration,
+    TimerReconcileState, TimerStart, WatchdogContext, WatchdogReconcileState, WatchdogRegistration,
     consecutive_expected_failures, initialize_runtime, reconcile_after_completion, reconcile_once,
     reconcile_watchdog, register_after_completion, register_once, register_watchdog,
     timer_inventory, timer_snapshot,
