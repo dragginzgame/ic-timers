@@ -4,3 +4,4 @@
 **/*.rs.bk
 .DS_Store
 .shared-tooling-refresh.*/
+.shared-tooling-payload.*

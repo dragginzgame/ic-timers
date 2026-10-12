@@ -1,5 +1,130 @@
 # Shared Tooling adoption
 
+## Prepared requested Shared Tooling 0.9.0 manifest reader
+
+The requested update selects committed upstream-main revision
+`019ce8236cc7cee14ea5540d468b939a2053ef30`. Its commit subject and changelog
+name 0.9.0, but committed `VERSION` remains 0.8.4. All three canonical manifests
+therefore preserve **0.8.4** annotations with the new exact revision;
+[Shared #137](https://github.com/dragginzgame/shared-tooling/issues/137) owns
+producer reconciliation. No version or hash is patched in the consumer.
+
+A clean isolated source supplies complete previews before apply, reusing all
+recorded entrypoints and retaining **67/35/11** payloads without additions or
+retirements. Incoming manifests, Cargo files, tool/IC pins, index entries and
+preview/apply logs remain at `/tmp/ic-timers-shared090.ucWTtqQQ/`. The helper
+bundle uses the existing isolated Git consumer, copying only verified payloads
+and its canonical manifest into the nested local destination.
+
+The selected verifier now exposes `--read-manifest FILE`: one captured byte
+stream is checked for NUL bytes before parsing, and records are emitted only
+after full syntax admission. Integrity verification still checks payload
+hashes/modes; source-owned refresh separately proves prior ownership. Refresh
+and central fleet tooling use this same reader from their reviewed source.
+Existing v1 manifests and ordinary verification commands stay supported.
+The exporter and fleet reporter remain upstream-owned, without local copies.
+Updated canonical consumption guidance records this boundary.
+
+All three snapshot integrity checks, changed Bash syntax, owner-document file
+links and diff checks pass. The root manifest, pin selections and real index
+entries match the saved inputs. Cargo.lock changed concurrently to Testkit
+0.34.4, Host 0.14.8 and Metrics 0.7.2; this adoption does not write or restore it.
+The before/observed lockfiles are retained separately. No tests, builds, lint,
+setup, release effects or sibling
+mutation run for this adoption. Behavioral/native qualification remains
+user-owned. The same undated **0.19.2** contributor batch remains pending with
+Cargo package versions at 0.19.1; frozen v0.19.1 evidence does not qualify it.
+
+## Prepared Shared Tooling 0.8.4 structured LOC reporting
+
+The requested 0.8.4 update selects committed upstream-main revision
+`dca2bdd018afa6be598f03bb3cce1bab79c66973`, with matching committed VERSION.
+The sibling has uncommitted 0.9 manifest-reader work; none is exported. A clean
+isolated clone supplies all three complete previews before canonical refresh,
+reusing the recorded roots and retaining **67/35/11** payloads without additions
+or retirements. Incoming manifests, Cargo/pin files, index entries and logs are
+retained at `/tmp/ic-timers-shared084.rd6lPKII/`.
+
+The selected LOC reporter adds `--json`, exposing the same crate rows and
+numeric totals as its existing human projection. It emits one complete document
+only after counting succeeds; the updated selected fixture covers projection
+agreement, an explicitly selected independent workspace and later count failure.
+Usage here is `bash scripts/dev/cloc.sh --json`. The ordinary `make cloc` route
+and human output remain unchanged; no local table parser or fleet reporter is
+added. Upstream sibling aggregation uses this JSON but stays centrally owned.
+
+The other selected change is canonical snapshot-adoption guidance clarifying
+derived script companions versus explicitly selected governance/optional roots.
+Upstream release-history archiving is outside our selection and does not rewrite
+Timers' published notes. Existing root Rust-catalog binding and its prepared
+hook coverage remain intact. Runtime source, Cargo files, pins, index entries,
+installed tools and older qualification artifacts are preserved.
+
+Snapshot integrity, changed Bash syntax, owner-document file links and diff
+checks pass. LOC/JSON fixture execution, tool admission, full/native gates and
+setup remain user-owned; no tests, builds, lint, release or sibling mutation run
+for this update. The complete compatible batch stays under undated **0.19.2**,
+with Cargo package versions unchanged at 0.19.1. The separately approved frozen
+v0.19.1 qualification cannot qualify these newer snapshot bytes.
+Exact-source [upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38243170578)
+is queued at inspection; local integrity is not native/report qualification.
+
+## Prepared Shared Tooling 0.8.3 setup and formatter safeguards
+
+The requested 0.8.3 adoption selects committed upstream-main revision
+`8cca7e67b03ce6e701b6e7dcec2e9753eb98337e`. Committed `VERSION`, GitHub readback
+and all canonical export annotations agree on **0.8.3**; the commit title is not
+used as a version selector. The clean isolated source retains previous revisions
+for ownership checks. Complete previews precede apply for all three bundles.
+Previous manifests, incoming Cargo/pin files, index entries and preview/apply
+logs remain at `/tmp/ic-timers-shared083.2RFeaOnh/`.
+
+The baseline grows **59 -> 67** payloads: seven installer/checksum/build-policy
+companions already present in the audit bundle become required by the common
+Make entrypoint, and the new `tasks/cargo-tool-versions.md` is selected to complete
+the reviewed maintenance catalog. Audit/helper selections remain **35/11**.
+No payload is retired. The tool-freshness procedure runs centrally from Shared
+Tooling; no local checker command, network query or schedule is activated.
+Both bundles' overlapping files come from the same exact revision.
+
+Snapshot records now reject extra/empty/trailing fields consistently
+([Shared #133](https://github.com/dragginzgame/shared-tooling/issues/133)).
+The source-owned exporter replaces individual payloads by same-directory atomic
+rename, rechecking edits/index before publication; the whole bundle remains a
+manifest-last operation
+([Shared #131](https://github.com/dragginzgame/shared-tooling/issues/131)).
+The consumer ignores its retained `.shared-tooling-payload.*` scratch names,
+without sweeping old files or evidence.
+
+Canonical Cargo setup preserves the exact original and changed build identities
+when refusing activation, rejects redirected observation paths before writing,
+and retains both observations through the existing evidence selector
+([Shared #134](https://github.com/dragginzgame/shared-tooling/issues/134),
+[#136](https://github.com/dragginzgame/shared-tooling/issues/136)).
+Successful ripgrep PCRE2 checks become quiet; failures keep their diagnostics.
+The selected regression fixtures arrive from the same reviewed source, without
+adding the owner's exporter integration suites to local CI.
+
+Formatting now reads `RUST_TOOL_VERSIONS` consistently with installation
+([Shared #135](https://github.com/dragginzgame/shared-tooling/issues/135)).
+Timers preserves its stronger local policy by binding that input to the root
+reviewed catalog alongside `HOST_TOOL_VERSIONS`. The existing real hook/format
+fixture now supplies an unselected Rust catalog through environment and Make
+command-line inputs, retaining root routing and working/index preservation.
+Other setup callers keep their existing catalog selection policy.
+
+Snapshot integrity, changed shell syntax, owner-document file links and diff
+checks pass. Incoming Cargo files, tool/IC pins and real index entries remain
+identical; installed tools, prior attempts, archives and build output are retained.
+No tests, builds, lint gates, setup, release effects or sibling mutation run for
+this adoption. Behavioral fixtures and native qualification remain user-owned.
+Exact-source [upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38238988308)
+is queued at inspection; neither upstream native acceptance nor this consumer's
+new hook/installer coverage is inferred from snapshot integrity.
+Only compatible **0.19.2** notes are prepared; package versions stay 0.19.1.
+The separately approved early/late qualification stays frozen at v0.19.1 and
+cannot qualify this newer Shared snapshot.
+
 ## Prepared Shared Tooling 0.8.0 automatic retirement
 
 The requested 0.8.0 adoption selects committed revision

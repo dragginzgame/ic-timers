@@ -3524,3 +3524,213 @@ Require all three original producers to reach the selected controlled failure
 and upload, and all three download verifiers to pass at each stage. Retain run,
 job, artifact, source and digest identities with the existing evidence procedure.
 No new dispatch has run; the old-source failed early run remains unchanged.
+
+## 0.19.1 delivery and issue acceptance
+
+Subsequent inspection establishes committed/tagged/pushed **0.19.1** at
+`0c24fac2fc1d38d216f6880a581f5ff9b85020e2`, matching HEAD and the annotated
+remote tag's commit. Main run
+[38231417336](https://github.com/dragginzgame/ic-timers/actions/runs/38231417336)
+is underway, with Linux/MSRV running and Intel/ARM queued; tag run
+[38231416722](https://github.com/dragginzgame/ic-timers/actions/runs/38231416722)
+is running at inspection. The committed root lock selects Metrics 0.7.1,
+Testkit 0.34.2, the four Host 0.14.5 packages and PocketIC 16.1.0. The incoming
+Testkit 0.34.3 lock edit is preserved separately and has no result from these
+committed-source runs. Source/tag evidence does not independently prove registry
+publication.
+
+The new main push cancels 0.19.0's Intel full gate during PocketIC preparation.
+The original raw log is retained at
+`/tmp/ic-timers-019-issue-review/019-intel-cancelled.log`, SHA-256
+`987e5fb881a926d05d604ec64e2c038fe0fdfc91e69635a03182680c46694f6a`.
+At exact checkout `81b82589ca08aeb966edaf77a09f3f611bcce079`, locked all-target
+library compilation completes at 09:15:07 UTC, before Clippy and release
+fixtures. The release-gate fixture succeeds at 09:32:22 UTC and the
+repository-check fixture at 09:33:49 UTC. The latter exercises compiler/Clippy
+fail-fast ordering and successful complete once-only routing. Library tests
+also complete before cancellation. Linux and ARM complete the same owning
+checks in successful gates. No matched timing improvement is claimed.
+
+This completes [#48](https://github.com/dragginzgame/ic-timers/issues/48)'s
+compile-permission and ordering acceptance. The cancelled full Intel job stays
+cancelled: its remaining simulator/report qualification is retained by #47,
+and complete common-Make/artifact qualification by #44. The actual Rust and
+ordering fixture bytes are unchanged in 0.19.1, but this does not qualify its
+new dependency/tooling inputs. No new local test, build or release ran for this
+issue closure, and no changelog draft is needed for existing-evidence acceptance.
+
+The maintainer explicitly approves both existing failure-qualification stages
+at frozen **v0.19.1**, sequentially after matching CI completes. Approval and
+remote annotated-tag readback are saved before dispatch at
+`/tmp/ic-timers-0191-qualification.IQiwIXf8/`; the exact source is the SHA above.
+The concrete approved commands are:
+
+```sh
+gh workflow run ci.yml --repo dragginzgame/ic-timers --ref v0.19.1 -f failure_stage=early
+gh workflow run ci.yml --repo dragginzgame/ic-timers --ref v0.19.1 -f failure_stage=late
+```
+
+Early must complete before dispatching late. Record each intent and reconcile
+its response/run identity without repeating a possibly accepted request. Require
+all three original producers to reach their selected controlled failure and
+upload, and all three download verifiers to pass in each stage. Late's original
+native gate must complete before its controlled failure. Both stages are
+awaiting matching CI; neither has been dispatched. Older archives and failed
+hosted verifiers remain unchanged. This specific approval does not authorize a
+new source ref, release, sibling edit or unrelated validation.
+
+The matching frozen-tag CI completes successfully. Main separately passes
+Linux/MSRV while native jobs remain queued; the manual frozen-tag ref has its
+own concurrency group and does not cancel those main jobs. One **early** stage
+is then dispatched and reconciled uniquely to
+[38234040990](https://github.com/dragginzgame/ic-timers/actions/runs/38234040990)
+at the exact approved source/ref. Original tag/run JSON, before/after run
+inventory, dispatch intent, stdout/stderr and receipt are retained in the same
+qualification directory. Early is queued at inspection, not qualified. Late
+remains undispatched and must wait for early completion. No approved request is
+repeated and the old-source observations remain unchanged.
+
+Early Linux producer **114760214224** reaches the intended controlled installer
+failure, exit 22, and successfully archives/uploads. Artifact **11739996419**
+has uploaded and downloaded ZIP SHA-256
+`109a9e235176c83d6640a5779915086ddee9be69057ae385bea4900b74d7a2b6`.
+The original producer log SHA-256 is
+`880e48b2586fef3d5964fa842aae576989f5a31eaa9ae2424a8d0e12cc624bc0`.
+ZIP, raw log and server artifact metadata remain in the same qualification
+directory. Intel/ARM producers remain queued; the three download verifiers and
+complete early acceptance are not established. Late is still undispatched.
+
+Read-only replay uses the exact committed 0.19.1 archive verifier and its frozen
+pin inputs, with early/Linux job identity, run 38234040990 and attempt 1.
+It admits the downloaded Linux tar, including preserved bytes/modes and the
+physical rejected-download payload. The frozen files and result remain under
+`frozen-source/` and `early-linux-local-verify.log` in the same directory.
+This is local artifact inspection, not execution of the three hosted download
+verifiers or complete early acceptance. Main's Intel native job has started;
+its gate is still incomplete and ARM remains queued.
+
+Early ARM producer **114760214442** subsequently reaches controlled exit 22
+and successfully archives/uploads artifact **11741875127**. Uploaded/downloaded
+ZIP SHA-256 agrees:
+`beed68c6015b790bf4f458c0e71c3dd4bdd3b5538f9b71f1a9e121999db4d462`.
+Original raw-log SHA-256 is
+`a74c24bf8a90aa408f81e4930e201d3db15522bbfafc591bb6ba01fe9ac58bf0`.
+The exact frozen verifier admits this tar locally with job `macos`, host
+`macOS/ARM64`, original run 38234040990 and attempt 1. ZIP, raw log, artifact
+metadata and `early-arm-local-verify.log` remain in the qualification directory.
+Intel's producer and all three hosted download verifiers remain outstanding;
+local replay does not complete their acceptance. Both main native jobs have
+started their full gates, but neither has a completed result at inspection.
+
+## Prepared Shared 0.8.3 for 0.19.2
+
+The maintainer requests Shared 0.8.3, adopted from committed upstream-main
+`8cca7e67b03ce6e701b6e7dcec2e9753eb98337e`. Exact committed VERSION and
+canonical annotations agree. The [adoption owner](shared-tooling.md) records
+stricter record admission, source-owned atomic payload replacement, retained
+build diagnostics/redirect refusal, and formatter catalog selection.
+Complete previews and apply logs are retained at
+`/tmp/ic-timers-shared083.2RFeaOnh/` with all incoming identities.
+
+The baseline is now 67 files, with audit/helper counts 35/11. Seven common
+installer/build/checksum companions were already physically owned by the audit
+snapshot; the additional maintenance procedure completes the catalog. No
+retirement, second tool store, optional local checker or scheduler is introduced.
+Local formatter targets bind the Rust catalog to reviewed root pins; existing
+hook/format coverage is extended for environment and command-line overrides.
+The selected owner fixtures remain in the normal complete release gate.
+
+Canonical integrity, changed shell syntax, owner-document file links and diff
+checks pass. Incoming Cargo files, tool/IC selections and the real index remain
+identical. Product Rust is unchanged, so no compiler run is repeated; tests,
+lint, setup and native/tooling qualification remain user-owned. Only compatible
+undated **0.19.2** notes are prepared; package versions remain 0.19.1.
+Existing frozen v0.19.1 qualification retains its exact source and graph and
+does not establish acceptance of the newly adopted 0.8.3 bytes.
+
+## Prepared Shared 0.8.4 update
+
+The same compatible 0.19.2 batch advances to requested committed Shared 0.8.4
+`dca2bdd018afa6be598f03bb3cce1bab79c66973`. All three canonical exports retain
+67/35/11 payloads and recorded entrypoints. Clean-source previews precede apply;
+incoming identities and logs remain at `/tmp/ic-timers-shared084.rd6lPKII/`.
+Uncommitted sibling 0.9 parser work is excluded. The [adoption owner](shared-tooling.md)
+records the selected LOC JSON reporter/fixture and companion-selection guidance.
+Existing formatter binding and earlier 0.8.3 safeguards are retained.
+
+Integrity, changed Bash syntax, owner-document file links and diff checks pass;
+Cargo files, pin selections and real index entries remain identical. No runtime
+Rust change, tool installation, test, build, lint or release runs for this update.
+LOC/JSON fixture and native/full acceptance remain user-owned. Package versions
+stay 0.19.1, and the existing frozen v0.19.1 qualification keeps its original
+source/graph rather than being attributed to the new 0.8.4 snapshot.
+
+## Prepared requested Shared 0.9.0 source update
+
+The compatible 0.19.2 batch now selects committed Shared
+`019ce8236cc7cee14ea5540d468b939a2053ef30`, whose subject and changelog name
+0.9.0 but whose committed VERSION remains 0.8.4. Canonical annotations retain
+that value and exact source identity; [Shared #137](https://github.com/dragginzgame/shared-tooling/issues/137)
+owns reconciliation. The [adoption owner](shared-tooling.md) records the shared
+manifest reader, NUL rejection and separate syntax/integrity/ownership contracts.
+
+Complete clean-source previews precede canonical apply for all three bundles;
+67/35/11 files and existing roots remain intact. Preserved inputs and logs are
+at `/tmp/ic-timers-shared090.ucWTtqQQ/`. Integrity, changed Bash syntax, document
+links and diff checks pass; the root manifest, pins and real index entries are unchanged.
+Cargo.lock changed concurrently to Testkit 0.34.4, Host 0.14.8 and Metrics 0.7.2;
+its original and observed bytes are retained without repair or qualification.
+No test, build, lint, setup or release runs for this update. Native/behavioral
+acceptance stays user-owned, and frozen v0.19.1 results retain their exact scope.
+
+## Completed 0.19.1 native and early qualification
+
+[0.19.1 main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38231417336)
+is complete and successful at exact source
+`0c24fac2fc1d38d216f6880a581f5ff9b85020e2`: Linux 114752068103,
+MSRV 114752067743, Intel 114752067890 and ARM 114752068062. The tag run passes
+separately. Both native logs establish the wide-total/mean role/order regression,
+149 library tests, API/frontier checks, native/Wasm/MSRV/probe validation,
+15 selected recovery/report tests and the separate policy-cohort selection.
+The report codec uses synthetic wide input; small actual instruction measurements
+are not relabelled as observed values above u64. The committed graph remains
+Metrics 0.7.1, Testkit 0.34.2, Host 0.14.5 and PocketIC 16.1.0.
+
+Raw completed logs are retained under
+`/tmp/ic-timers-0191-qualification.IQiwIXf8/`:
+
+| Log | SHA-256 |
+| --- | --- |
+| `main-linux.log` | `939f7717ae734125954becebfa29cfc6447f829148a6d8848ab2a76253ab397a` |
+| `main-intel.log` | `64b23e3c96d582bf87981f8f09bd311b4dd04e0525469a65ded4da1fcd7c6d19` |
+| `main-arm.log` | `4d55b4f9a6d0e87a61c624be4b467c415753cbbe6f8e2783f8e57c01471a94a8` |
+
+This closes [#47](https://github.com/dragginzgame/ic-timers/issues/47)'s owning
+native/report adoption. Earlier cancelled logs keep their original outcomes;
+these results do not qualify incoming Testkit 0.34.3 or Shared 0.8.4 maintenance.
+
+The authorized frozen [early run 38234040990](https://github.com/dragginzgame/ic-timers/actions/runs/38234040990)
+is also complete. All three original producers reach controlled exit 22 and
+archive/upload successfully. All three hosted downloaded verifiers pass:
+Linux 114791741093, Intel 114791741108 and ARM 114791741301. Original producer
+jobs remain failed; overall run failure is expected and is not hidden.
+The last Intel producer 114760214487 uploads artifact **11743982790**, whose
+uploaded/downloaded ZIP SHA-256 matches
+`1aa0209e118d2729aed444e9ae32c7e14e24ebc9469b60a798564b47a36cbbae`.
+Its original raw-log SHA-256 is
+`f847a55b67161a67523db5671d39a5fcaae884e42034231fa0a45af0b5815462`.
+The same frozen verifier also admits that archive locally; hosted acceptance
+comes from the three successful verifier jobs, not from this replay.
+All archives, run/job/artifact JSON, original logs and receipts are retained
+in the same qualification directory alongside the earlier Linux/ARM digests.
+
+Only after that completed early stage, the approved **late** dispatch is made
+once and uniquely reconciled to
+[38245658495](https://github.com/dragginzgame/ic-timers/actions/runs/38245658495)
+at the same frozen v0.19.1 source/ref. Exact tag readback, before/after manual
+run inventory, intent, stdout/stderr, receipt and original run JSON are saved
+before/after the one request. It is queued at inspection; no late acceptance
+is claimed. #44 remains open until all three late original producers finish
+the complete gate and selected controlled failure/upload, and all three hosted
+downloaded verifiers pass. No new source selection, repeated dispatch, local
+product test, release effect or sibling edit occurs.

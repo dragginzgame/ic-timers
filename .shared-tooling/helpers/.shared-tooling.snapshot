@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.8.0
+# version	0.8.4
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	045a6f22a9de497bfb3af90cb2571957384806f2
+revision	019ce8236cc7cee14ea5540d468b939a2053ef30
 # entrypoint	scripts/ci/verify-file-checksum.sh
 # entrypoint	scripts/ci/verify-shared-tooling-snapshot.sh
 # entrypoint	scripts/ci/check-dependency-pins.sh
@@ -15,7 +15,7 @@ revision	045a6f22a9de497bfb3af90cb2571957384806f2
 # entrypoint	scripts/ci/check-release-tag.sh
 # entrypoint	scripts/ci/check-release-commands.sh
 file	4c981184847462ab3c01cac087e28309f8e054253fd95c7bbe56f643877aa708	x	scripts/ci/verify-file-checksum.sh
-file	84f8c0acae3df99b48f0168cf001484a92e86836741cc6d3c0ecb222d97c1d2b	x	scripts/ci/verify-shared-tooling-snapshot.sh
+file	f0404c1c56d253ff5cb07b9f1c453af67ddc930578667108f73b89b0082dd104	x	scripts/ci/verify-shared-tooling-snapshot.sh
 file	de68acd7ba25355c73fa3e9a32cbde5525debf081862c1f1a52eccb4a66c48de	x	scripts/ci/check-dependency-pins.sh
 file	3d56ca1b0c5952b9534ece61b6754ca39e6ec1980d929f09de3dbd967a0c4977	-	scripts/ci/dependency-pins.jq
 file	36530d995c6ebad1f17b9718030ee168e14d2963dbfe725f9d2c1e9a4d960d5f	x	scripts/ci/test-dependency-pins.sh

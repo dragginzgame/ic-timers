@@ -271,6 +271,7 @@ publish: ensure-clean release-tag-check package
 # former repository-local routing even if a caller exports another snapshot root.
 format-tools-check fmt fmt-check release-patch release-minor release-major release-resume: override SHARED_TOOLING_ROOT = $(CURDIR)
 format-tools-check fmt fmt-check: override HOST_TOOL_VERSIONS = $(CURDIR)/ci/tool-versions.env
+format-tools-check fmt fmt-check: override RUST_TOOL_VERSIONS = $(CURDIR)/ci/tool-versions.env
 .PHONY: release-version release-preflight release-prepare-version release-prepared-check release-files release-commit-check release-committed-check release-tagged-check release-push-check
 
 release-version:

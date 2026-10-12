@@ -2,6 +2,26 @@
 
 All notable changes to this project are recorded here.
 
+## [0.19.2]
+
+### Development
+
+- Adopt Shared Tooling's requested 0.9.0 source for stricter snapshot records,
+  atomic payload replacement and complete Make installer dependencies
+  ([Shared #131](https://github.com/dragginzgame/shared-tooling/issues/131),
+  [#133](https://github.com/dragginzgame/shared-tooling/issues/133)).
+- Use the canonical shared snapshot reader, rejecting NUL bytes before parsing
+  and keeping syntax admission separate from payload integrity and ownership.
+- Preserve both Cargo build observations when setup refuses changed inputs,
+  and reject redirected diagnostic files
+  ([Shared #134](https://github.com/dragginzgame/shared-tooling/issues/134),
+  [#136](https://github.com/dragginzgame/shared-tooling/issues/136)).
+- Bind formatting to the reviewed Rust catalog and cover external catalog
+  overrides in the existing hook fixture
+  ([Shared #135](https://github.com/dragginzgame/shared-tooling/issues/135)).
+- Read workspace LOC counts as JSON with `bash scripts/dev/cloc.sh --json`,
+  using the same counted rows as the human-readable report.
+
 ## [0.19.1] - 2026-10-12
 
 ### Development

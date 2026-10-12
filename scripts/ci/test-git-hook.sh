@@ -196,6 +196,7 @@ done
 if ! CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 \
     SHARED_TOOLING_ROOT="${temporary_root}/unselected-snapshot" \
     HOST_TOOL_VERSIONS="${temporary_root}/unselected-pins.env" \
+    RUST_TOOL_VERSIONS="${temporary_root}/unselected-rust-pins.env" \
     bash "${repository_root}/.githooks/pre-commit" \
     > "${temporary_root}/format.log" 2>&1; then
     cat "${temporary_root}/format.log" >&2
@@ -215,9 +216,11 @@ cmp "${temporary_root}/working-lock" Cargo.lock
 git show :Cargo.lock > "${temporary_root}/after-hook-index-lock"
 cmp "${temporary_root}/index-lock" "${temporary_root}/after-hook-index-lock"
 if ! SHARED_TOOLING_ROOT="${temporary_root}/unselected-snapshot" \
-    HOST_TOOL_VERSIONS="${temporary_root}/unselected-pins.env" make --no-print-directory \
+    HOST_TOOL_VERSIONS="${temporary_root}/unselected-pins.env" \
+    RUST_TOOL_VERSIONS="${temporary_root}/unselected-rust-pins.env" make --no-print-directory \
     fmt-check "SHARED_TOOLING_ROOT=${temporary_root}/unselected-snapshot" \
     "HOST_TOOL_VERSIONS=${temporary_root}/unselected-pins.env" \
+    "RUST_TOOL_VERSIONS=${temporary_root}/unselected-rust-pins.env" \
     > "${temporary_root}/fmt-check.log" 2>&1; then
     cat "${temporary_root}/fmt-check.log" >&2
     exit 1
