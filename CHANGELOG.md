@@ -23,6 +23,8 @@ All notable changes to this project are recorded here.
   capture cleanup and retry across all policies, preservation of existing
   authority, and unused callback-factory destruction ordering. Add the owning
   canister-probe/PocketIC rejection subject.
+- Advance the first-reconciliation PocketIC fixture from its current clock;
+  avoid a backward absolute-time reset that PocketIC correctly rejects.
 
 ## [0.20.0] - 2026-10-12
 

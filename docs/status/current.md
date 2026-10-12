@@ -85,6 +85,18 @@ compile-only checks on Rust 1.88.0 pass. The checked source patch and Cargo inpu
 match their saved records; index entries are preserved. No setup, PocketIC or
 release command runs. Canic has the [semantic cut notice](https://github.com/dragginzgame/canic/issues/33#issuecomment-6128606209).
 
+The maintainer's subsequent release attempt at prepared commit
+`48299c0c23765ce89445a57727364228388988fc` passes 15 PocketIC watchdog subjects
+and fails the new reconciliation subject before any timer call: its absolute
+clock reset moves time backward, rejected as `SettingTimeIntoPast`.
+The host fixture now advances its existing clock by one second, retaining all
+policy/inventory/capture assertions. Runtime/probe source and the built Wasm are
+unchanged; Rust 1.88.0 probe Clippy passes. Original failure, repaired host-test
+patch, probe hash and input/check records remain at
+`/tmp/ic-timers-021-clock.l0OCwT2E/`. Focused PocketIC replay permission is requested
+separately; no replay or complete release result is claimed yet. The
+[release owner](../releasing.md#pocketic-fixture-clock-repair) records the diagnosis.
+
 ## Issues and frozen qualification
 
 The latest issue inspection finds one open Timers issue,

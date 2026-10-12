@@ -1034,7 +1034,8 @@ fn rejected_initial_schedules_preserve_ic_inventory_and_release_captures() {
 #[test]
 fn rejected_initial_reconciliation_preserves_ic_inventory_and_releases_captures() {
     let (_server, pic) = fresh_pocket_ic();
-    pic.set_time((std::time::UNIX_EPOCH + Duration::from_secs(1)).into());
+    // A positive time makes now + u64::MAX overflow; never move IC time backwards.
+    pic.advance_time(Duration::from_secs(1));
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);

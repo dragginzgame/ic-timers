@@ -3983,3 +3983,24 @@ Compiler checks and native fault injection do not prove IC rollback. No Wasm,
 heap or instruction delta is measured.
 Canic has the [semantic cut notice](https://github.com/dragginzgame/canic/issues/33#issuecomment-6128606209);
 its source/pins remain separately owned.
+
+### PocketIC fixture clock repair
+
+The maintainer-operated release attempt at prepared commit
+`48299c0c23765ce89445a57727364228388988fc` passes 15 watchdog subjects but fails
+the new initial-reconciliation subject before canister creation. Its absolute
+clock reset to one second after the Unix epoch is earlier than the instance's
+current `1620328630000000001` ns. PocketIC returns
+`SettingTimeIntoPast((1620328630000000001, 1000000000))`; no timer request is
+executed by that subject. This is a fixture error, not new runtime failure evidence.
+
+The fixture now advances the existing clock by one second. It establishes
+positive time for the intended `now + u64::MAX` rejection without moving time
+backward; all three policy assertions, inventory/capture checks and later-round
+checks remain. The library and canister probe are unchanged. Rust 1.88.0
+runtime/PocketIC probe Clippy passes with locked/offline inputs. The original
+failure log, exact prebuilt probe hash, input hashes, checked host-test patch and
+logs remain at `/tmp/ic-timers-021-clock.l0OCwT2E/`. Cargo inputs, the prebuilt
+probe and index entries are preserved. Approval for only the corrected PocketIC
+subject is requested separately; no replay result or complete release acceptance
+is claimed yet.
