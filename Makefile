@@ -155,7 +155,13 @@ release-check:
 	bash scripts/ci/test-shared-snapshots.sh
 	bash scripts/ci/test-host-tools.sh
 	bash scripts/ci/test-tool-commands.sh
-	bash scripts/ci/test-rust-tools.sh
+	# Keep the compiler-substitute fixture independent of this checkout's
+	# rust-toolchain.toml (Shared Tooling #143); leave canonical payloads intact.
+	@fixture_cwd="$$(mktemp -d "$${TMPDIR:-/tmp}/timer-rust-tools-cwd.XXXXXX")" || exit $$?; \
+		status=0; \
+		(cd "$$fixture_cwd" && bash "$(CURDIR)/scripts/ci/test-rust-tools.sh") || status=$$?; \
+		rmdir "$$fixture_cwd" || exit $$?; \
+		exit "$$status"
 	bash scripts/ci/test-cloc.sh
 	bash scripts/ci/test-failure-evidence.sh
 	bash scripts/ci/test-format-tools.sh

@@ -38,6 +38,15 @@ The local release receipt does not qualify later contributor changes.
 
 ## Prepared 0.21.1 maintenance
 
+The maintainer committed the maintenance source at `6483ffc`; the subsequent
+release gate fails Shared 0.9.7's Rust-tool fixture before version preparation.
+The [invocation repair](../shared-tooling.md#rust-tool-fixture-invocation-isolation)
+runs the unchanged canonical script from a fresh cwd so this checkout's
+toolchain file cannot trigger the mock staged-compiler guard. Make preserves the
+fixture status and failed artifacts. [Shared #143](https://github.com/dragginzgame/shared-tooling/issues/143#issuecomment-6129716067)
+owns the producer correction. Original log and `/tmp/rust-tools-test.C9TDs0`
+remain intact; no new behavioral fixture or release execution is performed.
+
 All three canonical snapshots select reviewed Shared **0.9.7**
 `4d10a06d50e44d302f00d5b7b706cac5f9b0127c`, retaining roots and **67/35/11**
 payloads without additions or retirements. Complete clean-source previews

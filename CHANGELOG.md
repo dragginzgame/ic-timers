@@ -6,6 +6,10 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Run the canonical Rust-tool fixture from an isolated directory during release
+  checks, so the checkout's toolchain file cannot trigger its mock staged-compiler
+  rejection. Preserve the fixture's failure status and retained evidence
+  ([Shared #143](https://github.com/dragginzgame/shared-tooling/issues/143)).
 - Refresh all three Shared Tooling snapshots to 0.9.7 for bounded transient
   tool-download retries, complete Git identity checks and typed Cargo offline
   configuration admission. Explicit Cargo-tool setup refreshes the changed

@@ -1,5 +1,29 @@
 # Shared Tooling adoption
 
+## Rust-tool fixture invocation isolation
+
+The maintainer's 0.21.1 CI attempt at `6483ffc` fails the canonical 0.9.7
+`test-rust-tools.sh` with `unprepared staged compiler`. Its new direct
+offline-policy initialization inherits the caller's cwd; the fake compiler
+mistakes this repository's `rust-toolchain.toml` for the deliberately unprepared
+staged-consumer case. The installer itself already enters its fixture consumer.
+[Shared #143](https://github.com/dragginzgame/shared-tooling/issues/143#issuecomment-6129716067)
+owns the canonical correction and compiler-context coverage, including pending
+upstream cache-key fixture calls.
+
+The repository-owned Make invocation runs the unchanged script by absolute path
+from a fresh temporary directory. It propagates the fixture's status and removes
+only that empty invocation directory; the canonical fixture independently retains
+failed artifacts. Later staged-hook rejection subjects still enter their own
+consumer and keep the compiler guard. All three snapshots retain their existing
+revision, bytes and ownership. Retire this adapter when adopting the committed
+upstream context correction; no dirty sibling source is selected.
+
+The original maintainer evidence remains at `/tmp/rust-tools-test.C9TDs0` and
+`.git/release-state/validation-failures/20261012T174303Z-1741683-3-ci.log`.
+Preparation uses source inspection, recipe syntax and snapshot integrity only;
+no fixture replay or complete gate result is claimed.
+
 ## Prepared Shared Tooling 0.9.7
 
 All three exports now select reviewed committed source
