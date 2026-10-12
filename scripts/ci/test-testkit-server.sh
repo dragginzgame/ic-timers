@@ -103,7 +103,7 @@ cmp "$fixture/next-lock" "$consumer/Cargo.lock"
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
 mkdir -p "$consumer/make" "$consumer/scripts/ci"
 cp "$root/Makefile" "$consumer/"
-cp "$root/make/tools.mk" "$root/make/rust-format.mk" "$root/make/release.mk" \
+cp "$root/make/consumer.mk" "$root/make/tools.mk" "$root/make/rust-format.mk" "$root/make/release.mk" \
     "$root/make/execution.mk" "$consumer/make/"
 cp "$root/scripts/ci/check-make-execution.sh" "$consumer/scripts/ci/"
 cp "$fixture/next-lock" "$consumer/Cargo.lock"

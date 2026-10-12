@@ -2,7 +2,7 @@
 
 # Current status
 
-Last updated: 2026-10-11
+Last updated: 2026-10-12
 
 This handoff links [release evidence](../releasing.md),
 [Shared adoption](../shared-tooling.md), [safety](../../SAFETY.md) and
@@ -10,76 +10,95 @@ This handoff links [release evidence](../releasing.md),
 
 ## Released source
 
-Released **0.17.14** is `cb86d87ce67f7aac1b127bdfaa2c6f8a7f68c2a0`.
-It selects Metrics **0.6.4**, Testkit **0.34.0**, all four Host **0.14.1**,
-PocketIC **16.1.0** and Shared **0.6.3**
-`4fd979d13c32adb3cb2f51f213ebfc4f98339b3d` through **56/33/11** exports.
-The release delivers the early verifier correction; it adds no native Python
-prerequisite, independent tool-store manager or direct Host dependency.
-[Full CI](https://github.com/dragginzgame/ic-timers/actions/runs/38153029865)
-passes Linux/MSRV; Intel is in progress and ARM queued at inspection.
-Previous 0.17.13 full CI was cancelled by the newer push. Historical observations
-remain bound to their actual sources and graphs.
+The maintainer reports **0.18.0 live**. HEAD and annotated `v0.18.0` resolve to
+`52bc4bad399122be040cf155d9b4563b5509e009`; root metadata and finalized notes
+agree. [Exact-source full CI](https://github.com/dragginzgame/ic-timers/actions/runs/38159662258)
+passes Linux (114529738250), MSRV (114529738169), ARM (114529738256) and Intel
+(114529738316). The [tag run](https://github.com/dragginzgame/ic-timers/actions/runs/38159662226)
+passes separately. It qualifies the delivered construction cut, not the dirty
+next graph or downstream adoption.
 
-## Prepared 0.18.0
+The release selects Metrics 0.6.6, Testkit 0.34.0, Host 0.14.1, PocketIC 16.1.0
+and Shared 0.6.3. Canic received [release availability](https://github.com/dragginzgame/canic/issues/33#issuecomment-6111737141)
+and [concrete adoption instructions](https://github.com/dragginzgame/canic/issues/33#issuecomment-6111101911).
+Its separate custody rollback remains necessary; sibling files/pins are unchanged.
 
-The maintainer authorized atomic initial registration and continuing #44.
-All three direct registration functions now take `initial: Option<TimerSchedule>`
-before the callback. Scheduled creation returns authority after provider binding;
-failed creation retires its exact claim and handles before releasing captures.
-`None` deliberately declares inactive retained authority; transient `None`
-returns `InitialScheduleRequired`. Cadence is independent of the first deadline.
-Later control, callback policies and lifecycle reconciliation retain their own
-existing boundaries. There is no old-signature forwarder or persisted intent.
+## Prepared 0.19.0
 
-The [construction decision](../design/0.18-atomic-registration.md) owns the
-contract and complete qualification scope. Runtime/size probes, native fixtures,
-positive/negative documentation and the undated **0.18.0** changelog are updated.
-`make fmt`, diff checks and locked offline no-dependency metadata pass. Tests,
-builds, lint gates, PocketIC and Wasm/instruction measurements are not run locally;
-this is prepared source, not qualified release readiness. Cargo package versions
-remain 0.17.14. A separate worktree lock update selects `syn` 3.0.8; it is preserved
-and must not be qualified with older released-source evidence.
+The incoming maintainer catalog/lock selects Metrics **0.7.0**, Testkit **0.34.1**,
+Host **0.14.3**, Candid **0.10.38** and PocketIC **16.1.0**. Their bytes are
+preserved. Package versions remain 0.18.0; the one undated pending section is
+**0.19.0**, because exposed Metrics types now have `u128` totals and integer means.
+Samples/counts/latest/maximum remain `u64`; no narrowing wrapper or compatibility
+reader is kept. The [owning contract](../design/callback-delivery-ownership.md#prepared-ic-metrics-07-adoption)
+records report/codec propagation, volatile-state scope and required qualification.
+Runtime/size probes, PocketIC decoders/calibration, native role/order and Canic
+projection fixtures are updated. Wide Candid round-trip coverage uses synthetic
+report values separately from actual small instruction deltas. No stable-map
+adapter or platform reads are added.
 
-Canic's lifecycle create/arm rollback branch is the concrete consumer benefit.
-Its separate custody rollback remains necessary. No sibling files or pins were
-changed. The [owner feedback](https://github.com/dragginzgame/canic/issues/33#issuecomment-6111101911)
-and [Canic mapping](../adoption/canic.md#operation-mapping) identify the coordinated
-consumer adoption after Timers publishes and qualifies this minor cut.
+Committed Shared **0.6.5 `42f2091768b5f71c98a684d3dab563f408ca2dd9`** is canonically
+adopted through **59/35/11** exports. The [adoption record](../shared-tooling.md)
+owns preserved inputs and clean-source preview/apply logs. `make/consumer.mk`
+replaces equivalent includes/hook/snapshot wiring; all actual fixture exports
+carry it. Direct release policy and ordered Testkit provisioning stay local.
+The CI roster runs compiler/Clippy before lengthy release fixtures; both actual
+consumer fixtures now agree on its ordering/failure assertions. The release-gate
+fixture's stale old order was corrected before execution. Its staged formatter receipt fix and the logger checksum companion are propagated
+through the current exports. Optional input checkpoints are not configured in
+the local caller. Uncommitted 0.6.6 derive-formatter pins are not adopted; consumer
+pins and installed-tool policy stay unchanged. Clean refresh evidence is retained
+at `/tmp/ic-timers-shared065.9v5uxcxv/`.
 
-## Remaining issue and authorization
+The maintainer explicitly approved offline, locked compile-only development
+checks on 2026-10-12. AGENTS.md records that standing exception. The existing
+library/all-targets `check` passes, compiling test targets without executing them.
+Native library/test-target and Wasm compile-only checks both pass with already
+prepared Rust 1.88.0 (`6b00bc388 2025-06-23`) and its Wasm target.
+Formatting, all snapshot integrity checks, changed shell syntax, diff and cheap
+locked metadata pass. Incoming Cargo/catalog and consumer tool pins compare
+byte-identical to their respective preserved incoming inputs. The later incoming
+Host 0.14.3 lock change has its own checksum/source review; old Host 0.14.2
+observations are not relabeled. Tests, Clippy, API doctests/probe builds, PocketIC,
+behavioral fixtures and matched Wasm/instruction measurements remain user-owned
+and were not run for this dirty batch. No performance saving is claimed.
 
-[#46](https://github.com/dragginzgame/ic-timers/issues/46) is closed from actual
-released Linux execution; it does not establish IC persistence or rollback.
-[#44](https://github.com/dragginzgame/ic-timers/issues/44) is open for complete
-native and controlled early/late artifact acceptance. Its snapshots, caller
-adoption and 0.17.14 correction are delivered.
+The incoming Host **0.14.3** family is published at
+`543b137458feba0f6dfd3e458b680fb2be3d9e6d`. All four cached official archives
+match selected lock checksums and that source; library Rust source is unchanged
+from 0.14.2. It remains transitive through Testkit, with no direct Host requirement
+or second identity. Review inputs/archives are at `/tmp/ic-timers-host0143.j57w4_7_/`.
 
-The explicitly approved frozen `v0.17.13` early and late stages are dispatched
-sequentially. [Early 38150377457](https://github.com/dragginzgame/ic-timers/actions/runs/38150377457)
-is complete: all original producers reach exit 22 and upload, but all three
-frozen download verifiers reject the obsolete candidate path. The released
-0.17.14 verifier accepts the exact downloaded Linux/ARM/Intel archives locally,
-with frozen source identities and unchanged caller pins. That replay does not
-turn the frozen hosted verifier green.
+## Remaining qualification and authority
 
-After early completed, [late 38154578484](https://github.com/dragginzgame/ic-timers/actions/runs/38154578484)
-was dispatched at the same annotated ref, verified to resolve to
-`e6ac645aac1b185bfaa3b146c2b8e1dd38b3299f`. Linux is in progress; both native
-producers are queued. Do not repeat the dispatch or close #44 on pending status.
-Archives, original failure logs, replay outputs, digests and dispatch records
-remain at `/tmp/ic-timers-01713-qualification.n07_3uur/`.
-[The evidence owner](../releasing.md#01714-delivery-and-frozen-failure-qualification-follow-up)
-records these exact observations.
+[#47](https://github.com/dragginzgame/ic-timers/issues/47) owns the Metrics cut;
+[#48](https://github.com/dragginzgame/ic-timers/issues/48) owns compile-check
+prevention and earlier CI admission. [#49](https://github.com/dragginzgame/ic-timers/issues/49)
+now has the library minimum-Wasm check prepared in the existing MSRV gate,
+explicit hosted target setup, and ordered command/failure coverage. Its local
+offline compile proof passes; delivery and hosted acceptance remain pending. Prepared changes and successful compile-only
+checks do not establish delivery or full acceptance; retain open qualification.
 
-A separate asynchronous approval request asks to run corrected-source early then
-late at frozen `v0.17.14` after the ongoing late run completes. No answer has
-arrived yet; elapsed time is not authorization. Preserve the original approved
-ref and failed observations. Carry any later explicit approval forward without
-asking again, and record its exact source before dispatch. Neither this product
-batch nor issue continuation authorizes arbitrary tests/builds/lint/setup.
+[#44](https://github.com/dragginzgame/ic-timers/issues/44) remains open.
+Approved frozen `v0.17.13` [early](https://github.com/dragginzgame/ic-timers/actions/runs/38150377457)
+producer/upload observations are preserved; all frozen early download verifiers
+fail the obsolete candidate path. The corrected released verifier accepts the
+same downloaded payloads locally, without relabeling the failed hosted source.
+Approved [late 38154578484](https://github.com/dragginzgame/ic-timers/actions/runs/38154578484)
+is complete: all original producers fail at the late qualifier and upload;
+all three download verifiers pass (Intel 114535962580, ARM 114535962592,
+Linux 114535962669). Source remains `e6ac645aac1b185bfaa3b146c2b8e1dd38b3299f`.
+These observations do not satisfy both stages at one corrected frozen source.
 
-Only inspection, syntax/diff, formatting and cheap metadata checks may run
-locally. Staging, commits, package versions, tags, pushes and release execution
-remain user-owned. Qualifier artifact inspection is covered by the explicit
-stage authorization; native substitutes remain separate from IC recovery.
+The earlier asynchronous request to dispatch corrected-source early then late
+at `v0.17.14` still has no answer. Compile-only approval does not authorize those
+dispatches or silently select a newer ref. Do not repeat original dispatches.
+[The existing evidence owner](../releasing.md#01714-delivery-and-frozen-failure-qualification-follow-up)
+retains archives/digests and source-bound history under
+`/tmp/ic-timers-01713-qualification.n07_3uur/`.
+
+Staging, commits, package/lock release mutation, tags, pushes and publication stay
+user-owned. Preserve the unrelated untracked `.vscode/` and incoming Cargo edits.
+Sibling checkouts stay read-only. Native substitutes remain separate from IC
+trap/rollback evidence. Tests/lint/setup/full gates require explicit authorization;
+only the recorded offline compile-only exception changes that boundary.

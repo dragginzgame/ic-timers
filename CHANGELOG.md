@@ -2,6 +2,34 @@
 
 All notable changes to this project are recorded here.
 
+## [0.19.0]
+
+### Breaking
+
+- Adopt Metrics 0.7 for public instruction summaries: totals and integer means
+  are `u128`, while samples, counts, latest and maximum remain `u64`. Totals
+  beyond the old limit retain exact means. Update public Metrics identities and
+  report/codec fields together; narrow only with checked conversion
+  ([#47](https://github.com/dragginzgame/ic-timers/issues/47)).
+
+### Development
+
+- Widen both canister probes and their matching PocketIC reports without
+  truncation. Cover exact totals above `u64::MAX`, role/order isolation and wide
+  Candid round trips.
+- Adopt Shared Tooling 0.6.5's common Make entrypoint and staged-formatter receipt
+  admission. Replace duplicate include, hook and snapshot wiring while retaining
+  local release and Testkit
+  policy ([Shared #130](https://github.com/dragginzgame/shared-tooling/issues/130)).
+- Run compiler and Clippy checks before lengthy release fixtures, retaining
+  every existing gate and fail-fast behavior. Permit offline, locked compile-only
+  development checks while keeping tests and lint execution maintainer-owned
+  ([#48](https://github.com/dragginzgame/ic-timers/issues/48)).
+- Check the library's Wasm path with the advertised Rust 1.88 minimum in the
+  existing MSRV gate. Prepare that target explicitly in hosted MSRV setup and
+  cover command ordering and failure propagation
+  ([#49](https://github.com/dragginzgame/ic-timers/issues/49)).
+
 ## [0.18.0] - 2026-10-11
 
 ### Changed

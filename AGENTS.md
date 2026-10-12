@@ -5,19 +5,19 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `4fd979d13c32adb3cb2f51f213ebfc4f98339b3d` (0.6.3). Its provenance and
+  from revision `42f2091768b5f71c98a684d3dab563f408ca2dd9` (0.6.5). Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
 - Apply the [shared audit methods](audits/README.md) from revision
-  `4fd979d13c32adb3cb2f51f213ebfc4f98339b3d`, recorded separately in
+  `42f2091768b5f71c98a684d3dab563f408ca2dd9`, recorded separately in
   [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). That
   supplemental snapshot also supplies pinned host/IC setup at the same
   reviewed revision. The isolated
   [Cargo helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
   supplies the structured dependency checker, Cargo readers/rewrites,
   annotated-tag checker and release-command adoption checker from
-  `4fd979d13c32adb3cb2f51f213ebfc4f98339b3d`. The root baseline snapshot owns
+  `42f2091768b5f71c98a684d3dab563f408ca2dd9`. The root baseline snapshot owns
   the formatter guard, Make execution admission and the adopted formatting/release
   Make includes. Apply the
   [dependency pinning rules](rules/dependency-pinning.md) with the exact local
@@ -28,7 +28,8 @@ This file is normative for automated contributors.
   Testkit owns PocketIC provisioning, checksums and compatibility admission;
   the local adapter selects its CLI from the one root lockfile. The paired baseline and maintenance
   rule are adopted together; all three snapshots use the same reviewed revision.
-  Common setup/check/LOC commands come from [make/tools.mk](make/tools.mk);
+  Common setup/check/LOC, formatting, hook and release commands come from
+  [make/consumer.mk](make/consumer.mk);
   Make, update-dev and CI select the complete host, IC and Cargo toolsets,
   followed by the existing Testkit setup/check targets in the ordered local lists.
   Shared Tooling owns common executable storage: host/IC and Cargo setup selects
@@ -49,11 +50,22 @@ This file is normative for automated contributors.
   procedures; it activates no scheduler or agent. Local validation and release
   exceptions below also apply to its task definitions.
 - Maintainer-approved validation exception: tests, builds, lint gates and
-  deployment validation are user-owned, including focused tests. Do not run
-  them without an explicit request. Read-only inspection, script syntax, diff,
+  deployment validation are user-owned, including focused tests, except for
+  the compile-only permission below. Do not run them without an explicit request.
+  Read-only inspection, script syntax, diff,
   documentation and cheap release-metadata checks remain allowed. This preserves
   the maintainer's deployment workflow rather than duplicating its validation.
   It also applies to the baseline's full-suite-before-delivery requirement.
+- Maintainer-approved compile-only exception (2026-10-12): after Rust changes,
+  contributors may run library compile-only `cargo check` commands, including
+  the `check` and `wasm-check` targets, with locked, offline inputs
+  and `RUSTUP_AUTO_INSTALL=0`, provided required tools/dependencies are already
+  prepared and no owner validation is active. It compiles library test targets
+  without executing tests. Missing offline inputs are reported rather than
+  installed or fetched. Preserve manifests, the selected lockfile, index and refs.
+  Minimum-compiler/Wasm checks may select an already prepared toolchain/target.
+  This authorizes neither tests, doctests, Clippy, PocketIC, setup, release
+  execution nor a claim that the complete delivery gate passed.
 - Maintainer-approved contribution exception: all commits remain user-owned,
   including contribution PR commits. The shared contribution rule does not
   supersede this established workflow. Prepare local edits and reviewable PR

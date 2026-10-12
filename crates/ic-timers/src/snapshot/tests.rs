@@ -156,7 +156,7 @@ struct CanicProjection<'a> {
     expected_failures_since_runtime_start: u64,
     invariant_failures_since_runtime_start: u64,
     stale_callbacks_since_runtime_start: u64,
-    total_instructions: u64,
+    total_instructions: u128,
 }
 
 fn project_to_canic(snapshot: &TimerSnapshot) -> CanicProjection<'_> {
@@ -303,6 +303,10 @@ fn canic_projection_combines_completion_and_stale_classes_without_fabrication() 
     registry
         .confirm_effect_applied(second_transition.effect())
         .expect("fixture provider effect should apply");
+    let pages = crate::MemoryPageExtent::new(0, 0);
+    registry
+        .record_callback_measurements(&first, u64::MAX, pages, pages)
+        .expect("completed work measurements should be accepted");
     let second = match second_transition.into_effect() {
         RegistryEffect::ArmWakeup { token, .. } => token,
         effect => panic!("expected arm effect, got {effect:?}"),
@@ -315,6 +319,9 @@ fn canic_projection_combines_completion_and_stale_classes_without_fabrication() 
             OrdinaryRunResult::new(TimerCompletion::no_work(), OrdinaryDirective::Stop),
         )
         .expect("terminal completion should succeed");
+    registry
+        .record_callback_measurements(&second, 1, pages, pages)
+        .expect("wide cumulative measurements should be accepted");
     assert!(registry.begin_ordinary(&first).is_none());
 
     let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
@@ -326,6 +333,7 @@ fn canic_projection_combines_completion_and_stale_classes_without_fabrication() 
     assert_eq!(projection.stale_callbacks_since_runtime_start, 1);
     assert_eq!(projection.latest_delay_ms, Some(0));
     assert_eq!(projection.generation, None);
+    assert_eq!(projection.total_instructions, u128::from(u64::MAX) + 1);
 }
 
 #[test]

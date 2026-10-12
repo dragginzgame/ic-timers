@@ -37,9 +37,9 @@ struct ProbeSnapshot {
     unacknowledged: u64,
     last_unacknowledged: bool,
     scheduler_instruction_samples: u64,
-    scheduler_instruction_total: u64,
+    scheduler_instruction_total: u128,
     work_instruction_samples: u64,
-    work_instruction_total: u64,
+    work_instruction_total: u128,
     scheduler_memory: Option<ProbeMemorySummary>,
     work_memory: Option<ProbeMemorySummary>,
     post_upgrade_reconstructed: bool,
@@ -76,6 +76,13 @@ fn immediate_initial_watchdog_runs_without_advancing_cadence_time() {
     assert_eq!(completed.work_dispatched, 1);
     assert_eq!(completed.work_completed, 1);
     assert!(completed.next_deadline_ns.is_some());
+
+    // Exercise wide Candid fields independently of the small measured deltas.
+    let mut wide = completed;
+    wide.scheduler_instruction_total = u128::from(u64::MAX) + 1;
+    wide.work_instruction_total = u128::MAX;
+    let encoded = Encode!(&wide).expect("encode wide instruction totals");
+    assert_eq!(Decode!(&encoded, ProbeSnapshot).unwrap(), wide);
 }
 
 #[test]

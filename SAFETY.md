@@ -155,12 +155,13 @@ See the [0.11.0 verification scope](docs/changelog/0.11.0.md).
 
 ## Limits and consumer obligations
 
-The prepared 0.18 direct-construction boundary accepts an initial schedule in
+The released 0.18 direct-construction boundary accepts an initial schedule in
 the registration call. Failed creation retires its exact claim and handles,
 including a retained declaration, before releasing callback captures. Inactive
-construction is retained-only. Native fault and production PocketIC rejection
-fixtures are prepared but not yet executed; do not treat them as recovery
-evidence. Later control and lifecycle reconciliation keep their existing
+construction is retained-only. Its [exact-source CI](https://github.com/dragginzgame/ic-timers/actions/runs/38159662258)
+passes the existing Linux/MSRV and native macOS gates. Fault-injection coverage
+and real-canister rejection retain their own evidence scopes; neither establishes
+stable persistence or exactly-once work. Later control and lifecycle reconciliation keep their existing
 retained-failure observations. A trapping provider call rolls back its current
 IC message rather than returning a Rust error. Capture destructors must remain
 bounded and nontrapping; a destructor's independent registration is not part of

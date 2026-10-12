@@ -34,7 +34,7 @@ git read-tree HEAD
 git checkout-index --all
 cp "${repository_root}/Makefile" Makefile
 mkdir -p make
-cp "${repository_root}/make/tools.mk" "${repository_root}/make/rust-format.mk" \
+cp "${repository_root}/make/consumer.mk" "${repository_root}/make/tools.mk" "${repository_root}/make/rust-format.mk" \
     "${repository_root}/make/release.mk" "${repository_root}/make/execution.mk" make/
 mkdir -p ci
 cp "${repository_root}/ci/tool-versions.env" ci/
@@ -62,7 +62,7 @@ edition.workspace = true
 EOF
     printf 'pub fn fixture( ){}\n' > "${member}/src/lib.rs"
 done
-git add Makefile make/tools.mk make/rust-format.mk make/release.mk make/execution.mk ci/tool-versions.env Cargo.toml \
+git add Makefile make/consumer.mk make/tools.mk make/rust-format.mk make/release.mk make/execution.mk ci/tool-versions.env Cargo.toml \
     crates/hook-fixture testing/crates/hook-probe \
     scripts/ci/check-format-tools.sh scripts/ci/check-make-execution.sh scripts/ci/run-formatting.sh
 printf 'unrelated working edit\n' >> README.md

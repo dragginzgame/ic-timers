@@ -33,9 +33,9 @@ struct CohortObservation {
     work_completed: u64,
     coalesced: u64,
     scheduler_instruction_samples: u64,
-    scheduler_instruction_total: u64,
+    scheduler_instruction_total: u128,
     work_instruction_samples: u64,
-    work_instruction_total: u64,
+    work_instruction_total: u128,
     snapshot_instructions: u64,
     inventory_len: u64,
     inventory_instructions: u64,
@@ -171,7 +171,7 @@ fn run_cohort(cohort: &str) {
     );
 }
 
-fn run_watchdog_calibration(profile: &str, representative_work: bool) -> u64 {
+fn run_watchdog_calibration(profile: &str, representative_work: bool) -> u128 {
     let (_server, pic) = fresh_pocket_ic();
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);

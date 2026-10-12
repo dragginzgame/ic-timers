@@ -14,6 +14,6 @@ rustup toolchain install "${TOOLCHAIN}" --profile minimal \
     --target wasm32-unknown-unknown
 make --no-print-directory -C "${ROOT_DIR}" install-tools
 make --no-print-directory -C "${ROOT_DIR}" tools-check
-bash "${ROOT_DIR}/scripts/dev/install-git-hooks.sh"
+make --no-print-directory -C "${ROOT_DIR}" install-hooks
 
 echo "ic-timers development toolchain is ready: Rust ${TOOLCHAIN}"

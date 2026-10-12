@@ -458,3 +458,50 @@ native boundary/saturation and claim/reset/removal tests. Native fake timings
 and callback totals alone cannot establish that cost. No such measurement or
 test ran during this evaluation. Keep this research outside the 0.14.7 tooling
 release; do not add arbitrary buckets, a second registry or instrumentation modes.
+
+
+## Prepared IC Metrics 0.7 adoption
+
+The pending **0.19.0** cut implements [Timers #47](https://github.com/dragginzgame/ic-timers/issues/47).
+The maintainer-selected root catalog/lock now use registry Metrics **0.7.0**;
+its cached official archive matches selected SHA-256
+`d526f945450ce67a517b36673d215809ce6e089e7809c4192db23600fe75d4ca`
+and identifies source `384046884365e3d73696e0813a43640d3b1f2cb4`.
+
+`MeasurementSummary::total()` and checked integer means are `u128`. Individual
+observations, count, latest and maximum stay `u64`; ordering and sticky actual
+saturation flags remain owned by Metrics. Two maximal observations fit exactly,
+so exceeding the former `u64` total cap no longer makes a mean unavailable.
+The public re-export changes Rust identity and return types. This is the next
+minor line, with no narrow wrapper, old-type alias or compatibility reader.
+
+Both maintained canister probes and their PocketIC consumers widen instruction
+total fields and cohort calibration returns together. Candid changes those
+fields from `nat64` to `nat`; rebuild both sides and retain wide values in logs
+and downstream codecs. The updated existing projection fixture exercises a
+Canic-style report above the old cap. The runtime-probe fixture also round-trips
+synthetic wide totals through its actual Candid report shape, separately from
+its small real measured instruction deltas. That synthetic boundary does not
+claim that one IC execution consumes `u128` instructions.
+
+Timers stores these observations only in its volatile runtime registry. There
+is no persisted timer metric format to migrate and no stable-map package added.
+Applications that persist their own report shape decide its hard-cut disposition.
+Reset/epoch, scheduler/work attribution, trap rejection and upgrade reconstruction
+remain unchanged. Interval subtraction still requires owner-established identity
+and append-only continuity.
+
+The source preparation replaces the old-cap saturation expectation with exact
+wide totals, integer means and unchanged latest/maximum ordering for both roles.
+The maintainer explicitly approved offline compile-only development checks on
+2026-10-12, now recorded in AGENTS.md. The library/all-targets check passes,
+including its test targets without executing them. No product tests, lint gates,
+PocketIC or measurements were run for these changed inputs. Qualification
+requires the existing library/MSRV/probe lint and real
+runtime/policy-cohort gates against the selected root graph. Source review,
+formatting, snapshot integrity and cheap locked metadata are preparation evidence.
+
+Wide arithmetic and larger inline totals may add instructions and heap bytes;
+they add no per-observation allocation or platform read. No Wasm or instruction
+saving is claimed. Use the existing matched policy cohorts to measure the delta
+against released 0.18.0 rather than reusing an older graph's size/cost figures.

@@ -25,7 +25,7 @@ mkdir -p "$fixture/current/scripts" "$fixture/current/.shared-tooling/helpers/sc
     "$fixture/selected" "$fixture/bin" "$fixture/tmp"
 cp "$root/Makefile" "$fixture/current/"
 mkdir -p "$fixture/current/make"
-cp "$root/make/tools.mk" "$root/make/rust-format.mk" \
+cp "$root/make/consumer.mk" "$root/make/tools.mk" "$root/make/rust-format.mk" \
     "$root/make/release.mk" "$root/make/execution.mk" "$fixture/current/make/"
 mkdir -p "$fixture/current/scripts/ci"
 cp "$root/scripts/ci/check-make-execution.sh" "$root/scripts/ci/run-formatting.sh" \

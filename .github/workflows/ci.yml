@@ -47,6 +47,7 @@ jobs:
         with:
           toolchain: ${{ env.IC_TIMERS_MSRV }}
           components: clippy, rustfmt
+          targets: wasm32-unknown-unknown
       - name: Pin cargo and rustc to MSRV
         shell: bash
         run: echo "RUSTUP_TOOLCHAIN=$IC_TIMERS_MSRV" >> "$GITHUB_ENV"
@@ -62,7 +63,7 @@ jobs:
             echo "$GITHUB_WORKSPACE/.tools/ic/bin"
             echo "$GITHUB_WORKSPACE/.tools/rust/common/bin"
           } >> "$GITHUB_PATH"
-      - name: Check MSRV, provider visibility and nested probes
+      - name: Check native and Wasm MSRV, provider visibility and nested probes
         run: |
           bash scripts/ci/test-repository-checks.sh
           make msrv testing-check

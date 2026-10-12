@@ -57,7 +57,11 @@ but it does not promise that a task will happen exactly once.
 
 | Field | Value |
 | --- | --- |
-| API line | `0.17` |
+| Released API line | `0.18` |
+
+The current checkout prepares 0.19's Metrics 0.7 integration. Its instruction
+summary totals and means are wider than the released 0.18 contract; see the
+[pending notes](CHANGELOG.md#0190) before adopting the checkout.
 
 IC Timers is written in Rust 2024 and supports Rust
 1.88.0 and newer. It uses `ic-cdk-timers` 1.0.0 as its private, underlying
@@ -193,7 +197,7 @@ that same exact package version. Mixing this pin with an older exact release
 can resolve two package identities and therefore create two independent timer
 registries.
 
-With the prepared 0.18 construction API, initialize the runtime from the
+With the released 0.18 construction API, initialize the runtime from the
 canister's existing lifecycle owner, create and schedule a timer in one call,
 and retain its non-clone registration capability:
 
@@ -242,7 +246,7 @@ an inactive retained declaration; using it with `RemoveWhenStopped` returns
 recurring timer's configured cadence. To start at that cadence, pass
 `Some(TimerSchedule::After(Duration::from_nanos(cadence.as_nanos())))`.
 
-This is the prepared 0.18 construction contract. Existing later control and
+This is the released 0.18 construction contract. Existing later control and
 lifecycle reconciliation retain their own failure semantics; see the
 [construction decision and qualification scope](docs/design/0.18-atomic-registration.md).
 
@@ -292,8 +296,10 @@ unregister/re-register changes it. Increasing numbers alone cannot detect a rese
 Callback `generation()` does not identify a counter lifetime.
 
 Event counters and memory sample counts conservatively treat `u64::MAX` as
-saturated. Instruction measurements use Metrics 0.6 ordered `MeasurementSummary`
-values: an exactly reached cap remains exact, while actual count/total overflow
+saturated. Instruction measurements use Metrics 0.7 ordered `MeasurementSummary`
+values with `u128` totals and integer means, and `u64` samples and counts. Totals
+above `u64::MAX` remain exact. An exactly reached cap remains exact, while actual
+count/total overflow
 is recorded by `aggregate().samples_saturated()` and `total_saturated()`.
 `mean()` returns `Ok(None)` for no completed samples, `Ok(Some(0))` for a completed
 zero measurement, and an error after actual overflow. Latest and maximum samples
@@ -301,9 +307,10 @@ remain available after overflow. Preserve the tracked summary when computing a
 mean or an admitted interval; clipped count/total fields alone lose overflow
 provenance. Numeric interval admission does not establish registration continuity.
 
-Use `ic_timers::MeasurementSummary` or the same Metrics 0.6 package when exchanging
-these values with other libraries; a direct Metrics 0.5 dependency has a distinct
-Rust type.
+Use `ic_timers::MeasurementSummary` or the same Metrics 0.7 package when exchanging
+these values with other libraries; a direct Metrics 0.6 dependency has a distinct
+Rust type. Preserve wide totals in reports/codecs, or use checked conversions
+when a narrower consumer field is required.
 
 Each instruction measurement covers the accepted `ic-timers` execution
 interval: it begins immediately before callback acceptance and ends after

@@ -9,10 +9,13 @@ MSRV ?= 1.88.0
 VERSION ?=
 LOCAL_TOOL_INSTALL_TARGETS := install-testkit-server
 LOCAL_TOOL_CHECK_TARGETS := pocketic-check
-include make/tools.mk
-include make/rust-format.mk
+override SHARED_TOOLING_ROOT := $(CURDIR)
+# Standard delivery remains direct, including under ambient Make selections.
+override RELEASE_DELIVERY := direct
+export RELEASE_DELIVERY
+include make/consumer.mk
 
-CI_TARGETS := actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package
+CI_TARGETS := actions-check shell-check provider-check fmt-check check clippy release-check docs-check test wasm-check package
 RELEASE_TARGETS := fetch install-testkit-server pocketic-check ci msrv testing-check pocketic-watchdog pocketic-cohorts
 REPOSITORY_TARGETS := actions-check shell-check release-check provider-check fmt-check
 
@@ -42,6 +45,8 @@ help:
 	@echo "  install-testkit-server  Prepare the locked Testkit CLI and its admitted server"
 	@echo "  ic-tools-check      Verify the installed IC bundle offline"
 	@echo "  install-tools / tools-check  Prepare or verify host, IC, Cargo tools, then Testkit"
+	@echo "  shared-tooling-check  Verify the reviewed root snapshot offline"
+	@echo "  install-hooks       Activate the reviewed repository-local formatting hook"
 	@echo "  cloc                Report root-workspace Rust LOC and test counts"
 	@echo "  shell-check         Check repository shell-script syntax"
 	@echo "  msrv                Check with the minimum supported Rust version"
@@ -76,6 +81,7 @@ wasm-check:
 
 msrv:
 	+cargo +$(MSRV) check -p ic-timers --all-targets --all-features --locked
+	+cargo +$(MSRV) check -p ic-timers --all-features --locked --target wasm32-unknown-unknown
 	+cargo +$(MSRV) test -p ic-timers --doc --all-features --locked
 
 testing-check:
@@ -142,7 +148,7 @@ shell-check:
 
 release-check:
 	bash scripts/ci/test-fixture-completion.sh
-	bash scripts/ci/verify-shared-tooling-snapshot.sh
+	+$(MAKE) --no-print-directory shared-tooling-check
 	bash scripts/ci/verify-shared-tooling-snapshot.sh --manifest .shared-tooling-audits.snapshot
 	bash .shared-tooling/helpers/scripts/ci/verify-shared-tooling-snapshot.sh \
 		--consumer "$(CURDIR)/.shared-tooling/helpers"
@@ -153,6 +159,7 @@ release-check:
 	bash scripts/ci/test-cloc.sh
 	bash scripts/ci/test-failure-evidence.sh
 	bash scripts/ci/test-format-tools.sh
+	bash scripts/ci/test-make-consumer.sh
 	bash scripts/ci/test-ic-tools.sh
 	bash scripts/ci/test-evidence-checksums.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/test-dependency-pins.sh
@@ -160,7 +167,7 @@ release-check:
 	perl .shared-tooling/helpers/scripts/ci/test-local-lock-versions.pl
 	bash scripts/ci/test-release-runner.sh
 	bash .shared-tooling/helpers/scripts/ci/check-release-commands.sh "$(CURDIR)" \
-		ci/tool-versions.env make/tools.mk make/rust-format.mk make/release.mk \
+		ci/tool-versions.env make/consumer.mk make/tools.mk make/rust-format.mk make/release.mk \
 		make/execution.mk scripts/ci/check-make-execution.sh scripts/ci/run-formatting.sh
 	bash scripts/release/test-committed-release.sh
 	bash scripts/release/test-release-index.sh
@@ -210,9 +217,6 @@ build:
 
 clean:
 	+cargo clean
-
-install-hooks:
-	bash scripts/dev/install-git-hooks.sh
 
 update-dev:
 	bash scripts/dev/update-dev.sh
@@ -267,12 +271,6 @@ publish: ensure-clean release-tag-check package
 # former repository-local routing even if a caller exports another snapshot root.
 format-tools-check fmt fmt-check release-patch release-minor release-major release-resume: override SHARED_TOOLING_ROOT = $(CURDIR)
 format-tools-check fmt fmt-check: override HOST_TOOL_VERSIONS = $(CURDIR)/ci/tool-versions.env
-# Keep direct delivery authoritative for all standard entrypoints, including
-# when an ambient environment or Make command-line variable selects PR delivery.
-# Separate assignment and export so GNU Make 3.81 can parse this consumer.
-override RELEASE_DELIVERY := direct
-export RELEASE_DELIVERY
-include make/release.mk
 .PHONY: release-version release-preflight release-prepare-version release-prepared-check release-files release-commit-check release-committed-check release-tagged-check release-push-check
 
 release-version:

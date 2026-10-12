@@ -20,7 +20,7 @@ git init -q "${temporary_root}"
 mkdir -p "${temporary_root}"/{.githooks,scripts/{ci,dev,release},.shared-tooling/helpers/scripts/ci,crates/ic-timers/src}
 cp "${repository_root}/Makefile" "${temporary_root}/Makefile"
 mkdir -p "${temporary_root}/make"
-cp "${repository_root}/make/tools.mk" "${repository_root}/make/rust-format.mk" \
+cp "${repository_root}/make/consumer.mk" "${repository_root}/make/tools.mk" "${repository_root}/make/rust-format.mk" \
     "${repository_root}/make/release.mk" "${repository_root}/make/execution.mk" "${temporary_root}/make/"
 cp "${repository_root}/scripts/ci/check-make-execution.sh" \
     "${repository_root}/scripts/ci/run-formatting.sh" "${temporary_root}/scripts/ci/"
@@ -107,7 +107,7 @@ cat > overrides.mk <<'EOF'
 # The shared formatter fixture owns tool admission; this fixture owns ordering.
 format-tools-check host-tools-check:
 	@:
-actions-check shell-check release-check provider-check fmt-check:
+actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package:
 	@printf '%s\n' '$@' >> checks-ran
 	@if [ '$@' = '$(FAIL_TARGET)' ]; then echo 'failed $@' >&2; exit 1; fi
 EOF
@@ -132,6 +132,25 @@ for target in "${targets[@]}"; do
         echo "error: repository-check skipped checks or continued after ${target} failed" >&2
         exit 1
     fi
+done
+rm -- checks-ran
+
+# Exercise the actual CI roster with substitute targets: compiler/lint failures
+# must stop before release fixtures, and successful CI retains every gate once.
+ci_targets=(actions-check shell-check provider-check fmt-check check clippy
+    release-check docs-check test wasm-check package)
+"${fixture_make[@]}" ci > /dev/null 2>&1
+printf '%s\n' "${ci_targets[@]}" > expected-checks
+cmp expected-checks checks-ran
+for failing in check clippy; do
+    : > expected-checks
+    for target in "${ci_targets[@]}"; do
+        printf '%s\n' "$target" >> expected-checks
+        [[ "$target" != "$failing" ]] || break
+    done
+    rm -- checks-ran
+    expect_failure "failed $failing" "${fixture_make[@]}" ci "FAIL_TARGET=$failing"
+    cmp expected-checks checks-ran
 done
 rm -- checks-ran
 expect_failure 'classification failed' env CLASSIFICATION=error "${fixture_make[@]}" repository-check

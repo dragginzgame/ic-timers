@@ -1,5 +1,75 @@
 # Shared Tooling adoption
 
+## Prepared Shared Tooling 0.6.5 staged-format admission
+
+The pending 0.19.0 batch now selects committed Shared **0.6.5**
+`42f2091768b5f71c98a684d3dab563f408ca2dd9` through canonical **59/35/11** exports.
+Remote main's VERSION agrees. Clean-source preview/apply logs and preserved
+incoming Cargo/tool inputs remain at `/tmp/ic-timers-shared065.9v5uxcxv/`.
+The audit preview identified two new mandatory companions for its real Rust-tool
+hook fixture: `.githooks/pre-commit` and `scripts/ci/check-make-execution.sh`.
+They were explicitly selected from the same committed revision as the baseline;
+there is no independent hook implementation. The prior incomplete preview is
+retained with the completed preview.
+
+The hook now scopes prepared receipt admission to its exact exported worktree,
+while checking exported selections/compiler and refusing setup in the export.
+The installer and real hook fixture come from the canonical owner. Timers'
+existing formatter prerequisite remains intact. The validation logger snapshots
+its new checksum companion even without opting into input checkpoints; both
+root and child exports in the actual local release-gate fixture now supply it.
+Other local failure-evidence exports already carried this companion.
+
+Shared's optional `--input` checkpoint API can retain hashes and stop subsequent
+stages on unreadable/changed inputs. The current caller does not declare inputs;
+this refresh alone does not claim detection of changing Cargo or source bytes.
+A separately reviewed caller adoption must identify the complete prepared inputs
+and qualify its real adapter, including nested/disposable exports. No duplicate
+checkpoint implementation is introduced. The new fixture-construction guidance
+also requires consumer-specific review before rewriting local gate substitutes.
+
+Shared 0.6.6's derive-formatter pin change is uncommitted at inspection and is not
+selected. Consumer tool pins/installations stay unchanged. The root library Rust
+bytes are unchanged by this tooling refresh, so the preceding approved compile
+check remains scoped to those same bytes. Snapshot integrity, changed syntax,
+document links and diff checks are preparation evidence; actual hook/Make/release
+fixtures, full/native gates and further workflow dispatch remain user-owned.
+
+## Prepared Shared Tooling 0.6.4 common Make adoption
+
+The pending 0.19.0 batch adopts committed Shared **0.6.4**
+`6fc8eb9a94f83fb0b9d0a26377d4232508cdbe2d` through canonical **59/33/11**
+exports. The source is a clean isolated checkout of that revision. Root and audit
+previews/apply logs, nested helper export and preserved incoming Cargo/tool inputs
+remain at `/tmp/ic-timers-019-adoption.9184ql8f/`. No uncommitted sibling payload
+is selected. The three root additions are the common entrypoint, its interface
+guide and canonical fixture. Existing tool pins/build policy do not change.
+
+[The common interface](make-interface.md) replaces three separate Make includes,
+the local hook recipe and root snapshot-check wiring. All actual Make/hook/
+release/Testkit fixture exports include the new file; update-dev calls the common
+hook target. Direct-only delivery, root-lock-selected Testkit provisioning,
+ordered setup/check extensions and every product release adapter remain local.
+The canonical Make fixture participates in the maintained gate. Query's stronger
+receipt-admission issue under [Shared #130](https://github.com/dragginzgame/shared-tooling/issues/130)
+is a distinct consumer integration: Timers' formatter prerequisite checks the
+prepared cargo-sort/rustfmt executables, without Query's checkout receipt check.
+Its dirty upstream repair is neither copied nor used to weaken admission here.
+
+The CI roster now runs compilation and Clippy before lengthy release fixtures.
+Its existing consumer fixture checks successful exact ordering and failure before
+later gates using substitute targets. Repository-only checks retain their previous
+non-compiling scope. [Timers #48](https://github.com/dragginzgame/ic-timers/issues/48)
+now has the maintainer's explicit 2026-10-12 compile-only development permission,
+recorded in AGENTS.md. The offline, locked library/all-targets check passes;
+tests, Clippy, PocketIC, setup and release execution remain user-owned.
+
+Snapshot integrity, syntax, formatting, diff and cheap metadata are preparation
+checks. Behavioral fixtures, lint, probe builds, full product gates and native
+acceptance for this changed consumer are not run locally. Prior green 0.18.0 CI qualifies
+its exact released inputs only. No hook activation, setup, real index mutation,
+package bump, release command, workflow dispatch or sibling edit runs here.
+
 ## Shared Tooling 0.6.3 committed-preparation restart
 
 Released **0.17.13** (`e6ac645aac1b185bfaa3b146c2b8e1dd38b3299f`) adopts committed Shared **0.6.3**

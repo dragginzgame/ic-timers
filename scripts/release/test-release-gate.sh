@@ -83,7 +83,7 @@ mkdir "${temporary_root}/workspace with spaces"
 ln -s 'workspace with spaces' "${temporary_root}/workspace-alias"
 cp "${makefile}" "${temporary_root}/workspace with spaces/Makefile"
 mkdir -p "${temporary_root}/workspace with spaces/make"
-cp "${repository_root}/make/tools.mk" "${repository_root}/make/rust-format.mk" \
+cp "${repository_root}/make/consumer.mk" "${repository_root}/make/tools.mk" "${repository_root}/make/rust-format.mk" \
     "${repository_root}/make/release.mk" "${repository_root}/make/execution.mk" \
     "${temporary_root}/workspace with spaces/make/"
 mkdir -p "${temporary_root}/workspace with spaces/scripts/ci"
@@ -136,14 +136,15 @@ for failed_manifest in '' Cargo.toml; do
 done
 
 # Exercise library build, test and MSRV recipes through the recording Cargo stub.
-# API compile-fail doctests must run in both toolchains, after their first check;
-# failures at either command stop the owning target.
+# API compile-fail doctests run after native and minimum-Wasm compilation;
+# failures at any command stop the owning target.
 for target in build test msrv; do
     case "${target}" in
         build) calls=('build -p ic-timers --all-targets --all-features --locked') ;;
         test) calls=('test -p ic-timers --all-targets --all-features --locked'
             'test -p ic-timers --doc --all-features --locked') ;;
         msrv) calls=('+1.88.0 check -p ic-timers --all-targets --all-features --locked'
+            '+1.88.0 check -p ic-timers --all-features --locked --target wasm32-unknown-unknown'
             '+1.88.0 test -p ic-timers --doc --all-features --locked') ;;
     esac
     for failed_call in '' "${calls[@]}"; do
@@ -171,7 +172,8 @@ done
 
 # Exercise explicit setup and offline admission through the real Make adapter.
 mkdir -p scripts/ci scripts/dev
-cp "$repository_root/scripts/ci/run-validation-targets.sh" scripts/ci/
+cp "$repository_root/scripts/ci/run-validation-targets.sh" \
+    "$repository_root/scripts/ci/verify-file-checksum.sh" scripts/ci/
 cat > scripts/dev/testkit-server.sh <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -299,7 +301,7 @@ fixture_make=(make --no-print-directory -f Makefile
     'MAKE=make --no-print-directory -f Makefile')
 # actions-check retains its real host-tools-check prerequisite when its recipe
 # is overridden. Record that admission before the action/dependency leaf.
-ci_targets=(host-tools-check actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package)
+ci_targets=(host-tools-check actions-check shell-check provider-check fmt-check check clippy release-check docs-check test wasm-check package)
 release_targets=(fetch install-testkit-server pocketic-check "${ci_targets[@]}" msrv testing-check
     pocketic-check pocketic-watchdog pocketic-check pocketic-cohorts)
 for gate in ci release-verify pocketic-watchdog pocketic-cohorts; do
@@ -486,7 +488,8 @@ done
 # A child logger must select its own checkout while retaining release identity.
 mkdir -p child/scripts/ci
 cp "$repository_root/scripts/ci/run-validation-targets.sh" \
-    "$repository_root/scripts/ci/check-make-execution.sh" child/scripts/ci/
+    "$repository_root/scripts/ci/check-make-execution.sh" \
+    "$repository_root/scripts/ci/verify-file-checksum.sh" child/scripts/ci/
 cat > child/Makefile <<'EOF'
 child-gate:
 	@test "$(RELEASE_VERSION)" = 9.8.7

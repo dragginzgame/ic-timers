@@ -357,11 +357,12 @@ const fn max_u64(left: u64, right: u64) -> u64 {
 /// successor binding. It is not an exclusive measurement of consumer code.
 /// Start/end page reads bracket the instruction interval from outside.
 ///
-/// Instruction summaries retain observation ordering and track actual overflow:
-/// an exactly reached `u64::MAX` is still exact. Use the summary's checked
-/// `mean()` or aggregate saturation flags rather than inferring overflow from
-/// its clipped total. Event counters and page-sample counts remain conservatively
-/// saturated at their numeric cap.
+/// Instruction summaries retain observation ordering and track actual overflow.
+/// Totals and integer means are `u128`; individual samples and counts are `u64`.
+/// Totals above `u64::MAX` remain exact. Use the summary's checked `mean()` or
+/// aggregate saturation flags rather than inferring overflow from its numeric
+/// cap. Event counters and page-sample counts remain conservatively saturated
+/// at their numeric cap.
 ///
 /// A terminal [`DeclarationLifetime::RemoveWhenStopped`](crate::DeclarationLifetime::RemoveWhenStopped)
 /// callback can remove its declaration before this final record is retained;
@@ -670,24 +671,15 @@ mod tests {
     }
 
     #[test]
-    fn instruction_overflow_is_tracked_without_losing_order_or_crossing_roles() {
+    fn wide_instruction_totals_preserve_exact_means_order_and_roles() {
+        let maximum = u128::from(u64::MAX);
         for scheduler in [true, false] {
             let mut performance = TimerPerformance::EMPTY;
-            for (instructions, samples, mean, saturated) in [
-                (u64::MAX, 1, Ok(Some(u64::MAX)), false),
-                (0, 2, Ok(Some(u64::MAX / 2)), false),
-                (
-                    1,
-                    3,
-                    Err(ic_metrics::MeasurementMeanError::SaturatedTotal),
-                    true,
-                ),
-                (
-                    0,
-                    4,
-                    Err(ic_metrics::MeasurementMeanError::SaturatedTotal),
-                    true,
-                ),
+            for (instructions, samples, total) in [
+                (u64::MAX, 1, maximum),
+                (0, 2, maximum),
+                (1, 3, maximum + 1),
+                (u64::MAX, 4, maximum * 2 + 1),
             ] {
                 let previous = performance;
                 if scheduler {
@@ -709,18 +701,16 @@ mod tests {
                     )
                 };
                 assert_eq!(summary.samples(), samples);
-                assert_eq!(summary.total(), u64::MAX);
-                assert_eq!(summary.mean(), mean);
+                assert_eq!(summary.total(), total);
+                assert_eq!(summary.mean(), Ok(Some(total / u128::from(samples))));
                 assert_eq!(summary.latest(), Some(instructions));
                 assert_eq!(summary.maximum(), Some(u64::MAX));
                 assert!(!summary.aggregate().samples_saturated());
-                assert_eq!(summary.aggregate().total_saturated(), saturated);
+                assert!(!summary.aggregate().total_saturated());
                 assert_eq!(other, MeasurementSummary::EMPTY);
                 assert_eq!(previous_summary.samples(), samples - 1);
-                if samples == 3 {
-                    assert_eq!(previous_summary.mean(), Ok(Some(u64::MAX / 2)));
-                    assert!(!previous_summary.aggregate().total_saturated());
-                }
+                assert_eq!(previous_summary.total(), total - u128::from(instructions));
+                assert!(!previous_summary.aggregate().total_saturated());
             }
         }
     }

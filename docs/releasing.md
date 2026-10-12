@@ -2957,7 +2957,8 @@ execution remain maintainer-owned.
 
 The 0.12 callback result cut used the minor release boundary for its incompatible
 public signatures. `make test` runs workspace targets followed by API doctests;
-`make msrv` compiles all targets and runs those doctests on Rust 1.88.0. Thus the
+`make msrv` compiles native all-targets and the library Wasm path, then runs those
+doctests on Rust 1.88.0. Hosted MSRV setup explicitly prepares the Wasm target. Thus the
 positive and compile-fail policy boundaries participate in PR/main validation
 and the existing complete release gate on each declared host. The recording-Cargo
 fixture checks order and failure propagation for both targets; it is not compiler
@@ -2974,6 +2975,19 @@ gate can also be run directly before committing, tagging and pushing:
 ```text
 make release-verify
 ```
+
+The maintainer's 2026-10-12 exception allows contributors to run only the existing
+compile check during development, with already prepared inputs:
+
+```text
+CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 make --no-print-directory check
+```
+
+This compiles library test targets without executing them. It neither fetches
+missing inputs nor replaces tests, Clippy, MSRV, probes, PocketIC or the release
+gate. Contributors wait for active owner validation to finish before compiling
+or mutating source. See [AGENTS.md](../AGENTS.md) and
+[issue #48](https://github.com/dragginzgame/ic-timers/issues/48).
 
 The gate starts with `make fetch`: `cargo fetch --manifest-path Cargo.toml --locked`
 for the single root workspace, without restricting the target. This explicitly prepares
@@ -3342,3 +3356,72 @@ MSRV, probe lint, watchdog/recovery and policy-cohort checks on supported hosts.
 No contributor builds/tests/lint/setup or release effects run for this review.
 [Consumer feedback](https://github.com/dragginzgame/ic-testkit/issues/47#issuecomment-6096202942)
 records the published selection and unchanged harness at its migration owner.
+
+
+## 0.18.0 delivery and 0.19.0 preparation checkpoint
+
+Released **0.18.0** at `52bc4bad399122be040cf155d9b4563b5509e009` passes
+[full main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38159662258)
+on Linux, Rust-floor and both native macOS lanes; its
+[tag run](https://github.com/dragginzgame/ic-timers/actions/runs/38159662226)
+passes separately. Earlier pending observations are superseded for this exact
+source, not relabeled as qualification of subsequent dependency changes.
+
+The explicitly approved old-source [late qualifier](https://github.com/dragginzgame/ic-timers/actions/runs/38154578484)
+is complete at frozen `v0.17.13` / `e6ac645aac1b185bfaa3b146c2b8e1dd38b3299f`.
+Linux 114514798873, ARM 114514798678 and Intel 114514798953 fail at the controlled
+late step, then upload successfully. Download verification passes in Linux
+114535962669, ARM 114535962592 and Intel 114535962580. This is the intentionally
+failing producer workflow with successful verifier jobs, not an ordinary CI
+failure to repair. Early's frozen verifiers still reject the obsolete candidate
+path. Keep [#44](https://github.com/dragginzgame/ic-timers/issues/44) open for both
+stages at one corrected frozen source; prior dispatch authority remains limited
+to its named ref, and no new dispatch has occurred.
+
+Pending **0.19.0** adopts the incoming Metrics 0.7.0 / Testkit 0.34.1 / Host 0.14.2
+root graph and committed Shared 0.6.4. The incoming Cargo and consumer pin bytes
+are preserved under `/tmp/ic-timers-019-adoption.9184ql8f/preserved/`. The explicit
+compile-only exception yields a successful locked/offline library/all-targets
+check (2.43 seconds), including test-target compilation without execution.
+Formatting, snapshot integrity, syntax/diff and cheap metadata checks pass.
+Behavioral tests, Clippy, probe/MSRV builds, IC policy cohorts and native host
+qualification remain pending for these changed inputs. The wider public Metrics
+identity requires a minor line; only notes are prepared, while package metadata
+remains 0.18.0. No release effects, tool setup or automatic cleanup are performed.
+
+
+## Host 0.14.3 and minimum-Wasm qualification follow-up
+
+The later incoming root lock selects all four Host packages at **0.14.3**, through
+Testkit **0.34.1**. Each cached official archive matches its selected checksum and
+identifies released `543b137458feba0f6dfd3e458b680fb2be3d9e6d` / `v0.14.3`.
+Library Rust paths are unchanged from 0.14.2; Host's new patch delivers contributor
+Shared 0.6.5 receipt admission. Timers already adopts that committed Shared owner.
+No direct Host dependency or consumer process/filesystem reimplementation is needed.
+The incoming lock is preserved, with review inputs at `/tmp/ic-timers-host0143.j57w4_7_/`.
+Earlier observations keep their original Host selection.
+
+[Timers #49](https://github.com/dragginzgame/ic-timers/issues/49) identified that the
+public Rust 1.88 floor was compiled natively but the maintained Wasm path used the
+development compiler. The existing `msrv` recipe now runs native check, library
+Wasm check, then API doctests. Hosted MSRV setup explicitly prepares
+`wasm32-unknown-unknown`. The actual release-command fixture records all three
+Cargo calls and rejects failure at each boundary. The same fixture's stale old
+CI order is also aligned with the earlier compiler/Clippy admission.
+
+The explicitly approved compile-only development permission covers the already
+prepared compiler and target: `rustc 1.88.0 (6b00bc388 2025-06-23)` with
+`RUSTUP_TOOLCHAIN=1.88.0 CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 make --no-print-directory wasm-check`
+passes in 2.84 seconds. It builds only the library Wasm check, not tests, doctests,
+Clippy, Testkit/Host probes or the complete MSRV target. No setup, fetch, package
+mutation or lock rewrite occurs. Behavioral command fixtures and delivered-source
+hosted MSRV/Wasm acceptance remain pending before issue closure. The pending
+release stays 0.19.0 for the separate public Metrics cut; this qualification repair
+is compatible and does not raise any Rust floor.
+
+
+The same prepared Rust 1.88 toolchain also passes the locked/offline native
+library/all-targets check in 3.20 seconds. Library test targets are compiled,
+not executed. This supplements the 2.84-second Wasm proof above; it does not
+run the full `msrv` target's doctests or qualify probe/Testkit/Host native behavior.
+Incoming Cargo files remain byte-identical to the saved Host 0.14.3 inputs.

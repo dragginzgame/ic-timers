@@ -1,18 +1,18 @@
 # Shared Tooling snapshot v1
-# version	0.6.3
+# version	0.6.5
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	4fd979d13c32adb3cb2f51f213ebfc4f98339b3d
+revision	42f2091768b5f71c98a684d3dab563f408ca2dd9
 file	faa9a62257ecdfd6532ac2225b3fd053012dfe9c35b8bc2ddc95288d8626a518	-	audits/README.md
 file	518d890bf485bef06c316b4cf26ac6bf357ed52bcce995e8d9b1232a103d0ea3	-	audits/code-hygiene.md
 file	35fd87d36a09ed0971841abf28535d43470c713a82581c2251b924da1ab8f484	-	audits/flow-convergence-and-duplication.md
 file	ffdca09602c44c8aff8fc2a17588b20eb6a56e2e71fb6d42ad75087fdd65819b	-	audits/complexity-and-technical-debt.md
 file	1b64cf2ba0393ab329ec29eb05a696d47ef5933f5ab9bff6e1fe4a7e7b294075	-	audits/module-surface-hardening.md
 file	b33ecebfb524f9af496c0f4f4b24650b97833e20f1fca56eedb8604a0660e109	-	audits/module-cleanup.md
-file	9078585cbc6b0dcc32166c99aa330fa3fd0d847f96da09373b2ff3326d943b0e	-	docs/consuming-snapshots.md
+file	b24f0f30f5c015a4e78033b408439d127eb26a0177f4ea9eb334ac3191cc400d	-	docs/consuming-snapshots.md
 file	15315edad497b9b165671c3f57e9f56e6ba1d206bbc635eb0ff51afaa8456bb3	-	docs/provenance.md
 file	bc9014d8e70a309cf2f65658a7c1ea29303375bbe5087150a4087a187efd9b41	-	docs/ic-tools.md
-file	87f826b16f1078f2d905cb02a8d78582d44654acfaa6b26492214ac4f07dad4c	-	docs/local-setup.md
+file	a643877c87cf8bd6f11c666bc45cbbb16ee9321852ce48245fc194eff86b023a	-	docs/local-setup.md
 file	82892e25292fe47c26035a0031aa4ad1996fcf181732163e75039bd657f2f84b	-	ci/tool-versions.env
 file	4692d760ea97861b52c183bb69e24c929d9baf7c292795c61d65ea3166368787	-	rules/dependency-pinning.md
 file	90eb28392912af63593a3773eff903c5ef77ebab2b9199e3c720be25a3fcbbbf	-	docs/principles/rust-code-hygiene.md
@@ -26,8 +26,8 @@ file	2bd56f477722c03d820259397a0ca9b2aca27a4216be61c254a745bfe79be4a0	x	scripts/
 file	ab2202f89a077373fffac29f57527b88ccc65998f5c85c60a32081edd8338150	x	scripts/ci/verify-evidence-checksums.sh
 file	32ddc6af301567fce4d1d78cea5fe53450e7cffede28d5ad08d9c033ffb9d62d	x	scripts/ci/test-evidence-checksums.sh
 file	94a934651d5cb0c6f77fa429df277856dbda4c1a7441b2b8563e678c416258f6	-	audits/ic-canister-applications.md
-file	022de88d3905b3b008785100b02455a0230fac7b88d8b7541015dda940453c74	x	scripts/dev/install-rust-tools.sh
-file	8fba3b5db2ca97e2df129955ac7ecc0914291d5e9ec77d8972fffd03c1309c15	x	scripts/ci/test-rust-tools.sh
+file	f6f870ba6d62c9a3c03eea4fe2faf87b6c5aa3c219ea3dd0186e9e7dd22331d5	x	scripts/dev/install-rust-tools.sh
+file	fbf128c6aca4a06e12011756486cf73a5668e38f3cf97cf44247fc490d9c9428	x	scripts/ci/test-rust-tools.sh
 file	775da89f655a3781059f433f80470ee6db9675e08942a805c111614183322fe1	-	scripts/ci/ic-tool-pins.awk
 file	2c1d5d40d481790aaa9c10a5cf29ec061cdc0c4840824851140b4c9c8e7d455b	x	scripts/ci/test-tool-evidence.sh
 file	50875aa80c211f8f5fded06bf75c7a9fc1fc99aac7590480de9be17d4753bf7f	x	scripts/ci/select-tool-evidence.sh
@@ -36,3 +36,5 @@ file	820c46f7fbbf3d4790f8bbce5b646c6506a3c4750ebab9525360fbc75c115b01	-	.github/
 file	d09d1ef8b6e5544832bb321eca736a407d9657ce25fe2ced0b35de0e8ad8792b	-	scripts/dev/tool-store.sh
 file	7011492452420a3cc651ffb52a559b6c36f9158936b96ea5652ee6a520b0871f	-	scripts/ci/test-tool-store.sh
 file	2d49252710ac5edf62cc9c3196147f544c5e2df9a0c4d2402e599452d2655eb6	-	scripts/dev/cargo-tool-build.sh
+file	d70f32239de9ea0d2d2a3a0eebd2fa862746807cd797f512f95b2e46fc5faa67	x	.githooks/pre-commit
+file	9e32385247296ce95d2b15b1290c64e6b6dff15716c1c139f21ab5e5128f4be3	x	scripts/ci/check-make-execution.sh
