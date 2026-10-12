@@ -1,24 +1,59 @@
 # Shared Tooling snapshot v1
-# version	0.6.5
+# version	0.8.0
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	42f2091768b5f71c98a684d3dab563f408ca2dd9
+revision	045a6f22a9de497bfb3af90cb2571957384806f2
+# entrypoint	audits/README.md
+# entrypoint	audits/code-hygiene.md
+# entrypoint	audits/flow-convergence-and-duplication.md
+# entrypoint	audits/complexity-and-technical-debt.md
+# entrypoint	audits/module-surface-hardening.md
+# entrypoint	audits/module-cleanup.md
+# entrypoint	docs/consuming-snapshots.md
+# entrypoint	docs/provenance.md
+# entrypoint	docs/ic-tools.md
+# entrypoint	docs/local-setup.md
+# entrypoint	ci/tool-versions.env
+# entrypoint	rules/dependency-pinning.md
+# entrypoint	docs/principles/rust-code-hygiene.md
+# entrypoint	docs/principles/simplicity-and-maintainability.md
+# entrypoint	scripts/ci/verify-file-checksum.sh
+# entrypoint	scripts/ci/verify-shared-tooling-snapshot.sh
+# entrypoint	scripts/dev/install-host-tools.sh
+# entrypoint	scripts/ci/test-host-tools.sh
+# entrypoint	scripts/dev/install-ic-tools.sh
+# entrypoint	scripts/ci/test-ic-tools.sh
+# entrypoint	scripts/ci/verify-evidence-checksums.sh
+# entrypoint	scripts/ci/test-evidence-checksums.sh
+# entrypoint	audits/ic-canister-applications.md
+# entrypoint	scripts/dev/install-rust-tools.sh
+# entrypoint	scripts/ci/test-rust-tools.sh
+# entrypoint	scripts/ci/ic-tool-pins.awk
+# entrypoint	scripts/ci/test-tool-evidence.sh
+# entrypoint	scripts/ci/select-tool-evidence.sh
+# entrypoint	scripts/ci/archive-evidence.sh
+# entrypoint	.github/actions/retain-failure-evidence/action.yml
+# entrypoint	scripts/dev/tool-store.sh
+# entrypoint	scripts/ci/test-tool-store.sh
+# entrypoint	scripts/dev/cargo-tool-build.sh
+# entrypoint	.githooks/pre-commit
+# entrypoint	scripts/ci/check-make-execution.sh
 file	faa9a62257ecdfd6532ac2225b3fd053012dfe9c35b8bc2ddc95288d8626a518	-	audits/README.md
 file	518d890bf485bef06c316b4cf26ac6bf357ed52bcce995e8d9b1232a103d0ea3	-	audits/code-hygiene.md
 file	35fd87d36a09ed0971841abf28535d43470c713a82581c2251b924da1ab8f484	-	audits/flow-convergence-and-duplication.md
 file	ffdca09602c44c8aff8fc2a17588b20eb6a56e2e71fb6d42ad75087fdd65819b	-	audits/complexity-and-technical-debt.md
 file	1b64cf2ba0393ab329ec29eb05a696d47ef5933f5ab9bff6e1fe4a7e7b294075	-	audits/module-surface-hardening.md
 file	b33ecebfb524f9af496c0f4f4b24650b97833e20f1fca56eedb8604a0660e109	-	audits/module-cleanup.md
-file	b24f0f30f5c015a4e78033b408439d127eb26a0177f4ea9eb334ac3191cc400d	-	docs/consuming-snapshots.md
+file	30e5881c8726b10b1ae16274e26b6377646bfdc7380dfb6451e6e29a13080850	-	docs/consuming-snapshots.md
 file	15315edad497b9b165671c3f57e9f56e6ba1d206bbc635eb0ff51afaa8456bb3	-	docs/provenance.md
 file	bc9014d8e70a309cf2f65658a7c1ea29303375bbe5087150a4087a187efd9b41	-	docs/ic-tools.md
-file	a643877c87cf8bd6f11c666bc45cbbb16ee9321852ce48245fc194eff86b023a	-	docs/local-setup.md
-file	82892e25292fe47c26035a0031aa4ad1996fcf181732163e75039bd657f2f84b	-	ci/tool-versions.env
+file	059216f91c0c97bdc4686934b501cd5eca286d2c30ee9a8ff03e04f86503d989	-	docs/local-setup.md
+file	7c1b2849ffce4e4b28fabe5eba2f7608b38dd08dc1478c25505ebd50c4e5d8a2	-	ci/tool-versions.env
 file	4692d760ea97861b52c183bb69e24c929d9baf7c292795c61d65ea3166368787	-	rules/dependency-pinning.md
 file	90eb28392912af63593a3773eff903c5ef77ebab2b9199e3c720be25a3fcbbbf	-	docs/principles/rust-code-hygiene.md
 file	457fd38e0073c91ba470b918d4facd9faac3c5200ebd38c97e9d6b76acdaea55	-	docs/principles/simplicity-and-maintainability.md
 file	4c981184847462ab3c01cac087e28309f8e054253fd95c7bbe56f643877aa708	x	scripts/ci/verify-file-checksum.sh
-file	71d1c69a25f190bc4b2b1df66d3359f172638371caa722142e820a8294d1938e	x	scripts/ci/verify-shared-tooling-snapshot.sh
+file	84f8c0acae3df99b48f0168cf001484a92e86836741cc6d3c0ecb222d97c1d2b	x	scripts/ci/verify-shared-tooling-snapshot.sh
 file	ef7259172673b035dc2cd8d4f231469d5d3f03a2edd3dacfac75458d3655e3ad	x	scripts/dev/install-host-tools.sh
 file	03a23ba6ec31750e7aa46526d2d52c86515572950a0ddffe2d0730a183fe29bb	x	scripts/ci/test-host-tools.sh
 file	590dfb56f85a6e8d7f0a6705488ef8655f78416f3baef635a0d504ecab237f96	x	scripts/dev/install-ic-tools.sh

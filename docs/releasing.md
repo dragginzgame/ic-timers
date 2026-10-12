@@ -3425,3 +3425,102 @@ library/all-targets check in 3.20 seconds. Library test targets are compiled,
 not executed. This supplements the 2.84-second Wasm proof above; it does not
 run the full `msrv` target's doctests or qualify probe/Testkit/Host native behavior.
 Incoming Cargo files remain byte-identical to the saved Host 0.14.3 inputs.
+
+
+## 0.19.0 delivery and 0.19.1 maintenance
+
+The maintainer reports **0.19.0 live** at
+`81b82589ca08aeb966edaf77a09f3f611bcce079`, matching local HEAD and annotated tag.
+[The tag job](https://github.com/dragginzgame/ic-timers/actions/runs/38221325648)
+passes. [Full main CI](https://github.com/dragginzgame/ic-timers/actions/runs/38221325703)
+passes Linux 114718018090, MSRV 114718018369 and ARM 114718018350;
+Intel 114718018302 is running at this inspection. The unfinished Intel lane
+remains distinct from completed Linux/ARM/minimum-Wasm evidence.
+
+The completed ARM raw log is retained at
+`/tmp/ic-timers-019-issue-review/019-arm.log`, SHA-256
+`bad8161b7dc5724d852f826aad2b4f0ba61ec02712591f9625ff6e2c7ca42c1f`.
+It checks out the exact released SHA, passes the wide instruction-total
+regression and release-gate fixtures, and executes native/Wasm/MSRV checks and
+both recovery/cohort selections. This is source-bound ARM evidence for the
+released graph, not qualification of the dirty 0.19.1 inputs.
+
+The actual MSRV job log selects `rustc 1.88.0 (6b00bc388 2025-06-23)`, checks
+native all-targets, then executes the locked/all-features library Wasm check
+successfully in 3.82 seconds before API doctests and probe lint.
+[Issue #49](https://github.com/dragginzgame/ic-timers/issues/49) is closed
+from delivered-source evidence. Its raw log is retained at
+`/tmp/ic-timers-shared066.jqtm0bp5/019-msrv.log`, SHA-256
+`3448b2bb96f05a8af6d803702db50e6387dbdf2c4041e82a0b5c666423e399f2`.
+The log contains the exact checkout SHA and compiler identity. Other issue/native
+and controlled-artifact acceptance is not inferred from this one job.
+
+Pending **0.19.1** adopts Shared 0.6.6 with cargo-sort-derives 0.14.1 and the
+requested coherent Host **0.14.4** family. All four official Host archives match
+the Cargo-generated candidate checksums and identify released
+`f93cd8854d500616a73eda713d215a20ff0617c7`. Their 21/22/23/12 Rust payload files
+respectively match the prior 0.14.3 archives byte-for-byte. No direct Host runtime
+dependency or process/filesystem adapter is added.
+
+The following Host 0.14.5 release at
+`bb8f1e71f3d4599618d0f4084d27fa637408f1fb` matches upstream main on inspection.
+Its complete diff from 0.14.4 changes only Cargo package versions/lock entries
+and the changelog heading. The `crates/` diff is empty. No new Host API or
+implementation is available to adopt, so this batch retains the reviewed 0.14.4
+graph without another dependency update.
+
+The offline resolver was run in an isolated copy, then reviewed before applying
+its lockfile. Host's four versions/checksums advance; every other package version
+stays fixed. Cargo also regenerates Windows dependency edges for errno,
+quinn-udp, rustix, rustls-platform-verifier, tempfile and winapi-util from the
+already-selected windows-sys 0.61.2 identity to 0.52.0. Both package identities
+remain present. The full Cargo-generated result is retained; no partial manual
+registry rewrite conceals the resolver's graph normalization. Source/archive
+comparison and the candidate review are at `/tmp/ic-timers-host0144.5jgzykdz/`.
+
+The approved offline, locked library/test-target compile check passes in 2.72
+seconds, with no test execution. Formatting, snapshot integrity and cheap locked
+metadata pass. The new common toolset requires explicit maintainer preparation
+and offline admission. Tool/hook/release behavioral fixtures, Clippy, full/native
+validation and simulator qualification are not run locally for this batch.
+Package versions remain 0.19.0; only the undated 0.19.1 notes are prepared.
+This maintenance changes no timer API and claims no Wasm/instruction saving.
+
+The subsequent requested Shared refresh selects committed
+`8e8cc21265272e0234326c53a8c7bf9e7d8d77df` at upstream main. This implements
+the 0.7 entrypoint selection contract; its committed `VERSION` and canonical
+manifest annotations still say 0.6.6. The adoption owner records all three
+explicit root sets and derived payloads, complete previews and canonical apply
+logs at `/tmp/ic-timers-shared070.n53MkYKh/`. All 59/35/11 prior payloads remain;
+there is no retirement, dependency/pin change or new product command. Integrity,
+syntax, local links and diff checks pass; no runtime build or user-owned
+behavioral/native gate is rerun for unchanged Rust source. Saved Cargo/tool pins
+and index entries preserve the incoming batch's identities.
+
+The maintainer then requested Shared **0.8.0**, adopted canonically at
+`045a6f22a9de497bfb3af90cb2571957384806f2`. Committed VERSION and manifest
+annotations now agree. The exporter reuses recorded entrypoints and
+automatically retires verified unchanged obsolete payloads without the removed
+`--retire-file` flag. All three previews preserve every current root/payload;
+this refresh removes nothing. The 59/35/11 complete preview/apply logs and
+preserved inputs are at `/tmp/ic-timers-shared080.IMvYFaPt/`.
+Integrity/local file links/diff checks pass; incoming Cargo files, tool/IC pins
+and real index entries stay identical. Only selected guidance and provenance
+change from the preceding adoption, so no compile or user-owned behavioral/
+native gate is repeated. Existing artifacts, prior failed observations and
+the pending 0.19.1 boundary remain intact.
+
+For [#44](https://github.com/dragginzgame/ic-timers/issues/44), the existing
+qualification workflow can now use frozen `v0.19.0` at the exact SHA above.
+The proposed sequence, pending explicit maintainer dispatch authorization, is
+early after main CI completes, then late only after early completes:
+
+```sh
+gh workflow run ci.yml --repo dragginzgame/ic-timers --ref v0.19.0 -f failure_stage=early
+gh workflow run ci.yml --repo dragginzgame/ic-timers --ref v0.19.0 -f failure_stage=late
+```
+
+Require all three original producers to reach the selected controlled failure
+and upload, and all three download verifiers to pass at each stage. Retain run,
+job, artifact, source and digest identities with the existing evidence procedure.
+No new dispatch has run; the old-source failed early run remains unchanged.

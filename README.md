@@ -57,11 +57,11 @@ but it does not promise that a task will happen exactly once.
 
 | Field | Value |
 | --- | --- |
-| Released API line | `0.18` |
+| Released API line | `0.19` |
 
-The current checkout prepares 0.19's Metrics 0.7 integration. Its instruction
-summary totals and means are wider than the released 0.18 contract; see the
-[pending notes](CHANGELOG.md#0190) before adopting the checkout.
+The 0.19 line uses Metrics 0.7 instruction summaries with `u128` totals and
+integer means; see the [release notes](CHANGELOG.md#0190) when updating report
+and codec fields.
 
 IC Timers is written in Rust 2024 and supports Rust
 1.88.0 and newer. It uses `ic-cdk-timers` 1.0.0 as its private, underlying
@@ -189,7 +189,7 @@ framework/application registry:
 
 ```toml
 [dependencies]
-ic-timers = "=0.17.0"
+ic-timers = "=0.19.0"
 ```
 
 Every framework and application crate linked into the same canister must use

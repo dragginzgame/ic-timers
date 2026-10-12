@@ -5,19 +5,25 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `42f2091768b5f71c98a684d3dab563f408ca2dd9` (0.6.5). Its provenance and
+  from revision `045a6f22a9de497bfb3af90cb2571957384806f2` (0.8.0). Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
 - Apply the [shared audit methods](audits/README.md) from revision
-  `42f2091768b5f71c98a684d3dab563f408ca2dd9`, recorded separately in
+  `045a6f22a9de497bfb3af90cb2571957384806f2`, recorded separately in
   [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). That
   supplemental snapshot also supplies pinned host/IC setup at the same
   reviewed revision. The isolated
   [Cargo helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
   supplies the structured dependency checker, Cargo readers/rewrites,
   annotated-tag checker and release-command adoption checker from
-  `42f2091768b5f71c98a684d3dab563f408ca2dd9`. The root baseline snapshot owns
+  `045a6f22a9de497bfb3af90cb2571957384806f2`. All three manifests record explicit
+  entrypoints and their complete derived payloads; future refreshes reuse those
+  roots. Review local callers and other bundles before changing root selection.
+  The exporter automatically retires only verified, unchanged owned payloads
+  outside the resulting closure; never hand-edit ownership records or use the
+  removed `--retire-file` option.
+  The root baseline snapshot owns
   the formatter guard, Make execution admission and the adopted formatting/release
   Make includes. Apply the
   [dependency pinning rules](rules/dependency-pinning.md) with the exact local

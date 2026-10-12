@@ -462,6 +462,12 @@ release; do not add arbitrary buckets, a second registry or instrumentation mode
 
 ## Prepared IC Metrics 0.7 adoption
 
+The cut is now delivered in Timers **0.19.0** at
+`81b82589ca08aeb966edaf77a09f3f611bcce079`. Its
+[released Linux/MSRV jobs](https://github.com/dragginzgame/ic-timers/actions/runs/38221325703)
+pass, with both native macOS lanes still incomplete at inspection. Preparation
+observations below retain their original source and graph scope.
+
 The pending **0.19.0** cut implements [Timers #47](https://github.com/dragginzgame/ic-timers/issues/47).
 The maintainer-selected root catalog/lock now use registry Metrics **0.7.0**;
 its cached official archive matches selected SHA-256

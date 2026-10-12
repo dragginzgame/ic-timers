@@ -2,6 +2,21 @@
 
 All notable changes to this project are recorded here.
 
+## [0.19.1]
+
+### Development
+
+- Adopt Shared Tooling 0.8.0 across all three snapshots. Recorded entrypoints
+  derive required files, and refresh automatically retires verified obsolete
+  payloads. Existing local selections and guards remain intact
+  ([Shared #131](https://github.com/dragginzgame/shared-tooling/issues/131)).
+- Select cargo-sort-derives 0.14.1, preserving literal `$crate` paths in derive
+  sorting. Prepare the selected common toolset with
+  `make install-tools`, then verify it with `make tools-check`
+  ([Shared #113](https://github.com/dragginzgame/shared-tooling/issues/113)).
+- Refresh the root-locked Testkit dependency graph to the coherent Host 0.14.4
+  family. Host library Rust source and the timer API are unchanged.
+
 ## [0.19.0] - 2026-10-12
 
 ### Breaking

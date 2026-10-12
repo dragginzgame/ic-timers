@@ -1,5 +1,117 @@
 # Shared Tooling adoption
 
+## Prepared Shared Tooling 0.8.0 automatic retirement
+
+The requested 0.8.0 adoption selects committed revision
+`045a6f22a9de497bfb3af90cb2571957384806f2`, matching upstream main and committed
+`VERSION`. All three canonical manifests now annotate **0.8.0**, superseding
+the prior 0.7 implementation's source-owned version discrepancy
+([Shared #132](https://github.com/dragginzgame/shared-tooling/issues/132)).
+
+The exporter now removes verified, unchanged previously owned payloads outside
+the selected entrypoint closure automatically, as described by
+[Shared #131](https://github.com/dragginzgame/shared-tooling/issues/131).
+`--retire-file` is removed. Root selection still needs local caller and
+other-bundle review; source proof, local/staged/concurrent-edit protections and
+same-source interruption recovery remain. No fallback exporter or manual
+ownership-roster editing is added. This replaces the previous individual
+retirement-selection rule for current refreshes.
+
+All three complete previews reused the already-recorded entrypoints before
+apply from a clean isolated source with prior revisions available. The existing
+**59/35/11** payloads and roots remain intact; no additions or retirements occur.
+Only the selected snapshot-consumption and Make-adoption guidance changes from
+the preceding source. The exporter stays source-owned rather than becoming
+another vendored local command. The nested helper export uses the existing
+isolated Git consumer boundary and copies only verified payloads/manifest.
+Preserved inputs, previous manifests, index entries and all preview/apply logs
+remain at `/tmp/ic-timers-shared080.IMvYFaPt/`.
+
+Canonical snapshot integrity, local document file links and diff checks pass.
+Cargo files, host/IC pin selections and real index entries remain identical to
+the incoming batch. Runtime source, installed tools, build artifacts and earlier
+evidence are preserved. No tests, builds, Clippy, setup, native qualification,
+workflow dispatch, release effects or sibling mutation ran for this adoption.
+Exact-source [upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38229670802)
+is queued at inspection; source review and integrity do not establish native
+acceptance. Released Timers 0.19.0's Intel gate is still running and does not
+qualify this dirty next snapshot.
+The existing undated **0.19.1** notes cover contributor maintenance; timer API,
+consumer build requirements and package versions remain unchanged.
+
+## Prior entrypoint-based snapshot selection
+
+The requested latest-source adoption selects committed Shared revision
+`8e8cc21265272e0234326c53a8c7bf9e7d8d77df`, matching upstream main, for all
+three bundles. It implements the **0.7 entrypoint contract** under
+[Shared #131](https://github.com/dragginzgame/shared-tooling/issues/131), but its
+committed `VERSION` still says **0.6.6**. Canonical annotations retain that value;
+neither the commit title nor the undated upstream draft proves a 0.7.0 release.
+The source-owned metadata discrepancy is already tracked by
+[Shared #132](https://github.com/dragginzgame/shared-tooling/issues/132).
+
+All existing **59/35/11** payloads are explicitly selected as roots for this first
+conversion, as allowed by the upstream adoption guide. The exporter derives
+their companion closure and publishes `# entrypoint` annotations separately
+from the exact payload hashes/modes. No files are added or retired. Conditional
+callers, the consumer IC pin matrix and optional helpers retain their existing
+ownership; the closure is not a new local command inventory. Future refreshes
+reuse recorded roots rather than reconstructing a manual file list. Narrowing
+roots requires a separate caller/other-bundle review and exact retirement approval.
+
+Complete previews ran before any apply from a clean isolated source with the
+previous committed revision available. The nested helper bundle is exported
+through an owned temporary Git consumer, verified and copied without its Git
+metadata. A direct nested-consumer preview refusal is retained, along with all
+successful previews/apply logs, previous manifests, index entries, Cargo files
+and tool pins, at `/tmp/ic-timers-shared070.n53MkYKh/`.
+
+Only the selected verifier and snapshot/adoption guidance change from the prior
+0.6.6 payloads. Shared Make recipes, release runner, installers, formatters,
+Cargo dependencies, tool pins and runtime source stay unchanged. Both verifier
+copies are canonical exports; local snapshot fixtures already copy exact
+manifests and payloads, so they retain the new annotations without a second
+manifest parser or compatibility export path. Full/native fixture qualification
+remains maintainer-owned. Integrity, syntax, local document links and diff checks
+are preparation evidence, not executed product or native acceptance.
+Exact-source [upstream CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38227589866)
+is queued at inspection; no upstream or consumer native acceptance is inferred.
+
+The existing undated **0.19.1** notes cover this contributor-only change; it
+does not require a Timers minor release. The prior derive-sorter selection and
+its explicit `make install-tools`, then `make tools-check` action remain valid.
+No tool setup, tests, Clippy, workflow dispatch, release or sibling mutation ran.
+
+## Prepared Shared Tooling 0.6.6 derive-formatter selection
+
+After the maintainer reports Timers 0.19.0 live, the pending **0.19.1** batch
+adopts committed Shared **0.6.6**
+`a15eb9d406d287697df9bc8fa96db8cda6721a71` through canonical **59/35/11** exports.
+Remote VERSION agrees. All three complete previews ran before refresh from a
+clean isolated checkout; manifests, apply logs and preserved released Cargo/tool
+inputs remain at `/tmp/ic-timers-shared066.jqtm0bp5/`. The selection adds no files.
+
+The canonical audit payload advances cargo-sort-derives **0.13.0 -> 0.14.1**,
+fixing literal `$crate` replacement in direct/conditional derives under
+[Shared #113](https://github.com/dragginzgame/shared-tooling/issues/113).
+The tool's compiler floor is Rust 1.88; Timers already supports that floor.
+No product Rust floor or formatter command is changed. Timers' formatting still
+uses cargo-sort/rustfmt through the same common entrypoint; the derive sorter is
+part of its mandatory prepared tool bundle, not a new product formatter stage.
+There are no product `$crate` derive macros or range markers to retire.
+
+Explicit preparation is `make install-tools`, followed by `make tools-check`.
+Existing tools/artifacts remain retained; no setup or tool validation gate is run
+by this adoption. The previous 0.13.0 selection cannot establish acceptance of
+the new pin. Snapshot integrity, documentation links, formatting, diff and cheap
+locked metadata pass. The approved library/test-target compile check passes on
+the requested Host 0.14.4 dependency graph; it does not qualify tool setup or
+behavioral hook/release fixtures. Product/native/full gates remain user-owned.
+
+This is contributor and test-dependency maintenance with an unchanged timer API.
+It does not manufacture a product feature or require a library minor boundary.
+The pending patch notes are prepared; package versions remain released 0.19.0.
+
 ## Prepared Shared Tooling 0.6.5 staged-format admission
 
 The pending 0.19.0 batch now selects committed Shared **0.6.5**
