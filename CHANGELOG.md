@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.19.0]
+## [0.19.0] - 2026-10-12
 
 ### Breaking
 
