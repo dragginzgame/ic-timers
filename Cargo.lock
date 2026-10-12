@@ -870,7 +870,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers"
-version = "0.21.0"
+version = "0.21.1"
 dependencies = [
  "ic-cdk-timers",
  "ic-metrics",
@@ -880,7 +880,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers-pocketic"
-version = "0.21.0"
+version = "0.21.1"
 dependencies = [
  "candid",
  "ic-testkit",
@@ -889,7 +889,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers-runtime-probe"
-version = "0.21.0"
+version = "0.21.1"
 dependencies = [
  "candid",
  "ic-cdk",
@@ -898,7 +898,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers-size-probe"
-version = "0.21.0"
+version = "0.21.1"
 dependencies = [
  "candid",
  "ic-cdk",
