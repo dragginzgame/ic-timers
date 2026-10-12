@@ -4353,6 +4353,327 @@ fn terminal_provider_and_scheduler_failures_release_captures_outside_registry_bo
     assert_eq!(timer_inventory().unwrap().timers(), []);
 }
 
+struct CancelContextOnDrop(Rc<RefCell<Option<OnceContext>>>);
+
+impl Drop for CancelContextOnDrop {
+    fn drop(&mut self) {
+        self.0.borrow().as_ref().unwrap().cancel().unwrap();
+    }
+}
+
+#[test]
+fn repeated_reconciliation_releases_unused_factory_before_applying_control() {
+    let _fixture = setup();
+    let timer = identity("unused-factory-ordering");
+    let gate = SuspendedWork::default();
+    let context = Rc::new(RefCell::new(None));
+    let callback_context = Rc::clone(&context);
+    let callback_gate = gate.clone();
+    let mut slot = Some(
+        register_once(
+            timer.clone(),
+            TimerStart::Retained {
+                initial: Some(TimerSchedule::At(10)),
+            },
+            move |context| {
+                *callback_context.borrow_mut() = Some(context);
+                let gate = callback_gate.clone();
+                async move {
+                    gate.wait().await;
+                    OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
+                }
+            },
+        )
+        .unwrap(),
+    );
+    assert!(run_next_due());
+    let captured = CancelContextOnDrop(context);
+    reconcile_once(&mut slot, &timer, Some(TimerSchedule::At(20)), move |_| {
+        std::hint::black_box(&captured);
+        async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
+    })
+    .unwrap();
+    gate.resume();
+    assert!(run_next_due());
+    assert_eq!(
+        timer_snapshot(&timer).unwrap().unwrap().next_deadline_ns(),
+        Some(20)
+    );
+    assert_eq!(timer_count(), 1);
+    slot.take().unwrap().unregister().unwrap();
+}
+
+enum ReconciliationSlot {
+    Once(Option<OnceRegistration>),
+    AfterCompletion(Option<AfterCompletionRegistration>),
+    Watchdog(Option<WatchdogRegistration>),
+}
+
+impl ReconciliationSlot {
+    const fn new(policy: u8) -> Self {
+        match policy {
+            0 => Self::Once(None),
+            1 => Self::AfterCompletion(None),
+            _ => Self::Watchdog(None),
+        }
+    }
+
+    fn claim(&self) -> Option<&RegistrationClaim> {
+        match self {
+            Self::Once(slot) => slot
+                .as_ref()
+                .map(RegistrationClaimOwner::registration_claim),
+            Self::AfterCompletion(slot) => slot
+                .as_ref()
+                .map(RegistrationClaimOwner::registration_claim),
+            Self::Watchdog(slot) => slot
+                .as_ref()
+                .map(RegistrationClaimOwner::registration_claim),
+        }
+    }
+
+    fn reconcile(
+        &mut self,
+        timer: &TimerIdentity,
+        cadence: TimerCadence,
+        scheduled: bool,
+        captured: Option<RemovalCapture>,
+        calls: Rc<Cell<u64>>,
+    ) -> Result<(), TimerError> {
+        let record = move || {
+            std::hint::black_box(&captured);
+            calls.set(calls.get() + 1);
+        };
+        match self {
+            Self::Once(slot) => reconcile_once(
+                slot,
+                timer,
+                scheduled.then_some(TimerSchedule::After(Duration::from_nanos(
+                    cadence.as_nanos(),
+                ))),
+                move |_| {
+                    record();
+                    async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
+                },
+            ),
+            Self::AfterCompletion(slot) => reconcile_after_completion(
+                slot,
+                timer,
+                cadence,
+                if scheduled {
+                    TimerReconcileState::Scheduled
+                } else {
+                    TimerReconcileState::Inactive
+                },
+                move |_| {
+                    record();
+                    async {
+                        AfterCompletionRunResult::new(
+                            TimerCompletion::no_work(),
+                            AfterCompletionDecision::Stop,
+                        )
+                    }
+                },
+            ),
+            Self::Watchdog(slot) => reconcile_watchdog(
+                slot,
+                timer,
+                cadence,
+                if scheduled {
+                    WatchdogReconcileState::Scheduled
+                } else {
+                    WatchdogReconcileState::Inactive
+                },
+                move |_| {
+                    record();
+                    WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
+                },
+            ),
+        }
+    }
+}
+
+#[test]
+fn failed_first_reconciliation_retires_all_policies_before_retry() {
+    for policy in 0..3 {
+        for rejection in 0..3 {
+            let _fixture = setup();
+            let timer = identity("first-reconciliation");
+            let dropped = Rc::new(Cell::new(false));
+            let captured = RemovalCapture {
+                timer: timer.clone(),
+                dropped: Rc::clone(&dropped),
+            };
+            let failed_calls = Rc::new(Cell::new(0));
+            let mut slot = ReconciliationSlot::new(policy);
+            let cadence =
+                TimerCadence::from_nanos(if rejection == 0 { u64::MAX } else { 5 }).unwrap();
+            if rejection == 1 {
+                inject_provider_install_fault();
+            } else if rejection == 2 {
+                inject_provider_confirmation_fault();
+            }
+            let result = slot.reconcile(
+                &timer,
+                cadence,
+                true,
+                Some(captured),
+                Rc::clone(&failed_calls),
+            );
+            assert!(matches!(
+                (rejection, result),
+                (
+                    0,
+                    Err(TimerError::Schedule(ScheduleError::DeadlineOverflow))
+                ) | (1 | 2, Err(TimerError::OwnershipInvariant))
+            ));
+            assert!(slot.claim().is_none());
+            assert!(dropped.get());
+            assert_eq!(timer_inventory().unwrap().timers(), []);
+            assert_eq!(timer_count(), 0);
+            assert!(!run_next_due());
+
+            let retry_calls = Rc::new(Cell::new(0));
+            slot.reconcile(
+                &timer,
+                TimerCadence::from_nanos(5).unwrap(),
+                true,
+                None,
+                Rc::clone(&retry_calls),
+            )
+            .unwrap();
+            assert!(has_armed_wakeup_claim(slot.claim().unwrap()).unwrap());
+            assert_eq!(timer_count(), 1);
+            set_time(15);
+            while run_next_due() {}
+            assert_eq!(retry_calls.get(), 1);
+            assert_eq!(failed_calls.get(), 0);
+            assert_eq!(timer_count(), 0);
+            unregister_claim(slot.claim().unwrap()).unwrap();
+        }
+    }
+}
+
+#[test]
+fn first_once_reconciliation_rejects_unencodable_delay_without_retaining_authority() {
+    let _fixture = setup();
+    let timer = identity("unencodable-reconciliation");
+    let dropped = Rc::new(Cell::new(false));
+    let captured = RemovalCapture {
+        timer: timer.clone(),
+        dropped: Rc::clone(&dropped),
+    };
+    let mut slot = None;
+    let result = reconcile_once(
+        &mut slot,
+        &timer,
+        Some(TimerSchedule::After(Duration::MAX)),
+        move |_| {
+            std::hint::black_box(&captured);
+            async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
+        },
+    );
+    assert!(matches!(
+        result,
+        Err(TimerError::Schedule(ScheduleError::DelayOutOfRange))
+    ));
+    assert!(slot.is_none());
+    assert!(dropped.get());
+    assert_eq!(timer_inventory().unwrap().timers(), []);
+    assert_eq!(timer_count(), 0);
+}
+
+#[test]
+fn later_reconciliation_deadline_error_preserves_existing_inactive_authority() {
+    for policy in 0..3 {
+        let _fixture = setup();
+        let timer = identity("later-reconciliation-deadline");
+        let cadence = TimerCadence::from_nanos(u64::MAX).unwrap();
+        let dropped = Rc::new(Cell::new(false));
+        let captured = RemovalCapture {
+            timer: timer.clone(),
+            dropped: Rc::clone(&dropped),
+        };
+        let mut slot = ReconciliationSlot::new(policy);
+        slot.reconcile(
+            &timer,
+            cadence,
+            false,
+            Some(captured),
+            Rc::new(Cell::new(0)),
+        )
+        .unwrap();
+        let before = timer_snapshot(&timer).unwrap();
+        let result = slot.reconcile(&timer, cadence, true, None, Rc::new(Cell::new(0)));
+        assert!(matches!(
+            result,
+            Err(TimerError::Schedule(ScheduleError::DeadlineOverflow))
+        ));
+        assert!(slot.claim().is_some());
+        assert_eq!(timer_snapshot(&timer).unwrap(), before);
+        assert!(!dropped.get());
+        assert_eq!(timer_count(), 0);
+        unregister_claim(slot.claim().unwrap()).unwrap();
+        assert!(dropped.get());
+    }
+}
+
+#[test]
+fn later_reconciliation_provider_error_retains_original_callback_for_retry() {
+    for policy in 0..3 {
+        for confirmation in [false, true] {
+            let _fixture = setup();
+            let timer = identity("later-reconciliation-provider");
+            let cadence = TimerCadence::from_nanos(5).unwrap();
+            let dropped = Rc::new(Cell::new(false));
+            let captured = RemovalCapture {
+                timer: timer.clone(),
+                dropped: Rc::clone(&dropped),
+            };
+            let original_calls = Rc::new(Cell::new(0));
+            let ignored_calls = Rc::new(Cell::new(0));
+            let mut slot = ReconciliationSlot::new(policy);
+            slot.reconcile(
+                &timer,
+                cadence,
+                false,
+                Some(captured),
+                Rc::clone(&original_calls),
+            )
+            .unwrap();
+            let original_id = timer_snapshot(&timer).unwrap().unwrap().registration_id();
+            if confirmation {
+                inject_provider_confirmation_fault();
+            } else {
+                inject_provider_install_fault();
+            }
+            let result = slot.reconcile(&timer, cadence, true, None, Rc::clone(&ignored_calls));
+            assert!(matches!(result, Err(TimerError::OwnershipInvariant)));
+            assert!(slot.claim().is_some());
+            assert!(!dropped.get());
+            let failed = timer_snapshot(&timer).unwrap().unwrap();
+            assert_eq!(failed.registration_id(), original_id);
+            assert_eq!(
+                failed.state(),
+                TimerRuntimeStateSnapshot::Inactive {
+                    reason: InactiveReason::ControlFailure(
+                        TimerControlFailure::ProviderBindingFailed
+                    ),
+                }
+            );
+            assert_eq!(timer_count(), 0);
+            slot.reconcile(&timer, cadence, true, None, Rc::clone(&ignored_calls))
+                .unwrap();
+            set_time(15);
+            while run_next_due() {}
+            assert_eq!(original_calls.get(), 1);
+            assert_eq!(ignored_calls.get(), 0);
+            unregister_claim(slot.claim().unwrap()).unwrap();
+            assert!(dropped.get());
+        }
+    }
+}
+
 fn initial_registration_with_capture(
     policy: u8,
     timer: TimerIdentity,

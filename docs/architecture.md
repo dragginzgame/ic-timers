@@ -31,6 +31,14 @@ validates requested time before allocating a claim, and returns scheduled
 authority only after provider binding and confirmation. `DeclarationLifetime`
 remains a snapshot observation. See the [typed setup contract](design/0.20-typed-registration.md).
 
+Prepared 0.21 also makes first lifecycle reconciliation atomic at the owner
+slot. The shared reconciliation owner creates authority locally, applies the
+requested initial state, and publishes it only on success. Failed creation uses
+the direct-registration cleanup owner to remove its exact declaration and
+handles before releasing captures. Existing registrations retain their callback
+and failure observations on later control errors; an unused replacement factory
+is dropped outside registry borrows before applying that control.
+
 The crate root is the only public facade. It re-exports runtime operations and
 provider-neutral values directly; every implementation and value-grouping
 module is private. In particular, neither `callback`, `platform`, `registry`, `schedule`,

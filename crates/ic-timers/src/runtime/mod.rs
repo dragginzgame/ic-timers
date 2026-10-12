@@ -689,12 +689,16 @@ fn register_initial(
         // Unlike later control, failed creation must retire retained
         // declarations too. Provider cleanup can already have removed a
         // transient entry; treat only that exact claim's expiry as done.
-        match unregister_claim(&claim) {
-            Ok(()) | Err(TimerError::RegistrationExpired) => return Err(error),
-            Err(cleanup_error) => return Err(cleanup_error),
-        }
+        return Err(cleanup_creation_error(&claim, error));
     }
     Ok(claim)
+}
+
+fn cleanup_creation_error(claim: &RegistrationClaim, error: TimerError) -> TimerError {
+    match unregister_claim(claim) {
+        Ok(()) | Err(TimerError::RegistrationExpired) => error,
+        Err(cleanup_error) => cleanup_error,
+    }
 }
 
 /// Reconstruct or reconcile one `Once` declaration synchronously.
@@ -704,6 +708,9 @@ fn register_initial(
 /// inventory, including on a fresh heap. Lifecycle reconciliation always owns
 /// a [`TimerStart::Retained`] declaration; transient
 /// `RemoveWhenStopped` callbacks use [`register_once`] directly.
+/// An empty owner slot is filled only after initial reconciliation succeeds.
+/// A returned error cleans up the new declaration and captures, leaving that
+/// slot empty. Later errors preserve an existing registration's authority.
 ///
 /// Lifecycle reconstruction retains the same policy-specific result boundary:
 ///
@@ -726,21 +733,28 @@ where
     F: FnMut(OnceContext) -> Fut + 'static,
     Fut: Future<Output = OnceRunResult> + 'static,
 {
-    let registration = reconcile_registration(registration, identity, TimerPolicy::Once, || {
-        register_once(
-            identity.clone(),
-            TimerStart::Retained { initial: None },
-            callback,
-        )
-    })?;
-    registration.reconcile_schedule(desired)
+    reconcile_registration(
+        registration,
+        identity,
+        TimerPolicy::Once,
+        || {
+            register_once(
+                identity.clone(),
+                TimerStart::Retained { initial: None },
+                callback,
+            )
+        },
+        |registration| registration.reconcile_schedule(desired),
+    )
 }
 
 /// Reconstruct or reconcile one after-completion declaration synchronously.
 ///
 /// The consumer owns `registration` in volatile state. A fresh Wasm heap has
-/// `None`, so this function installs callback authority before reconciling it
-/// active or inactive. A repeated call reuses the exact claim and does not
+/// `None`, so this function creates callback authority and publishes it only
+/// after initial active or inactive reconciliation succeeds. A returned error
+/// cleans up a fresh declaration, leaving the slot empty. Later errors retain
+/// existing authority. A repeated call reuses the exact claim and does not
 /// replace its callback. The installed declaration is always retained;
 /// transient `RemoveWhenStopped` recurrence uses
 /// [`register_after_completion`] directly.
@@ -769,7 +783,7 @@ where
     F: FnMut(AfterCompletionContext) -> Fut + 'static,
     Fut: Future<Output = AfterCompletionRunResult> + 'static,
 {
-    let registration = reconcile_registration(
+    reconcile_registration(
         registration,
         identity,
         TimerPolicy::AfterCompletion { cadence },
@@ -781,11 +795,11 @@ where
                 callback,
             )
         },
-    )?;
-    match desired {
-        TimerReconcileState::Inactive => registration.cancel(),
-        TimerReconcileState::Scheduled => registration.ensure_scheduled(),
-    }
+        |registration| match desired {
+            TimerReconcileState::Inactive => registration.cancel(),
+            TimerReconcileState::Scheduled => registration.ensure_scheduled(),
+        },
+    )
 }
 
 /// Reconstruct or reconcile one watchdog declaration synchronously.
@@ -797,6 +811,9 @@ where
 /// This helper owns no lifecycle export and persists no policy, generation,
 /// provider handle, or callback.
 /// Transient `RemoveWhenStopped` watchdogs use [`register_watchdog`] directly.
+/// An empty owner slot is filled only after its initial state succeeds. A
+/// returned error cleans up the new declaration and captures, leaving the slot
+/// empty. Later errors retain existing authority and its failure observations.
 pub fn reconcile_watchdog<F>(
     registration: &mut Option<WatchdogRegistration>,
     identity: &TimerIdentity,
@@ -807,7 +824,7 @@ pub fn reconcile_watchdog<F>(
 where
     F: FnMut(WatchdogContext) -> WatchdogRunResult + 'static,
 {
-    let registration = reconcile_registration(
+    reconcile_registration(
         registration,
         identity,
         TimerPolicy::Watchdog { cadence },
@@ -819,28 +836,36 @@ where
                 callback,
             )
         },
-    )?;
-    match desired {
-        WatchdogReconcileState::Inactive => registration.cancel(),
-        WatchdogReconcileState::Scheduled => registration.ensure_scheduled(),
-        WatchdogReconcileState::ScheduledImmediately => registration.ensure_scheduled_immediately(),
-        WatchdogReconcileState::ScheduledAt(deadline_ns) => {
-            registration.reconcile_schedule(Some(TimerSchedule::At(deadline_ns)))
-        }
-    }
+        |registration| match desired {
+            WatchdogReconcileState::Inactive => registration.cancel(),
+            WatchdogReconcileState::Scheduled => registration.ensure_scheduled(),
+            WatchdogReconcileState::ScheduledImmediately => {
+                registration.ensure_scheduled_immediately()
+            }
+            WatchdogReconcileState::ScheduledAt(deadline_ns) => {
+                registration.reconcile_schedule(Some(TimerSchedule::At(deadline_ns)))
+            }
+        },
+    )
 }
 
-fn reconcile_registration<'a, Registration>(
-    registration: &'a mut Option<Registration>,
+fn reconcile_registration<Registration>(
+    registration: &mut Option<Registration>,
     identity: &TimerIdentity,
     policy: TimerPolicy,
     register: impl FnOnce() -> Result<Registration, TimerError>,
-) -> Result<&'a Registration, TimerError>
+    reconcile: impl FnOnce(&Registration) -> Result<(), TimerError>,
+) -> Result<(), TimerError>
 where
     Registration: RegistrationClaimOwner,
 {
     if registration.is_none() {
-        *registration = Some(register()?);
+        let created = register()?;
+        if let Err(error) = reconcile(&created) {
+            return Err(cleanup_creation_error(created.registration_claim(), error));
+        }
+        *registration = Some(created);
+        return Ok(());
     }
     let registration = registration
         .as_ref()
@@ -856,7 +881,10 @@ where
             .then_some(())
             .ok_or(TimerError::ReconciliationConflict)
     })?;
-    Ok(registration)
+    // Repeated calls retain the original callback. Release the unused factory
+    // outside the registry borrow, before applying control as in prior calls.
+    drop(register);
+    reconcile(registration)
 }
 
 /// Return one coherent inert snapshot by identity.

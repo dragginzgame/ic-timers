@@ -3929,3 +3929,57 @@ not mutated by this preparation.
 The [focused qualification follow-up](https://github.com/dragginzgame/canic/issues/33#issuecomment-6127448281)
 records the new native/doctest/Clippy/probe compile results separately from
 publication and IC acceptance.
+
+## Prepared 0.21 first lifecycle reconciliation
+
+The maintainer approves a semantic hard cut for fresh `reconcile_*` calls:
+publish callback authority into the owner slot only after the requested initial
+state succeeds, and retire the exact failed creation before returning an error.
+Later failure on an existing slot preserves its callback and failure observations.
+The [design owner](design/0.20-typed-registration.md#prepared-021-lifecycle-creation)
+records cleanup ordering, unused-factory destruction, counter identity, caller
+implications and prepared native/IC subjects. Public signatures stay unchanged.
+The one undated 0.21.0 draft also includes the separately owned Metrics 0.8 cut.
+
+The source base is released 0.20.0
+`01031c912058089756aed87fafa4918476c12bd4`, with incoming maintainer root
+requirement/lock changes selecting Metrics 0.8.0. The selected graph retains
+Testkit 0.34.7, Host 0.14.10 and PocketIC 16.1.0. No Cargo or lockfile mutation,
+staging, commit, tag, push or publication is performed by this preparation.
+
+Prepared library compile-only checks pass with `CARGO_NET_OFFLINE=true` and
+`RUSTUP_AUTO_INSTALL=0`:
+
+```bash
+cargo check -p ic-timers --all-targets --all-features --locked --offline
+cargo +1.88.0 check -p ic-timers --lib --all-features --target wasm32-unknown-unknown --locked --offline
+```
+
+The first compiles library test targets on Rust 1.99.0 without executing them;
+the second checks the production library Wasm path at Rust 1.88.0. Source,
+input hashes, index entries, commands and original logs remain at
+`/tmp/ic-timers-021-reconciliation.sFVjKHjS/`.
+
+The maintainer explicitly approves focused native tests, doctests, library/probe
+Clippy and probe compile checks with locked/offline prepared inputs, excluding
+setup, PocketIC execution and release commands. All selected checks pass:
+
+| Subject | Compiler | Result |
+| --- | --- | --- |
+| Library all-target/all-feature native tests | 1.99.0 | 154 passed, including the five new lifecycle subjects and existing report/metrics boundaries |
+| Library all-feature doctests | 1.99.0 and 1.88.0 | Nine passed on each compiler |
+| Library all-target/all-feature Clippy, warnings denied | 1.99.0 | Passed |
+| Runtime/PocketIC all-target Clippy, warnings denied | 1.88.0 | Passed; no PocketIC test execution |
+| Size-probe all-target Clippy, warnings denied | 1.88.0 | All four separate feature selections passed |
+| Runtime and four size-probe Wasm compile-only checks | 1.88.0 | Passed with `timer-probe` profile |
+
+Every focused command uses `CARGO_NET_OFFLINE=true`, `RUSTUP_AUTO_INSTALL=0`,
+`--locked` and `--offline`. The receipt retains complete commands, original logs,
+input hashes and the identical before/after checked source patch. Cargo inputs
+and real index entries remain unchanged. No setup, PocketIC or release command
+runs. The new IC initial-reconciliation rejection subject and all existing
+recovery/policy cohorts still need the complete user-operated release gate.
+Compiler checks and native fault injection do not prove IC rollback. No Wasm,
+heap or instruction delta is measured.
+Canic has the [semantic cut notice](https://github.com/dragginzgame/canic/issues/33#issuecomment-6128606209);
+its source/pins remain separately owned.

@@ -57,12 +57,13 @@ but it does not promise that a task will happen exactly once.
 
 | Field | Value |
 | --- | --- |
-| Released API line | `0.19` |
-| Prepared source API line | `0.20` |
+| Released API line | `0.20` |
+| Prepared source API line | `0.21` |
 
-The 0.19 line uses Metrics 0.7 instruction summaries with `u128` totals and
+The released 0.20 line uses Metrics 0.7 instruction summaries with `u128` totals and
 integer means; see the [release notes](CHANGELOG.md#0190) when updating report
-and codec fields.
+and codec fields. Prepared 0.21 source uses Metrics 0.8; its public summary type
+requires coordinated consumer adoption, with unchanged timer execution semantics.
 
 IC Timers is written in Rust 2024 and supports Rust
 1.88.0 and newer. It uses `ic-cdk-timers` 1.0.0 as its private, underlying
@@ -183,11 +184,11 @@ exact reconciliation can discard an invalid callback delay before that check.
 
 ## Minimal `Once` example
 
-The examples below target the prepared 0.20 constructor API. Released 0.19
-examples remain at [v0.19.3](https://github.com/dragginzgame/ic-timers/blob/v0.19.3/README.md).
+The examples below use the released 0.20 constructor API, which remains the
+same in prepared 0.21 source.
 
-Once 0.20.0 is published, select one exact package version when this crate
-participates in a shared framework/application registry:
+Select one exact published package version when this crate participates in a
+shared framework/application registry:
 
 ```toml
 [dependencies]
@@ -240,6 +241,12 @@ For fixed declarations, use `reconcile_once`,
 inactive ones. Transient `RemoveWhenStopped` declarations use the direct
 registration functions.
 
+Prepared 0.21 lifecycle helpers fill an empty registration slot only after the
+requested initial state succeeds. If that first call returns an error, the
+fresh declaration and handles are cleaned up and its captures are released;
+the slot remains empty, allowing a retry to install its new callback. A failed
+later reconciliation retains the existing registration and its callback.
+
 All three registration functions take one `TimerStart` before the callback.
 `Retained { initial: None }` creates an inactive retained declaration;
 `Retained { initial: Some(schedule) }` starts one scheduled.
@@ -255,8 +262,8 @@ The first deadline is independent of recurrence cadence: set `initial` to
 chosen start configuration to begin at that cadence.
 
 Typed starts preserve the atomic construction contract introduced in 0.18.
-Existing later control and
-lifecycle reconciliation retain their own failure semantics; see the
+Prepared 0.21 extends creation cleanup to first lifecycle reconciliation;
+existing later control retains its failure semantics. See the
 [typed setup decision and qualification scope](docs/design/0.20-typed-registration.md).
 
 ## Runtime ownership
@@ -305,7 +312,7 @@ unregister/re-register changes it. Increasing numbers alone cannot detect a rese
 Callback `generation()` does not identify a counter lifetime.
 
 Event counters and memory sample counts conservatively treat `u64::MAX` as
-saturated. Instruction measurements use Metrics 0.7 ordered `MeasurementSummary`
+saturated. Prepared source uses Metrics 0.8 ordered `MeasurementSummary`
 values with `u128` totals and integer means, and `u64` samples and counts. Totals
 above `u64::MAX` remain exact. An exactly reached cap remains exact, while actual
 count/total overflow
@@ -316,10 +323,18 @@ remain available after overflow. Preserve the tracked summary when computing a
 mean or an admitted interval; clipped count/total fields alone lose overflow
 provenance. Numeric interval admission does not establish registration continuity.
 
-Use `ic_timers::MeasurementSummary` or the same Metrics 0.7 package when exchanging
-these values with other libraries; a direct Metrics 0.6 dependency has a distinct
-Rust type. Preserve wide totals in reports/codecs, or use checked conversions
-when a narrower consumer field is required.
+Prepared 0.21 source also exposes the summary's checked `scaled_mean(scale)` for
+fractional reports. It computes `floor(total * scale / samples)` from the tracked
+total, preserving fractions lost by scaling an already rounded integer mean.
+It distinguishes empty from measured zero and refuses actual overflow even when
+scale is zero; a failed projection retains its typed ratio cause.
+
+Use `ic_timers::MeasurementSummary` or the same Metrics package when exchanging
+these values with other libraries: released Timers 0.20 uses Metrics 0.7,
+prepared Timers 0.21 uses Metrics 0.8. Those are distinct Rust types. Preserve
+wide totals in reports/codecs, or use checked conversions when a narrower
+consumer field is required. The [adoption owner](docs/design/callback-delivery-ownership.md#prepared-ic-metrics-08-adoption)
+records the selected graph and qualification limits.
 
 Each instruction measurement covers the accepted `ic-timers` execution
 interval: it begins immediately before callback acceptance and ends after

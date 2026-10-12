@@ -2,6 +2,28 @@
 
 All notable changes to this project are recorded here.
 
+## [0.21.0]
+
+### Breaking
+
+- Adopt Metrics 0.8 for the public instruction-summary type. Consumers that
+  exchange summaries or match their mean errors must select Metrics 0.8 or use
+  the Timers re-export. Tracked recording, wide totals and timer execution
+  contracts remain unchanged; fractional reports can use the summary's checked
+  `scaled_mean(scale)` directly
+  ([#50](https://github.com/dragginzgame/ic-timers/issues/50)).
+- First lifecycle reconciliation publishes a new registration only after its
+  requested state succeeds. A failed first call leaves the owner slot empty
+  and releases the new callback and handles, so a retry installs its supplied
+  callback. Later failures retain existing authority; signatures stay unchanged.
+
+### Testing
+
+- Cover first-reconciliation rejection, provider binding/confirmation failure,
+  capture cleanup and retry across all policies, preservation of existing
+  authority, and unused callback-factory destruction ordering. Add the owning
+  canister-probe/PocketIC rejection subject.
+
 ## [0.20.0] - 2026-10-12
 
 ### Breaking

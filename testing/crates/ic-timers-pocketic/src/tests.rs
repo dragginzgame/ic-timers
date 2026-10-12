@@ -1030,3 +1030,32 @@ fn rejected_initial_schedules_preserve_ic_inventory_and_release_captures() {
     assert_eq!(observation.completed, 0);
     assert_eq!(observation.captures_dropped, 6);
 }
+
+#[test]
+fn rejected_initial_reconciliation_preserves_ic_inventory_and_releases_captures() {
+    let (_server, pic) = fresh_pocket_ic();
+    pic.set_time((std::time::UNIX_EPOCH + Duration::from_secs(1)).into());
+    let canister_id = pic.create_canister();
+    pic.add_cycles(canister_id, INIT_CYCLES);
+    pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
+    for policy in 0_u8..3 {
+        let bytes = pic
+            .update_call(
+                canister_id,
+                Principal::anonymous(),
+                "reject_initial_reconciliation",
+                Encode!(&policy).unwrap(),
+            )
+            .unwrap();
+        assert_eq!(
+            Decode!(&bytes, bool, bool, u64, bool).unwrap(),
+            (true, true, 1, true)
+        );
+    }
+    pic.advance_time(Duration::from_secs(2));
+    drive_rounds(&pic, 8);
+    let observation = ordinary_observation(&pic, canister_id);
+    assert_eq!(observation.inventory_len, 0);
+    assert_eq!(observation.completed, 0);
+    assert_eq!(observation.captures_dropped, 3);
+}

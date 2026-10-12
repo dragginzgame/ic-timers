@@ -511,3 +511,47 @@ Wide arithmetic and larger inline totals may add instructions and heap bytes;
 they add no per-observation allocation or platform read. No Wasm or instruction
 saving is claimed. Use the existing matched policy cohorts to measure the delta
 against released 0.18.0 rather than reusing an older graph's size/cost figures.
+
+## Prepared IC Metrics 0.8 adoption
+
+Released Timers 0.20.0 at `01031c912058089756aed87fafa4918476c12bd4`
+selects Metrics 0.7.3. Incoming maintainer changes to the one root catalog and
+lock now select published registry Metrics **0.8.0** for all maintained members
+([Timers #50](https://github.com/dragginzgame/ic-timers/issues/50)). Its cached
+archive SHA-256 matches the selected checksum
+`8ea44e32777b165cd60bdc0316d11891088ec87592648ba2bb7ca6949dfbfc37`;
+the resolved package identifies released source
+`71a29d8a4d7ecf6774d9715895ce9abd13b9e5d7`. Locked/offline metadata resolves one
+Metrics package and one Timers package. All direct member dependencies still
+inherit the root catalog; no sibling path fallback or second workspace is added.
+
+Timers already records through tracked `MeasurementSummary` values. No local
+raw recording helper or raw-only mean-error match needs replacement. Upstream
+recording state, `record`, integer means and ordered observations retain their
+existing implementation. The new `scaled_mean(scale)` is available directly
+from the public summary; no Timers reporting wrapper or new recording path is
+needed. Totals/means stay `u128`, samples/counts/latest/maximum stay `u64`, and
+empty, measured zero, exact caps and sticky actual overflow remain distinct.
+
+The public summary's Rust identity changes from Metrics 0.7 to 0.8. Its mean
+error removes the raw-only variant and gains a typed projection cause. Consumers
+exchanging direct Metrics types or exhaustively matching errors must update
+together; select the next minor **0.21.0**, without aliases or dual readers.
+The timer runtime, callback roles, attribution, epoch/reset ownership and probe
+Candid report fields are unchanged. Timers metrics remain volatile; no stable
+format or persistence dependency is introduced.
+
+Library/all-target/all-feature compile-only checks pass with Rust 1.99.0;
+the library Wasm path passes at Rust 1.88.0, all with locked/offline prepared
+inputs. The selected graph also contains Testkit 0.34.7, Host 0.14.10 and
+PocketIC 16.1.0. Inputs, metadata, commands and logs are retained at
+`target/development/metrics080.ehT3o5JK/`. Cargo files/index entries are preserved.
+These initial checks execute no tests. Subsequent explicitly approved focused
+0.21 checks on the atomic lifecycle source pass all 154 native subjects, nine
+doctests on Rust 1.99.0 and 1.88.0, library/probe Clippy and runtime/four-cohort
+Wasm compilation; the [release owner](../releasing.md#prepared-021-first-lifecycle-reconciliation)
+retains their exact source/graph/commands at
+`/tmp/ic-timers-021-reconciliation.sFVjKHjS/`. IC runtime/policy cohorts and the
+complete release gate remain outstanding; #50 stays open pending that acceptance.
+Upstream's arithmetic experiment is not Timers cost or IC recovery evidence.
+No Wasm, heap or instruction savings are claimed.

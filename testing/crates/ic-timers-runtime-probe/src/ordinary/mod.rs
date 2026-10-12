@@ -4,9 +4,10 @@ use candid::CandidType;
 use ic_timers::{
     AfterCompletionContext, AfterCompletionDecision, AfterCompletionRegistration,
     AfterCompletionRunResult, InactiveReason, OnceContext, OnceDecision, OnceRegistration,
-    OnceRunResult, TimerCadence, TimerCompletion, TimerError, TimerIdentity,
+    OnceRunResult, TimerCadence, TimerCompletion, TimerError, TimerIdentity, TimerReconcileState,
     TimerRegistrationStatus, TimerRuntimeStateSnapshot, TimerSchedule, TimerStart,
-    WatchdogDecision, WatchdogRunResult, register_after_completion, register_once,
+    WatchdogDecision, WatchdogReconcileState, WatchdogRunResult, reconcile_after_completion,
+    reconcile_once, reconcile_watchdog, register_after_completion, register_once,
     register_watchdog, timer_inventory, timer_snapshot,
 };
 use std::{
@@ -430,6 +431,84 @@ fn reject_initial_schedule(policy: u8, transient: bool) -> (bool, u64, bool) {
     );
     assert!(rejected, "typed initial rejection");
     (
+        timer_inventory().expect("rejected inventory") == before,
+        CAPTURES_DROPPED.with(Cell::get) - dropped_before,
+        CAPTURE_REGISTRY_ACCESSIBLE.with(Cell::get),
+    )
+}
+
+/// A rejected first lifecycle reconciliation must leave its owner slot empty.
+#[ic_cdk::update]
+fn reject_initial_reconciliation(policy: u8) -> (bool, bool, u64, bool) {
+    let before = timer_inventory().expect("initial inventory");
+    let dropped_before = CAPTURES_DROPPED.with(Cell::get);
+    let captured = CapturedState;
+    let cadence = TimerCadence::from_nanos(u64::MAX).expect("positive cadence");
+    let (result, empty) = match policy {
+        0 => {
+            let mut slot = None;
+            let result = reconcile_once(
+                &mut slot,
+                &identity(),
+                Some(TimerSchedule::After(std::time::Duration::MAX)),
+                move |_| {
+                    std::hint::black_box(&captured);
+                    async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
+                },
+            );
+            (result, slot.is_none())
+        }
+        1 => {
+            let mut slot = None;
+            let result = reconcile_after_completion(
+                &mut slot,
+                &identity(),
+                cadence,
+                TimerReconcileState::Scheduled,
+                move |_| {
+                    std::hint::black_box(&captured);
+                    async {
+                        AfterCompletionRunResult::new(
+                            TimerCompletion::no_work(),
+                            AfterCompletionDecision::Stop,
+                        )
+                    }
+                },
+            );
+            (result, slot.is_none())
+        }
+        2 => {
+            let mut slot = None;
+            let result = reconcile_watchdog(
+                &mut slot,
+                &identity(),
+                cadence,
+                WatchdogReconcileState::Scheduled,
+                move |_| {
+                    std::hint::black_box(&captured);
+                    WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
+                },
+            );
+            (result, slot.is_none())
+        }
+        _ => ic_cdk::trap("unknown reconciliation policy"),
+    };
+    let rejected = matches!(
+        (policy, result),
+        (
+            0,
+            Err(TimerError::Schedule(
+                ic_timers::ScheduleError::DelayOutOfRange
+            ))
+        ) | (
+            1 | 2,
+            Err(TimerError::Schedule(
+                ic_timers::ScheduleError::DeadlineOverflow
+            ))
+        )
+    );
+    (
+        empty && rejected,
         timer_inventory().expect("rejected inventory") == before,
         CAPTURES_DROPPED.with(Cell::get) - dropped_before,
         CAPTURE_REGISTRY_ACCESSIBLE.with(Cell::get),
