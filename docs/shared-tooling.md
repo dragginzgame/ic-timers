@@ -1,5 +1,32 @@
 # Shared Tooling adoption
 
+## Prepared corrected Shared Tooling 0.9.0 provenance
+
+After Timers 0.19.2 is committed, tagged and pushed at
+`8b3e09fe82ee6a7e9cebda904536b1717bfc1fd3`, upstream corrects only `VERSION`
+in `aec7a149f581a42b9531fc747b46024fc0314fcf`
+([Shared #137](https://github.com/dragginzgame/shared-tooling/issues/137)).
+The canonical refresh now records **0.9.0** in all three manifests. Every
+selected payload and entrypoint is unchanged: complete previews show only
+KEEP rows for **67/35/11** files, with no additions or retirements.
+Earlier mismatched annotations retain their historical evidence below.
+
+Clean-source previews precede apply; the helper bundle uses its existing
+isolated Git consumer. Saved manifests, Cargo files, host/IC pins, index entries
+and preview/apply logs are retained at
+`/tmp/ic-timers-shared090-corrected.L7AXQHLo/`. Uncommitted sibling installer
+work is excluded. Canonical integrity, owner-document links and diff checks
+pass; the root manifest, pin selections and real index entries match saved inputs.
+Cargo.lock changes concurrently from Testkit 0.34.4 to 0.34.5; this refresh does
+not write or restore it. Original/observed lock selections are retained separately.
+No tests, builds, lint, setup, release effects or sibling mutation run for this
+metadata-only refresh. No tool reinstall or public API change is required.
+
+The undated **0.19.3** note records repository-only provenance work; package
+versions remain 0.19.2. Normally bundle this with the next code-bearing release
+rather than publishing another package identity solely for annotations.
+The approved frozen v0.19.1 qualification remains separate.
+
 ## Prepared requested Shared Tooling 0.9.0 manifest reader
 
 The requested update selects committed upstream-main revision

@@ -3734,3 +3734,41 @@ is claimed. #44 remains open until all three late original producers finish
 the complete gate and selected controlled failure/upload, and all three hosted
 downloaded verifiers pass. No new source selection, repeated dispatch, local
 product test, release effect or sibling edit occurs.
+
+## 0.19.2 delivery and corrected Shared provenance
+
+Timers 0.19.2 is committed, tagged and pushed at
+`8b3e09fe82ee6a7e9cebda904536b1717bfc1fd3`. Remote annotated tag object
+`08897405c6c929b68cecd5223c8650b5cfb90fef` dereferences to that source.
+The committed graph selects Metrics 0.7.2, Testkit 0.34.4, all four Host 0.14.9
+and PocketIC 16.1.0. Hosted runs 38247833714/38247833419 are incomplete at
+inspection; neither publication nor complete hosted acceptance is inferred.
+
+Shared's corrected 0.9.0 source `aec7a149f581a42b9531fc747b46024fc0314fcf`
+changes only VERSION from the adopted preceding source. All three complete
+previews retain every payload as KEEP. Canonical apply updates annotations and
+source revisions while preserving identical 67/35/11 payloads. Saved inputs,
+manifests and logs remain at `/tmp/ic-timers-shared090-corrected.L7AXQHLo/`;
+the [adoption owner](shared-tooling.md) records the correction separately from
+the original mismatched-version observation. Integrity/link/diff checks pass,
+the root manifest/pin/index inputs are identical and no local test/build/lint/setup/release
+or sibling mutation runs. Undated 0.19.3 notes are repository-only; package
+versions stay 0.19.2 and no metadata-only publication is recommended.
+Cargo.lock changes concurrently to Testkit 0.34.5; original and observed inputs
+are retained separately, without write, restoration or qualification by this pass.
+
+The approved late run still selects frozen v0.19.1. Linux producer 114798745212
+completes CI/probe lint/PocketIC recovery and policy cohorts, then intentionally
+exits 2 at the late qualification step and archives/uploads successfully.
+Artifact 11746077825 reports uploaded ZIP SHA-256
+`bcc9ed0393d7d64aa1eb2bba250bbe1fa95a35732f17ba420de19a1efc913f0c`.
+The downloaded ZIP matches that digest. Only its named tar member is copied;
+the exact frozen verifier admits it locally with original source/run/attempt
+and pin inputs, without extracting arbitrary archive paths. This is archive
+inspection, not successful hosted late verification or fresh product execution.
+Original raw producer log SHA-256 is
+`f976ae7aa50af0038489080307657a6dd37604287cdca35c0d24f02529957e38`.
+The original log and run/job/artifact observations are retained at
+`/tmp/ic-timers-0191-qualification.IQiwIXf8/`. Both macOS producers remain
+queued and hosted late download verification is incomplete at inspection;
+#44 remains open. No existing approval is repeated or changed to another source.

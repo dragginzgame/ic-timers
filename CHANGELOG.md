@@ -2,6 +2,15 @@
 
 All notable changes to this project are recorded here.
 
+## [0.19.3]
+
+### Development
+
+- Refresh all three snapshots from Shared Tooling's corrected 0.9.0 revision,
+  aligning canonical version annotations with the adopted source. Selected
+  payloads and timer behavior are unchanged
+  ([Shared #137](https://github.com/dragginzgame/shared-tooling/issues/137)).
+
 ## [0.19.2] - 2026-10-12
 
 ### Development

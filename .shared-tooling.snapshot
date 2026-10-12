@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.8.4
+# version	0.9.0
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	019ce8236cc7cee14ea5540d468b939a2053ef30
+revision	aec7a149f581a42b9531fc747b46024fc0314fcf
 # entrypoint	DRAGGINZGAME.md
 # entrypoint	rules/changelogs.md
 # entrypoint	rules/cargo-dependencies.md

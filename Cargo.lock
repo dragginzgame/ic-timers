@@ -876,9 +876,9 @@ checksum = "0c050c95dd910cc884a67ffae47394ab2f8ce8cf5968bcb1e6485eba220f6c7c"
 
 [[package]]
 name = "ic-testkit"
-version = "0.34.4"
+version = "0.34.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e412ab45e61bb3e7017dbb0db0b056294dc2a28ee47d5e428815b4f281357eaf"
+checksum = "452971159fb00fb68118d94d52e690d5b22120c785f4ae4a1238455aeae6575b"
 dependencies = [
  "candid",
  "fs2",
