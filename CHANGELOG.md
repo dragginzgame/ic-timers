@@ -2,6 +2,18 @@
 
 All notable changes to this project are recorded here.
 
+## [0.21.1]
+
+### Development
+
+- Refresh all three Shared Tooling snapshots to 0.9.7 for bounded transient
+  tool-download retries, complete Git identity checks and typed Cargo offline
+  configuration admission. Explicit Cargo-tool setup refreshes the changed
+  build-policy identity while retaining earlier builds.
+- Select Testkit 0.35 and its Host 0.15 graph for unpublished probes, removing
+  unused build-tool dependencies without adding a direct Host or IC Build
+  dependency. The published timer API and runtime are unchanged.
+
 ## [0.21.0] - 2026-10-12
 
 ### Breaking

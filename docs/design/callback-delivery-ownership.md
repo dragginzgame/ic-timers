@@ -514,6 +514,12 @@ against released 0.18.0 rather than reusing an older graph's size/cost figures.
 
 ## Prepared IC Metrics 0.8 adoption
 
+Delivered in Timers 0.21.0 at `a6b518722438d2f7e2dccd7ccfef07debc35b5b3`.
+[#50 is closed](https://github.com/dragginzgame/ic-timers/issues/50#issuecomment-6129282698)
+from its completed standard release acceptance; the [delivery owner](../releasing.md#021-delivery-and-issue-50-acceptance)
+separates that graph from later contributor dependencies and hosted CI gaps.
+Preparation observations below retain their original scope.
+
 Released Timers 0.20.0 at `01031c912058089756aed87fafa4918476c12bd4`
 selects Metrics 0.7.3. Incoming maintainer changes to the one root catalog and
 lock now select published registry Metrics **0.8.0** for all maintained members

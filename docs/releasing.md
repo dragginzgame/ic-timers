@@ -4004,3 +4004,57 @@ logs remain at `/tmp/ic-timers-021-clock.l0OCwT2E/`. Cargo inputs, the prebuilt
 probe and index entries are preserved. Approval for only the corrected PocketIC
 subject is requested separately; no replay result or complete release acceptance
 is claimed yet.
+
+## 0.21 delivery and issue 50 acceptance
+
+The maintainer reports **0.21.0 live**, committed/tagged/pushed at
+`a6b518722438d2f7e2dccd7ccfef07debc35b5b3`. The local `v0.21.0` resolves to
+that commit. Its completed standard direct-release record binds the original
+validation source to `854e85f0a5d3129be3aa545352cfae4b2073ce12` and the delivered
+tree to `03d8ef1a20ee78aa71d815d3f97bfc681b8d2544`. Source-to-release differences
+are only normal Cargo/lock version advancement and changelog finalization.
+The retained runner permits preparation only after the complete `release-verify`
+gate succeeds with unchanged source; this supplies maintainer-operated acceptance
+for native CI/MSRV/probe lint, watchdog/recovery and policy-cohort PocketIC gates.
+No successful raw gate log or agent PocketIC replay is fabricated. The old
+clock-reset attempt remains failed in its original log; the repaired fixture is
+in the validated source. The pending request to replay it is no longer needed.
+
+Delivered graph: Metrics 0.8.0, Testkit 0.34.7, all four Host 0.14.10 and
+PocketIC 16.1.0, with Shared 0.9.2 at 67/35/11 files. The earlier focused
+qualification remains separately bound to its prepared source. This closes
+[#50](https://github.com/dragginzgame/ic-timers/issues/50#issuecomment-6129282698)
+at the named delivered graph. The tag [run 38283128868](https://github.com/dragginzgame/ic-timers/actions/runs/38283128868)
+passes; full main [run 38283128647](https://github.com/dragginzgame/ic-timers/actions/runs/38283128647)
+is queued at inspection. No new complete hosted/macOS acceptance follows from
+the local receipt or tag result. The inspected receipt, exact delivered Cargo
+files and metadata-only release diff remain at
+`/tmp/ic-timers-shared097.Oh8uAbQu/`.
+
+## Prepared 0.21.1 contributor graph
+
+The incoming maintainer catalog/lock selects published Testkit 0.35.0, sourced
+from `ad5bdfa5221ec25743fbc56e028fb958f2a6a558`, with Host artifacts/fs/process
+0.15.1 and unchanged PocketIC 16.1.0. Probe callers consume Testkit's maintained
+PocketIC surface; none uses its removed generic artifact or Host-tools re-export.
+No direct IC Build/Host dependency or additional catalog is introduced.
+Locked/offline metadata resolves all four maintained members with inherited
+direct dependencies, one Timers identity and one Metrics 0.8.0 package.
+The lock graph shrinks from 299 to 288 packages by retiring unused build-tool
+dependencies; this is a graph count, not a measured build-time or Wasm saving.
+
+The paired [Shared 0.9.7 refresh](shared-tooling.md#prepared-shared-tooling-097)
+retains the current roots and 67/35/11 payloads. Integrity and syntax pass, and
+incoming Cargo files, pins and real index entries match saved inputs. Rust
+product source and probe imports are unchanged. No new native/probe execution,
+lint, PocketIC or setup result is claimed for this later graph. Earlier 0.21
+acceptance does not qualify these incoming contributor dependencies.
+
+Run **`make install-tools`** explicitly before validation to refresh the common
+Cargo build-policy identity and the selected Testkit CLI/server through their
+existing owners. Setup is user-owned and is not performed by this preparation;
+offline checks neither repair old selections nor fall back to them. Undated
+0.21.1 notes record repository-only work, normally bundled into the next
+code-bearing release. An explicitly chosen maintainer tooling patch still
+retains the full release gate. Cargo versions remain 0.21.0; no staging, commit,
+tag, push or publication is performed.

@@ -1,5 +1,42 @@
 # Shared Tooling adoption
 
+## Prepared Shared Tooling 0.9.7
+
+All three exports now select reviewed committed source
+`4d10a06d50e44d302f00d5b7b706cac5f9b0127c` (0.9.7), across **67/35/11**
+payloads. Complete clean-source previews precede apply; existing entrypoints are
+reused with no additions or retirements. The nested helper slice is refreshed
+through its existing isolated Git consumer and copied only from the verified
+canonical export. Sibling dirty work is excluded.
+
+Selected host/IC installers use bounded transient download retries, retaining
+failed candidates and prior selections. Snapshot and release readers accept
+only complete 40- or 64-character Git identities. The included PR helper also
+rejects newline-suffixed saved/API identities and requires the complete repository
+identity; direct release delivery remains the only locally adopted route.
+Cargo-tool admission now requires boolean `net.offline` configuration unless an
+explicit environment override supplies the reviewed policy. This changes the
+build-helper identity: run **`make install-tools`** explicitly to select new
+Cargo-tool builds before offline checks. Existing generations remain retained;
+no automatic fallback, rebuild or deletion is added.
+
+The upstream artifact-discovery helper is not selected or activated by this
+refresh. Timers' existing cross-job matrix verifier downloads a source/attempt
+named artifact, without the same-job upload-ID flow that helper requires.
+Changing that caller needs its own reviewed identity contract; no new selector
+or workflow qualification is manufactured here. Tool pins and product gates
+remain unchanged, including Testkit's exclusive server admission ownership.
+
+Canonical integrity, changed Bash syntax, incoming Cargo/pin byte comparisons
+and index-entry preservation pass. Source, before manifests, complete preview/
+apply logs and metadata remain at `/tmp/ic-timers-shared097.Oh8uAbQu/`.
+The initial scratch preview's local-origin rejection is retained; only that
+temporary clone's remote is corrected to the verified canonical GitHub source
+before the successful previews. Tests, lint, tool setup and product validation
+are not run for this contributor batch. Notes are under undated **0.21.1**;
+package versions remain 0.21.0. This repository-only work normally waits for
+the next code-bearing release unless the maintainer chooses a tooling patch.
+
 ## Prepared Shared Tooling 0.9.2 evidence and path admission
 
 The requested source is committed upstream main

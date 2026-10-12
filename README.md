@@ -57,13 +57,11 @@ but it does not promise that a task will happen exactly once.
 
 | Field | Value |
 | --- | --- |
-| Released API line | `0.20` |
-| Prepared source API line | `0.21` |
+| Released API line | `0.21` |
 
-The released 0.20 line uses Metrics 0.7 instruction summaries with `u128` totals and
-integer means; see the [release notes](CHANGELOG.md#0190) when updating report
-and codec fields. Prepared 0.21 source uses Metrics 0.8; its public summary type
-requires coordinated consumer adoption, with unchanged timer execution semantics.
+The 0.21 line uses Metrics 0.8 instruction summaries with `u128` totals and
+checked integer/fractional means. It also makes first lifecycle reconciliation
+atomic; see the [release notes](CHANGELOG.md#0210) for consumer implications.
 
 IC Timers is written in Rust 2024 and supports Rust
 1.88.0 and newer. It uses `ic-cdk-timers` 1.0.0 as its private, underlying
@@ -184,15 +182,14 @@ exact reconciliation can discard an invalid callback delay before that check.
 
 ## Minimal `Once` example
 
-The examples below use the released 0.20 constructor API, which remains the
-same in prepared 0.21 source.
+The examples below use the released 0.21 API.
 
 Select one exact published package version when this crate participates in a
 shared framework/application registry:
 
 ```toml
 [dependencies]
-ic-timers = "=0.20.0"
+ic-timers = "=0.21.0"
 ```
 
 Every framework and application crate linked into the same canister must use
@@ -241,7 +238,7 @@ For fixed declarations, use `reconcile_once`,
 inactive ones. Transient `RemoveWhenStopped` declarations use the direct
 registration functions.
 
-Prepared 0.21 lifecycle helpers fill an empty registration slot only after the
+Lifecycle helpers fill an empty registration slot only after the
 requested initial state succeeds. If that first call returns an error, the
 fresh declaration and handles are cleaned up and its captures are released;
 the slot remains empty, allowing a retry to install its new callback. A failed
@@ -262,7 +259,7 @@ The first deadline is independent of recurrence cadence: set `initial` to
 chosen start configuration to begin at that cadence.
 
 Typed starts preserve the atomic construction contract introduced in 0.18.
-Prepared 0.21 extends creation cleanup to first lifecycle reconciliation;
+The 0.21 line extends creation cleanup to first lifecycle reconciliation;
 existing later control retains its failure semantics. See the
 [typed setup decision and qualification scope](docs/design/0.20-typed-registration.md).
 
@@ -312,7 +309,7 @@ unregister/re-register changes it. Increasing numbers alone cannot detect a rese
 Callback `generation()` does not identify a counter lifetime.
 
 Event counters and memory sample counts conservatively treat `u64::MAX` as
-saturated. Prepared source uses Metrics 0.8 ordered `MeasurementSummary`
+saturated. Instruction measurements use Metrics 0.8 ordered `MeasurementSummary`
 values with `u128` totals and integer means, and `u64` samples and counts. Totals
 above `u64::MAX` remain exact. An exactly reached cap remains exact, while actual
 count/total overflow
@@ -323,15 +320,15 @@ remain available after overflow. Preserve the tracked summary when computing a
 mean or an admitted interval; clipped count/total fields alone lose overflow
 provenance. Numeric interval admission does not establish registration continuity.
 
-Prepared 0.21 source also exposes the summary's checked `scaled_mean(scale)` for
+The summary exposes checked `scaled_mean(scale)` for
 fractional reports. It computes `floor(total * scale / samples)` from the tracked
 total, preserving fractions lost by scaling an already rounded integer mean.
 It distinguishes empty from measured zero and refuses actual overflow even when
 scale is zero; a failed projection retains its typed ratio cause.
 
 Use `ic_timers::MeasurementSummary` or the same Metrics package when exchanging
-these values with other libraries: released Timers 0.20 uses Metrics 0.7,
-prepared Timers 0.21 uses Metrics 0.8. Those are distinct Rust types. Preserve
+these values with other libraries: Timers 0.21 uses Metrics 0.8.
+Older Metrics lines have distinct Rust types. Preserve
 wide totals in reports/codecs, or use checked conversions when a narrower
 consumer field is required. The [adoption owner](docs/design/callback-delivery-ownership.md#prepared-ic-metrics-08-adoption)
 records the selected graph and qualification limits.
