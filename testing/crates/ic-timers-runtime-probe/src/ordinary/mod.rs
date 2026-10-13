@@ -1,6 +1,5 @@
 //! Real await/ingress interleaving and ordinary abandonment qualification.
 
-use candid::CandidType;
 use ic_timers::{
     AfterCompletionContext, AfterCompletionDecision, AfterCompletionRegistration,
     AfterCompletionRunResult, InactiveReason, OnceContext, OnceDecision, OnceRegistration,
@@ -10,6 +9,7 @@ use ic_timers::{
     reconcile_once, reconcile_watchdog, register_after_completion, register_once,
     register_watchdog, timer_inventory, timer_snapshot,
 };
+use ic_timers_test_protocol::OrdinaryObservation;
 use std::{
     cell::{Cell, RefCell},
     rc::Rc,
@@ -55,26 +55,6 @@ thread_local! {
     static WORK_CONTEXT: RefCell<Option<WorkContext>> = const { RefCell::new(None) };
     static CAPTURES_DROPPED: Cell<u64> = const { Cell::new(0) };
     static CAPTURE_REGISTRY_ACCESSIBLE: Cell<bool> = const { Cell::new(true) };
-}
-
-#[derive(CandidType)]
-struct Observation {
-    declared: bool,
-    running: bool,
-    waiting: bool,
-    gate_replies: u64,
-    gate_error: Option<String>,
-    completed: u64,
-    completed_at_ns: Option<u64>,
-    next_deadline_ns: Option<u64>,
-    work_completed: u64,
-    abandoned: bool,
-    armed: bool,
-    unacknowledged: u64,
-    instruction_samples: u64,
-    captures_dropped: u64,
-    capture_registry_accessible: bool,
-    inventory_len: u64,
 }
 
 fn identity() -> TimerIdentity {
@@ -261,7 +241,7 @@ fn unregister_ordinary() {
 }
 
 #[ic_cdk::query]
-fn ordinary_observation() -> Observation {
+fn ordinary_observation() -> OrdinaryObservation {
     let snapshot = timer_snapshot(&identity()).expect("ordinary snapshot");
     let armed = REGISTRATION.with_borrow(|slot| {
         let result = match slot.as_ref() {
@@ -275,7 +255,7 @@ fn ordinary_observation() -> Observation {
             Err(error) => panic!("ordinary ownership observation failed: {error}"),
         }
     });
-    Observation {
+    OrdinaryObservation {
         declared: snapshot.is_some(),
         running: snapshot
             .as_ref()

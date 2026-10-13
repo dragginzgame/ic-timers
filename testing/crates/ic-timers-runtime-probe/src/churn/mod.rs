@@ -1,10 +1,10 @@
 //! Provider cancellation churn observations, separate from live handle bounds.
 
-use candid::CandidType;
 use ic_timers::{
     TimerCadence, TimerCompletion, TimerIdentity, TimerSchedule, TimerStart, WatchdogDecision,
     WatchdogRegistration, WatchdogRunResult, register_watchdog, timer_inventory,
 };
+use ic_timers_test_protocol::ChurnObservation;
 use std::cell::{Cell, RefCell};
 
 const CADENCE_NS: u64 = 3_600_000_000_000;
@@ -14,14 +14,6 @@ const IMMEDIATE_STEPS: u64 = 64;
 thread_local! {
     static REGISTRATION: RefCell<Option<WatchdogRegistration>> = const { RefCell::new(None) };
     static COMPLETED: Cell<u64> = const { Cell::new(0) };
-}
-
-#[derive(CandidType)]
-struct Observation {
-    wasm_pages: u64,
-    inventory_len: u64,
-    armed: bool,
-    completed: u64,
 }
 
 #[ic_cdk::update]
@@ -83,12 +75,12 @@ fn start_immediate_churn() {
 }
 
 #[ic_cdk::query]
-fn churn_observation() -> Observation {
+fn churn_observation() -> ChurnObservation {
     #[cfg(target_arch = "wasm32")]
     let wasm_pages = core::arch::wasm32::memory_size::<0>() as u64;
     #[cfg(not(target_arch = "wasm32"))]
     let wasm_pages = 0;
-    Observation {
+    ChurnObservation {
         wasm_pages,
         inventory_len: timer_inventory().expect("inventory").len() as u64,
         armed: REGISTRATION.with_borrow(|slot| {

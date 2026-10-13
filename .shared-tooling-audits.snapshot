@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.10.0
+# version	0.10.2
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	ed9c26f015691859f67b50b512a94709dcdc0c6c
+revision	626fc2bd3125195520fb870b92abfec11b01454d
 # entrypoint	audits/README.md
 # entrypoint	audits/code-hygiene.md
 # entrypoint	audits/flow-convergence-and-duplication.md
@@ -62,7 +62,7 @@ file	ebf236f1db579744a13bc995ec1c58c2ee87e34caed23088a6d9b75e638dd27f	x	scripts/
 file	544bf727af1886a6c8853be306da72fd1f2498cca319f2aaf040c16cc4ce43d4	x	scripts/ci/test-evidence-checksums.sh
 file	94a934651d5cb0c6f77fa429df277856dbda4c1a7441b2b8563e678c416258f6	-	audits/ic-canister-applications.md
 file	7fef45969bee38b2e9be9ffc3e100653e48f15e862d5925b739572c5d27def42	x	scripts/dev/install-rust-tools.sh
-file	8278e7decd36eafd33b1aaedaec0a933e283ffdd73fd389fe3213773b0cf1b8c	x	scripts/ci/test-rust-tools.sh
+file	59aae2a771c59666ec8d9ea546247c98c146a0aaff9638f952d7cb2898b7fc08	x	scripts/ci/test-rust-tools.sh
 file	775da89f655a3781059f433f80470ee6db9675e08942a805c111614183322fe1	-	scripts/ci/ic-tool-pins.awk
 file	652899116e6afb8a00b95ba673fb9febcf2930a19334a74d9d8b1fff525ad3ad	x	scripts/ci/test-tool-evidence.sh
 file	50875aa80c211f8f5fded06bf75c7a9fc1fc99aac7590480de9be17d4753bf7f	x	scripts/ci/select-tool-evidence.sh
@@ -74,4 +74,4 @@ file	b936baeb21374c8718c4f35b00cd3ee09350f2315f4367559cf922ef42f68292	-	scripts/
 file	d70f32239de9ea0d2d2a3a0eebd2fa862746807cd797f512f95b2e46fc5faa67	x	.githooks/pre-commit
 file	9e32385247296ce95d2b15b1290c64e6b6dff15716c1c139f21ab5e5128f4be3	x	scripts/ci/check-make-execution.sh
 file	05da2ac2b805c7cf9597d4af75983efc1268d619a0fb1e42c7f6d3fdb481880b	-	ci/ic-tools.tsv
-file	7ab130f8222b69e2ea4c4e083d6286f93a2472ec396d953d0b116330e0e76607	x	scripts/ci/cargo-tool-cache-key.sh
+file	8acf788bb9ce064690a2313b06be7308d6edd838e00f40a510b708a3649c91e4	x	scripts/ci/cargo-tool-cache-key.sh

@@ -1,5 +1,5 @@
-use candid::CandidType;
 use ic_timers::{TimerIdentity, initialize_runtime, timer_inventory, timer_snapshot};
+use ic_timers_test_protocol::{CohortObservation, MemorySamplingMeasurement, OperationMeasurement};
 use std::cell::Cell;
 
 #[cfg(not(feature = "baseline"))]
@@ -61,41 +61,6 @@ thread_local! {
     static REPRESENTATIVE_WATCHDOG_WORK: Cell<bool> = const { Cell::new(false) };
 }
 
-#[derive(CandidType, Debug)]
-struct OperationMeasurement {
-    changed: bool,
-    instructions: u64,
-}
-
-#[derive(CandidType, Debug)]
-struct MemorySamplingMeasurement {
-    empty_bracket_instructions: u64,
-    sampled_bracket_instructions: u64,
-    overhead_instructions: u64,
-}
-
-#[derive(CandidType, Debug)]
-struct CohortObservation {
-    cohort: &'static str,
-    registered: bool,
-    callbacks: u64,
-    next_deadline_ns: Option<u64>,
-    schedule_requests: u64,
-    wakeups_armed: u64,
-    work_dispatched: u64,
-    scheduler_started: u64,
-    work_started: u64,
-    work_completed: u64,
-    coalesced: u64,
-    scheduler_instruction_samples: u64,
-    scheduler_instruction_total: u128,
-    work_instruction_samples: u64,
-    work_instruction_total: u128,
-    snapshot_instructions: u64,
-    inventory_len: u64,
-    inventory_instructions: u64,
-}
-
 #[ic_cdk::init]
 fn init() {
     if initialize_runtime().is_err() {
@@ -148,7 +113,7 @@ fn use_representative_watchdog_work() {
 }
 
 #[ic_cdk::query]
-fn observe() -> CohortObservation {
+fn observe() -> CohortObservation<&'static str> {
     let snapshot_before = ic_cdk::api::performance_counter(1);
     let snapshot = match timer_snapshot(&cohort_identity()) {
         Ok(snapshot) => snapshot,
@@ -164,34 +129,21 @@ fn observe() -> CohortObservation {
         ic_cdk::api::performance_counter(1).saturating_sub(inventory_before);
     let registered = registration_present();
     let callbacks = CALLBACKS.with(Cell::get);
+    let observed = CohortObservation {
+        cohort: cohort_name(),
+        registered,
+        callbacks,
+        snapshot_instructions,
+        inventory_len: inventory.len() as u64,
+        inventory_instructions,
+        ..CohortObservation::default()
+    };
     let Some(snapshot) = snapshot else {
-        return CohortObservation {
-            cohort: cohort_name(),
-            registered,
-            callbacks,
-            next_deadline_ns: None,
-            schedule_requests: 0,
-            wakeups_armed: 0,
-            work_dispatched: 0,
-            scheduler_started: 0,
-            work_started: 0,
-            work_completed: 0,
-            coalesced: 0,
-            scheduler_instruction_samples: 0,
-            scheduler_instruction_total: 0,
-            work_instruction_samples: 0,
-            work_instruction_total: 0,
-            snapshot_instructions,
-            inventory_len: inventory.len() as u64,
-            inventory_instructions,
-        };
+        return observed;
     };
     let counters = snapshot.observability().counters();
     let performance = snapshot.observability().performance();
     CohortObservation {
-        cohort: cohort_name(),
-        registered,
-        callbacks,
         next_deadline_ns: snapshot.next_deadline_ns(),
         schedule_requests: counters.schedule_requests(),
         wakeups_armed: counters.wakeups_armed(),
@@ -204,9 +156,7 @@ fn observe() -> CohortObservation {
         scheduler_instruction_total: performance.scheduler_instructions().total(),
         work_instruction_samples: performance.work_instructions().samples(),
         work_instruction_total: performance.work_instructions().total(),
-        snapshot_instructions,
-        inventory_len: inventory.len() as u64,
-        inventory_instructions,
+        ..observed
     }
 }
 

@@ -9,7 +9,7 @@ license.workspace = true
 [dependencies]
 candid.workspace = true
 ic-testkit.workspace = true
-serde = { workspace = true, features = ["derive"] }
+ic-timers-test-protocol.workspace = true
 
 [lints.rust]
 unsafe_code = "forbid"

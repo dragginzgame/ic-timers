@@ -95,13 +95,11 @@ impl OrdinaryDirective {
                 mode: TimerSchedulingMode::Continuation,
             })),
             Self::RetryAfter(delay) => {
-                let delay_ns = duration_ns(delay).map_err(ScheduleError::control_failure)?;
-                Ok(Some(ResolvedSchedule {
-                    deadline_ns: checked_deadline_after(now_ns, delay_ns)
-                        .map_err(ScheduleError::control_failure)?,
-                    requested_delay_ns: Some(delay_ns),
-                    mode: TimerSchedulingMode::Retry,
-                }))
+                let mut requested = TimerSchedule::After(delay)
+                    .resolve(now_ns)
+                    .map_err(ScheduleError::control_failure)?;
+                requested.mode = TimerSchedulingMode::Retry;
+                Ok(Some(requested))
             }
             Self::ScheduleAt(deadline_ns) => Ok(Some(ResolvedSchedule {
                 deadline_ns,
@@ -219,14 +217,20 @@ mod tests {
                 mode: TimerSchedulingMode::Continuation,
             }))
         );
-        assert_eq!(
-            OrdinaryDirective::RetryAfter(Duration::from_nanos(5)).resolve(10, None),
-            Ok(Some(ResolvedSchedule {
-                deadline_ns: 15,
-                requested_delay_ns: Some(5),
-                mode: TimerSchedulingMode::Retry,
-            }))
-        );
+        for (now_ns, delay_ns, deadline_ns) in [
+            (10, 5, 15),
+            (u64::MAX, 0, u64::MAX),
+            (0, u64::MAX, u64::MAX),
+        ] {
+            assert_eq!(
+                OrdinaryDirective::RetryAfter(Duration::from_nanos(delay_ns)).resolve(now_ns, None),
+                Ok(Some(ResolvedSchedule {
+                    deadline_ns,
+                    requested_delay_ns: Some(delay_ns),
+                    mode: TimerSchedulingMode::Retry,
+                }))
+            );
+        }
         assert_eq!(
             OrdinaryDirective::ScheduleAt(7).resolve(10, None),
             Ok(Some(ResolvedSchedule {

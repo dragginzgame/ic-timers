@@ -296,147 +296,8 @@ if [[ "${output}" != *'continuing because the maintainer invoked an explicit ver
     exit 1
 fi
 
-# Standard Make delegation and shared phase ordering are checked by the shared
-# release-command checker and test-release-runner in release-check.
-# test-commit-release exercises the actual local worktree admission.
-cp Makefile preparation-only.mk
-cp "${repository_root}/Makefile" Makefile
-mkdir -p make
-cp "${repository_root}/make/consumer.mk" "${repository_root}/make/tools.mk" "${repository_root}/make/rust-format.mk" \
-    "${repository_root}/make/release.mk" "${repository_root}/make/execution.mk" make/
-mv scripts/release/bump-version.sh scripts/release/preparation-bump-version.sh
-cat > scripts/release/bump-version.sh <<'EOF'
-#!/usr/bin/env bash
-printf 'preflight %s\n' "$*" >> release-events
-bash scripts/release/preparation-bump-version.sh "$@"
-EOF
-cat > scripts/release/commit-release.sh <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-[[ "$#:$*" == '1:--check-before-bump' ]] || exit 1
-printf '%s\n' worktree >> release-events
-if [[ "${FIXTURE_FAIL_WORKTREE:-0}" == 1 ]]; then exit 1; fi
-EOF
-cat > overrides.mk <<'EOF'
-release-verify:
-	@printf '%s\n' gate >> release-events
-	@if [ '$(FAIL_GATE)' = 1 ]; then exit 1; fi
-patch minor major bump-x:
-	@printf 'bump %s\n' '$(if $(filter bump-x,$@),$(VERSION),$@)' >> release-events
-	@if [ '$(FAIL_PHASE)' = '$@' ]; then exit 9; fi
-release-stage release-commit release-push:
-	@printf '%s\n' '$@' >> release-events
-	@if [ '$(FAIL_PHASE)' = '$@' ]; then exit 9; fi
-ensure-clean release-tag-check:
-	@:
-EOF
-fixture_make=(make --no-print-directory -f Makefile -f overrides.mk
-    'MAKE=make --no-print-directory -f Makefile -f overrides.mk')
-# The local exact-version recipe still owns this sequence. Exercise its real
-# preflight with recording leaf phases, without commits, pushes or test execution.
-cp CHANGELOG.md original-changelog.md
-for target in release-x; do
-    case "${target}" in
-        release-x) requested=0.4.2; candidate=0.4.2 ;;
-    esac
-    cp original-changelog.md candidate-changelog.md
-    for scenario in empty-notes failed-worktree failed-gate failed-bump failed-stage \
-        failed-commit failed-push success repeat-success; do
-        cp candidate-changelog.md CHANGELOG.md
-        fail_phase=''
-        case "${scenario}" in
-            empty-notes)
-                perl -pi -e 's/^- Fix terminal cleanup\.$//' CHANGELOG.md
-                expected=("preflight --check ${requested}" worktree gate "bump ${requested}"
-                    release-stage release-commit release-push) ;;
-            failed-worktree) expected=("preflight --check ${requested}" worktree) ;;
-            failed-gate) expected=("preflight --check ${requested}" worktree gate) ;;
-            failed-bump)
-                fail_phase=bump-x
-                expected=("preflight --check ${requested}" worktree gate "bump ${requested}") ;;
-            failed-stage)
-                fail_phase=release-stage
-                expected=("preflight --check ${requested}" worktree gate "bump ${requested}"
-                    release-stage) ;;
-            failed-commit)
-                fail_phase=release-commit
-                expected=("preflight --check ${requested}" worktree gate "bump ${requested}"
-                    release-stage release-commit) ;;
-            failed-push)
-                fail_phase=release-push
-                expected=("preflight --check ${requested}" worktree gate "bump ${requested}"
-                    release-stage release-commit release-push) ;;
-            *) expected=("preflight --check ${requested}" worktree gate "bump ${requested}"
-                release-stage release-commit release-push) ;;
-        esac
-        fail_gate=0
-        if [[ "${scenario}" == failed-gate ]]; then fail_gate=1; fi
-        fail_worktree=0
-        if [[ "${scenario}" == failed-worktree ]]; then fail_worktree=1; fi
-        if FIXTURE_FAIL_WORKTREE="${fail_worktree}" "${fixture_make[@]}" "${target}" \
-            "VERSION=${candidate}" "FAIL_GATE=${fail_gate}" "FAIL_PHASE=${fail_phase}" \
-            > "${target}-${scenario}.log" 2>&1; then
-            if [[ "${scenario}" == failed-* ]]; then
-                cat "${target}-${scenario}.log" >&2
-                echo "error: ${target} accepted ${scenario}" >&2
-                exit 1
-            fi
-        elif [[ "${scenario}" != failed-* ]]; then
-            cat "${target}-${scenario}.log" >&2
-            echo "error: ${target} rejected valid preflight" >&2
-            exit 1
-        fi
-        printf '%s\n' "${expected[@]}" > expected-release-events
-        if ! cmp -s expected-release-events release-events; then
-            cat release-events >&2
-            echo "error: ${target} ${scenario} ran unexpected phases" >&2
-            exit 1
-        fi
-        rm release-events
-        cp original-changelog.md CHANGELOG.md
-        assert_metadata_unchanged original-files
-    done
-done
-if "${fixture_make[@]}" release-x VERSION= > release-x-empty-version.log 2>&1; then
-    echo 'error: exact release accepted an empty target' >&2
-    exit 1
-fi
-test ! -f release-events
-# Actual Make dispatch must stop before every leaf phase and metadata mutation.
-# The shared include rejects unsafe execution modes while parsing; version-only
-# Make never dispatches the recipe. Neither may produce effects.
-# GNU Make 3.81 on macOS ignores GNUMAKEFLAGS; 4.0 introduced it.
-mode_variables=(MAKEFLAGS)
-make_version="$(make --version)"
-case "$make_version" in 'GNU Make 3.'*) ;; *) mode_variables+=(GNUMAKEFLAGS) ;; esac
-for variable in "${mode_variables[@]}"; do
-    for flags in i n q t v --ignore-errors --dry-run --question --touch --version; do
-        mode_status=0
-        mode_output="${variable}-${flags}.log"
-        env "$variable=$flags" "${fixture_make[@]}" release-x VERSION=0.4.2 \
-            > "${mode_output}" 2>&1 || mode_status=$?
-        case "$flags" in
-            v|--version) ;;
-            *)
-                if [[ "$mode_status" != 2 ]]; then
-                    cat "${mode_output}" >&2
-                    echo "error: Make did not reject $variable=$flags before release phases (status $mode_status)" >&2
-                    exit 1
-                fi
-                ;;
-        esac
-        if [[ -f release-events ]]; then
-            cat "${mode_output}" >&2
-            cat release-events >&2
-            echo "error: Make dispatched release phases with $variable=$flags" >&2
-            exit 1
-        fi
-        assert_metadata_unchanged original-files
-    done
-done
-rm original-changelog.md candidate-changelog.md overrides.mk
-mv scripts/release/preparation-bump-version.sh scripts/release/bump-version.sh
-mv preparation-only.mk Makefile
+# Standard delivery ordering and Make execution admission belong to the
+# shared release runner and its adopted fixtures, not version preparation.
 
 # Inject failures after the mutating lock update and metadata check.
 mkdir -p bin
@@ -535,37 +396,10 @@ if [[ -n "${staged_paths}" ]]; then
     exit 1
 fi
 
-# Staging selects current release metadata and excludes unrelated adoption work.
-cp "${repository_root}/Makefile" Makefile
-printf '\n[features]\nmaintainer_fixture = []\n' >> crates/ic-timers/Cargo.toml
-mkdir -p docs/adoption
-printf '%s\n' '# Unrelated adoption edits' > docs/adoption/canic.md
-cp Cargo.toml valid-stage-manifest.toml
-perl -pi -e 's/\[workspace\.package\]/[workspace.metadata]/' Cargo.toml
-for target in version release-stage; do
-    if make --no-print-directory "${target}" >/dev/null 2>&1; then
-        echo "error: ${target} accepted missing workspace version ownership" >&2
-        exit 1
-    fi
-    staged_paths="$(git diff --cached --name-only)"
-    test -z "${staged_paths}"
-done
-mv valid-stage-manifest.toml Cargo.toml
-make --no-print-directory release-stage >/dev/null
-expected_staged=(CHANGELOG.md Cargo.lock Cargo.toml)
-git diff --cached --name-only > staged-paths
-printf '%s\n' "${expected_staged[@]}" > expected-staged-paths
-if ! cmp -s expected-staged-paths staged-paths; then
-    cat staged-paths >&2
-    echo "error: release staging selected unexpected paths" >&2
-    exit 1
-fi
-grep -Fqx '# Unrelated adoption edits' docs/adoption/canic.md
-grep -Fqx 'maintainer_fixture = []' crates/ic-timers/Cargo.toml
-
 # A same-named branch is harmless; only an existing exact release tag blocks.
 git config user.name 'ic-timers release test'
 git config user.email 'release-test@example.invalid'
+git add Cargo.toml Cargo.lock CHANGELOG.md
 git commit -qm fixture
 git branch v0.1.2
 perl -0pi -e 's/^(## \[)/## [Draft]\n\n- Next fixture release.\n\n$1/m' CHANGELOG.md

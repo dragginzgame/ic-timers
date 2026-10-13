@@ -4,6 +4,7 @@ members = [
     "testing/crates/ic-timers-pocketic",
     "testing/crates/ic-timers-runtime-probe",
     "testing/crates/ic-timers-size-probe",
+    "testing/crates/ic-timers-test-protocol",
 ]
 default-members = ["crates/ic-timers"]
 resolver = "3"
@@ -28,6 +29,7 @@ ic-cdk-timers = "=1.0.0"
 ic-metrics = "0.9"
 ic-testkit = "0.37"
 ic-timers = { path = "crates/ic-timers" }
+ic-timers-test-protocol = { path = "testing/crates/ic-timers-test-protocol" }
 ic0 = "=1.2.0"
 serde = "1.0"
 thiserror = "2.0"

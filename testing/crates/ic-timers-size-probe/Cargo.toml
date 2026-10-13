@@ -20,6 +20,7 @@ watchdog = []
 candid.workspace = true
 ic-cdk.workspace = true
 ic-timers.workspace = true
+ic-timers-test-protocol.workspace = true
 
 [lints.rust]
 unsafe_code = "forbid"

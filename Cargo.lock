@@ -885,7 +885,7 @@ version = "0.22.0"
 dependencies = [
  "candid",
  "ic-testkit",
- "serde",
+ "ic-timers-test-protocol",
 ]
 
 [[package]]
@@ -895,6 +895,7 @@ dependencies = [
  "candid",
  "ic-cdk",
  "ic-timers",
+ "ic-timers-test-protocol",
 ]
 
 [[package]]
@@ -904,6 +905,15 @@ dependencies = [
  "candid",
  "ic-cdk",
  "ic-timers",
+ "ic-timers-test-protocol",
+]
+
+[[package]]
+name = "ic-timers-test-protocol"
+version = "0.22.0"
+dependencies = [
+ "candid",
+ "serde",
 ]
 
 [[package]]

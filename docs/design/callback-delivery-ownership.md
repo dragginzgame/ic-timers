@@ -3,6 +3,24 @@
 This records the implementation and evidence scope of the callback delivery
 change. It does not select a release or establish deployment validation.
 
+## Prepared 0.22.1 relative-deadline cleanup
+
+Callback retries now use the existing relative `TimerSchedule` resolution path,
+then retain their `Retry` mode. Both paths encode `Duration` before checked
+deadline addition; callback resolution still maps failures into terminal control
+errors, while explicit scheduling returns its input-boundary `ScheduleError`.
+The supplied time sample and requested relative delay are unchanged. Registry
+arbitration still discards losing or terminal proposals before resolution.
+
+The existing schedule/directive fixture covers a normal relative retry, zero
+delay at `u64::MAX`, and a maximal encodable delay from zero, alongside its prior
+out-of-range duration and deadline-overflow cases. Expected absolute deadlines,
+requested-delay metadata and Retry mode remain explicit. No new helper, type,
+public API, provider operation or persistence path is introduced. Native/test
+target and Wasm compile evidence belongs in the current handoff; test execution
+and full owner qualification remain separate. No Wasm or instruction saving is
+claimed from this source simplification.
+
 ## Whole-canister Wasm experiments
 
 The maintainer approved isolated optimized builds on 2026-10-13 to investigate

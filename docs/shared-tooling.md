@@ -1,5 +1,33 @@
 # Shared Tooling adoption
 
+## Prepared Shared Tooling 0.10.2
+
+All three canonical exports select clean committed
+`626fc2bd3125195520fb870b92abfec11b01454d` (0.10.2), preserving roots and
+**70/37/11** payloads. Complete previews precede apply; no additions/retirements.
+The sibling's dirty 0.10.3 tooling inventory changes are excluded.
+
+Literal common catalogs now project only the three Cargo-tool selections into
+the CI cache key, so unrelated host/IC pins, comments and record order do not
+invalidate it. Compiler/native/build-policy identity, runner image and relevant
+installer/checksum sources remain inputs. Duplicate, executable or ambiguous
+catalogs retain their complete bytes; inspection never executes them. This does
+not change admission or authorize setup. Timers has not adopted common Cargo-tool
+CI cache transport, so no job-time saving is claimed here.
+
+Snapshot review now traces canonical catalog paths and independently selected
+exceptions across Make, direct installer calls, formatting, CI and evidence.
+Timers' shared catalogs and byte-exact qualified Binaryen 132 exception remain
+unchanged. The 0.10.2 sibling-dashboard path guard is outside the selected roots;
+no optional dashboard command is activated. Installer/build-policy identities and
+pins are unchanged, so this refresh alone requires no executable reinstall.
+
+Evidence stays at `/tmp/ic-timers-shared0102.XdtpHHvq/`: clean source, previews/
+applies, saved inputs/index/refs, verified delivered 0.22.0 receipt and selected
+Host 0.17.2 registry archives. Source/payload checks remain separate from native
+execution. These repository-only notes use undated 0.22.1 and normally stay
+untagged until a code-bearing release. Cargo inputs remain 0.22.0 and unchanged.
+
 ## Prepared Shared Tooling 0.10.0
 
 All three canonical snapshots select clean committed

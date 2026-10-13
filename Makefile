@@ -1,8 +1,8 @@
 .PHONY: \
 	actions-check build bump-x check ci clean clippy docs-check ensure-clean fetch help \
-	install-hooks install-testkit-server major minor msrv package patch pocketic-cohorts pocketic-watchdog publish release-check release-commit \
-	pocketic-check provider-check release-push release-stage \
-	release-impact release-tag-check release-verify release-x repository-check shell-check test testing-check update-dev \
+	install-hooks install-testkit-server major minor msrv package patch pocketic-cohorts pocketic-watchdog publish release-check \
+	pocketic-check provider-check \
+	release-impact release-tag-check release-verify repository-check shell-check test testing-check update-dev \
 	version wasm-check
 
 MSRV ?= 1.88.0
@@ -56,7 +56,7 @@ help:
 	@echo "  update-dev          Install pinned Rust/host/IC tools, Wasm target, and hook"
 	@echo "  patch|minor|major   Prepare version metadata without deployment tests"
 	@echo "  release-{patch,minor,major}  Commit, tag, and push a SemVer release"
-	@echo "  release-x VERSION=x.y.z      Commit, tag, and push an exact release"
+	@echo "  release-resume VERSION=x.y.z Resume exact saved shared release intent"
 
 version:
 	@bash scripts/release/workspace-version.sh
@@ -77,6 +77,7 @@ docs-check:
 test:
 	+cargo test -p ic-timers --all-targets --all-features --locked
 	+cargo test -p ic-timers --doc --all-features --locked
+	+cargo test -p ic-timers-test-protocol --lib --locked
 
 wasm-check:
 	+cargo check -p ic-timers --all-features --locked --target wasm32-unknown-unknown
@@ -89,7 +90,7 @@ msrv:
 testing-check:
 	+$(MAKE) --no-print-directory fmt-check
 	+cargo +$(MSRV) clippy \
-		-p ic-timers-runtime-probe -p ic-timers-pocketic --all-targets --locked -- -D warnings
+		-p ic-timers-runtime-probe -p ic-timers-pocketic -p ic-timers-test-protocol --all-targets --locked -- -D warnings
 	+cargo +$(MSRV) clippy \
 		-p ic-timers-size-probe --no-default-features --features baseline --all-targets --locked -- -D warnings
 	+cargo +$(MSRV) clippy \
@@ -180,7 +181,6 @@ release-check:
 	bash scripts/release/test-release-gate.sh
 	bash scripts/release/test-version-preparation.sh
 	bash scripts/release/test-tag-at-head.sh
-	bash scripts/release/test-commit-release.sh
 	bash scripts/ci/test-testkit-server.sh
 	bash scripts/ci/test-git-hook.sh
 	bash scripts/ci/test-repository-checks.sh
@@ -239,32 +239,8 @@ bump-x:
 	@if [ -z "$(VERSION)" ]; then echo "error: VERSION=x.y.z is required" >&2; exit 2; fi
 	bash scripts/release/bump-version.sh "$(VERSION)"
 
-release-x:
-	+@set -e; \
-		bash scripts/ci/check-make-execution.sh; \
-		if [ -z "$(VERSION)" ]; then echo "error: VERSION=x.y.z is required" >&2; exit 2; fi; \
-		bash scripts/release/bump-version.sh --check "$(VERSION)"; \
-		bash scripts/release/commit-release.sh --check-before-bump; \
-		$(MAKE) --no-print-directory release-verify; \
-		$(MAKE) --no-print-directory bump-x VERSION="$(VERSION)"; \
-		$(MAKE) --no-print-directory release-stage; \
-		$(MAKE) --no-print-directory release-commit; \
-		$(MAKE) --no-print-directory release-push
-
-release-stage:
-	@set -e; bash scripts/release/workspace-version.sh >/dev/null; \
-		git add Cargo.toml Cargo.lock CHANGELOG.md
-
-release-commit:
-	@bash scripts/release/commit-release.sh
-
 release-tag-check:
 	@bash scripts/release/check-tag-at-head.sh
-
-release-push: ensure-clean release-tag-check
-	@set -e; version="$$(bash scripts/release/workspace-version.sh)"; \
-		git push --no-follow-tags --atomic "$(RELEASE_REMOTE)" \
-		"HEAD:refs/heads/$(RELEASE_BRANCH)" "refs/tags/v$$version:refs/tags/v$$version"
 
 publish: ensure-clean release-tag-check package
 	+cargo publish --locked --registry crates-io -p ic-timers

@@ -8,101 +8,116 @@ This handoff links [release evidence](../releasing.md),
 [Shared adoption](../shared-tooling.md), [safety](../../SAFETY.md) and
 [the archive](archive-2026-10-10.md).
 
-## Delivered source
+## Delivered 0.22.0
 
-The maintainer reports **0.21.4 live** at
-`44935d6188a0da82314e00a56f5f68a9d0c59638`. The completed standard receipt binds
-owner validation to `903a548263ea2bfdd1eca395c63703dac31fee2c` and tree
-`cc2bec1f20ba29516dd7d270005b5dd521007799`. Source-to-release differences are
-only workspace Cargo/lock versions and changelog finalization. The
-[delivery owner](../releasing.md#0214-delivery-and-prepared-0215-tooling)
-records complete owner-operated native/IC/cohort acceptance without fabricating
-successful raw logs or agent replay. Earlier focused proofs retain their original
-source/graph and are not reused as execution of later dependency selections.
+The maintainer reports 0.22.0 live at
+`ffe175b2ae1b38719ec649286468b96a08a2f111`. The completed standard receipt binds
+owner release validation to `9ad2c39b1f6bf89a12098612111aebb66e23aa72` and staged
+tree `5f00837b17b2a0bda924d33eb8ce9c4a49f09c61`. Source-to-release differences
+are only Cargo/local-lock versions and changelog finalization. The
+[delivery owner](../releasing.md#0220-delivery-and-prepared-0221-tooling) records
+the exact graph and separates receipt completion from raw/hosted acceptance.
 
-Delivered graph: Metrics **0.8.3**, Testkit **0.36.0**, Host artifacts/fs/process
-**0.16.0**, PocketIC **16.1.0**, Shared **0.9.13** across **68/36/11** files.
-Callbacks now live directly in their shared owner without a nested Box; returned
-ordinary futures stay boxed/pinned. Lifecycle slots are selected in one branch,
-with cleanup, publication and unused-factory drop ordering preserved. Public
-APIs and timer semantics are unchanged. No comparable footprint/instruction
-saving is measured. Retain protected ordinary/watchdog, detached-handle and
-confirmed-delivery boundaries rather than forcing another consolidation.
+Delivered graph: Metrics 0.9.0, Testkit 0.37.0, Host artifacts/fs/process 0.17.2,
+PocketIC 16.1.0 and Shared 0.10.0 across 70/37/11 files. Host's three registry
+archive checksums and VCS receipts match the selected graph; runtime source is
+unchanged from 0.17.1. No new Host selection is needed. Dirty Host 0.17.3 is excluded.
 
-[Initial cleanup evidence](../design/callback-delivery-ownership.md#prepared-0214-callback-ownership-simplification)
-remains at `/tmp/ic-timers-complexity0214.CsNLubA0/`: prepared inputs and compiler/
-test logs. All 154 native subjects and library Clippy passed under scoped approval,
-with compile-only native/test targets on Rust 1.99/1.88 and Wasm on 1.88.
-That approval is complete and does not authorize new independent fixtures.
+Metrics overflow assertions and public summary identity now use 0.9. The private
+callback measurement path records directly from its captured start, preserving
+sampling order and stale-claim rejection. The earlier frozen four-cohort source
+experiment yielded byte-identical Wasm for that cleanup; it does not measure
+this dependency graph. Full LTO remains a larger-application qualification topic
+with IC Build; the local profile still selects thin LTO. The
+[callback owner](../design/callback-delivery-ownership.md) retains preparation
+receipts and their original compiler/graph scopes.
 
-Hosted [run 38375894239](https://github.com/dragginzgame/ic-timers/actions/runs/38375894239)
-is in progress; [run 38375894348](https://github.com/dragginzgame/ic-timers/actions/runs/38375894348)
-is queued. No complete new hosted/macOS acceptance is claimed.
+## Prepared Shared 0.10.2
 
-## Prepared 0.22 cleanup and upstream adoption
+The [prepared contributor cleanup](../releasing.md#prepared-0221-contributor-cleanup)
+removes the separate exact-version delivery and manual Git phase commands.
+Shared standard release/resume commands now own delivery; publication admission
+and metadata rollback retain focused fixtures. Seven probe wire records live
+once in the unpublished `ic-timers-test-protocol` package, shared by the three
+probe packages. Empty/populated observations reuse one application-metadata
+construction. The root workspace has five members; only local lock rows and
+links change, with all existing package versions and registry selections retained.
+Timer library source, public API and dependency graph are unchanged by this
+contributor cleanup. Its new Candid interop test and changed fixture/build
+qualification remain distinct from earlier harness evidence.
+Approved focused checks pass: Rust 1.88 native probe/test-target compilation,
+the protocol test and runtime/four-cohort Wasm compile-only checks; Rust 1.99
+probe/protocol Clippy; version-preparation, tag/publication, fixture-completion
+and release-gate fixtures. The gate fixture's stale two-test expectation is
+updated to require the new protocol test and propagate its failure. Before-images
+and logs remain at `/tmp/ic-timers-cleanup0221.zH22uPmx/`; the original failed
+fixture remains at `/tmp/tmp.slBA01ZRdq`. No PocketIC execution, optimized Wasm
+artifact build, setup or real release ran; real index/refs and external versions
+are preserved. Complete owner/native macOS qualification remains outstanding.
 
-The private [callback measurement simplification](../design/callback-delivery-ownership.md#prepared-022-callback-measurement-simplification)
-records directly from the captured start, preserving instruction/memory sampling
-order and the registry's stale-claim rejection. Existing identity-reuse fixtures
-now use that production recording path, retaining normal accounting assertions.
-The private cleanup preserves public APIs and timer semantics; the profile selects thin
-LTO. Earlier frozen experiments showed byte-identical Wasm for this source change.
-Earlier native/test-target compile-only checks pass on Rust 1.99 and 1.88;
-Wasm library compilation passes on 1.88, with locked/offline inputs and selected
-Metrics 0.8.4. Logs and before-images stay at
-`/tmp/ic-timers-measurement0215.dq7zQXfN/`. Production source matches the earlier
-measured private prototype. Tests, Clippy and PocketIC have not been rerun;
-complete owner validation remains pending.
+The unpublished PocketIC harness also delegates combined server/instance startup
+and lifetime ordering to selected Testkit 0.37.0. Every fixture retains the
+upstream owner and borrows its instance. One 60-second startup budget replaces
+two 30-second phase budgets; admitted binary selection and canister assertions
+remain unchanged. The [harness owner](../releasing.md#prepared-0221-harness-ownership)
+records the qualification scope and the decision to retain the simple Make probe
+builds: IC Build's package/target-name admission blocker is reported in
+[#16](https://github.com/dragginzgame/ic-build/issues/16), and a new adapter and
+dependency have no established reduction or measured saving. The literal
+workspace-version renderer proposal is on
+[Shared #159](https://github.com/dragginzgame/shared-tooling/issues/159#issuecomment-6147567013).
+No sibling source, snapshot, IC Build dependency, cache or build policy changes
+are introduced by this cleanup.
+Explicitly approved Rust 1.88 probe compilation and Clippy pass locked/offline
+with `RUSTUP_AUTO_INSTALL=0`. Before-images and logs remain at
+`/tmp/ic-timers-harness0221.y2PU7FAH/`; no tests, PocketIC, Wasm builds, setup or
+release commands ran. Cargo inputs and real index/refs are preserved.
 
-Incoming Cargo inputs now select registry Metrics **0.9.0**, Testkit **0.37.0**,
-and Host artifacts/fs/process **0.17.1**, with PocketIC **16.1.0** unchanged.
-Their prepared official archives match lock checksums and producer VCS receipts.
-The [Metrics adoption](../design/callback-delivery-ownership.md#prepared-metrics-09-adoption)
-updates overflow assertions and public summary identity; consumers must coordinate
-Metrics 0.9. This public cut supersedes the 0.21.5 draft with one undated
-**0.22.0** section. Package versions and the incoming root lock remain untouched.
+The undated 0.22.1 batch also includes a small
+[relative-deadline cleanup](../design/callback-delivery-ownership.md#prepared-0221-relative-deadline-cleanup):
+callback retries reuse initial scheduling's checked duration/deadline path,
+retaining Retry mode and terminal error mapping. The existing boundary fixture
+covers zero and maximal encoded delays as well as its prior failures. Public
+APIs and timer semantics are unchanged. Native/test-target compilation passes on
+Rust 1.99 and 1.88; Wasm library compilation passes on 1.88, all locked/offline
+with `RUSTUP_AUTO_INSTALL=0`. Before-images and logs stay at
+`/tmp/ic-timers-relative-cleanup0221.csCl1Y1d/`. Tests, Clippy and PocketIC have
+not run for this cleanup, and no Wasm/instruction saving is measured.
 
-All three canonical snapshots select reviewed Shared **0.10.0**
-`ed9c26f015691859f67b50b512a94709dcdc0c6c`, preserving roots and deriving
-**70/37/11** payloads. Complete clean-source previews precede apply. The shared
-catalogs are canonical; `ci/ic-tools-qualified.tsv` keeps the prior byte-exact
-Binaryen 132 selection, explicitly chosen by Make and local failure collection.
-No optimizer/provider/PocketIC policy is silently replaced. Maintenance/LOC
-path rejection, release-lock diagnostics and earlier CI recovery are included.
+All three canonical snapshots select clean committed
+`626fc2bd3125195520fb870b92abfec11b01454d`, preserving roots and 70/37/11 files.
+Complete previews precede apply. Literal Cargo cache keys ignore unrelated pins,
+comments and record order, retaining compiler/build identity and conservative
+fallback for ambiguous catalogs. Catalog/exception review is explicit. Common
+Cargo-tool CI cache transport is not activated, and no job-time saving is claimed.
 
-[Adoption evidence](../shared-tooling.md#prepared-shared-tooling-0100) stays at
-`/tmp/ic-timers-upstream022.Kjn981dG/`: clean source, previews/applies, saved
-inputs/index/refs, integrity logs, selected registry receipts and full locked
-offline metadata. Remote API requests were unavailable/refused; no new hosted
-acceptance is claimed. Native/test-target compile-only checks for Metrics 0.9
-pass on Rust 1.99 and 1.88; Wasm library compilation passes on 1.88. All use
-locked/offline inputs and `RUSTUP_AUTO_INSTALL=0` with the prepared tools.
-Run owner-operated `make install-tools` and `make tools-check` before formatting
-and complete native/IC/release qualification. No tests, lint, PocketIC, executable
-setup or release execution has been performed for this adoption.
+The shared host/Cargo and IC catalogs are unchanged; Make and local failure
+collection retain `ci/ic-tools-qualified.tsv` for qualified Binaryen 132.
+Installer/build-policy identities are unchanged, so no reinstall is needed solely
+for this refresh. Dirty Shared 0.10.3 is excluded. The
+[adoption evidence](../shared-tooling.md#prepared-shared-tooling-0102) stays at
+`/tmp/ic-timers-shared0102.XdtpHHvq/`, with clean source, saved inputs/index/refs,
+previews/applies and the 0.22.0 delivery receipt. That snapshot refresh ran no
+tests, builds, lint, setup, PocketIC or release execution.
+Snapshot integrity, changed Bash syntax, local documentation links, diff checks
+and full locked offline metadata pass; Cargo inputs and real index/refs are preserved.
+The undated 0.22.1 notes now include the private code-bearing cleanup above.
 
-## Issues and authority
+## Issues and hosted acceptance
 
-The 2026-10-13 isolated Wasm review found full LTO saves 18.67–18.85% across
-four released 0.21.4 linked probes; two private source simplifications produced
-byte-identical artifacts. The
-[owning evidence](../design/callback-delivery-ownership.md#whole-canister-wasm-experiments)
-records frozen inputs and limits. Reusable recipe guidance is prepared in
-IC Build; larger-app final transforms and instruction qualification remain
-necessary before central adoption. Local profiles remain unchanged; the private
-measurement simplification is now applied as described above.
-
-The current issue inspection finds no open Timers issues. No additional runtime
-cleanup justifies weakening the protected state paths.
-[#50](https://github.com/dragginzgame/ic-timers/issues/50#issuecomment-6129282698)
-remains closed from delivered Metrics adoption at 0.21.0.
-[#44](https://github.com/dragginzgame/ic-timers/issues/44) retains its frozen
-v0.19.1 acceptance and original/restored evidence. Shared fleet
-[#98](https://github.com/dragginzgame/shared-tooling/issues/98) retains other
-consumer obligations. No qualification dispatch is pending.
+[Metrics #51](https://github.com/dragginzgame/ic-timers/issues/51) and
+[catalog #52](https://github.com/dragginzgame/ic-timers/issues/52) have delivered
+source adoption in 0.22.0. Their remaining hosted native acceptance is open.
+Both issues now carry delivered-source evidence and the outstanding gate.
+[Tag run 38399245736](https://github.com/dragginzgame/ic-timers/actions/runs/38399245736)
+passes tag truth; full native jobs are skipped on the tag. The same-SHA
+[main run 38399245629](https://github.com/dragginzgame/ic-timers/actions/runs/38399245629)
+passes Linux checks/MSRV and Apple Silicon; Intel is queued at final
+readback. Do not close host qualification from tag success or the
+older 0.21.4 hosted results. No workflow dispatch or rerun is pending.
 
 Siblings remain read-only. Tests, builds, lint, PocketIC and setup remain
-user-owned outside explicit scoped approvals; prepared locked/offline library
-compile-only checks retain their AGENTS.md exception. Cargo versions, staging,
-commits, tags, pushes, publication and cleanup remain user-owned. Preserve
-incoming edits and retained evidence.
+user-owned outside explicit scoped approval; prepared locked/offline library
+compile-only checks retain the AGENTS.md exception after Rust changes. Versions,
+staging, commits, tags, pushes, publication and cleanup remain user-owned.
+Preserve incoming edits, retained artifacts and failure evidence.

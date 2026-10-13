@@ -5,6 +5,7 @@ repository_root="$(git rev-parse --show-toplevel)"
 export PATH="${repository_root}/.tools/host/bin:${PATH}"
 export YQ="${repository_root}/.tools/host/bin/yq"
 checker="${repository_root}/scripts/release/check-tag-at-head.sh"
+cleaner="${repository_root}/scripts/ci/ensure-clean.sh"
 temporary_root="$(mktemp -d)"
 # Bash 3.2 can report zero on nounset; cleanup also requires completion.
 fixture_complete=false
@@ -90,5 +91,47 @@ for query in "rev-parse --verify ${release_commit}^{commit}" \
 done
 git for-each-ref --format='%(refname) %(objectname)' > .git/refs-after
 cmp .git/refs-before .git/refs-after
+
+# Publication still requires a clean worktree. Retain these admission checks
+# here after removing the independent local commit/tag delivery owner.
+git add bin/git
+git commit -qm 'publication guard fixture'
+bash "$cleaner"
+git for-each-ref --format='%(refname) %(objectname)' > .git/clean-refs-before
+for query in 'rev-parse --verify HEAD' 'ls-files --others --exclude-standard' \
+    'diff-index --quiet HEAD --'; do
+    for observation in '' 'plausible but failed observation'; do
+        if output="$(PATH="$temporary_root/bin:$PATH" FIXTURE_FAIL_TAG_QUERY="$query" \
+            FIXTURE_TAG_QUERY_OUTPUT="$observation" bash "$cleaner" 2>&1)"; then
+            echo "error: clean publication guard admitted failed query: $query" >&2
+            exit 1
+        fi
+        if [[ "$query" != 'rev-parse --verify HEAD' &&
+            "$output" != *'injected tag query failure'* ]]; then
+            echo "error: clean guard fixture missed its intended boundary: $output" >&2
+            exit 1
+        fi
+    done
+done
+git for-each-ref --format='%(refname) %(objectname)' > .git/clean-refs-after
+cmp .git/clean-refs-before .git/clean-refs-after
+printf '\n# Unstaged publication change\n' >> Cargo.toml
+if bash "$cleaner" >/dev/null 2>&1; then
+    echo 'error: clean publication guard admitted unstaged work' >&2
+    exit 1
+fi
+git add Cargo.toml
+if bash "$cleaner" >/dev/null 2>&1; then
+    echo 'error: clean publication guard admitted staged work' >&2
+    exit 1
+fi
+git restore --staged --worktree Cargo.toml
+printf 'untracked' > 'untracked publication change'
+if bash "$cleaner" >/dev/null 2>&1; then
+    echo 'error: clean publication guard admitted untracked work' >&2
+    exit 1
+fi
+rm 'untracked publication change'
+bash "$cleaner"
 fixture_complete=true
-echo 'Exact annotated release-tag checks passed'
+echo 'Exact annotated release-tag and clean publication checks passed'

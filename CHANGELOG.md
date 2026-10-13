@@ -2,6 +2,45 @@
 
 All notable changes to this project are recorded here.
 
+## [0.22.1]
+
+### Changed
+
+- Resolve callback retry delays through the same checked relative-deadline path
+  as initial scheduling, retaining retry classification and typed terminal
+  failures. Extend the existing boundary fixture for zero and maximal encoded
+  delays; public APIs and timer semantics are unchanged.
+
+### Development
+
+- Remove the independent exact-version delivery path and manual staging,
+  commit/tag and push targets. Use the shared patch/minor/major runner and
+  exact saved-intent resume; preserve publication admission and version-preparation
+  rollback checks. Fresh arbitrary-version delivery is no longer a local command.
+- Define the seven probe wire records once in an unpublished protocol package,
+  preserving borrowed canister cohort labels and owned native decoding. Simplify
+  empty/populated observations without changing fields or measurement boundaries;
+  the published timer API and dependency graph are unchanged.
+- Let Testkit own fresh PocketIC server/instance construction and drop ordering
+  across recovery and cohort fixtures. Use one 60-second startup deadline in
+  place of two 30-second phase budgets; retain explicit admitted-binary selection
+  and the existing canister assertions.
+- Propose literal workspace-version rendering upstream
+  ([Shared #159](https://github.com/dragginzgame/shared-tooling/issues/159)) and
+  report IC Build's default library-name admission blocker
+  ([#16](https://github.com/dragginzgame/ic-build/issues/16)). Retain qualified
+  local release writing and probe builds pending equivalent upstream support
+  and a demonstrated benefit from build adoption.
+- Refresh all three reviewed Shared Tooling snapshots to 0.10.2, retaining
+  literal Cargo-tool cache identity after unrelated pin/comment/order changes
+  and tracing canonical catalogs and explicit exceptions during adoption review.
+  Current timer/runtime code and dependency selections are unchanged.
+- Reconcile delivered 0.22.0 Metrics/catalog adoption against
+  [#51](https://github.com/dragginzgame/ic-timers/issues/51) and
+  [#52](https://github.com/dragginzgame/ic-timers/issues/52), distinguishing
+  completed owner release validation and tag truth from
+  the remaining hosted native qualification.
+
 ## [0.22.0] - 2026-10-13
 
 ### Breaking

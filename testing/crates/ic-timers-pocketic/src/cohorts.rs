@@ -1,45 +1,10 @@
 use super::harness::fresh_pocket_ic;
-use candid::{CandidType, Decode, Encode, Principal};
+use candid::{Decode, Encode, Principal};
 use ic_testkit::pic::PocketIc;
-use serde::Deserialize;
+use ic_timers_test_protocol::{CohortObservation, MemorySamplingMeasurement, OperationMeasurement};
 use std::{env, fs, path::PathBuf, time::Duration};
 
 const INIT_CYCLES: u128 = 2_000_000_000_000;
-
-#[derive(CandidType, Debug, Deserialize)]
-struct OperationMeasurement {
-    changed: bool,
-    instructions: u64,
-}
-
-#[derive(CandidType, Debug, Deserialize)]
-struct MemorySamplingMeasurement {
-    empty_bracket_instructions: u64,
-    sampled_bracket_instructions: u64,
-    overhead_instructions: u64,
-}
-
-#[derive(CandidType, Debug, Deserialize)]
-struct CohortObservation {
-    cohort: String,
-    registered: bool,
-    callbacks: u64,
-    next_deadline_ns: Option<u64>,
-    schedule_requests: u64,
-    wakeups_armed: u64,
-    work_dispatched: u64,
-    scheduler_started: u64,
-    work_started: u64,
-    work_completed: u64,
-    coalesced: u64,
-    scheduler_instruction_samples: u64,
-    scheduler_instruction_total: u128,
-    work_instruction_samples: u64,
-    work_instruction_total: u128,
-    snapshot_instructions: u64,
-    inventory_len: u64,
-    inventory_instructions: u64,
-}
 
 #[test]
 fn comparable_policy_cohorts_report_size_and_instruction_subjects() {
@@ -52,7 +17,8 @@ fn comparable_policy_cohorts_report_size_and_instruction_subjects() {
 }
 
 fn run_cohort(cohort: &str) {
-    let (_server, pic) = fresh_pocket_ic();
+    let owned = fresh_pocket_ic();
+    let pic = &owned.instance;
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
     let wasm = cohort_wasm(cohort);
@@ -64,18 +30,18 @@ fn run_cohort(cohort: &str) {
         None,
     );
 
-    let initial = observe(&pic, canister_id);
+    let initial = observe(pic, canister_id);
     assert_eq!(initial.cohort, cohort);
     assert!(!initial.registered);
     assert_eq!(initial.callbacks, 0);
     assert_eq!(initial.inventory_len, 0);
 
-    let start = update_measurement(&pic, canister_id, "start");
-    let duplicate = update_measurement(&pic, canister_id, "ensure_again");
+    let start = update_measurement(pic, canister_id, "start");
+    let duplicate = update_measurement(pic, canister_id, "ensure_again");
     assert_eq!(start.changed, cohort != "baseline");
     assert!(!duplicate.changed);
 
-    let scheduled = observe(&pic, canister_id);
+    let scheduled = observe(pic, canister_id);
     if cohort == "baseline" {
         assert!(!scheduled.registered);
         assert_eq!(scheduled.schedule_requests, 0);
@@ -89,9 +55,9 @@ fn run_cohort(cohort: &str) {
 
     let cycles_before_dispatch = pic.cycle_balance(canister_id);
     pic.advance_time(Duration::from_secs(1));
-    drive_rounds(&pic, 16);
+    drive_rounds(pic, 16);
     let dispatch_cycles = cycles_before_dispatch.saturating_sub(pic.cycle_balance(canister_id));
-    let completed = observe(&pic, canister_id);
+    let completed = observe(pic, canister_id);
     match cohort {
         "baseline" => {
             assert_eq!(completed.callbacks, 0);
@@ -124,15 +90,15 @@ fn run_cohort(cohort: &str) {
         _ => unreachable!("fixed cohort list"),
     }
 
-    let cancellation = update_measurement(&pic, canister_id, "cancel");
+    let cancellation = update_measurement(pic, canister_id, "cancel");
     assert_eq!(
         cancellation.changed,
         matches!(cohort, "after-completion" | "watchdog")
     );
-    assert_eq!(observe(&pic, canister_id).next_deadline_ns, None);
+    assert_eq!(observe(pic, canister_id).next_deadline_ns, None);
 
     let memory_sampling = if cohort == "watchdog" {
-        let measurement = memory_sampling_measurement(&pic, canister_id);
+        let measurement = memory_sampling_measurement(pic, canister_id);
         assert!(measurement.sampled_bracket_instructions >= measurement.empty_bracket_instructions);
         assert_eq!(
             measurement.overhead_instructions,
@@ -172,7 +138,8 @@ fn run_cohort(cohort: &str) {
 }
 
 fn run_watchdog_calibration(profile: &str, representative_work: bool) -> u128 {
-    let (_server, pic) = fresh_pocket_ic();
+    let owned = fresh_pocket_ic();
+    let pic = &owned.instance;
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(
@@ -182,16 +149,16 @@ fn run_watchdog_calibration(profile: &str, representative_work: bool) -> u128 {
         None,
     );
     if representative_work {
-        update_unit(&pic, canister_id, "use_representative_watchdog_work");
+        update_unit(pic, canister_id, "use_representative_watchdog_work");
     }
-    let start = update_measurement(&pic, canister_id, "start");
+    let start = update_measurement(pic, canister_id, "start");
     assert!(start.changed);
 
     let cycles_before_dispatch = pic.cycle_balance(canister_id);
     pic.advance_time(Duration::from_secs(1));
-    drive_rounds(&pic, 16);
+    drive_rounds(pic, 16);
     let dispatch_cycles = cycles_before_dispatch.saturating_sub(pic.cycle_balance(canister_id));
-    let completed = observe(&pic, canister_id);
+    let completed = observe(pic, canister_id);
     assert_eq!(completed.scheduler_instruction_samples, 1);
     assert_eq!(completed.work_instruction_samples, 1);
     assert_eq!(completed.work_completed, 1);

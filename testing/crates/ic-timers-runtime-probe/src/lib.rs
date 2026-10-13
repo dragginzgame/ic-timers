@@ -1,10 +1,10 @@
-use candid::CandidType;
 use ic_timers::{
     MAX_TIMER_REGISTRATIONS, MemoryPageSummary, TimerCadence, TimerCompletion, TimerIdentity,
     TimerLastOutcome, TimerSchedule, TimerSchedulingMode, TimerStart, WatchdogDecision,
     WatchdogRegistration, WatchdogRunResult, initialize_runtime, register_watchdog,
     timer_inventory, timer_snapshot,
 };
+use ic_timers_test_protocol::{ProbeMemorySummary, ProbeSnapshot};
 use std::cell::{Cell, RefCell};
 
 const CADENCE_NS: u64 = 1_000_000_000;
@@ -26,46 +26,6 @@ thread_local! {
     static DESIRED_SCHEDULED: Cell<bool> = const { Cell::new(false) };
     static SECONDARY_DESIRED_SCHEDULED: Cell<bool> = const { Cell::new(false) };
     static POST_UPGRADE_RECONSTRUCTED: Cell<bool> = const { Cell::new(false) };
-}
-
-#[derive(CandidType, Debug, Eq, PartialEq)]
-struct ProbeMemorySummary {
-    samples: u64,
-    latest_wasm_start_pages: u64,
-    latest_wasm_end_pages: u64,
-    latest_stable_start_pages: u64,
-    latest_stable_end_pages: u64,
-    maximum_wasm_growth_pages: u64,
-    maximum_stable_growth_pages: u64,
-}
-
-#[derive(CandidType, Debug, Eq, PartialEq)]
-struct ProbeSnapshot {
-    registration_id: Option<(u64, u64, u64)>,
-    registered: bool,
-    completed_work: u64,
-    next_deadline_ns: Option<u64>,
-    immediate_scheduling: bool,
-    latest_requested_delay_ns: Option<u64>,
-    latest_armed_delay_ns: Option<u64>,
-    schedule_requests: u64,
-    scheduler_started: u64,
-    wakeups_armed: u64,
-    work_dispatched: u64,
-    work_started: u64,
-    work_completed: u64,
-    coalesced: u64,
-    unacknowledged: u64,
-    last_unacknowledged: bool,
-    scheduler_instruction_samples: u64,
-    scheduler_instruction_total: u128,
-    work_instruction_samples: u64,
-    work_instruction_total: u128,
-    scheduler_memory: Option<ProbeMemorySummary>,
-    work_memory: Option<ProbeMemorySummary>,
-    post_upgrade_reconstructed: bool,
-    secondary_registered: bool,
-    secondary_completed_work: u64,
 }
 
 #[ic_cdk::init]
@@ -415,34 +375,16 @@ fn snapshot() -> ProbeSnapshot {
         Ok(snapshot) => snapshot,
         Err(_) => ic_cdk::trap("snapshot lookup failed"),
     };
+    let observed = ProbeSnapshot {
+        registered,
+        completed_work,
+        post_upgrade_reconstructed: POST_UPGRADE_RECONSTRUCTED.with(Cell::get),
+        secondary_registered: SECONDARY_REGISTRATION.with_borrow(Option::is_some),
+        secondary_completed_work: SECONDARY_COMPLETED_WORK.with(Cell::get),
+        ..ProbeSnapshot::default()
+    };
     let Some(snapshot) = snapshot else {
-        return ProbeSnapshot {
-            registration_id: None,
-            registered,
-            completed_work,
-            next_deadline_ns: None,
-            immediate_scheduling: false,
-            latest_requested_delay_ns: None,
-            latest_armed_delay_ns: None,
-            schedule_requests: 0,
-            scheduler_started: 0,
-            wakeups_armed: 0,
-            work_dispatched: 0,
-            work_started: 0,
-            work_completed: 0,
-            coalesced: 0,
-            unacknowledged: 0,
-            last_unacknowledged: false,
-            scheduler_instruction_samples: 0,
-            scheduler_instruction_total: 0,
-            work_instruction_samples: 0,
-            work_instruction_total: 0,
-            scheduler_memory: None,
-            work_memory: None,
-            post_upgrade_reconstructed: POST_UPGRADE_RECONSTRUCTED.with(Cell::get),
-            secondary_registered: SECONDARY_REGISTRATION.with_borrow(Option::is_some),
-            secondary_completed_work: SECONDARY_COMPLETED_WORK.with(Cell::get),
-        };
+        return observed;
     };
     let counters = snapshot.observability().counters();
     let performance = snapshot.observability().performance();
@@ -454,8 +396,6 @@ fn snapshot() -> ProbeSnapshot {
             snapshot.registration_id().epoch().started_at_ns(),
             snapshot.registration_id().sequence(),
         )),
-        registered,
-        completed_work,
         next_deadline_ns: snapshot.next_deadline_ns(),
         immediate_scheduling: snapshot.scheduling_mode() == TimerSchedulingMode::Continuation,
         latest_requested_delay_ns: snapshot.latest_requested_delay_ns(),
@@ -476,9 +416,7 @@ fn snapshot() -> ProbeSnapshot {
         work_instruction_total: performance.work_instructions().total(),
         scheduler_memory: probe_memory_summary(scheduler_memory),
         work_memory: probe_memory_summary(work_memory),
-        post_upgrade_reconstructed: POST_UPGRADE_RECONSTRUCTED.with(Cell::get),
-        secondary_registered: SECONDARY_REGISTRATION.with_borrow(Option::is_some),
-        secondary_completed_work: SECONDARY_COMPLETED_WORK.with(Cell::get),
+        ..observed
     }
 }
 

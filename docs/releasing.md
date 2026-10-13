@@ -10,6 +10,134 @@ classify the change, choose the appropriate version, run the required validation
 let the bump label the current changelog draft, and then publish the
 release through the repository's release commands.
 
+## 0.22.0 delivery and prepared 0.22.1 tooling
+
+The maintainer reports 0.22.0 live at
+`ffe175b2ae1b38719ec649286468b96a08a2f111`. Its completed standard receipt binds
+owner release validation to source `9ad2c39b1f6bf89a12098612111aebb66e23aa72`
+and staged tree `5f00837b17b2a0bda924d33eb8ce9c4a49f09c61`. Source-to-release
+differences are only workspace/local-lock versions and changelog finalization.
+The normal gate retains native tests, MSRV, probe lint and PocketIC recovery/
+policy cohorts. Receipt completion is not a fabricated passing raw log, agent
+replay or native macOS qualification.
+
+The actual delivered graph selects Metrics 0.9.0, Testkit 0.37.0 and Host
+artifacts/fs/process 0.17.2, with PocketIC 16.1.0 and Shared 0.10.0. Host's
+three cached registry archives match the lock checksums and VCS producer
+`e3afa6ddf022309e7ba97f6cefb312c48738db4e`; their runtime source is unchanged
+from 0.17.1. Earlier preparation selected 0.17.1 and retains that exact scope.
+No further Host dependency update is needed, and dirty 0.17.3 is excluded.
+
+[Tag run 38399245736](https://github.com/dragginzgame/ic-timers/actions/runs/38399245736)
+passes only tag truth. The same-SHA
+[main run 38399245629](https://github.com/dragginzgame/ic-timers/actions/runs/38399245629)
+has passed Linux checks and MSRV; Apple Silicon is running and Intel is queued
+at final readback. Skipped tag jobs do not qualify native macOS.
+Issues [#51](https://github.com/dragginzgame/ic-timers/issues/51) and
+[#52](https://github.com/dragginzgame/ic-timers/issues/52) have delivered source
+adoptions, but remain open for their final hosted native acceptance.
+
+The later [Shared 0.10.2 refresh](shared-tooling.md#prepared-shared-tooling-0102)
+is repository-only work under undated 0.22.1 notes. No timer source, Cargo input,
+pin, installer/build-policy identity or gate membership changes. Common tool
+cache transport is not newly enabled. Integrity/syntax/documentation checks do
+not qualify new shared fixture behavior; tests, lint, setup and release execution
+remain user-owned.
+
+## Prepared 0.22.1 harness ownership
+
+The unpublished PocketIC harness now uses selected Testkit 0.37.0's
+`PocketIcStartupConfig::build_instance` and keeps its `PocketIcInstance` owner
+through recovery and cohort execution. The ordinary-trap setup helper returns
+that same owner with the canister ID. Callers borrow `instance` without
+destructuring the server, so upstream field ordering owns instance deletion
+before server termination. The factory still requires the gate-admitted
+`POCKET_IC_BIN` and explicitly selects an application subnet.
+
+One 60-second deadline covers server readiness and instance construction,
+replacing separate 30-second deadlines. The maximum startup budget remains
+60 seconds, but either phase may now consume more than 30 seconds. Synchronous
+instance deletion is still unbounded; startup admission does not bound Drop.
+All canister assertions, cohort features, compiler/profile selections and
+Testkit setup/check gates remain in place. This is unpublished host plumbing;
+the timer API, production dependency graph and canister source are unchanged.
+Focused probe compilation and lint are separately approved development checks;
+startup/recovery/cohort and native host qualification remain owner-operated.
+The approved Rust 1.88 `cargo check` and Clippy commands for
+`ic-timers-pocketic --all-targets` pass with locked, offline inputs and
+`RUSTUP_AUTO_INSTALL=0`. Clippy initially rejected a redundant `must_use`
+attribute on the factory; the final source relies on the upstream owning type's
+attribute and passes both commands. Logs and task before-images remain at
+`/tmp/ic-timers-harness0221.y2PU7FAH/`. No tests, PocketIC execution, Wasm build,
+setup or release command ran for this cleanup. Cargo inputs, real index and refs
+are preserved. No production Wasm or instruction saving is claimed.
+
+IC Build's specification has feature/cohort controls, but its committed 0.2.2
+acquisition compares package and library names literally and constructs artifact
+paths with the package spelling. Locked Cargo metadata shows that our hyphenated
+probe packages have default underscored cdylib names. This source-level blocker
+is reported in [IC Build #16](https://github.com/dragginzgame/ic-build/issues/16);
+no IC Build acquisition or Wasm experiment was run. Even after that fix, adoption
+would require a native adapter, dependency and retained artifact owners to replace
+roughly 25 lines of Make build/path plumbing. The current recipes use Cargo's
+incremental targets and introduce no custom cache. No measured time saving or
+smaller total adapter has been established, so this batch retains the recipes
+and adds no IC Build dependency or second cache.
+
+The version-writer extraction is proposed on
+[Shared #159](https://github.com/dragginzgame/shared-tooling/issues/159#issuecomment-6147567013).
+The narrow shared operation would render a literal workspace version from an
+admitted source to stdout, preserving unrelated bytes and rejecting ambiguous
+selectors before output. Installation and release transaction rollback remain
+local. The qualified local writer stays until the upstream helper exists and
+its consumer fixtures can establish equivalence; snapshots are unchanged.
+
+## Prepared 0.22.1 contributor cleanup
+
+Standard Shared Tooling release and resume commands are the sole automated
+delivery owner. The local `release-x`, `release-stage`, `release-commit` and
+`release-push` commands and their independent commit/tag helper are removed.
+Fresh arbitrary-version delivery is no longer supported locally. Version-only
+`patch`, `minor`, `major` and `bump-x` preparation remain user-owned; they do not
+create shared release intent or authorize delivery. For a standard interrupted
+release, rerun its original target or select its exact saved version through
+`release-resume`. Unjournaled earlier manual preparations require maintainer
+reconciliation; this cleanup does not infer or discard effects from them.
+
+The shared runner keeps its exact source/index/destination checks, journal and
+interruption recovery. Timers retains metadata adapters, the full release gate,
+publication clean-worktree/exact-tag admission and the version helper's rollback
+fixtures. Removed delivery tests retire with their commands; publication guard
+failure and dirty-state cases remain in `test-tag-at-head.sh`.
+
+The unpublished `ic-timers-test-protocol` package owns the seven wire record
+definitions used by the runtime/size canisters and native PocketIC decoder.
+It has only inherited Candid and Serde dependencies, with no runtime/provider
+authority. The producer's cohort label remains borrowed and the decoder's owned;
+one generic record carries both text representations. A native interop test checks
+their identical Candid types, borrowed-to-owned decoding and wide totals.
+The root catalog and sole lockfile add only that local package and its links;
+external selections and existing package versions are preserved.
+
+Runtime and cohort observation endpoints construct application metadata once,
+using empty defaults before populating available timer fields. Their wire fields,
+canister assertions, feature isolation and counter measurement boundaries stay
+unchanged. The published timer library has no new dependency or API change.
+Probe Wasm/instruction deltas remain unmeasured; final artifacts and PocketIC
+subjects retain their owner-operated qualification. Source before-images and
+focused evidence belong at `/tmp/ic-timers-cleanup0221.zH22uPmx/`.
+
+Approved locked/offline checks pass: Rust 1.88 native probe/test-target compilation,
+the protocol interop test, and runtime/four-cohort Wasm compile-only checks under
+`timer-probe`; Rust 1.99 probe/protocol Clippy with warnings denied. Version
+preparation, tag/publication, fixture-completion and release-gate fixtures pass.
+The gate fixture initially expected only the two library test commands; its
+updated independent expectation also requires the protocol test and checks its
+failure propagation. Original failure output and fixture remain retained.
+No PocketIC execution, optimized Wasm artifact build, setup or real release ran.
+Registry identities, existing local versions, real index and refs are preserved.
+Native macOS and complete release qualification remain owner-operated.
+
 ## Prepared 0.22 upstream boundary
 
 The incoming root catalog/lock select Metrics 0.9.0, Testkit 0.37.0 and Host
@@ -43,14 +171,14 @@ acceptance; the current handoff owns their exact scope.
 ## Root workspace and dependencies
 
 The maintainer's dependency-centralization request supersedes the independent
-`testing/` workspace. The root `Cargo.toml` owns `ic-timers` and the three
+`testing/` workspace. The root `Cargo.toml` owns `ic-timers` and the four
 unpublished packages under `testing/crates/`, with one root dependency catalog
 and `Cargo.lock`. Member dependencies and package versions inherit from the
 root; probe publication stays disabled. There is no `testing/Cargo.toml` or
 `testing/Cargo.lock` compatibility path.
 
 `ic-timers` remains the default member. Library check, test, lint, docs, MSRV
-and Wasm targets select it explicitly. Formatting covers all four members.
+and Wasm targets select it explicitly. Formatting covers all five members.
 The full release gate retains every probe lint configuration, watchdog/ordinary
 recovery subject and policy cohort. Probe Wasm builds use `--profile timer-probe`
 and the existing ignored `testing/target` and cohort target directories;
@@ -211,25 +339,11 @@ advisory documentation review is requested in
 [Shared Tooling #100](https://github.com/dragginzgame/shared-tooling/issues/100),
 using the shared maintenance catalog rather than another local gate.
 
-The clean-worktree and release-commit guards capture untracked-file queries
-before testing their output. The commit helper treats Git's staged-diff status
-of 1 as pending changes, while other failures stop before commit or tagging.
-Interrupted tag retries also require a successful read of the exact release
-subject; matching output from a failed query is insufficient. The Git-phase
-fixture injects failures at these boundaries and checks that the commit identity
-is preserved. Source review, shell syntax and embedded fixture-shell syntax
-checks passed; those new fixture scenarios have not been executed.
-
-Version preparation and release commits capture the exact version's tag listing
-before testing whether it is empty. A failed query cannot authorize a bump,
-commit or tag, even when it emits plausible output. The release helper queries
-again after committing and checking the clean worktree; failure there leaves
-the prepared release commit untagged for the existing retry path. Fixtures cover
-empty and matching output from failed lookups, metadata and index preservation
-before preparation, and recovery using the same commit after the post-commit
-lookup fails. Source and shell syntax were reviewed; these scenarios have not
-been executed. The lookup uses Git and Bash without adding a host dependency
-or establishing native macOS qualification.
+The current publication guards reject failed Git observations and dirty source;
+standard delivery commit/tag observation and recovery belong to the adopted
+Shared Tooling runner. Local tag/publication fixtures retain empty and plausible
+failed observations without authorizing effects. Earlier independent commit/tag
+qualification is historical and does not define another current delivery path.
 
 The repository checks retain producer failure status during Git configuration
 inventory and provider-source inspection. The shared structured Actions checker
@@ -244,11 +358,11 @@ reusable workflows, malformed inputs and independent tracked lockfiles. The new
 adoption fixtures have not been executed locally; this repository-only work
 changes no timer runtime contract and supplies no new native macOS qualification.
 
-Combined release targets run `bump-version.sh --check` before deployment
+Standard release targets run `bump-version.sh --check` before deployment
 validation. This preflight checks the requested version, impact, unambiguous
 draft selection without changing version
-metadata or running tests. An empty exact `VERSION` is rejected before the gate.
-The bump helper accepts exactly one `patch`, `minor`, `major` or canonical
+metadata or running tests. The bump helper accepts exactly one `patch`, `minor`,
+`major` or canonical
 `x.y.z` argument after an optional leading `--check`. Missing or extra arguments,
 including a misplaced or repeated check flag, fail with usage status 2 before
 reading release metadata. The preparation fixture checks these rejections against
@@ -256,11 +370,11 @@ unchanged metadata bytes and permission bits.
 
 The version-preparation fixture copies the shared `next-release-version.sh` used
 by the bump helper into its isolated repository. It checks all three increment
-preflights without metadata mutation, then checks standard Makefile delegation,
-selected remote/branch forwarding, resume selection and runner failure propagation
-using a recording stub. The local exact-version recipe retains real preflight,
-rollback and explicit staging coverage. Shared phase ordering and interruption
-recovery belong to `test-release-runner.sh`, now included in `release-check`.
+preflights without metadata mutation and retains real rollback coverage. The
+separate release-gate fixture checks standard Make delegation, selected
+remote/branch forwarding, resume selection and runner failure propagation using
+a recording stub. Shared phase ordering and interruption recovery belong to
+`test-release-runner.sh`, included in `release-check`.
 The maintainer reported the missing-helper failure before these changes. Shell
 and embedded fixture-shell syntax and source flow were reviewed; the corrected
 fixtures remain unexecuted by the automated contributor and need maintainer
@@ -275,44 +389,15 @@ created changelog and compares the remaining metadata bytes and modes. The
 production bump helper is unchanged. Source, shell and embedded fixture-shell
 syntax were reviewed; rerunning the corrected fixture remains maintainer-owned.
 
-The release-commit owner then runs its read-only `--check-before-bump` mode. It
-accepts staged implementation changes and dirty metadata selected by
-`release-stage`: `Cargo.toml`, `Cargo.lock` and `CHANGELOG.md`.
-Other unstaged or untracked paths are listed with Bash escaping
-and rejected before dependency fetching, validation or version mutation. Stage
-the intended implementation changes yourself; the helper does not expand the
-metadata staging scope or require a preparatory source commit. Plain `patch`,
-`minor`, `major` and `bump-x` remain available for dirty-worktree version
-preparation without this combined-release admission check.
+Standard delivery admits the canonical source through the shared runner and
+consumer adapter before preparation. Plain `patch`, `minor`, `major` and `bump-x`
+remain available for dirty-worktree metadata preparation. Their preflight and
+rollback fixture does not stage, commit or tag as part of the bump.
 
-The same owner requires every path to be staged in its normal commit/tag mode.
-Both modes complete NUL-delimited Git discovery before reading records; an empty
-or plausible partial result from a failed query cannot establish admission.
-The normal commit mode retains lockfile validation, exact tag identity,
-clean-worktree checks and interrupted-tag retries. The real bump repeats the
-version preflight checks afterward and always advances the requested version.
-
-The worktree fixture covers clean admission without a release commit, each dirty
-metadata output, staged/partially staged/deleted source, untracked whitespace/quoted/UTF-8
-paths, invalid arguments, and empty/metadata-only failed Git output. Recipe
-fixtures cover every combined target rejecting the worktree before the gate and
-bump. Shell and embedded fixture syntax, source flow, read-only 0.11.10 changelog
-preparation and diff whitespace checks passed; these new fixture scenarios have
-not been executed. This is repository-only tooling and supplies no new runtime
-or native host qualification.
-
-If a combined release already bumped and staged metadata but stopped at the
-commit guard, review and stage the remaining intended paths, then run:
-
-```text
-make release-commit && make release-push
-```
-
-These local phase commands resume the prepared version. For the standard shared
-workflow, rerun its original target to reconcile saved intent automatically.
-A prepared date or version does not prove a release tag or publication;
-an intentionally unpushed preparation may be followed by a new maintainer-selected
-batch while preserving the existing metadata and index.
+If a standard release is interrupted, rerun its original target to reconcile
+saved intent. A prepared date or version does not prove a release tag,
+publication or completed delivery. Retain earlier effects and metadata for
+maintainer reconciliation rather than starting an independent delivery path.
 
 Cargo owns package identity. The handoff reads it directly instead of storing a
 second version projection. Release and deployment checks do not read changelog
@@ -336,18 +421,20 @@ make release-minor
 make release-major
 ```
 
-For an exact version, use:
+For an exact saved unfinished release, use:
 
 ```text
-make release-x VERSION=0.3.0
+make release-resume VERSION=x.y.z
 ```
+
+This resumes admitted shared intent; it does not prepare a fresh arbitrary version.
 
 All release execution is user-owned: version bumps, tests, staging, commits,
 tags, pushes and publication. Automated contributors prepare only the next
 changelog draft and directly relevant evidence. The user runs `make patch`, `make
 minor`, `make major`, or `make bump-x VERSION=...` when ready to update the
-workspace version and the root lockfile, and `make release-stage` to stage release
-metadata.
+workspace version and the root lockfile. Normal delivery stages only its admitted
+metadata through the shared runner.
 
 The selected shared contract includes the PR helper. Standard entrypoints come
 from `make/release.mk`; this consumer uses separate override assignment and
@@ -396,15 +483,15 @@ preparation and upstream/consumer qualification limits;
 unchanged adoption passed both complete native gates in 0.14.15.
 
 The user-operated release targets run the complete release gate, update the
-workspace version and all four local member identities in the sole root lockfile,
+workspace version and all five local member identities in the sole root lockfile,
 commit, create an annotated `vX.Y.Z` tag, and push the branch/tag atomically. If the workspace version
 has no saved unfinished intent, the requested bump runs. A fresh `make release-patch`
 advances the patch version; rerunning an unfinished patch release recovers it. For
 example, with Cargo at 0.8.2 and a current draft, stage and commit the code-bearing
 changes, then run `make release-patch` to validate, bump and release 0.8.3. The bump
-itself also supports a dirty worktree without a preparatory commit. An exact
-`release-x` target must be a strict version increase. Standard releases, exact
-releases, validation logging and pre-commit formatting require executing Make
+itself also supports a dirty worktree without a preparatory commit.
+Standard releases, exact saved-intent resume, validation logging and pre-commit
+formatting require executing Make
 modes that propagate failures. The shared admission probe rejects ignore-errors,
 dry-run, question, touch and version-only controls before protected effects.
 Use ordinary Make modes for those commands. The reviewed Shared 0.2.11 include
@@ -413,8 +500,8 @@ that erase MFLAGS. Clearing/replacing MAKEFLAGS cannot admit hidden unsafe modes
 Release selections and normal parallel-job controls remain inherited.
 Hook and version-preparation regressions print their retained scratch paths on
 failure, including per-scenario Make output and before/after fixture state.
-Successful fixture runs remove their scratch directories. Exact-release failure
-cases use recording phase substitutes; they do not commit, tag or push.
+Successful fixture runs remove their scratch directories. Shared delivery
+fixtures own ordering and interrupted-effect recovery.
 Release metadata and the root lockfile are checked before the release commit;
 unstaged and untracked work is rejected before committing or tagging.
 
@@ -455,24 +542,10 @@ therefore has no matching local replacement path. This adoption performs no real
 recovery, changes no log-retention policy and adds no second release-state machine.
 
 If a standard release stops after the version bump, rerun the same standard
-target. The local exact-version `release-x` has no shared journal; finish its
-prepared version with the phase targets:
-
-```text
-make release-stage
-make release-commit
-make release-push
-make publish
-```
-
-`release-commit` commits staged release metadata when the version is untagged.
-If the release commit already exists, it requires a clean `HEAD` whose subject
-is exactly `Release X.Y.Z`, verifies metadata and the root lockfile, then creates
-the missing annotated tag. A retry with an existing tag verifies that tag's
-type and commit. Arbitrary clean commits, conflicting tags and new staged
-changes for a tagged version are rejected. A push-only failure can be retried
-with `make release-push`. These phase targets do not repeat deployment tests;
-the completed pre-bump gate remains the evidence for the prepared code.
+target or select its exact saved intent with `release-resume VERSION=x.y.z`.
+The shared runner owns commit/tag/push reconciliation without an independent
+local phase command. Publication remains a separate user-owned `make publish`
+after delivery succeeds.
 
 `make fmt` and `make fmt-check` sort manifests with cargo-sort 2.1.4 before
 formatting/checking Rust for every member of the single root workspace. The exact
@@ -1593,7 +1666,7 @@ PocketIC keeps its separate exact audited admission owner. Follow the
 macOS and prepare this repository's Rust toolchain before the common aggregate.
 The reviewed installer itself requires no sudo.
 
-`make cloc` reports all four members of the root workspace, including the
+At that revision, `make cloc` reported all four members of the root workspace, including the
 unpublished probes. `CLOC_MANIFEST=Cargo.toml` explicitly selects that same graph;
 there is no independent testing manifest. The refreshed reporter isolates its
 fixture workspaces and excludes configured build output, including aliases.
@@ -3057,7 +3130,8 @@ rewriter. External selections are preserved. It then runs offline
 manifest through `check-lockfiles.sh`. The no-deps inventory is not the validation
 gate: it does not establish lockfile coherence. Full locked resolution catches
 stale member versions without building packages or repeating evidence suites.
-`release-stage` stages the root lockfile automatically.
+The original `release-stage` target staged the root lockfile automatically;
+current standard delivery delegates staging to the shared runner.
 
 The checker captures successful Cargo output before parsing JSON. Cargo failures
 retain their exit status and diagnostic without a cascading parse error from
@@ -3072,7 +3146,7 @@ inspection found that archive and eight other selected testing archives absent
 from the local default cache; it does not establish results in another cache or
 native macOS qualification.
 
-`release-stage` selects only the three outputs the bump owns. Workspace members
+The original `release-stage` target selected only the three outputs the bump owns. Workspace members
 inherit their versions, so their manifests are not version-bump outputs and
 remain under the maintainer's separate code-staging ownership. Stage and commit
 the intended implementation and supporting evidence before the combined release;

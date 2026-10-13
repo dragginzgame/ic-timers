@@ -135,14 +135,15 @@ for failed_manifest in '' Cargo.toml; do
     rm fetch-events
 done
 
-# Exercise library build, test and MSRV recipes through the recording Cargo stub.
+# Exercise library build, API/protocol tests and MSRV through the Cargo stub.
 # API compile-fail doctests run after native and minimum-Wasm compilation;
 # failures at any command stop the owning target.
 for target in build test msrv; do
     case "${target}" in
         build) calls=('build -p ic-timers --all-targets --all-features --locked') ;;
         test) calls=('test -p ic-timers --all-targets --all-features --locked'
-            'test -p ic-timers --doc --all-features --locked') ;;
+            'test -p ic-timers --doc --all-features --locked'
+            'test -p ic-timers-test-protocol --lib --locked') ;;
         msrv) calls=('+1.88.0 check -p ic-timers --all-targets --all-features --locked'
             '+1.88.0 check -p ic-timers --all-features --locked --target wasm32-unknown-unknown'
             '+1.88.0 test -p ic-timers --doc --all-features --locked') ;;

@@ -5,19 +5,19 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `ed9c26f015691859f67b50b512a94709dcdc0c6c` (0.10.0). Its provenance and
+  from revision `626fc2bd3125195520fb870b92abfec11b01454d` (0.10.2). Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
 - Apply the [shared audit methods](audits/README.md) from revision
-  `ed9c26f015691859f67b50b512a94709dcdc0c6c`, recorded separately in
+  `626fc2bd3125195520fb870b92abfec11b01454d`, recorded separately in
   [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). That
   supplemental snapshot also supplies pinned host/IC setup at the same
   reviewed revision. The isolated
   [Cargo helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
   supplies the structured dependency checker, Cargo readers/rewrites,
   annotated-tag checker and release-command adoption checker from
-  `ed9c26f015691859f67b50b512a94709dcdc0c6c`. All three manifests record explicit
+  `626fc2bd3125195520fb870b92abfec11b01454d`. All three manifests record explicit
   entrypoints and their complete derived payloads; future refreshes reuse those
   roots. Review local callers and other bundles before changing root selection.
   The exporter automatically retires only verified, unchanged owned payloads
@@ -108,10 +108,13 @@ This file is normative for automated contributors.
   another exact target and authorizes mutation there.
 - The maintainer requested one root dependency catalog on 2026-10-07,
   superseding the former independent testing-workspace exception. `Cargo.toml`
-  owns all four maintained packages and every direct dependency; all member
+  owns all five maintained packages and every direct dependency; all member
   dependency tables use `workspace = true`. There is one selected `Cargo.lock`.
   Retain the previously approved probe locations under `testing/crates/`;
   those directories no longer introduce a workspace or dependency catalog.
+  The unpublished `ic-timers-test-protocol` package owns probe wire records only;
+  it has no timer-runtime or platform dependency. Probe canisters and the native
+  decoder share those records without exporting them from the published library.
 - Keep `ic-timers` as the default member and select it explicitly in library
   validation, docs, MSRV and Wasm commands. Probes remain unpublished, inherit
   the root package version, retain their Rust-only lint selection, and use the
