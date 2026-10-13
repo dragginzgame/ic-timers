@@ -1,5 +1,74 @@
 # Shared Tooling adoption
 
+## Prepared Shared Tooling 0.9.10
+
+All three canonical exports select committed
+`7e55adecf6f0b196c050f104b37f8c69b6bf434e` (0.9.10), across **68/36/11**
+payloads. Complete clean-source previews precede apply. The root selection adds
+`rules/change-reporting.md` explicitly because the baseline and selected audit
+methods require its contract; Markdown links do not derive snapshot companions.
+Other roots remain unchanged and no canonical payload is retired. The earlier
+0.9.8 preparation below is superseded within the same undated 0.21.2 batch.
+
+The canonical fixture enters its prepared consumer before direct compiler/cache
+identity checks. It borrows the source checkout's existing commit and README
+through a read-only object reference, with disposable refs/index/working files;
+no synthetic commit, tag or push. A guard records forbidden attempts and fails
+even when a negative case consumes the status. Real hook, partial-staging,
+receipt and exported-input checks remain. Remove the temporary Make adapter and
+invoke the complete canonical entrypoint directly
+([Shared #143](https://github.com/dragginzgame/shared-tooling/issues/143),
+[#144](https://github.com/dragginzgame/shared-tooling/issues/144)).
+
+The new reporting rule separates genuine deletions from moves/renames and defines
+scoped Rust/type/documentation measures, excluding distributed copies from
+consumer totals ([Shared #141](https://github.com/dragginzgame/shared-tooling/issues/141)).
+It adds no scheduler, product API or validation command. Existing local authority,
+tool pins, installer/build policy and full gates are unchanged. Shared's CI cache
+transport and fleet-wide portable timing suite remain unactivated in Timers.
+
+The fixture correction at `da4977129b9e2d3a62178fba8925026f9e42daa6` has successful
+upstream Linux and both macOS qualification in
+[run 38305700979](https://github.com/dragginzgame/shared-tooling/actions/runs/38305700979).
+Latest [run 38358334690](https://github.com/dragginzgame/shared-tooling/actions/runs/38358334690)
+is in progress at inspection. Neither result substitutes for consumer execution
+of the newly selected bytes. Evidence remains at
+`/tmp/ic-timers-shared0910.CyrZ3Vtp/`: exact source reference, before inputs/index,
+all previews/applies and integrity logs. Integrity, changed Bash syntax and diff
+checks pass; Cargo/pins and real index entries are preserved. No tests, lint,
+setup or release execution; package versions remain 0.21.1. The original failed
+fixture evidence and prior adapter delivery stay intact.
+
+## Prepared Shared Tooling 0.9.8
+
+All three exports select reviewed committed source
+`b50925a342ff1880c76eb784a7406c7fdfaf59da` (0.9.8), with unchanged entrypoints
+and **67/36/11** payloads. Complete clean-source previews precede apply. The
+audit/setup slice gains the cache-identity helper as a required companion of the
+canonical Rust-tool fixture; no owned payload is retired. The fixture covers
+identity changes and restored physical generations before its existing offline
+cold-checkout reuse checks
+([Shared #142](https://github.com/dragginzgame/shared-tooling/issues/142)).
+
+This refresh does not enable cache transport in Timers' GitHub workflow or add
+Shared's fleet-wide portable suite as a local gate. The new host guide describes
+the producer's CI behavior; all existing consumer setup, admission, three-host
+validation and failure-artifact contracts remain. No hosted speed-up is claimed.
+The installer/build-policy bytes and tool pins are unchanged from 0.9.7.
+
+The committed 0.9.8 fixture still selects its mock compiler from the invoking
+cwd, including new cache-key calls. Keep the repository-owned neutral-cwd
+adapter until a committed
+[Shared #143](https://github.com/dragginzgame/shared-tooling/issues/143)
+correction is reviewed and adopted. No canonical fixture is patched locally.
+
+Evidence stays at `/tmp/ic-timers-shared098.VKSuUBCD/`: exact clean source,
+before inputs/index, all previews/applies and integrity logs. Cargo files, pins
+and real index entries are preserved. Integrity, changed Bash syntax and diff
+checks pass; no behavioral fixture, setup, Rust build/lint or release runs during
+preparation. Compatible repository-only notes use undated **0.21.2**, leaving
+package versions at 0.21.1.
+
 ## Rust-tool fixture invocation isolation
 
 The maintainer's 0.21.1 CI attempt at `6483ffc` fails the canonical 0.9.7

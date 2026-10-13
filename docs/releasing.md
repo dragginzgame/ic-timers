@@ -4058,3 +4058,28 @@ offline checks neither repair old selections nor fall back to them. Undated
 code-bearing release. An explicitly chosen maintainer tooling patch still
 retains the full release gate. Cargo versions remain 0.21.0; no staging, commit,
 tag, push or publication is performed.
+
+## 0.21.1 delivery and prepared 0.21.2 tooling
+
+The maintainer's completed direct-release receipt records source
+`f935c706cfdb7e2554b0a2a95b06763efcc009c9`, delivered tree
+`a971b09581c1433747caae7a20195cdd30bcd9b2`, and release commit
+`a97dcb4b5f091d98afd35038a4cbeb15fba1d7d6` (0.21.1). That source contains the
+neutral-cwd Make adapter and Shared 0.9.7/Testkit 0.35 contributor graph. The
+completed standard receipt supplies owner-operated full-gate acceptance; it does
+not replace or erase the original failed fixture evidence. Exact-source hosted
+[run 38288927727](https://github.com/dragginzgame/ic-timers/actions/runs/38288927727)
+and [run 38288927426](https://github.com/dragginzgame/ic-timers/actions/runs/38288927426)
+pass at 2026-10-13 readback. These exact-source results remain separate from
+newer tooling preparation.
+
+The [0.9.10 refresh](shared-tooling.md#prepared-shared-tooling-0910) is a later
+repository-only batch under undated 0.21.2 notes, separate from that acceptance.
+It supersedes the earlier prepared 0.9.8 selection and removes the Make adapter
+because the canonical fixture now isolates its compiler context and creates no
+synthetic commits. The new reporting rule is explicitly selected as a governance
+root. All user-operated gates remain; no Rust API/runtime, package-version,
+Cargo-lock or workflow changes. Snapshot, syntax and diff inspection do not
+qualify new fixture behavior; execution remains with the maintainer. No setup is
+required solely by this refresh because the Cargo installer/build-policy identity
+and executable pins are unchanged.

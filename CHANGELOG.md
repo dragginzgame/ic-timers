@@ -2,6 +2,20 @@
 
 All notable changes to this project are recorded here.
 
+## [0.21.2]
+
+### Development
+
+- Adopt Shared Tooling 0.9.10 for Cargo-cache and restored tool-build checks,
+  and compiler-isolated, commit-free Rust-tool qualification. Remove the
+  temporary fixture invocation adapter; the timer runtime is unchanged
+  ([Shared #142](https://github.com/dragginzgame/shared-tooling/issues/142),
+  [#143](https://github.com/dragginzgame/shared-tooling/issues/143),
+  [#144](https://github.com/dragginzgame/shared-tooling/issues/144)).
+- Apply shared change-reporting rules for distinct deletion/move/rename counts
+  and scoped Rust, type and documentation metrics
+  ([Shared #141](https://github.com/dragginzgame/shared-tooling/issues/141)).
+
 ## [0.21.1] - 2026-10-12
 
 ### Development
