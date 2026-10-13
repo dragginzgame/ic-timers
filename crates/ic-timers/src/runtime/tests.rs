@@ -1736,12 +1736,13 @@ fn stale_reused_identity_callback_cannot_change_handles_or_measurements() {
     old.cancel()
         .expect("old transient registration should be removed");
 
-    let stale_measurement = CallbackMeasurement {
-        instructions: 1_000,
+    // Exercise the production recording path with current platform end counters.
+    // A removed or reused claim must reject the sample before updating accounting.
+    let stale_measurement = CallbackMeasurementStart {
+        instructions_before: 0,
         memory_start: MemoryPageExtent::new(1, 0),
-        memory_end: MemoryPageExtent::new(11, 20),
     };
-    record_callback_measurements(&old_token, stale_measurement);
+    stale_measurement.record(&old_token);
     assert!(timer_snapshot(old_token.identity()).unwrap().is_none());
 
     let replacement = register_once(
@@ -1768,7 +1769,7 @@ fn stale_reused_identity_callback_cannot_change_handles_or_measurements() {
     assert!(run_next_due(), "stale callback delivery should be harmless");
     // Exercise the accounting boundary directly; stale dispatch would return
     // before taking a measurement and cannot reach this ownership check.
-    record_callback_measurements(&old_token, stale_measurement);
+    stale_measurement.record(&old_token);
     let after = timer_snapshot(replacement.identity()).unwrap().unwrap();
     assert_eq!(after.observability().performance(), before_performance);
     assert_eq!(after.observability().counters().stale_wakeups(), 1);
@@ -1802,7 +1803,7 @@ fn stale_reused_identity_callback_cannot_change_handles_or_measurements() {
         performance.scheduler_memory_pages(),
         before_performance.scheduler_memory_pages()
     );
-    record_callback_measurements(&old_token, stale_measurement);
+    stale_measurement.record(&old_token);
     let after_stale = timer_snapshot(replacement.identity()).unwrap().unwrap();
     assert_eq!(after_stale.observability().performance(), performance);
 

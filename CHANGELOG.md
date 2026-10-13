@@ -2,6 +2,40 @@
 
 All notable changes to this project are recorded here.
 
+## [0.22.0]
+
+### Breaking
+
+- Adopt Metrics 0.9 for the public measurement-summary identity. Consumers
+  exchanging summaries must select Metrics 0.9 or the Timers re-export; update
+  actual-overflow accessors to `*_overflowed` and error matches to the new
+  overflow names, removing unreachable mean/interval error variants. Numeric
+  accounting and timer lifecycle semantics remain unchanged.
+
+### Changed
+
+- Record callback measurements directly from the captured start, simplifying
+  private accounting while preserving sampling order, stale-registration
+  rejection and public timer semantics. The isolated Wasm experiment measured
+  no binary-size change from this simplification.
+
+### Development
+
+- Adopt Shared Tooling 0.10.0 across all three snapshots. Common catalogs now
+  belong to the reviewed export; keep Binaryen 132 in an explicitly selected
+  qualified exception for Make and failure evidence. Maintenance/LOC path
+  rejection and release-lock diagnostics retain native failures.
+- Review the incoming Testkit 0.37 and Host 0.17.1 registry selections, preserving
+  the root dependency catalog and lockfile. Host stays in the unpublished native
+  harness graph; provider and PocketIC ownership are unchanged.
+- Record whole-canister LTO experiments and hand reusable build guidance to
+  IC Build. Larger applications retain their own final-artifact qualification;
+  timer profiles and public APIs are unchanged.
+- Adopt Shared Tooling 0.9.14 to recover missing failed-step logs from only the
+  selected run attempt's failed jobs, retaining original and recovered evidence.
+  Missing or partially retrieved logs still fail inspection
+  ([Shared #149](https://github.com/dragginzgame/shared-tooling/issues/149)).
+
 ## [0.21.4] - 2026-10-13
 
 ### Changed

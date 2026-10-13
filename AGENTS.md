@@ -5,19 +5,19 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `35cad65677ff989b5fb24a88d947fda37d2366e8` (0.9.13). Its provenance and
+  from revision `ed9c26f015691859f67b50b512a94709dcdc0c6c` (0.10.0). Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
 - Apply the [shared audit methods](audits/README.md) from revision
-  `35cad65677ff989b5fb24a88d947fda37d2366e8`, recorded separately in
+  `ed9c26f015691859f67b50b512a94709dcdc0c6c`, recorded separately in
   [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). That
   supplemental snapshot also supplies pinned host/IC setup at the same
   reviewed revision. The isolated
   [Cargo helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
   supplies the structured dependency checker, Cargo readers/rewrites,
   annotated-tag checker and release-command adoption checker from
-  `35cad65677ff989b5fb24a88d947fda37d2366e8`. All three manifests record explicit
+  `ed9c26f015691859f67b50b512a94709dcdc0c6c`. All three manifests record explicit
   entrypoints and their complete derived payloads; future refreshes reuse those
   roots. Review local callers and other bundles before changing root selection.
   The exporter automatically retires only verified, unchanged owned payloads
@@ -46,10 +46,13 @@ This file is normative for automated contributors.
   only canonical installers; keep one store setting
   across setup, checks and evidence. Retain earlier installations without an
   old-bundle fallback, independent store manager or automatic deletion.
-  The consumer-owned [IC pin matrix](ci/ic-tools.tsv) selects the five shared
-  tools and is excluded from the immutable audit export. It contains no PocketIC
-  policy. Shared installers receive that explicit matrix; a snapshot refresh
-  cannot overwrite consumer tool selections.
+  The snapshots own the default [host/Cargo catalog](ci/tool-versions.env) and
+  [IC catalog](ci/ic-tools.tsv). The consumer-owned
+  [qualified IC exception](ci/ic-tools-qualified.tsv) retains Binaryen 132
+  until consumer optimizer qualification supports replacing it; other versions
+  and digests match shared defaults. Make and failure-evidence collection select
+  that exception explicitly. It is excluded from immutable exports and contains
+  no PocketIC policy. A host override does not implicitly select Rust pins.
   Optional helpers described in shared guides do not become local commands
   without a separate caller adoption.
   The linked [maintenance catalog](tasks/README.md) is included as reviewed

@@ -10,6 +10,8 @@ VERSION ?=
 LOCAL_TOOL_INSTALL_TARGETS := install-testkit-server
 LOCAL_TOOL_CHECK_TARGETS := pocketic-check
 override SHARED_TOOLING_ROOT := $(CURDIR)
+# Retain the qualified optimizer selection separately from shared defaults.
+IC_TOOL_PINS := $(CURDIR)/ci/ic-tools-qualified.tsv
 # Standard delivery remains direct, including under ambient Make selections.
 override RELEASE_DELIVERY := direct
 export RELEASE_DELIVERY

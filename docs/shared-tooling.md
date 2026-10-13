@@ -1,5 +1,78 @@
 # Shared Tooling adoption
 
+## Prepared Shared Tooling 0.10.0
+
+All three canonical snapshots select clean committed
+`ed9c26f015691859f67b50b512a94709dcdc0c6c` (0.10.0), across **70/37/11**
+payloads. Complete previews precede apply. Existing roots are preserved; derived
+companions add the common catalogs to baseline/setup ownership. No payload is
+retired. The isolated helper export is prepared in a disposable Git consumer and
+copied only after canonical export and preservation checks.
+
+Common host/Cargo and IC pin catalogs now belong to the reviewed snapshot.
+Host/Cargo assignments and digests match the earlier selection; only catalog
+ownership comments change. The shared IC default selects Binaryen 133. Timers
+relocates its prior byte-exact IC selection to `ci/ic-tools-qualified.tsv`, keeping
+Binaryen 132 as the existing consumer-qualified exception. Make's `IC_TOOL_PINS`
+and local failure-evidence collection explicitly select that file. Formatting
+continues to select the snapshot's root host/Cargo catalog. Host overrides no
+longer imply Rust selections; there is no consumer-catalog discovery fallback.
+Testkit remains the sole PocketIC setup/admission owner.
+
+The existing failure-artifact fixture uses that same exception for its synthetic
+admitted IC bundles, reordered caller pins and copied checkout. It retains the
+canonical default catalog separately; these adjusted fixture cases are unexecuted.
+
+The new exporter catalogs do not establish Timers optimizer qualification. No
+maintained probe/build recipe runs Binaryen, so there is no product justification
+for switching the exception yet. Existing pins, artifacts and installations are
+retained. The shared adoption procedure requires explicit `make install-tools`
+and `make tools-check`, followed by formatting and consumer qualification on the
+supported native hosts. These are owner-operated preparation/validation steps;
+the contributor has not installed or run tools merely to refresh snapshots.
+
+Maintenance and LOC helpers reject line breaks in supplied/resolved directory
+paths before probing another checkout or writing state. Release lock failures
+retain original filesystem diagnostics/status and distinguish existing locks.
+The earlier run/attempt-specific CI-log recovery remains included.
+
+Evidence stays at `/tmp/ic-timers-upstream022.Kjn981dG/`: clean source, saved
+inputs/index/refs, previews/applies, integrity logs and registry payload receipts.
+Public registry API readback returned HTTP 403; prepared official package
+archives are checked against the selected lockfile and producer VCS receipts.
+This is source/payload inspection, not fresh remote-main or hosted qualification.
+The same batch adopts public Metrics 0.9 and therefore uses undated **0.22.0**
+notes; Shared's own breaking catalog change does not independently force a
+Timers API cut. Cargo versions and full release effects remain user-owned.
+
+## Prepared Shared Tooling 0.9.14
+
+All three canonical exports select committed
+`969f4d2a2d3bd9f0cc34a9f31cbc379a5262edba` (0.9.14), preserving roots and
+**68/36/11** payloads. Complete clean-source previews precede apply; no additions
+or retirements. The sibling's dirty 0.9.15 maintenance-path work is excluded.
+
+The selected CI helper pins repository/run/attempt before log reads. When a
+completed failed/timed-out attempt has empty failed-step output, it validates
+the complete attempt-specific failed-job list before retrieving job logs. Raw
+observations, errors and recovered logs remain retained; API failures, partial
+results or missing logs fail inspection rather than selecting another attempt
+or rerunning CI
+([Shared #149](https://github.com/dragginzgame/shared-tooling/issues/149)).
+This is bounded evidence recovery, not a timer/runtime change. Full gates,
+artifact verification and setup ownership remain unchanged. No reinstall is
+required solely for this refresh: installer/build-policy bytes and pins match
+the delivered 0.9.13 selection.
+
+Evidence stays at `/tmp/ic-timers-shared0914.JWe4yrBk/`: exact clean source,
+before inputs/index, previews/applies, integrity logs and completed 0.21.4 receipt.
+Integrity, changed Bash syntax, local document links and diff checks pass. Cargo,
+pins and real index entries remain unchanged. No new tests, lint, setup, build or
+release execution; earlier approval was scoped to the delivered callback cleanup.
+Upstream [run 38372877801](https://github.com/dragginzgame/shared-tooling/actions/runs/38372877801)
+is queued at inspection. Compatible repository-only notes use undated **0.21.5**;
+package versions remain 0.21.4.
+
 ## Prepared Shared Tooling 0.9.13
 
 All three canonical exports select committed

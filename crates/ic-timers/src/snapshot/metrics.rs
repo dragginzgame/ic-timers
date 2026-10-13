@@ -665,8 +665,8 @@ mod tests {
             assert_eq!(summary.mean(), Ok(Some(0)));
             assert_eq!(summary.latest(), Some(0));
             assert_eq!(summary.maximum(), Some(0));
-            assert!(!summary.aggregate().samples_saturated());
-            assert!(!summary.aggregate().total_saturated());
+            assert!(!summary.aggregate().samples_overflowed());
+            assert!(!summary.aggregate().total_overflowed());
         }
     }
 
@@ -705,12 +705,12 @@ mod tests {
                 assert_eq!(summary.mean(), Ok(Some(total / u128::from(samples))));
                 assert_eq!(summary.latest(), Some(instructions));
                 assert_eq!(summary.maximum(), Some(u64::MAX));
-                assert!(!summary.aggregate().samples_saturated());
-                assert!(!summary.aggregate().total_saturated());
+                assert!(!summary.aggregate().samples_overflowed());
+                assert!(!summary.aggregate().total_overflowed());
                 assert_eq!(other, MeasurementSummary::EMPTY);
                 assert_eq!(previous_summary.samples(), samples - 1);
                 assert_eq!(previous_summary.total(), total - u128::from(instructions));
-                assert!(!previous_summary.aggregate().total_saturated());
+                assert!(!previous_summary.aggregate().total_overflowed());
             }
         }
     }

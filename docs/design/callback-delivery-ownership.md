@@ -3,6 +3,79 @@
 This records the implementation and evidence scope of the callback delivery
 change. It does not select a release or establish deployment validation.
 
+## Whole-canister Wasm experiments
+
+The maintainer approved isolated optimized builds on 2026-10-13 to investigate
+code complexity, types and Wasm size. All four size-probe cohorts were compared
+at released 0.21.4 source `44935d6188a0da82314e00a56f5f68a9d0c59638`, using
+Rust 1.88.0, the frozen release lockfile (Metrics 0.8.3), one source path, and
+locked/offline inputs. Baseline, Once, AfterCompletion and Watchdog were built
+separately with `timer-probe`, whose other settings remained unchanged.
+
+Full LTO reduced raw linked-canister Wasm by 18.67–18.85%, or 49,849–61,093 bytes.
+Export names matched. These artifacts include Candid, CDK and dependency code;
+the result does not isolate ic-timers' contribution or qualify larger apps.
+There was no final optimizer, PocketIC execution or instruction/heap measurement.
+The experiment left local profiles and runtime unchanged. The incoming Metrics 0.8.4
+selection is outside this frozen comparison and remains preserved.
+
+The reusable recipe and measurement table belong to
+[IC Build's deployable-Wasm guidance](https://github.com/dragginzgame/ic-build/blob/main/docs/artifacts.md#deployable-wasm-lto).
+Complete applications should compare their final transformed artifacts and
+instruction costs before a common build adapter adopts full LTO. IC Timers keeps
+its existing policy/recovery cohorts as timer-semantic evidence; a probe size
+win does not establish an application release default.
+
+Two private source experiments produced byte-identical Wasm to baseline in all
+four cohorts: direct recording from the callback measurement start, and a
+non-generic identity validation core. The former is a possible small source
+simplification; neither supplies size evidence. No public state/type collapse is
+justified by these measurements. The retained experiment directory is
+`/tmp/ic-timers-reductions.NeY8gjCm/`, with `results.tsv`, complete build logs,
+variant patches, compiler identity, artifacts and preservation checks. It is
+local evidence, not a required input to normal builds or deployment.
+
+## Prepared 0.22 callback measurement simplification
+
+The runtime now records directly from the captured instruction and memory start
+after callback completion. It still closes the instruction interval before
+reading the end memory extent, then takes the same registry mutation boundary.
+Only accepted callback paths reach recording, and stale registration claims are
+still rejected by the registry before any accounting mutation. Ordinary work,
+Watchdog scheduling and Watchdog work retain their existing recording sites and
+trap context. There is no new public API, state, dependency or profile selection.
+
+The identity-reuse fixture now reaches this production recording method using
+the native platform's end counters. It retains checks after declaration removal,
+after replacement scheduling and after replacement completion, plus the normal
+seven-instruction/two-Wasm-page/three-stable-page callback assertions. The earlier
+four-cohort experiment produced byte-identical Wasm for this production change
+at frozen 0.21.4 inputs; it does not qualify the newer selected dependency graph.
+Current compile-only checks and any owner-authorized test execution are recorded
+in the handoff. Full native/IC/release qualification remains user-owned.
+
+## Prepared Metrics 0.9 adoption
+
+The incoming root catalog and lock select registry Metrics 0.9.0. The cached
+official archive matches lock checksum
+`f37740e17c25ed7792cad59abf4f72670ca29b85b2ae9d1f8cd022ff1b6a7e18`
+and records producer source `fe4d14f2a24138794878a17a354885a1e7222487`.
+Timers' public `MeasurementSummary` re-export now has that package identity.
+Consumers exchanging it must coordinate the Metrics 0.9 selection, or use the
+Timers re-export. Actual-overflow accessors use `*_overflowed`, and error matches
+must follow Metrics' renamed cases and deleted unreachable mean/interval cases.
+No old-name adapter or second Metrics identity is retained.
+
+Existing zero-sample and wide-total fixtures now assert the new overflow flags,
+retaining exact totals, means, latest/maximum ordering and scheduler/work
+attribution. Timers' separate conservative event/page-counter saturation rules
+are unchanged. The runtime still records through the same registration claim
+and preserves sampling order. These Metrics changes alter the public dependency
+contract, so the complete prepared cleanup/tooling batch uses undated 0.22.0
+notes; Cargo package versions remain maintainer-owned. Timers retains no stable
+measurement format to migrate. New compile evidence belongs in the handoff;
+prior Metrics 0.8 executions do not qualify this graph.
+
 ## Consume the delivered handle through the selected entry
 
 Runtime work delivery previously called registry-level handle consumption and
@@ -564,6 +637,10 @@ No Wasm, heap or instruction savings are claimed.
 
 ## Prepared 0.21.4 callback ownership simplification
 
+The maintainer reports this cleanup delivered/live at 0.21.4. The
+[delivery evidence](../releasing.md#0214-delivery-and-prepared-0215-tooling)
+records the completed full-gate receipt separately from initial focused checks.
+
 Internal callback aliases store their erased closures directly as
 `Rc<RefCell<dyn FnMut(...) -> ...>>`, without a nested `Box`. The same shared
 owner remains in registration, dispatch and abandonment; mutable borrowing and
@@ -587,7 +664,7 @@ reentrant capture destruction, first-reconciliation cleanup/retry and later
 callback ownership. All 154 pass under the maintainer's focused approval;
 library Clippy also passes with warnings denied. The
 [release owner](../releasing.md#0213-delivery-and-prepared-0214-cleanup) retains
-exact compiler/test commands and evidence, with full IC/cohort qualification
-still outstanding. Source changes require no public migration and use undated
-0.21.4 notes. No measured Wasm, heap or instruction savings are claimed; removing
+exact compiler/test commands and evidence; full IC/cohort qualification was
+still outstanding at that preparation. Source changes require no public migration.
+No measured Wasm, heap or instruction savings are claimed; removing
 nested boxing also changes internal pointer layout.

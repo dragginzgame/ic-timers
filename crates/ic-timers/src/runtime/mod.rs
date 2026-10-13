@@ -1286,7 +1286,7 @@ async fn dispatch_ordinary(token: &CallbackToken) {
     };
     let result = future.await;
     finish_ordinary_callback(token, result);
-    record_callback_measurements(token, measurement.finish());
+    measurement.record(token);
 }
 
 fn finish_ordinary_callback(token: &CallbackToken, result: OrdinaryRunResult) {
@@ -1316,7 +1316,7 @@ fn dispatch_watchdog_scheduler(token: &CallbackToken) {
     let accepted = !matches!(transition.effect(), RegistryEffect::None);
     finish_callback_transition(token, transition, handles);
     if accepted {
-        record_callback_measurements(token, measurement.finish());
+        measurement.record(token);
     }
 }
 
@@ -1338,7 +1338,7 @@ fn dispatch_watchdog_work(token: &CallbackToken) {
         callback(token.clone())
     };
     finish_watchdog_dispatch(token, result);
-    record_callback_measurements(token, measurement.finish());
+    measurement.record(token);
 }
 
 fn finish_watchdog_dispatch(token: &CallbackToken, result: WatchdogRunResult) {
@@ -1415,37 +1415,17 @@ impl CallbackMeasurementStart {
         }
     }
 
-    fn finish(self) -> CallbackMeasurement {
+    fn record(self, token: &CallbackToken) {
         // Close the instruction interval before taking its paired end extent.
         let instructions = platform::instruction_counter().saturating_sub(self.instructions_before);
         let memory_end = platform::memory_pages();
-        CallbackMeasurement {
-            instructions,
-            memory_start: self.memory_start,
-            memory_end,
-        }
+        with_registry_mut(|registry| {
+            registry
+                .record_callback_measurements(token, instructions, self.memory_start, memory_end)
+                .map_err(TimerError::from)
+        })
+        .unwrap_or_else(|error| trap_callback_failure("callback measurement accounting", &error));
     }
-}
-
-#[derive(Clone, Copy)]
-struct CallbackMeasurement {
-    instructions: u64,
-    memory_start: MemoryPageExtent,
-    memory_end: MemoryPageExtent,
-}
-
-fn record_callback_measurements(token: &CallbackToken, measurement: CallbackMeasurement) {
-    with_registry_mut(|registry| {
-        registry
-            .record_callback_measurements(
-                token,
-                measurement.instructions,
-                measurement.memory_start,
-                measurement.memory_end,
-            )
-            .map_err(TimerError::from)
-    })
-    .unwrap_or_else(|error| trap_callback_failure("callback measurement accounting", &error));
 }
 
 fn trap_callback_failure(context: &str, error: &TimerError) -> ! {

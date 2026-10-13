@@ -10,6 +10,36 @@ classify the change, choose the appropriate version, run the required validation
 let the bump label the current changelog draft, and then publish the
 release through the repository's release commands.
 
+## Prepared 0.22 upstream boundary
+
+The incoming root catalog/lock select Metrics 0.9.0, Testkit 0.37.0 and Host
+artifacts/fs/process 0.17.1. Full locked offline metadata resolves one package
+identity for each; cached official archives match lock checksums and producer
+VCS receipts. No direct Host or IC Build dependency is added to the timer library.
+Host remains transitive through the unpublished native harness. PocketIC stays
+16.1.0 and Testkit retains CLI/server provisioning and admission.
+
+Metrics 0.9 changes the public summary package identity, actual-overflow accessor
+names and error cases. Existing wide/zero accounting fixtures follow that API
+directly; there is no legacy bridge. Consumers exchange summaries through the
+Timers re-export or coordinate Metrics 0.9. This requires undated 0.22.0 notes,
+superseding the prepared 0.21.5 patch. Cargo versions, release execution and
+publication remain maintainer-owned.
+
+The [Shared 0.10 adoption](shared-tooling.md#prepared-shared-tooling-0100) owns
+canonical host/Cargo and IC catalogs. Make explicitly selects
+`ci/ic-tools-qualified.tsv` for the retained Binaryen 132 exception, and failure
+collection uses that same file. Other tool versions/digests match shared defaults.
+Its existing compact-evidence fixture follows the exception through generated
+bundle receipts and copied-checkout qualification; execution remains owner-owned.
+Standalone IC installer use must pass this exception with `--pins`; an omitted
+selection uses the snapshot's Binaryen 133 default. No maintained product recipe
+runs that optimizer, so unoptimized PocketIC acceptance does not qualify a switch.
+Perform owner-operated `make install-tools` and `make tools-check` before
+formatting and the normal complete release gate. Prior tools and failed evidence
+remain retained. New source/payload checks do not establish native/macOS/IC
+acceptance; the current handoff owns their exact scope.
+
 ## Root workspace and dependencies
 
 The maintainer's dependency-centralization request supersedes the independent
@@ -4135,3 +4165,29 @@ subjects retain their assertions. No size or instruction delta is measured.
 Commands/logs and saved source/Cargo/index inputs stay at
 `/tmp/ic-timers-complexity0214.CsNLubA0/`; the full user-operated release gate
 still owns native/IC lifecycle and cohort acceptance for the new source.
+
+## 0.21.4 delivery and prepared 0.21.5 tooling
+
+The maintainer reports 0.21.4 live at
+`44935d6188a0da82314e00a56f5f68a9d0c59638`. The completed standard receipt binds
+owner validation to source `903a548263ea2bfdd1eca395c63703dac31fee2c` and delivered
+tree `cc2bec1f20ba29516dd7d270005b5dd521007799`. Source-to-release changes are
+only Cargo/lock workspace versions and changelog finalization. This supplies
+owner-operated full native/MSRV/probe, watchdog/recovery and cohort acceptance;
+no successful raw log or agent replay is fabricated. Earlier focused tests use
+their original source/graph and are not re-labelled as execution of later inputs.
+
+Delivered graph selects Metrics 0.8.3, Testkit 0.36.0, Host artifacts/fs/process
+0.16.0, PocketIC 16.1.0 and Shared 0.9.13. Callback storage and lifecycle-slot
+cleanup are delivered without another public API cut. No matched before/after
+footprint or instruction result is available, so no saving is claimed.
+Hosted [run 38375894239](https://github.com/dragginzgame/ic-timers/actions/runs/38375894239)
+is in progress and [run 38375894348](https://github.com/dragginzgame/ic-timers/actions/runs/38375894348)
+is queued at inspection; no complete new hosted/macOS acceptance is claimed.
+
+The later [Shared 0.9.14 refresh](shared-tooling.md#prepared-shared-tooling-0914)
+is repository-only work under undated 0.21.5 notes. It changes CI log inspection,
+not runtime behavior or executable setup identity. Cargo inputs, tool pins and
+real index entries are preserved. No new product code, tests, lint, setup or
+release execution is added; the focused 0.21.4 permission does not cover these
+new helper bytes. The complete release gate remains maintainer-operated.

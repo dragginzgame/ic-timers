@@ -59,9 +59,9 @@ but it does not promise that a task will happen exactly once.
 | --- | --- |
 | Released API line | `0.21` |
 
-The 0.21 line uses Metrics 0.8 instruction summaries with `u128` totals and
-checked integer/fractional means. It also makes first lifecycle reconciliation
-atomic; see the [release notes](CHANGELOG.md#0210) for consumer implications.
+The prepared 0.22 line uses Metrics 0.9 instruction summaries with `u128` totals and
+checked integer/fractional means. First lifecycle reconciliation remains atomic;
+see the [earlier release notes](CHANGELOG.md#0210) for that contract.
 
 IC Timers is written in Rust 2024 and supports Rust
 1.88.0 and newer. It uses `ic-cdk-timers` 1.0.0 as its private, underlying
@@ -309,11 +309,11 @@ unregister/re-register changes it. Increasing numbers alone cannot detect a rese
 Callback `generation()` does not identify a counter lifetime.
 
 Event counters and memory sample counts conservatively treat `u64::MAX` as
-saturated. Instruction measurements use Metrics 0.8 ordered `MeasurementSummary`
+saturated. Instruction measurements use Metrics 0.9 ordered `MeasurementSummary`
 values with `u128` totals and integer means, and `u64` samples and counts. Totals
 above `u64::MAX` remain exact. An exactly reached cap remains exact, while actual
 count/total overflow
-is recorded by `aggregate().samples_saturated()` and `total_saturated()`.
+is recorded by `aggregate().samples_overflowed()` and `total_overflowed()`.
 `mean()` returns `Ok(None)` for no completed samples, `Ok(Some(0))` for a completed
 zero measurement, and an error after actual overflow. Latest and maximum samples
 remain available after overflow. Preserve the tracked summary when computing a
@@ -323,14 +323,15 @@ provenance. Numeric interval admission does not establish registration continuit
 The summary exposes checked `scaled_mean(scale)` for
 fractional reports. It computes `floor(total * scale / samples)` from the tracked
 total, preserving fractions lost by scaling an already rounded integer mean.
-It distinguishes empty from measured zero and refuses actual overflow even when
-scale is zero; a failed projection retains its typed ratio cause.
+It distinguishes empty from measured zero and returns `SampleCountOverflow` on
+actual count overflow even when scale is zero. An exact count bounds the scaled
+result within `u128`; there is no separate projection-error case.
 
 Use `ic_timers::MeasurementSummary` or the same Metrics package when exchanging
-these values with other libraries: Timers 0.21 uses Metrics 0.8.
+these values with other libraries: the prepared Timers 0.22 cut uses Metrics 0.9.
 Older Metrics lines have distinct Rust types. Preserve
 wide totals in reports/codecs, or use checked conversions when a narrower
-consumer field is required. The [adoption owner](docs/design/callback-delivery-ownership.md#prepared-ic-metrics-08-adoption)
+consumer field is required. The [adoption owner](docs/design/callback-delivery-ownership.md#prepared-metrics-09-adoption)
 records the selected graph and qualification limits.
 
 Each instruction measurement covers the accepted `ic-timers` execution

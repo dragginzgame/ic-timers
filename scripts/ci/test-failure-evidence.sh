@@ -284,6 +284,7 @@ tar -czf "$GITHUB_WORKSPACE/.tools/host-set.active/ripgrep.tar.gz" \
     -C "$fixture" "ripgrep-15.2.0-$target/rg"
 digest="$(bash "$root/scripts/ci/verify-file-checksum.sh" --print sha256 "$GITHUB_WORKSPACE/.tools/host-set.active/ripgrep.tar.gz")"
 printf 'export SHARED_TOOLING_RIPGREP_SHA256_%s=%s\n' "$host" "$digest" >> "$host_pins"
+cp "$root/ci/ic-tools-qualified.tsv" "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv"
 cp "$root/ci/ic-tools.tsv" "$GITHUB_WORKSPACE/ci/ic-tools.tsv"
 mkdir "$fixture/assets" "$fixture/payloads" "$fixture/installer-bin"
 export TIMER_EVIDENCE_ASSETS="$fixture/assets"
@@ -320,13 +321,13 @@ while IFS=$'\t' read -r tool version selected_host _; do
     esac
     digest="$(bash "$root/scripts/ci/verify-file-checksum.sh" --print sha256 "$fixture/assets/$asset")"
     printf '%s\t%s\n' "$tool" "$digest" >> "$fixture/ic-archive-digests"
-done < "$GITHUB_WORKSPACE/ci/ic-tools.tsv"
+done < "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv"
 awk -F '\t' -v OFS='\t' -v host="$ic_host" '
     NR==FNR { digests[$1]=$2; next }
     $3==host { $4=digests[$1] }
     { print }
-' "$fixture/ic-archive-digests" "$GITHUB_WORKSPACE/ci/ic-tools.tsv" > "$fixture/authenticated-ic-pins"
-mv "$fixture/authenticated-ic-pins" "$GITHUB_WORKSPACE/ci/ic-tools.tsv"
+' "$fixture/ic-archive-digests" "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv" > "$fixture/authenticated-ic-pins"
+mv "$fixture/authenticated-ic-pins" "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv"
 cat > "$fixture/installer-bin/curl" <<'SCRIPT'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -354,7 +355,7 @@ chmod +x "$fixture/installer-bin/curl"
 PATH="$fixture/installer-bin:$PATH" bash "$root/scripts/dev/install-host-tools.sh" \
     --consumer "$GITHUB_WORKSPACE" --versions "$host_pins" > "$fixture/host-store-install.log" 2>&1
 PATH="$fixture/installer-bin:$PATH" bash "$root/scripts/dev/install-ic-tools.sh" \
-    --consumer "$GITHUB_WORKSPACE" --pins "$GITHUB_WORKSPACE/ci/ic-tools.tsv" > "$fixture/ic-store-install.log" 2>&1
+    --consumer "$GITHUB_WORKSPACE" --pins "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv" > "$fixture/ic-store-install.log" 2>&1
 host_bundle="$(cd -P "$GITHUB_WORKSPACE/.tools/host" && printf '%s' "$PWD")"
 ic_bundle="$(cd -P "$GITHUB_WORKSPACE/.tools/ic" && printf '%s' "$PWD")"
 host_stored="${host_bundle#"$SHARED_TOOLING_STORE/"}"
@@ -365,9 +366,9 @@ printf 'unrelated store bytes\n' > "$SHARED_TOOLING_STORE/unrelated/not-selected
 # Preserve installed provenance while the caller adds notes/reorders the same
 # admitted records. Compaction must retain both distinct inputs without downloads.
 awk '{ rows[NR]=$0 } END { print "# updated caller notes"; for (i=NR; i>0; i--) print rows[i] }' \
-    "$GITHUB_WORKSPACE/ci/ic-tools.tsv" > "$fixture/reordered-caller-pins"
-mv "$fixture/reordered-caller-pins" "$GITHUB_WORKSPACE/ci/ic-tools.tsv"
-if cmp -s "$GITHUB_WORKSPACE/ci/ic-tools.tsv" "$ic_bundle/pins.tsv"; then
+    "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv" > "$fixture/reordered-caller-pins"
+mv "$fixture/reordered-caller-pins" "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv"
+if cmp -s "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv" "$ic_bundle/pins.tsv"; then
     echo 'fixture needs distinct caller/installed pin provenance' >&2
     exit 1
 fi
@@ -389,7 +390,7 @@ for kind in host ic; do
     cmp "$fixture/expected-selection" "$fixture/compact-extracted/tool-evidence/$kind/selection.txt"
 done
 cmp "$host_pins" "$fixture/compact-extracted/tool-evidence/host/caller-pins"
-cmp "$GITHUB_WORKSPACE/ci/ic-tools.tsv" "$fixture/compact-extracted/tool-evidence/ic/caller-pins"
+cmp "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv" "$fixture/compact-extracted/tool-evidence/ic/caller-pins"
 for receipt in pins.tsv host files.sha256; do
     cmp "$ic_bundle/$receipt" "$fixture/compact-extracted/tool-evidence/ic/$receipt"
 done
@@ -677,6 +678,7 @@ for script in collect-failure-evidence qualify-failure-evidence archive-evidence
     cp "$root/scripts/ci/$script.sh" "$copied/scripts/ci/"
 done
 cp "$root/ci/tool-versions.env" "$copied/ci/"
+cp "$root/ci/ic-tools-qualified.tsv" "$copied/ci/"
 cp "$root/ci/ic-tools.tsv" "$copied/ci/"
 cp "$root/scripts/ci/ic-tool-pins.awk" "$copied/scripts/ci/"
 cp "$root/scripts/dev/install-host-tools.sh" "$root/scripts/dev/install-ic-tools.sh" \

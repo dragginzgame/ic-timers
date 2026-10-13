@@ -64,14 +64,14 @@ if [[ ! -L "$root/.tools" && ! -L "$root/.tools/testkit-server" ]]; then
     done
 fi
 # The shared selector owns local Rust evidence and referenced shared generations,
-# and freshly checks the exact managed host/IC selections with our pins.
+# and freshly checks shared host defaults and our explicit qualified IC selection.
 # Failed, changed and unselected bundles stay full; verified sets retain checks
 # and receipts. Keep selection output on disk so producer failure cannot be lost
 # in a process substitution or mistaken for an empty successful selection.
 mkdir "$metadata/tool-evidence"
 selection_status=0
 bash "$script_root/scripts/ci/select-tool-evidence.sh" compact "$root" \
-    "$metadata/tool-evidence" "$root/ci/tool-versions.env" "$root/ci/ic-tools.tsv" \
+    "$metadata/tool-evidence" "$root/ci/tool-versions.env" "$root/ci/ic-tools-qualified.tsv" \
     > "$metadata/tool-selections.nul" 2> "$metadata/tool-evidence/selection.log" || selection_status=$?
 cat "$metadata/tool-evidence/selection.log" >&2
 if [[ "$selection_status" == 0 ]]; then

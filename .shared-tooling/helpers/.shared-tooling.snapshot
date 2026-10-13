@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.9.13
+# version	0.10.0
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	35cad65677ff989b5fb24a88d947fda37d2366e8
+revision	ed9c26f015691859f67b50b512a94709dcdc0c6c
 # entrypoint	scripts/ci/verify-file-checksum.sh
 # entrypoint	scripts/ci/verify-shared-tooling-snapshot.sh
 # entrypoint	scripts/ci/check-dependency-pins.sh
