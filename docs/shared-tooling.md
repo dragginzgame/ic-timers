@@ -1,5 +1,41 @@
 # Shared Tooling adoption
 
+## Prepared Shared Tooling 0.9.13
+
+All three canonical exports select committed
+`35cad65677ff989b5fb24a88d947fda37d2366e8` (0.9.13), across **68/36/11**
+payloads. Complete clean-source previews precede apply. Existing roots, including
+the reporting rule, remain; no additions or retirements. The sibling's dirty
+0.9.14 CI-log recovery work is excluded.
+
+Common store/checkout lock acquisition preserves `mkdir` diagnostics and status,
+distinguishing an existing path from other filesystem failures without clearing
+another owner's lock. Cargo source acquisition preserves the original failure
+before build/activation. Existing fixture owners cover both common and selected
+executables and retained prior selections
+([Shared #145](https://github.com/dragginzgame/shared-tooling/issues/145),
+[#146](https://github.com/dragginzgame/shared-tooling/issues/146)).
+The changed Cargo build-helper digest requires explicit **`make install-tools`**
+before offline validation; retain earlier generations with no fallback.
+
+CI inspection rejects failed or empty current-branch discovery. Use `--commit`,
+`--branch` or `--run` explicitly when no branch is observable; explicit run
+inspection works outside a checkout with `GH_REPO`
+([Shared #148](https://github.com/dragginzgame/shared-tooling/issues/148)).
+Locked source-preparation guidance is adopted
+([Shared #147](https://github.com/dragginzgame/shared-tooling/issues/147)); it does
+not authorize tool installation, upgrades or release effects. Local explicit
+offline compile-only and user-owned validation exceptions remain unchanged.
+No automatic fetch is added to checks or read-only helpers.
+
+Evidence stays at `/tmp/ic-timers-shared0913.8v63usJT/`: exact clean source,
+before inputs/index, previews/applies, integrity logs and delivered 0.21.2 receipt.
+Integrity, changed Bash syntax, documentation links and diff checks pass. Incoming
+Cargo/pin bytes and real index entries are preserved; no tests, lint, setup or
+release execution. Upstream [run 38368099898](https://github.com/dragginzgame/shared-tooling/actions/runs/38368099898)
+is queued at inspection. Compatible repository-only notes use undated **0.21.3**;
+Cargo package versions remain 0.21.2.
+
 ## Prepared Shared Tooling 0.9.10
 
 All three canonical exports select committed

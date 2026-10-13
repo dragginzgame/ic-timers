@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.9.10
+# version	0.9.13
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	7e55adecf6f0b196c050f104b37f8c69b6bf434e
+revision	35cad65677ff989b5fb24a88d947fda37d2366e8
 # entrypoint	audits/README.md
 # entrypoint	audits/code-hygiene.md
 # entrypoint	audits/flow-convergence-and-duplication.md
@@ -47,7 +47,7 @@ file	652218ac8dd91bcc35a8dbfd4305d41f540f76973b7a80038e31c322af11aa9f	-	audits/m
 file	f10fc5d18faa3bab686edd8b95e1a11ddacba115ae84fe7f85d8ae27b059a131	-	docs/consuming-snapshots.md
 file	15315edad497b9b165671c3f57e9f56e6ba1d206bbc635eb0ff51afaa8456bb3	-	docs/provenance.md
 file	922d482affa0a2538e3fca2a3eb07b266c7e07aabf96a71d8b8e987d97ff216a	-	docs/ic-tools.md
-file	ab666fb5f373d3feddb1e060ce65ea2c8c72cc192bf773ebc5697212d2c90325	-	docs/local-setup.md
+file	6a6544f471a448777066f3043e47776bf63ad4ddad2bccb10062cafdd4e0cfa0	-	docs/local-setup.md
 file	7c1b2849ffce4e4b28fabe5eba2f7608b38dd08dc1478c25505ebd50c4e5d8a2	-	ci/tool-versions.env
 file	4692d760ea97861b52c183bb69e24c929d9baf7c292795c61d65ea3166368787	-	rules/dependency-pinning.md
 file	90eb28392912af63593a3773eff903c5ef77ebab2b9199e3c720be25a3fcbbbf	-	docs/principles/rust-code-hygiene.md
@@ -62,15 +62,15 @@ file	ebf236f1db579744a13bc995ec1c58c2ee87e34caed23088a6d9b75e638dd27f	x	scripts/
 file	544bf727af1886a6c8853be306da72fd1f2498cca319f2aaf040c16cc4ce43d4	x	scripts/ci/test-evidence-checksums.sh
 file	94a934651d5cb0c6f77fa429df277856dbda4c1a7441b2b8563e678c416258f6	-	audits/ic-canister-applications.md
 file	8135ff6e3bc11be17afd3b9c43eb70864037c8e0bbdda7b8aa931f502daf515d	x	scripts/dev/install-rust-tools.sh
-file	f90a845a33bce4f06913b509a29c66e74d68bec7ef1b4a4d29eb8ca421bbbfdf	x	scripts/ci/test-rust-tools.sh
+file	8278e7decd36eafd33b1aaedaec0a933e283ffdd73fd389fe3213773b0cf1b8c	x	scripts/ci/test-rust-tools.sh
 file	775da89f655a3781059f433f80470ee6db9675e08942a805c111614183322fe1	-	scripts/ci/ic-tool-pins.awk
 file	2c1d5d40d481790aaa9c10a5cf29ec061cdc0c4840824851140b4c9c8e7d455b	x	scripts/ci/test-tool-evidence.sh
 file	50875aa80c211f8f5fded06bf75c7a9fc1fc99aac7590480de9be17d4753bf7f	x	scripts/ci/select-tool-evidence.sh
 file	5be336cb3e8045b2d2d536542a94944b376ee812b03f786a90b9d962ab697f13	x	scripts/ci/archive-evidence.sh
 file	820c46f7fbbf3d4790f8bbce5b646c6506a3c4750ebab9525360fbc75c115b01	-	.github/actions/retain-failure-evidence/action.yml
-file	07e333d082e734d367167299c48410cab6ca24bc37f545e1300ecfbf93767bbd	-	scripts/dev/tool-store.sh
-file	24d54f814ae4e3323d8a20dd6c503ad0e5e13d4d61159a4dbee57cf8674c98ce	-	scripts/ci/test-tool-store.sh
-file	7e05f84495397e747c866416340ae1522178cc073ae0cc55387fd824d7a82056	-	scripts/dev/cargo-tool-build.sh
+file	78af8b88228a1bf9616001c8458e0b6b43ec734b86a2c7bbdf8b4b014fb1a083	-	scripts/dev/tool-store.sh
+file	2e8abfb85405e430e870276f8ee50f9766ba41ac3717404d5341d8345ca1a6de	-	scripts/ci/test-tool-store.sh
+file	b936baeb21374c8718c4f35b00cd3ee09350f2315f4367559cf922ef42f68292	-	scripts/dev/cargo-tool-build.sh
 file	d70f32239de9ea0d2d2a3a0eebd2fa862746807cd797f512f95b2e46fc5faa67	x	.githooks/pre-commit
 file	9e32385247296ce95d2b15b1290c64e6b6dff15716c1c139f21ab5e5128f4be3	x	scripts/ci/check-make-execution.sh
 file	7ab130f8222b69e2ea4c4e083d6286f93a2472ec396d953d0b116330e0e76607	x	scripts/ci/cargo-tool-cache-key.sh

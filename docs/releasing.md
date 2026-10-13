@@ -4083,3 +4083,28 @@ Cargo-lock or workflow changes. Snapshot, syntax and diff inspection do not
 qualify new fixture behavior; execution remains with the maintainer. No setup is
 required solely by this refresh because the Cargo installer/build-policy identity
 and executable pins are unchanged.
+
+## 0.21.2 delivery and prepared 0.21.3 tooling
+
+Release 0.21.2 is committed/tagged/pushed at
+`1065512b6d6d231aa8cad25e3a668b1a65c99b51`; the local annotated tag resolves to
+that commit and GitHub reports matching push runs. The completed standard direct
+receipt binds owner validation to source `d3d9ecad898e42bf0c60c3ccce1f876e1362bbae`
+and delivered tree `1a15c83ee63313da0a64ffc130ff4c8c8ca9f105`. Source-to-release
+changes are only workspace Cargo/lock versions and changelog finalization.
+Delivered selections are Shared 0.9.10, Metrics 0.8.1, Testkit 0.35.1,
+Host artifacts/fs/process 0.15.2 and PocketIC 16.1.0. Original failed fixture
+evidence is retained; no successful raw log or agent replay is fabricated.
+Hosted [run 38363085866](https://github.com/dragginzgame/ic-timers/actions/runs/38363085866)
+passes and [run 38363085915](https://github.com/dragginzgame/ic-timers/actions/runs/38363085915)
+is in progress at inspection. No complete new hosted/macOS acceptance is claimed.
+
+The [Shared 0.9.13 refresh](shared-tooling.md#prepared-shared-tooling-0913) is later
+repository-only preparation under undated 0.21.3 notes. The incoming maintainer
+lockfile selects Metrics 0.8.2 and deranged 0.5.9; preserve those bytes rather than
+restoring the delivered selection. This tooling refresh does not qualify that
+later graph or change library source. Run **`make install-tools`** explicitly
+before validation because the Cargo build-helper identity changed. Earlier
+generations remain retained. Setup, behavioral/full gates and release execution
+remain user-owned; no Cargo version, lock, index or release-ref mutation is made
+by this preparation.

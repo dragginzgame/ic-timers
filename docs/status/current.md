@@ -10,75 +10,75 @@ This handoff links [release evidence](../releasing.md),
 
 ## Delivered source
 
-**0.21.1 is committed/tagged/pushed** at
-`a97dcb4b5f091d98afd35038a4cbeb15fba1d7d6`. The completed standard direct-release
-receipt binds validation to source `f935c706cfdb7e2554b0a2a95b06763efcc009c9`
-and delivered tree `a971b09581c1433747caae7a20195cdd30bcd9b2`.
-The [delivery owner](../releasing.md#0211-delivery-and-prepared-0212-tooling)
-records owner-operated full-gate acceptance separately from earlier failures and
-later contributor changes. No successful raw log or agent replay is fabricated.
+**0.21.2 is committed/tagged/pushed** at
+`1065512b6d6d231aa8cad25e3a668b1a65c99b51`. The local annotated tag resolves to
+that commit; GitHub push runs match it. The completed standard direct receipt
+binds validation to source `d3d9ecad898e42bf0c60c3ccce1f876e1362bbae` and tree
+`1a15c83ee63313da0a64ffc130ff4c8c8ca9f105`. Source-to-release changes are only
+workspace versions and changelog finalization. The
+[delivery owner](../releasing.md#0212-delivery-and-prepared-0213-tooling)
+records owner-operated acceptance without fabricating successful raw logs or
+agent replay, separately from earlier failures and later tooling changes.
 
-Delivered graph: Metrics **0.8.0**, Testkit **0.35.0**, Host artifacts/fs/process
-**0.15.1** and PocketIC **16.1.0**, with Shared **0.9.7** across **67/35/11**
-files. The neutral-cwd Make adapter avoids the canonical Rust-tool fixture's
-mock compiler/caller toolchain conflict while preserving rejection subjects,
-failure status and retained evidence. The original failed attempt at `6483ffc`
-remains at `/tmp/rust-tools-test.C9TDs0` and in its original release log.
+Delivered selections: Metrics **0.8.1**, Testkit **0.35.1**, Host artifacts/fs/process
+**0.15.2**, PocketIC **16.1.0**, Shared **0.9.10** across **68/36/11** files.
+The canonical Rust-tool fixture now owns compiler isolation and commit-free
+history reuse; the temporary Make adapter is removed. Original failed fixture
+and 0.21.1 adapter evidence remain at their existing owners.
 
-The 0.21 runtime still shares Metrics 0.8 summary identity. First lifecycle
-reconciliation publishes a fresh slot only after the requested state succeeds;
-failed creation releases its callback and handles before retry. Later errors
-retain existing authority and unused-factory destruction ordering.
+The 0.21 lifecycle semantics retain atomic fresh registration publication,
+cleanup before retry and existing callback ownership on later failures.
 The [lifecycle](../design/0.20-typed-registration.md#prepared-021-lifecycle-creation)
 and [Metrics](../design/callback-delivery-ownership.md#prepared-ic-metrics-08-adoption)
-owners retain earlier focused evidence separately from delivered acceptance.
+owners preserve the earlier evidence. The recent bounded cleanup inspection
+found no justified additional runtime deletion; do not manufacture a hard cut.
 
-Exact-source hosted [run 38288927727](https://github.com/dragginzgame/ic-timers/actions/runs/38288927727)
-and [run 38288927426](https://github.com/dragginzgame/ic-timers/actions/runs/38288927426)
-now pass. Those results qualify delivered 0.21.1, not later dirty tooling.
+Exact-source hosted [run 38363085866](https://github.com/dragginzgame/ic-timers/actions/runs/38363085866)
+passes; [run 38363085915](https://github.com/dragginzgame/ic-timers/actions/runs/38363085915)
+is in progress. No complete new hosted/macOS acceptance is claimed.
 
-## Prepared 0.21.2 maintenance
+## Prepared 0.21.3 maintenance
 
-All three canonical snapshots select reviewed Shared **0.9.10**
-`7e55adecf6f0b196c050f104b37f8c69b6bf434e`, with **68/36/11** payloads.
-Complete clean-source previews precede apply. Add the required reporting rule as
-an explicit root; retain all other roots and the 0.9.8 cache fixture/helper.
-No canonical retirement or patch. The new reporting contract separates genuine
-deletions, moves/renames and scoped Rust/type/documentation counts.
+All three canonical snapshots select reviewed Shared **0.9.13**
+`35cad65677ff989b5fb24a88d947fda37d2366e8`, retaining roots and **68/36/11**
+payloads. Complete clean-source previews precede apply, without additions or
+retirements. Dirty upstream 0.9.14 log-recovery work is excluded.
 
-The canonical fixture now enters its prepared compiler context and borrows
-existing source history without creating commits. Remove the temporary Make
-adapter and invoke the complete canonical fixture directly. Hook, receipt,
-partial-staging and failure-retention checks remain. The 0.9.9 producer fix passes
-upstream Linux and both macOS qualification; 0.9.10 CI is in progress. Consumer
-execution of these new bytes remains unqualified. Shared's CI cache transport and
-fleet-wide suite are not activated. Full local gates remain unchanged.
+Store/checkout locks preserve filesystem diagnostics/status without clearing
+another owner's lock. Cargo acquisition preserves its original source failure
+before build/activation. CI inspection rejects failed/empty branch discovery;
+explicit branch/commit/run selection remains supported. Locked source-preparation
+guidance retains local explicit offline and user-owned validation exceptions.
+No automatic fetch or additional runtime/CI cache path is introduced.
 
-[Adoption evidence](../shared-tooling.md#prepared-shared-tooling-0910) remains at
-`/tmp/ic-timers-shared0910.CyrZ3Vtp/`: clean source, before inputs/index, complete
-previews/applies and integrity logs. Integrity, changed Bash syntax and diff
-checks pass. Cargo inputs, pins and real index entries are preserved. No tests,
-setup, Rust build/lint or release execution for this batch. Published timer source
-is unchanged. Undated **0.21.2** notes are compatible repository-only work,
-normally bundled into the next code-bearing release. Cargo stays at 0.21.1.
-No tool reinstall is required solely for this refresh: installer/build-policy
-bytes and executable pins are unchanged from 0.9.7. Earlier 0.9.8 preparation and
-original failed fixture evidence remain at their existing owners.
+**Run `make install-tools` before validation:** the changed Cargo build-helper
+identity requires explicit new selections. Earlier generations remain retained;
+checks do not install or fall back. Setup remains user-owned.
+
+[Adoption evidence](../shared-tooling.md#prepared-shared-tooling-0913) stays at
+`/tmp/ic-timers-shared0913.8v63usJT/`: clean source, saved inputs/index, all
+previews/applies, integrity logs and delivered receipt. Integrity, changed Bash
+syntax, documentation links and diff checks pass. No tests, lint, setup or
+release execution. Cargo package versions remain 0.21.2. Preserve incoming
+Metrics **0.8.2** / deranged **0.5.9** lock changes; this new graph is not qualified
+by the delivered receipt. Contributor-only notes use undated **0.21.3**, normally
+bundled into the next code-bearing release. Product Rust source is unchanged.
+Upstream [run 38368099898](https://github.com/dragginzgame/shared-tooling/actions/runs/38368099898)
+is queued at inspection.
 
 ## Issues and authority
 
-The current issue inspection finds **no open Timers issues**.
+The latest bounded issue inspection found no open Timers issues.
 [#50](https://github.com/dragginzgame/ic-timers/issues/50#issuecomment-6129282698)
 remains closed from delivered Metrics adoption at 0.21.0.
 [#44](https://github.com/dragginzgame/ic-timers/issues/44) remains closed from
-frozen sequential v0.19.1 early/late acceptance; original controlled failures,
-artifact identities and restored/missing evidence stay with the release owner.
-Shared fleet [#98](https://github.com/dragginzgame/shared-tooling/issues/98)
-still has other consumers' obligations. No qualification dispatch is pending.
+frozen sequential v0.19.1 acceptance; original failures, artifact identities and
+restored/missing evidence stay with the release owner. Shared fleet
+[#98](https://github.com/dragginzgame/shared-tooling/issues/98) retains other
+consumer obligations. No qualification dispatch is pending.
 
-Do not invent another product hard cut. Continue bounded issue/CI inspection
-when requested. Siblings remain read-only. Tests, builds, lint, PocketIC and setup
-remain user-owned outside explicit scoped approvals; prepared locked/offline
-library compile-only checks retain their AGENTS.md exception. Cargo version
-mutation, staging, commits, tags, pushes, publication and cleanup remain
-user-owned. Preserve incoming edits and retained evidence.
+Siblings remain read-only. Tests, builds, lint, PocketIC and setup remain
+user-owned outside explicit scoped approvals; prepared locked/offline library
+compile-only checks retain their AGENTS.md exception. Cargo versions, staging,
+commits, tags, pushes, publication and cleanup remain user-owned. Preserve
+incoming edits and retained evidence.

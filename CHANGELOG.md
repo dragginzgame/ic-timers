@@ -2,6 +2,19 @@
 
 All notable changes to this project are recorded here.
 
+## [0.21.3]
+
+### Development
+
+- Adopt Shared Tooling 0.9.13: preserve filesystem lock-acquisition and Cargo
+  source-download errors with their original statuses, and require an explicit
+  CI selection when the current branch is unavailable. Refresh common Cargo
+  tools with `make install-tools` before validation; earlier builds remain
+  retained. The timer runtime is unchanged
+  ([Shared #145](https://github.com/dragginzgame/shared-tooling/issues/145),
+  [#146](https://github.com/dragginzgame/shared-tooling/issues/146),
+  [#148](https://github.com/dragginzgame/shared-tooling/issues/148)).
+
 ## [0.21.2] - 2026-10-13
 
 ### Development
