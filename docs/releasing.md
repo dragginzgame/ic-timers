@@ -4108,3 +4108,30 @@ before validation because the Cargo build-helper identity changed. Earlier
 generations remain retained. Setup, behavioral/full gates and release execution
 remain user-owned; no Cargo version, lock, index or release-ref mutation is made
 by this preparation.
+
+## 0.21.3 delivery and prepared 0.21.4 cleanup
+
+The maintainer reports 0.21.3 live at
+`18ca1de856643f316b79c4a22774f5b0c34c423b`. Its completed standard receipt binds
+owner validation to `51ff94b4a2ff7f78f5280dc93a4ca961dd160417` and delivered tree
+`435d71194f56b4513104d796c34e1dd9ee59c0cf`. Source-to-release changes are only
+workspace Cargo/lock versions and changelog finalization. The delivered graph
+selects Shared 0.9.13, Metrics 0.8.2, Testkit 0.35.1, Host artifacts/fs/process
+0.15.2 and PocketIC 16.1.0. Earlier failed evidence is retained; no successful
+raw full-gate log or agent replay is fabricated.
+
+The later [callback ownership cleanup](design/callback-delivery-ownership.md#prepared-0214-callback-ownership-simplification)
+uses undated 0.21.4 notes with no public API or semantic cut. Rust 1.99.0 and
+1.88.0 compile-only library/all-target/all-feature checks and the 1.88.0 Wasm
+library check pass with prepared locked/offline inputs and
+`RUSTUP_AUTO_INSTALL=0`. No test executes in these compile-only checks.
+The maintainer separately authorizes focused native library tests and library
+Clippy, excluding PocketIC, setup and release commands. On Rust 1.99.0,
+`cargo test -p ic-timers --lib --all-features --locked --offline` passes all
+154 subjects; `cargo clippy -p ic-timers --all-targets --all-features --locked
+--offline -- -D warnings` passes. Both retain offline/toolchain environment
+settings above. Existing capture cleanup, suspended-work and reconciliation
+subjects retain their assertions. No size or instruction delta is measured.
+Commands/logs and saved source/Cargo/index inputs stay at
+`/tmp/ic-timers-complexity0214.CsNLubA0/`; the full user-operated release gate
+still owns native/IC lifecycle and cohort acceptance for the new source.

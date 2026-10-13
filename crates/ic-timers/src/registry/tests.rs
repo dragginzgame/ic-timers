@@ -3,15 +3,15 @@ use crate::{TimerLastOutcome, TimerProcessCondition, TimerRegistrationStatus};
 use std::time::Duration;
 // Pure transition fixtures install real typed payloads but never execute work.
 pub(super) fn ordinary_callback_fixture() -> OrdinaryCallback {
-    Rc::new(RefCell::new(Box::new(|_| {
+    Rc::new(RefCell::new(|_| {
         panic!("pure registry fixture must not execute ordinary work")
-    })))
+    }))
 }
 
 pub(super) fn watchdog_callback_fixture() -> WatchdogCallback {
-    Rc::new(RefCell::new(Box::new(|_| {
+    Rc::new(RefCell::new(|_| {
         panic!("pure registry fixture must not execute watchdog work")
-    })))
+    }))
 }
 
 fn identity(name: &str) -> TimerIdentity {

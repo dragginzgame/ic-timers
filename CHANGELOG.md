@@ -2,6 +2,15 @@
 
 All notable changes to this project are recorded here.
 
+## [0.21.4]
+
+### Changed
+
+- Store erased callbacks directly in their shared owner, removing redundant
+  nested boxing while preserving mutable callback and capture lifetimes.
+  Resolve lifecycle owner slots in one branch, removing an impossible conflict
+  path. Public APIs, scheduling and failure semantics are unchanged.
+
 ## [0.21.3] - 2026-10-13
 
 ### Development

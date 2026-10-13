@@ -633,9 +633,9 @@ where
     F: FnMut(WatchdogContext) -> WatchdogRunResult + 'static,
 {
     let mut callback = callback;
-    let callback: WatchdogCallback = Rc::new(RefCell::new(Box::new(move |token| {
+    let callback: WatchdogCallback = Rc::new(RefCell::new(move |token| {
         callback(WatchdogContext::new(token))
-    })));
+    }));
     let claim = register_initial(
         start,
         |registry, lifetime| {
@@ -859,18 +859,15 @@ fn reconcile_registration<Registration>(
 where
     Registration: RegistrationClaimOwner,
 {
-    if registration.is_none() {
+    let Some(current) = registration.as_ref() else {
         let created = register()?;
         if let Err(error) = reconcile(&created) {
             return Err(cleanup_creation_error(created.registration_claim(), error));
         }
         *registration = Some(created);
         return Ok(());
-    }
-    let registration = registration
-        .as_ref()
-        .ok_or(TimerError::ReconciliationConflict)?;
-    let claim = registration.registration_claim();
+    };
+    let claim = current.registration_claim();
     if claim.identity() != identity {
         return Err(TimerError::ReconciliationConflict);
     }
@@ -884,7 +881,7 @@ where
     // Repeated calls retain the original callback. Release the unused factory
     // outside the registry borrow, before applying control as in prior calls.
     drop(register);
-    reconcile(registration)
+    reconcile(current)
 }
 
 /// Return one coherent inert snapshot by identity.
@@ -918,10 +915,10 @@ where
     F: FnMut(Context) -> Fut + 'static,
     Fut: Future<Output = Output> + 'static,
 {
-    Rc::new(RefCell::new(Box::new(move |token| {
+    Rc::new(RefCell::new(move |token| {
         let future = callback(context(token));
-        Box::pin(async move { erase_result(future.await) })
-    })))
+        Box::pin(async move { erase_result(future.await) }) as _
+    }))
 }
 
 fn apply_claim_transition(

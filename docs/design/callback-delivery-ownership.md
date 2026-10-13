@@ -561,3 +561,33 @@ retains their exact source/graph/commands at
 complete release gate remain outstanding; #50 stays open pending that acceptance.
 Upstream's arithmetic experiment is not Timers cost or IC recovery evidence.
 No Wasm, heap or instruction savings are claimed.
+
+## Prepared 0.21.4 callback ownership simplification
+
+Internal callback aliases store their erased closures directly as
+`Rc<RefCell<dyn FnMut(...) -> ...>>`, without a nested `Box`. The same shared
+owner remains in registration, dispatch and abandonment; mutable borrowing and
+the last-strong-owner drop still govern captures. Ordinary returned futures
+remain separately boxed and pinned across suspension. This removes an ownership
+layer, not a callback capability or policy boundary.
+
+Lifecycle reconciliation selects the empty/existing slot with one `let ... else`.
+It no longer checks `is_none` and then re-reads the same exclusive slot with an
+impossible `ReconciliationConflict` branch. Fresh authority is still published
+only after successful reconciliation; existing identity/policy/lifetime checks,
+creation-error cleanup and unused-factory destruction ordering remain.
+
+Retain distinct ordinary abandonment and watchdog trap/rollback paths. Retain
+detached handle restoration, confirmed-delivery tracking and boxed removed
+entries: each protects an independent cleanup or execution boundary. No new
+allocation counter, generic scheduler or public API is introduced.
+
+Existing native subjects cover mutable/repeated callbacks, suspended work,
+reentrant capture destruction, first-reconciliation cleanup/retry and later
+callback ownership. All 154 pass under the maintainer's focused approval;
+library Clippy also passes with warnings denied. The
+[release owner](../releasing.md#0213-delivery-and-prepared-0214-cleanup) retains
+exact compiler/test commands and evidence, with full IC/cohort qualification
+still outstanding. Source changes require no public migration and use undated
+0.21.4 notes. No measured Wasm, heap or instruction savings are claimed; removing
+nested boxing also changes internal pointer layout.
