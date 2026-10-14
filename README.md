@@ -57,9 +57,9 @@ but it does not promise that a task will happen exactly once.
 
 | Field | Value |
 | --- | --- |
-| Released API line | `0.21` |
+| Released API line | `0.22` |
 
-The prepared 0.22 line uses Metrics 0.9 instruction summaries with `u128` totals and
+The 0.22 line uses Metrics 0.9 instruction summaries with `u128` totals and
 checked integer/fractional means. First lifecycle reconciliation remains atomic;
 see the [earlier release notes](CHANGELOG.md#0210) for that contract.
 
@@ -182,14 +182,14 @@ exact reconciliation can discard an invalid callback delay before that check.
 
 ## Minimal `Once` example
 
-The examples below use the released 0.21 API.
+The examples below use the released 0.22 API.
 
 Select one exact published package version when this crate participates in a
 shared framework/application registry:
 
 ```toml
 [dependencies]
-ic-timers = "=0.21.0"
+ic-timers = "=0.22.1"
 ```
 
 Every framework and application crate linked into the same canister must use
@@ -498,8 +498,8 @@ checks it offline. `update-dev`, hosted CI and release preparation run explicit
 setup. Ordinary checks never download the server. The old Make binary override
 and `target/tools` provisioning route are removed. Testkit owns server versions,
 asset hashes and compatibility; Timers passes its admitted path to the probes.
-Testkit starts a caller-owned server and fresh IC instance for each fixture, with a
-30-second deadline for each startup phase. The instance is dropped before its
+Testkit starts a caller-owned server and fresh IC instance for each fixture, with
+one 60-second deadline covering both startup phases. The instance is dropped before its
 server; upstream instance deletion itself remains unbounded.
 
 Recorded PocketIC 15 evidence covers real work traps, 40-billion-instruction

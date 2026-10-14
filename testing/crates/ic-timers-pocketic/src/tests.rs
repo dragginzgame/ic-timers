@@ -1,6 +1,6 @@
 use super::harness::fresh_pocket_ic;
 use candid::{Decode, Encode, Principal};
-use ic_testkit::pic::{PocketIc, PocketIcInstance};
+use ic_testkit::pic::{CandidCallExt, PocketIc, PocketIcInstance};
 use ic_timers_test_protocol::{
     ChurnObservation, OrdinaryObservation, ProbeMemorySummary, ProbeSnapshot,
 };
@@ -461,27 +461,11 @@ fn drive_rounds(pic: &PocketIc, count: usize) {
 }
 
 fn update_bool(pic: &PocketIc, canister_id: Principal, method: &str) -> bool {
-    let bytes = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            method,
-            Encode!().expect("encode call"),
-        )
-        .unwrap_or_else(|error| panic!("update {method}: {error:?}"));
-    Decode!(&bytes, bool).unwrap_or_else(|error| panic!("decode {method}: {error}"))
+    pic.update_candid_or_panic(canister_id, method, ())
 }
 
 fn update_u64(pic: &PocketIc, canister_id: Principal, method: &str) -> u64 {
-    let bytes = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            method,
-            Encode!().expect("encode call"),
-        )
-        .unwrap_or_else(|error| panic!("update {method}: {error:?}"));
-    Decode!(&bytes, u64).unwrap_or_else(|error| panic!("decode {method}: {error}"))
+    pic.update_candid_or_panic(canister_id, method, ())
 }
 
 fn update_u128_pair(pic: &PocketIc, canister_id: Principal, method: &str) -> (u128, u128) {
@@ -497,15 +481,7 @@ fn update_u128_pair(pic: &PocketIc, canister_id: Principal, method: &str) -> (u1
 }
 
 fn update_unit(pic: &PocketIc, canister_id: Principal, method: &str) {
-    let bytes = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            method,
-            Encode!().expect("encode call"),
-        )
-        .unwrap_or_else(|error| panic!("update {method}: {error:?}"));
-    Decode!(&bytes, ()).unwrap_or_else(|error| panic!("decode {method}: {error}"));
+    pic.update_candid_or_panic::<(), _>(canister_id, method, ());
 }
 
 fn query_inventory_measurement(pic: &PocketIc, canister_id: Principal) -> (u64, u64, bool) {
@@ -522,15 +498,7 @@ fn query_inventory_measurement(pic: &PocketIc, canister_id: Principal) -> (u64, 
 }
 
 fn snapshot(pic: &PocketIc, canister_id: Principal) -> ProbeSnapshot {
-    let bytes = pic
-        .query_call(
-            canister_id,
-            Principal::anonymous(),
-            "snapshot",
-            Encode!().expect("encode query"),
-        )
-        .unwrap_or_else(|error| panic!("query snapshot: {error:?}"));
-    Decode!(&bytes, ProbeSnapshot).expect("decode snapshot")
+    pic.query_candid_or_panic(canister_id, "snapshot", ())
 }
 
 #[test]
@@ -596,27 +564,11 @@ fn exact_deadline_sleeps_and_registration_replacement_marks_counter_regrowth() {
 }
 
 fn update_deadline(pic: &PocketIc, canister_id: Principal, method: &str, deadline: u64) {
-    let result = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            method,
-            Encode!(&deadline).expect("encode deadline"),
-        )
-        .expect("deadline update");
-    Decode!(&result, ()).expect("decode unit");
+    pic.update_candid_or_panic::<(), _>(canister_id, method, (deadline,));
 }
 
 fn ordinary_observation(pic: &PocketIc, canister_id: Principal) -> OrdinaryObservation {
-    let bytes = pic
-        .query_call(
-            canister_id,
-            Principal::anonymous(),
-            "ordinary_observation",
-            Encode!().unwrap(),
-        )
-        .unwrap();
-    Decode!(&bytes, OrdinaryObservation).unwrap()
+    pic.query_candid_or_panic(canister_id, "ordinary_observation", ())
 }
 
 #[test]
@@ -632,13 +584,11 @@ fn ordinary_await_allows_ingress_and_other_timers_before_completion() {
             pic.add_cycles(canister_id, INIT_CYCLES);
             pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
             let transient = command == "cancel";
-            pic.update_call(
+            pic.update_candid_or_panic::<(), _>(
                 canister_id,
-                Principal::anonymous(),
                 "start_ordinary",
-                Encode!(&after_completion, &transient).unwrap(),
-            )
-            .unwrap();
+                (after_completion, transient),
+            );
             let mut suspended = ordinary_observation(pic, canister_id);
             for _ in 0..32 {
                 pic.tick();
@@ -716,24 +666,12 @@ fn trapping_ordinary_probe(
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
-    let result = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            "trap_ordinary_work",
-            Encode!(&before_await).unwrap(),
-        )
-        .unwrap();
-    Decode!(&result, ()).unwrap();
-    let result = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            "start_ordinary",
-            Encode!(&after_completion, &transient).unwrap(),
-        )
-        .unwrap();
-    Decode!(&result, ()).unwrap();
+    pic.update_candid_or_panic::<(), _>(canister_id, "trap_ordinary_work", (before_await,));
+    pic.update_candid_or_panic::<(), _>(
+        canister_id,
+        "start_ordinary",
+        (after_completion, transient),
+    );
     (owned, canister_id)
 }
 
@@ -819,15 +757,11 @@ fn ordinary_continuation_trap_retires_running_work_and_releases_expired_authorit
                     if command != "unregister" {
                         update_unit(pic, canister_id, "discard_expired_ordinary_claim");
                     }
-                    let result = pic
-                        .update_call(
-                            canister_id,
-                            Principal::anonymous(),
-                            "start_ordinary",
-                            Encode!(&after_completion, &false).unwrap(),
-                        )
-                        .unwrap();
-                    Decode!(&result, ()).unwrap();
+                    pic.update_candid_or_panic::<(), _>(
+                        canister_id,
+                        "start_ordinary",
+                        (after_completion, false),
+                    );
                 } else {
                     // The original retained capability can rearm explicitly.
                     update_deadline(pic, canister_id, "reconcile_ordinary_at", 0);
@@ -853,15 +787,7 @@ fn ordinary_continuation_trap_retires_running_work_and_releases_expired_authorit
 }
 
 fn churn_observation(pic: &PocketIc, canister_id: Principal) -> ChurnObservation {
-    let bytes = pic
-        .query_call(
-            canister_id,
-            Principal::anonymous(),
-            "churn_observation",
-            Encode!().unwrap(),
-        )
-        .unwrap();
-    Decode!(&bytes, ChurnObservation).unwrap()
+    pic.query_candid_or_panic(canister_id, "churn_observation", ())
 }
 
 #[test]
@@ -872,13 +798,7 @@ fn provider_replacement_churn_preserves_cancellation_and_reports_memory() {
     pic.add_cycles(canister_id, INIT_CYCLES);
     pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
     let before = churn_observation(pic, canister_id);
-    pic.update_call(
-        canister_id,
-        Principal::anonymous(),
-        "replace_distant_deadlines",
-        Encode!(&32_768_u32).unwrap(),
-    )
-    .unwrap();
+    pic.update_candid_or_panic::<(), _>(canister_id, "replace_distant_deadlines", (32_768_u32,));
     let replaced = churn_observation(pic, canister_id);
     assert_eq!(replaced.inventory_len, 1);
     assert!(!replaced.armed);
@@ -923,13 +843,7 @@ fn armed_callback_removal_releases_captures_with_registry_access() {
         let canister_id = pic.create_canister();
         pic.add_cycles(canister_id, INIT_CYCLES);
         pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
-        pic.update_call(
-            canister_id,
-            Principal::anonymous(),
-            "remove_armed_callback",
-            Encode!(&policy).unwrap(),
-        )
-        .unwrap();
+        pic.update_candid_or_panic::<(), _>(canister_id, "remove_armed_callback", (policy,));
         let removed = ordinary_observation(pic, canister_id);
         assert!(!removed.declared);
         assert!(!removed.armed);

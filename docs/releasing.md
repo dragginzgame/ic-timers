@@ -10,6 +10,57 @@ classify the change, choose the appropriate version, run the required validation
 let the bump label the current changelog draft, and then publish the
 release through the repository's release commands.
 
+## Prepared 0.22.2 contributor cleanup
+
+The maintainer reports 0.22.1 live at
+`52a0fce4082b087342f5b04db717e94bf5448193`. The compatible 0.22.2 draft combines
+contributor cleanup with an explicit Metrics 0.9.1 minimum requirement. Timer
+source, public summary types and instruction measurement boundaries are
+unchanged. Package release versions remain maintainer-owned.
+
+The incoming root lock already selects Metrics 0.9.1 and Host artifacts/fs/process
+0.17.6; it is preserved byte-for-byte. Metrics' cached archive matches checksum
+`59af3d107a6b06bee0a31b56d9ec014ed77b8f2cd69c96b419561efd57aee812`
+and release commit `804ca4727b74d641bbe3be9155e20de914eb3ad9`. The arithmetic
+package has identical authored source to 0.9.0, no dependencies and Rust 1.85
+support; Timers retains Rust 1.88. Library/test-target compilation passes on
+prepared Rust 1.99 and 1.88, and Wasm library compilation passes on 1.88, all
+locked/offline with `RUSTUP_AUTO_INSTALL=0`. No tests or optimized artifact builds
+ran for this adoption. Logs and input identities remain at
+`/tmp/ic-timers-metrics091-audit.dVRqqwVF/` and with the
+[renewed source audit](audits/code-hygiene-2026-10-13-01.md).
+
+The [download verifier](../scripts/ci/verify_failure_evidence.py) repair for
+[#53](https://github.com/dragginzgame/ic-timers/issues/53) now selects
+`ci/ic-tools-qualified.tsv`, matching Make and the local collector's qualified
+Binaryen 132 selection. The existing downloaded-evidence suite exercises the
+actual CLI with differing default/qualified catalogs, changed versions/digests
+and a missing qualified catalog. Exact caller bytes, semantic installation
+receipt checks and source/job/native-host identity checks remain mandatory.
+Shared [#168](https://github.com/dragginzgame/shared-tooling/issues/168) owns the
+separate proposed automatic cross-caller selection check; this local repair
+does not implement that check or qualify Binaryen 133.
+
+Publication's [clean-source adapter](../scripts/ci/ensure-clean.sh) retains its
+existing-commit guard and delegates dirty/staged/untracked inspection to the
+adopted Shared `check-release-source.sh` with no allowed metadata exceptions.
+Its maintained fixture covers failed Git observations, unchanged index/ref
+bytes, dirty/staged/untracked source and an unborn checkout.
+
+The native PocketIC harness reuses selected Testkit 0.37.0's `CandidCallExt` for
+single-result replies, including unit endpoints. Candid's unit decoder admits
+empty replies. Multi-argument replies keep their raw `Decode!` paths; decoding
+one tuple value would change their wire interpretation. Private timer-executor
+ingress rejection remains raw. Probe method names, callers, arguments and
+canister code are unchanged; no dependency or new generic adapter is added.
+
+Before-images, incoming Cargo inputs and index/ref observations are retained at
+`/tmp/ic-timers-cleanup0222.me2TVYCf/`. Rust formatting, changed Bash syntax and
+diff inspection pass. Focused downloaded-evidence/publication fixtures and
+native probe compilation/Clippy have not run. Complete owner release validation
+and PocketIC execution retain their own authority; no performance saving is
+claimed from native harness line removal.
+
 ## 0.22.0 delivery and prepared 0.22.1 tooling
 
 The maintainer reports 0.22.0 live at

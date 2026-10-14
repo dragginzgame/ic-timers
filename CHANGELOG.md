@@ -2,6 +2,28 @@
 
 All notable changes to this project are recorded here.
 
+## [0.22.2]
+
+### Changed
+
+- Require Metrics 0.9.1 in the root dependency catalog. Its arithmetic crate
+  source and public summary types are unchanged from 0.9.0; existing overflow,
+  callback attribution and scheduling semantics are preserved.
+
+### Development
+
+- Verify downloaded failure evidence against the same qualified IC tool catalog
+  used by setup and collection. Cover the actual verifier command when shared
+  defaults differ, and reject changed or missing qualified pins.
+  ([#53](https://github.com/dragginzgame/ic-timers/issues/53))
+- Reuse the adopted Shared source-cleanliness checker for publication, retaining
+  the committed-source requirement and failed-observation checks.
+- Use Testkit's typed Candid calls for single-result probe replies, keeping raw
+  calls for multiple reply arguments and the private executor rejection test.
+  Timer APIs and execution semantics are unchanged by these harness changes.
+- Refresh README API guidance and describe the combined 60-second Testkit
+  startup budget used by the current harness.
+
 ## [0.22.1] - 2026-10-13
 
 ### Changed

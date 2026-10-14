@@ -98,8 +98,9 @@ git add bin/git
 git commit -qm 'publication guard fixture'
 bash "$cleaner"
 git for-each-ref --format='%(refname) %(objectname)' > .git/clean-refs-before
-for query in 'rev-parse --verify HEAD' 'ls-files --others --exclude-standard' \
-    'diff-index --quiet HEAD --'; do
+cp -p .git/index .git/clean-index-before
+for query in 'rev-parse --verify HEAD' 'rev-parse --show-prefix' \
+    'status --porcelain=v1 -z --untracked-files=all'; do
     for observation in '' 'plausible but failed observation'; do
         if output="$(PATH="$temporary_root/bin:$PATH" FIXTURE_FAIL_TAG_QUERY="$query" \
             FIXTURE_TAG_QUERY_OUTPUT="$observation" bash "$cleaner" 2>&1)"; then
@@ -113,6 +114,7 @@ for query in 'rev-parse --verify HEAD' 'ls-files --others --exclude-standard' \
         fi
     done
 done
+cmp .git/index .git/clean-index-before
 git for-each-ref --format='%(refname) %(objectname)' > .git/clean-refs-after
 cmp .git/clean-refs-before .git/clean-refs-after
 printf '\n# Unstaged publication change\n' >> Cargo.toml
@@ -133,5 +135,11 @@ if bash "$cleaner" >/dev/null 2>&1; then
 fi
 rm 'untracked publication change'
 bash "$cleaner"
+# A source-only checker can admit an empty unborn checkout; publication cannot.
+git init -q "$temporary_root/unborn"
+if (cd "$temporary_root/unborn" && bash "$cleaner" >/dev/null 2>&1); then
+    echo 'error: clean publication guard admitted a checkout without a commit' >&2
+    exit 1
+fi
 fixture_complete=true
 echo 'Exact annotated release-tag and clean publication checks passed'

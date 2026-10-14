@@ -1,6 +1,6 @@
 use super::harness::fresh_pocket_ic;
-use candid::{Decode, Encode, Principal};
-use ic_testkit::pic::PocketIc;
+use candid::{Encode, Principal};
+use ic_testkit::pic::{CandidCallExt, PocketIc};
 use ic_timers_test_protocol::{CohortObservation, MemorySamplingMeasurement, OperationMeasurement};
 use std::{env, fs, path::PathBuf, time::Duration};
 
@@ -194,51 +194,20 @@ fn update_measurement(
     canister_id: Principal,
     method: &str,
 ) -> OperationMeasurement {
-    let bytes = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            method,
-            Encode!().expect("encode cohort update"),
-        )
-        .unwrap_or_else(|error| panic!("update {method}: {error:?}"));
-    Decode!(&bytes, OperationMeasurement).unwrap_or_else(|error| panic!("decode {method}: {error}"))
+    pic.update_candid_or_panic(canister_id, method, ())
 }
 
 fn update_unit(pic: &PocketIc, canister_id: Principal, method: &str) {
-    pic.update_call(
-        canister_id,
-        Principal::anonymous(),
-        method,
-        Encode!().expect("encode unit update"),
-    )
-    .unwrap_or_else(|error| panic!("update {method}: {error:?}"));
+    pic.update_candid_or_panic::<(), _>(canister_id, method, ());
 }
 
 fn memory_sampling_measurement(
     pic: &PocketIc,
     canister_id: Principal,
 ) -> MemorySamplingMeasurement {
-    let bytes = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            "memory_sampling_overhead",
-            Encode!().expect("encode memory-sampling update"),
-        )
-        .unwrap_or_else(|error| panic!("measure memory sampling: {error:?}"));
-    Decode!(&bytes, MemorySamplingMeasurement)
-        .unwrap_or_else(|error| panic!("decode memory-sampling measurement: {error}"))
+    pic.update_candid_or_panic(canister_id, "memory_sampling_overhead", ())
 }
 
 fn observe(pic: &PocketIc, canister_id: Principal) -> CohortObservation {
-    let bytes = pic
-        .query_call(
-            canister_id,
-            Principal::anonymous(),
-            "observe",
-            Encode!().expect("encode cohort query"),
-        )
-        .unwrap_or_else(|error| panic!("query cohort observation: {error:?}"));
-    Decode!(&bytes, CohortObservation).expect("decode cohort observation")
+    pic.query_candid_or_panic(canister_id, "observe", ())
 }

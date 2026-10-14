@@ -41,7 +41,7 @@ class DownloadedEvidenceTests(unittest.TestCase):
                 "scripts/ci/verify-file-checksum.sh",
                 "scripts/dev/install-host-tools.sh",
                 "scripts/dev/tool-store.sh",
-                "ci/tool-versions.env", "ci/ic-tools.tsv",
+                "ci/tool-versions.env", "ci/ic-tools-qualified.tsv",
             ):
                 target = workspace / name
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -66,7 +66,7 @@ class DownloadedEvidenceTests(unittest.TestCase):
                 (temporary / log).write_bytes(result.stdout + result.stderr)
                 self.assertEqual(result.returncode, expected, (result.stdout, result.stderr))
             tool_pins = {kind: (root / "ci" / name).read_bytes() for kind, name in
-                         (("host", "tool-versions.env"), ("ic", "ic-tools.tsv"))}
+                         (("host", "tool-versions.env"), ("ic", "ic-tools-qualified.tsv"))}
             verify_archive(runner / "ic-timers-failure-evidence.tar.gz", "early", identity, tool_pins)
 
     def test_qualification_and_rejections(self):
@@ -121,6 +121,32 @@ class DownloadedEvidenceTests(unittest.TestCase):
 
                 write(files)
                 verify_archive(archive, stage, identity, tool_pins)
+                if stage == "late":
+                    # Exercise the actual CLI's checkout selection: the shared
+                    # default intentionally differs from our qualified exception.
+                    catalogs = temporary / "ci"
+                    catalogs.mkdir()
+                    (catalogs / "tool-versions.env").write_bytes(tool_pins["host"])
+                    qualified = catalogs / "ic-tools-qualified.tsv"
+                    qualified.write_bytes(ic_pins)
+                    default = ic_pins.replace(b"\t132\t", b"\t133\t")
+                    (catalogs / "ic-tools.tsv").write_bytes(default)
+                    env = dict(os.environ, GITHUB_WORKSPACE=str(temporary),
+                               GITHUB_SHA=identity["checkout_sha"], GITHUB_RUN_ID=identity["run"],
+                               GITHUB_RUN_ATTEMPT=identity["attempt"])
+                    command = [sys.executable, str(Path(__file__).with_name("verify_failure_evidence.py")),
+                               str(archive), stage, identity["job"], identity["host"]]
+                    result = subprocess.run(command, env=env, capture_output=True)
+                    self.assertEqual(result.returncode, 0, (result.stdout, result.stderr))
+                    for wrong in (default, ic_pins.replace(b"0" * 64, b"1" * 64, 1)):
+                        qualified.write_bytes(wrong)
+                        result = subprocess.run(command, env=env, capture_output=True)
+                        self.assertNotEqual(result.returncode, 0)
+                        self.assertIn(b"different caller pins", result.stderr)
+                    qualified.unlink()
+                    result = subprocess.run(command, env=env, capture_output=True)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(b"ic-tools-qualified.tsv", result.stderr)
                 if stage == "early":
                     # Earlier physical checkout slots cannot stand in for the
                     # current retained shared generation. Reject malformed or

@@ -122,7 +122,7 @@ if __name__ == "__main__":
     try:
         workspace = os.environ["GITHUB_WORKSPACE"]
         tool_pins = {}
-        for kind, name in (("host", "tool-versions.env"), ("ic", "ic-tools.tsv")):
+        for kind, name in (("host", "tool-versions.env"), ("ic", "ic-tools-qualified.tsv")):
             with open(os.path.join(workspace, "ci", name), "rb") as pins:
                 tool_pins[kind] = pins.read()
         verify_archive(sys.argv[1], sys.argv[2], identity, tool_pins)

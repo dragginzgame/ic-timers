@@ -8,7 +8,46 @@ This handoff links [release evidence](../releasing.md),
 [Shared adoption](../shared-tooling.md), [safety](../../SAFETY.md) and
 [the archive](archive-2026-10-10.md).
 
-## Delivered 0.22.0
+## Delivered 0.22.1 and prepared 0.22.2
+
+The maintainer reports 0.22.1 live; current HEAD is
+`52a0fce4082b087342f5b04db717e94bf5448193`. Shared remains adopted at 0.10.2.
+The incoming root lock selects Metrics 0.9.1 and Host artifacts/fs/process 0.17.6
+and is preserved separately from this task. No agent release execution is pending.
+The matching [main CI run](https://github.com/dragginzgame/ic-timers/actions/runs/38421039455)
+passes Linux CI, probe lint, PocketIC recovery/cohorts, MSRV and Apple Silicon.
+Intel is running; issues #51 and #52 still require complete hosted
+native acceptance. The earlier 0.22.0 main run is now cancelled.
+
+The [0.22.2 contributor cleanup](../releasing.md#prepared-0222-contributor-cleanup)
+prepares the [#53](https://github.com/dragginzgame/ic-timers/issues/53) downloaded
+verifier catalog fix, with an actual CLI fixture. Make, collection and
+verification select the qualified Binaryen 132 exception. Automatic cross-caller detection remains upstream
+[Shared #168](https://github.com/dragginzgame/shared-tooling/issues/168).
+Publication delegates clean-source inspection to the already adopted Shared
+helper, retaining the commit guard. Probe single-result Candid calls reuse
+Testkit 0.37.0; multi-argument replies and private executor rejection remain raw.
+Timer source/API and canister measurements are unchanged by the harness cleanup.
+
+The root Metrics requirement is now 0.9.1, matching the incoming selection.
+Its cached archive/checksum and released source are reviewed; arithmetic source
+and public summary types are unchanged from 0.9.0. Locked/offline native library
+and test-target compilation passes on Rust 1.99 and 1.88; Wasm library compilation
+passes on 1.88. No dependency fetch, tests, Clippy or optimized builds ran.
+The [renewed audit](../audits/code-hygiene-2026-10-13-01.md) reviews current timer
+authority, ownership, semantics and tooling. README API/startup guidance follows
+the delivered 0.22 API and the harness's single 60-second deadline.
+The source review finds no new timer correctness defect. Two std import paths
+remain a trivial probe convention correction; identity sharing and extreme
+provider-key reuse remain research, with no code change or cost claim.
+
+Before-images and incoming/index/ref observations stay at
+`/tmp/ic-timers-cleanup0222.me2TVYCf/`. Formatting, Bash syntax and diff checks
+pass; focused fixtures, native probe compilation/Clippy and PocketIC execution
+have not run. Tests, lint and probe builds require scoped maintainer approval.
+The single draft combines this contributor cleanup with the Metrics declaration.
+
+## Prior 0.22.0 delivery evidence
 
 The maintainer reports 0.22.0 live at
 `ffe175b2ae1b38719ec649286468b96a08a2f111`. The completed standard receipt binds
@@ -32,7 +71,7 @@ with IC Build; the local profile still selects thin LTO. The
 [callback owner](../design/callback-delivery-ownership.md) retains preparation
 receipts and their original compiler/graph scopes.
 
-## Prepared Shared 0.10.2
+## 0.22.1 preparation evidence
 
 The [prepared contributor cleanup](../releasing.md#prepared-0221-contributor-cleanup)
 removes the separate exact-version delivery and manual Git phase commands.
