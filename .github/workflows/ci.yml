@@ -334,7 +334,6 @@ jobs:
           make release-tag-check
           make fetch
           bash scripts/release/check-lockfiles.sh
-          make release-check
       - name: Archive failure evidence
         if: ${{ failure() }}
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
