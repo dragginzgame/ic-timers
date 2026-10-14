@@ -2,6 +2,23 @@
 
 All notable changes to this project are recorded here.
 
+## [0.22.5]
+
+### Development
+
+- Reuse Testkit's bounded readiness poller for five probe waits, preserving
+  tick-before-observation boundaries and reporting the last pending observation.
+- Build the four policy cohorts through one fail-fast recipe, retaining explicit
+  mutually exclusive features and separate target directories.
+- Delegate release-prose heuristics and semantic fixtures to the exact Shared
+  Tooling contribution ([#191](https://github.com/dragginzgame/shared-tooling/pull/191));
+  retain local caller binding and advisory pre-mutation invocation.
+- Move complete release-change observation and generic Git regressions to Shared
+  Tooling; retain local package-impact policy and reject failed partial streams.
+- Propose zero-duration polling without redundant simulated-time requests in
+  Testkit ([#96](https://github.com/dragginzgame/ic-testkit/pull/96)); local dependency
+  adoption awaits owner publication.
+
 ## [0.22.4] - 2026-10-14
 
 ### Development

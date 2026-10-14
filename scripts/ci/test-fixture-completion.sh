@@ -27,7 +27,7 @@ fixtures=(
     scripts/release/test-release-gate.sh:temporary_root
     scripts/release/test-release-impact.sh:temporary_root
     scripts/release/test-release-index.sh:fixture
-    scripts/release/test-release-prose-warning.sh:fixture_root
+    scripts/release/test-release-prose-warning.sh:fixture
     scripts/release/test-tag-at-head.sh:temporary_root
     scripts/release/test-version-preparation.sh:temporary_root
 )
@@ -82,6 +82,7 @@ done
 # Copy actual mandatory assertions into this fixture's initialization boundary,
 # make their inputs contradictory, and attempt completion only after the check.
 for assertion in retained-path status-match host-os host-architecture host-version; do
+    # shellcheck disable=SC2016 # Match literal source expressions in the copied assertions.
     case "$assertion" in
         retained-path)
             assertion_source=scripts/ci/test-fixture-completion.sh

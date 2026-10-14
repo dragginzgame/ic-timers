@@ -8,7 +8,54 @@ This handoff links [release evidence](../releasing.md),
 [Shared adoption](../shared-tooling.md), [safety](../../SAFETY.md) and
 [the archive](archive-2026-10-10.md).
 
-## Delivered 0.22.3 and prepared 0.22.4
+## Delivered 0.22.4 and prepared 0.22.5
+
+Current HEAD is `09dc8c1` (released 0.22.4). The maintainer's incoming Cargo
+selection uses Testkit 0.41 and Metrics 0.9.5; this task preserves those inputs.
+The undated repository-only 0.22.5 batch centralizes five readiness waits through
+Testkit's bounded poller, preserving the first tick and each existing round budget.
+Fixed-round drain observations remain explicit. Four cohort builds share one
+fail-fast recipe, retaining exclusive features and isolated target directories.
+
+The release-prose advisory, complete release-change collector and semantic suites belong to
+[Shared PR #191](https://github.com/dragginzgame/shared-tooling/pull/191), pinned
+through all three reviewed snapshots at `c576f79dcd6bb693ba704410884e81c5e3a226d3`
+(82/41/18 payloads). Timers retains package path policy and qualified caller
+adapters; failed partial streams never become impact classifications. Canonical
+exports were generated in an isolated current-tree copy because earlier changes
+are staged. Before-images were verified before copyback; index bytes and Cargo
+inputs remain intact. The source includes committed Shared 0.13.1, with pending
+0.13.2 helper notes. It excludes #180's release-preparation hard cut.
+
+Testkit [#96](https://github.com/dragginzgame/ic-testkit/pull/96), at
+`bc02adb2b73c5decad754cd8c30272796b4015b5`, skips time requests in zero-duration
+polling. A bounded native peer proves the actual client sends only a tick for
+zero and read/set/tick with the exact timestamp for nonzero. The regression fails
+with the old behavior; all five polling tests, strict Clippy and Rust 1.88 test-target
+compilation pass. This is native transport evidence, not live canister qualification.
+The real graph still selects Testkit 0.41.0; adoption waits for publication.
+
+Both removal-payload experiments were rejected. With Rust 1.88/thin LTO and the
+same current graph, allocation-free callback/slot ownership adds 1,976–2,019 bytes
+to the three active policy cohorts; native transition size grows from 168 to 232
+bytes. A narrow boxed payload still adds 1,156 bytes for Once and 1,211 for Watchdog.
+The allocation-free candidates passed the 154 native tests, but neither approach
+justifies the extra type/code and Wasm cost for short-lived cleanup storage.
+The original registry source is restored
+byte-for-byte and its native suite passes. No library API or runtime change remains.
+Before/after artifacts, hashes, layouts and isolated source are retained at
+`/tmp/ic-timers-owner-cleanup.Qa4P1qIr/`; no IC instruction saving was measured.
+
+Rust 1.88 probe/test-target compilation, Rust 1.99 probe Clippy, the actual cohort
+recipe/failure fixture and Shared advisory/ShellCheck checks pass. Live PocketIC
+qualification cannot start because the incoming Testkit 0.41 CLI has not been
+prepared; `make install-testkit-server` remains explicit owner setup. No setup,
+live canister execution, real release or main-branch commit ran. Snapshot integrity/corruption, prose adapter/owner semantics, version-preparation,
+fixture retention/completion, changed ShellCheck and documentation links also pass.
+The focused readback is retained at
+`/tmp/ic-timers-three-reductions.YIlCM7hu/`. Production timer code is unchanged.
+
+## Prior 0.22.3 and 0.22.4 preparation
 
 Current HEAD is `730ad01` (released 0.22.3); the previous preparation and
 qualification below retain their historical source scope. Shared snapshots now

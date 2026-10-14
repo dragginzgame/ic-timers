@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.12.8
+# version	0.13.1
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	eafa07cac1fdba7d6303d061ed8af458aacf32b7
+revision	c576f79dcd6bb693ba704410884e81c5e3a226d3
 # entrypoint	DRAGGINZGAME.md
 # entrypoint	rules/changelogs.md
 # entrypoint	rules/cargo-dependencies.md
@@ -67,6 +67,10 @@ revision	eafa07cac1fdba7d6303d061ed8af458aacf32b7
 # entrypoint	scripts/ci/fixture-lifecycle.sh
 # entrypoint	scripts/ci/failure_evidence.py
 # entrypoint	scripts/ci/qualify-hosted-failure.sh
+# entrypoint	scripts/ci/warn-release-prose.sh
+# entrypoint	scripts/ci/test-release-prose-warning.sh
+# entrypoint	scripts/ci/collect-release-changes.sh
+# entrypoint	scripts/ci/test-release-changes.sh
 file	9cd262741b22e90500126294326697cc5a7d0c6d49add21346c4a749342e370d	-	DRAGGINZGAME.md
 file	4e089b5a565559fbf698c36d92146b0703579a95027ac0778fb48af21fa3e5a0	-	rules/changelogs.md
 file	afd13ae708e684244edb5262f42e106900c076b3cac4def8bd741bfade3c602a	-	rules/cargo-dependencies.md
@@ -88,7 +92,7 @@ file	d70f32239de9ea0d2d2a3a0eebd2fa862746807cd797f512f95b2e46fc5faa67	x	.githook
 file	0f86b831af02072f89b74477c73e378fd451f81116def1271a0c0a4552e278bb	x	scripts/dev/install-git-hooks.sh
 file	32582e5d76c9e6988f4431a96554ba298e52ddb8a424945c7ea4b98815ec0889	-	rules/agent-maintenance.md
 file	e7647e72465b1caf790d8312fc276dda0efc2a8f7dacf1c0ff519ee5b7f1640a	x	scripts/ci/run-validation-targets.sh
-file	e85dd6c67e5e6eebe878013a5de2e8b965d0016ed550f98cb9c757be1d48496d	-	docs/verification-helpers.md
+file	2d67ecd5de63278d43feeeab34227a535533b67e7b5d00b7780c2d713f9ef501	-	docs/verification-helpers.md
 file	1063002468575e2f821cfec71524bde06a64634bf30455d64d2d9fed872969d6	-	docs/tag-maintenance.md
 file	98be974ab1155e7859bc1b678b3035751fa809904b1cea0fc650ee905649df2b	-	scripts/distribution/governance-files.txt
 file	6eb261f79ff2780422a75e018b091bb119f552a1d155504acacefb7e2e290ba0	x	scripts/dev/gh-ci.sh
@@ -128,9 +132,13 @@ file	bfb1adad1d3fd2acf2ce417b69f97275dce51cddef0d1aec59cd72d39b2aac05	-	docs/mak
 file	9bf799d14fc0aa7c63bd09ab0e966e891fe3abaf4bf20896f40a1562b3d03deb	x	scripts/ci/test-make-consumer.sh
 file	a9ed416a02f737d420723642935de94ffdd53cf92f75bb06ab4b0bc1c68430dc	-	tasks/cargo-tool-versions.md
 file	7abc7480e1092046849328168a5d29822d44dfc6ffff1ad60d388c4099c159e8	-	rules/change-reporting.md
-file	a3c4b4868cc90165461d99611321342b2d37b5cf89727a97d781fd3ec7867bab	-	scripts/ci/fixture-lifecycle.sh
+file	ecfd7c82fd84ce4468d7be846a23961c2894239f80c817f1059fc675eaad378b	-	scripts/ci/fixture-lifecycle.sh
 file	e1a3e52026e20df3afc111a1da08bd1d11d7ccc8c09fb416640f2fbe2569f6e8	-	scripts/ci/failure_evidence.py
 file	5d0aa6f672901e0ed62295d559a77e54eab6c59d3882f8a07a5899c4837a7e46	x	scripts/ci/qualify-hosted-failure.sh
+file	e947eb1cd88985cde31b28a970301fdbca8e5e403856e895457f651405994384	-	scripts/ci/warn-release-prose.sh
+file	d110703ca082c2f1d2e0f786c8889d9e2755dd0c7cca513a823c53c20c86a24e	-	scripts/ci/test-release-prose-warning.sh
+file	3efb4b9afdc91a955eb2718bce78d88cc5381a370fd711122679757a86367fa3	-	scripts/ci/collect-release-changes.sh
+file	247a33949da761296269d7640a31fd2870e16f513dd17b321d7783a254aae28a	-	scripts/ci/test-release-changes.sh
 file	c9971d3de02546e81e25f19ab74dfa7997164fa05fe76e0d323b200a30f28318	-	docs/cargo-publication.md
 file	3824050479f26a6d8533dadc6a53826d365274e0840b11691c46dacceb191e00	-	docs/ci-change-selection.md
 file	ef2ba87f4a34406c355cef9d101ec97dce72990f04b16ded721761bb59ec4df3	-	docs/rust-toolchains.md

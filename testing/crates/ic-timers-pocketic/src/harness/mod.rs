@@ -3,12 +3,34 @@
 use candid::{Encode, Principal};
 use ic_testkit::pic::{
     CanisterInstallExt, InstallSpec, PocketIc, PocketIcBuilder, PocketIcInstance,
-    PocketIcStartupConfig,
+    PocketIcStartupConfig, tick_until,
 };
-use std::{env, path::PathBuf, time::Duration};
+use std::{convert::Infallible, env, fmt::Debug, path::PathBuf, task::Poll, time::Duration};
 
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(60);
 pub const INIT_CYCLES: u128 = 2_000_000_000_000;
+
+/// Preserve tick-before-observation boundaries while Testkit owns bounded progress.
+pub fn wait_for_probe<T: Debug>(
+    pic: &PocketIc,
+    rounds: u32,
+    mut observe: impl FnMut(&PocketIc) -> T,
+    ready: impl Fn(&T) -> bool,
+) -> T {
+    let remaining = rounds.checked_sub(1).expect("positive probe round budget");
+    let mut last = None;
+    pic.tick();
+    tick_until(pic, remaining, Duration::ZERO, |pic| {
+        let observation = observe(pic);
+        if ready(&observation) {
+            Poll::Ready(Ok::<_, Infallible>(observation))
+        } else {
+            last = Some(observation);
+            Poll::Pending
+        }
+    })
+    .unwrap_or_else(|error| panic!("{error}; last probe observation: {last:?}"))
+}
 
 /// Install one probe with the fixtures' explicit funding and empty init payload.
 pub fn install_probe(pic: &PocketIc, wasm: Vec<u8>) -> Principal {

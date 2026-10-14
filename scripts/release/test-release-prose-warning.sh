@@ -2,57 +2,31 @@
 set -euo pipefail
 
 repository_root="$(git rev-parse --show-toplevel)"
-checker="${repository_root}/scripts/release/warn-release-prose.sh"
-fixture_root="$(mktemp -d)"
-status_file="${fixture_root}/current.md"
-# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture="$(mktemp -d "${TMPDIR:-/tmp}/timers-prose-adapter.XXXXXX")"
 fixture_complete=false
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$repository_root/scripts/ci/fixture-lifecycle.sh"
-trap 'fixture_finish "$?" "$fixture_root" "Failed release-prose fixture retained"' EXIT
-
-printf '%s\n' \
-    '# Current status' \
-    '' \
-    'Read Cargo for package identity.' \
-    '' \
-    '## Next action' \
-    '' \
-    'Review the bounded hygiene patch.' > "${status_file}"
-clean_output="$(bash "${checker}" 0.3.7 "${status_file}" 2>&1)"
-if [[ -n "${clean_output}" ]]; then
-    echo "error: advisory warned about clean status prose" >&2
-    echo "${clean_output}" >&2
-    exit 1
-fi
-
-printf '%s\n' \
-    '# Current status' \
-    '' \
-    'Version 0.3.7 remains a candidate.' > "${status_file}"
-candidate_output="$(bash "${checker}" 0.3.7 "${status_file}" 2>&1)"
-if [[ "${candidate_output}" != *"advisory only; release validation continues"* ]]; then
-    echo "error: advisory missed target-version candidate wording" >&2
-    exit 1
-fi
-
-printf '%s\n' \
-    '# Current status' \
-    '' \
-    '## Next action' \
-    '' \
-    'Publish after release.' > "${status_file}"
-next_action_output="$(bash "${checker}" 0.3.7 "${status_file}" 2>&1)"
-if [[ "${next_action_output}" != *"next-action wording"* ]]; then
-    echo "error: advisory missed stale next-action wording" >&2
-    exit 1
-fi
-
-missing_output="$(bash "${checker}" 0.3.7 "${fixture_root}/missing.md" 2>&1)"
-if [[ "${missing_output}" != *"continuing"* ]]; then
-    echo "error: advisory did not fail open for a missing status file" >&2
-    exit 1
-fi
-
+trap 'fixture_finish "$?" "$fixture" "Failed prose-adapter fixture retained"' EXIT
+mkdir -p "$fixture/consumer with spaces/scripts/release" "$fixture/consumer with spaces/scripts/ci" "$fixture/caller"
+cp "$repository_root/scripts/release/warn-release-prose.sh" "$fixture/consumer with spaces/scripts/release/"
+cat > "$fixture/consumer with spaces/scripts/ci/warn-release-prose.sh" <<'STUB'
+#!/usr/bin/env bash
+printf '%s\0' "$PWD" "$@" > "$PROSE_ADAPTER_CALL"
+exit "$PROSE_ADAPTER_STATUS"
+STUB
+export PROSE_ADAPTER_CALL="$fixture/call" PROSE_ADAPTER_STATUS=0
+(
+    cd "$fixture/caller"
+    bash "$fixture/consumer with spaces/scripts/release/warn-release-prose.sh" 0.22.5 'status notes.md'
+)
+printf '%s\0' "$fixture/caller" 0.22.5 'status notes.md' > "$fixture/expected"
+cmp "$fixture/expected" "$fixture/call"
+status=0
+PROSE_ADAPTER_STATUS=37 bash "$fixture/consumer with spaces/scripts/release/warn-release-prose.sh" 0.22.5 || status=$?
+[[ "$status" == 37 ]] || exit 1
+printf '%s\0' "$PWD" 0.22.5 docs/status/current.md > "$fixture/expected"
+cmp "$fixture/expected" "$fixture/call"
+# Shared owns prose heuristics and failure behavior; qualify its exact export.
+bash "$repository_root/scripts/ci/test-release-prose-warning.sh"
 fixture_complete=true
-echo "Release-prose advisory checks passed"
+echo 'Release-prose adapter binding and owner checks passed'

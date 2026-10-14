@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.12.8
+# version	0.13.1
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	eafa07cac1fdba7d6303d061ed8af458aacf32b7
+revision	c576f79dcd6bb693ba704410884e81c5e3a226d3
 # entrypoint	audits/README.md
 # entrypoint	audits/code-hygiene.md
 # entrypoint	audits/flow-convergence-and-duplication.md
@@ -76,6 +76,6 @@ file	9e32385247296ce95d2b15b1290c64e6b6dff15716c1c139f21ab5e5128f4be3	x	scripts/
 file	ef2ba87f4a34406c355cef9d101ec97dce72990f04b16ded721761bb59ec4df3	-	docs/rust-toolchains.md
 file	05da2ac2b805c7cf9597d4af75983efc1268d619a0fb1e42c7f6d3fdb481880b	-	ci/ic-tools.tsv
 file	a46f24404cdf654f576ba7c2ca4ff359ac00eb25ffad2e3f37d9d43ea98dc225	x	scripts/ci/cargo-tool-cache-key.sh
-file	a3c4b4868cc90165461d99611321342b2d37b5cf89727a97d781fd3ec7867bab	-	scripts/ci/fixture-lifecycle.sh
+file	ecfd7c82fd84ce4468d7be846a23961c2894239f80c817f1059fc675eaad378b	-	scripts/ci/fixture-lifecycle.sh
 file	ee8a8a07148c199481149331602cb6f9292793a1ca8455dfa9d5a04628dbc4e7	x	scripts/ci/collect-tool-evidence.sh
 file	37477ebdbf9f03da16473290b12bb99436c73f1855df27d592438dc6324e05ea	x	scripts/ci/tool-catalog-records.pl

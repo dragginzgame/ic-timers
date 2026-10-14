@@ -1,4 +1,4 @@
-use super::harness::{INIT_CYCLES, fresh_pocket_ic, install_probe};
+use super::harness::{INIT_CYCLES, fresh_pocket_ic, install_probe, wait_for_probe};
 use candid::{Decode, Encode, Principal};
 use ic_testkit::pic::{CandidCallExt, PocketIc, PocketIcInstance};
 use ic_timers_test_protocol::{
@@ -50,16 +50,12 @@ fn successful_immediate_continuation_runs_again_without_waiting_for_cadence() {
 
     let cycles_before_first = pic.cycle_balance(canister_id);
     pic.advance_time(Duration::from_secs(1));
-    let mut immediate = None;
-    for _ in 0..16 {
-        pic.tick();
-        let current = snapshot(pic, canister_id);
-        if current.completed_work == 1 {
-            immediate = Some(current);
-            break;
-        }
-    }
-    let immediate = immediate.expect("first work completion should be observable");
+    let immediate = wait_for_probe(
+        pic,
+        16,
+        |pic| snapshot(pic, canister_id),
+        |current| current.completed_work == 1,
+    );
     assert!(immediate.immediate_scheduling);
     assert_eq!(immediate.latest_requested_delay_ns, Some(0));
     assert_eq!(immediate.latest_armed_delay_ns, Some(0));
@@ -368,16 +364,12 @@ fn cancellation_between_scheduler_and_work_makes_late_provider_delivery_harmless
     assert!(update_bool(pic, canister_id, "start"));
     pic.advance_time(Duration::from_secs(1));
 
-    let mut dispatched = None;
-    for _ in 0..12 {
-        pic.tick();
-        let current = snapshot(pic, canister_id);
-        if current.work_dispatched == 1 && current.work_started == 0 {
-            dispatched = Some(current);
-            break;
-        }
-    }
-    let dispatched = dispatched.expect("scheduler/work message boundary must be observable");
+    let dispatched = wait_for_probe(
+        pic,
+        12,
+        |pic| snapshot(pic, canister_id),
+        |current| current.work_dispatched == 1 && current.work_started == 0,
+    );
     assert_eq!(dispatched.completed_work, 0);
     assert!(dispatched.next_deadline_ns.is_some());
 
@@ -523,17 +515,11 @@ fn ordinary_await_allows_ingress_and_other_timers_before_completion() {
                 "start_ordinary",
                 (after_completion, transient),
             );
-            let mut suspended = ordinary_observation(pic, canister_id);
-            for _ in 0..32 {
-                pic.tick();
-                suspended = ordinary_observation(pic, canister_id);
-                if suspended.running && suspended.waiting && suspended.gate_replies > 0 {
-                    break;
-                }
-            }
-            assert!(
-                suspended.running && suspended.waiting && suspended.gate_replies > 0,
-                "self-call must commit real suspension: after_completion={after_completion} command={command} observed={suspended:?}"
+            let suspended = wait_for_probe(
+                pic,
+                32,
+                |pic| ordinary_observation(pic, canister_id),
+                |current| current.running && current.waiting && current.gate_replies > 0,
             );
             assert_eq!(suspended.gate_error, None);
             assert!(update_bool(pic, canister_id, "start"));
@@ -655,15 +641,12 @@ fn ordinary_continuation_trap_retires_running_work_and_releases_expired_authorit
                 let (owned, canister_id) =
                     trapping_ordinary_probe(after_completion, transient, false);
                 let pic = &owned.instance;
-                let mut suspended = ordinary_observation(pic, canister_id);
-                for _ in 0..32 {
-                    pic.tick();
-                    suspended = ordinary_observation(pic, canister_id);
-                    if suspended.running && suspended.waiting && suspended.gate_replies > 0 {
-                        break;
-                    }
-                }
-                assert!(suspended.running && suspended.waiting && suspended.gate_replies > 0);
+                wait_for_probe(
+                    pic,
+                    32,
+                    |pic| ordinary_observation(pic, canister_id),
+                    |current| current.running && current.waiting && current.gate_replies > 0,
+                );
                 match command {
                     "none" => {}
                     "cancel" => update_unit(pic, canister_id, "cancel_ordinary"),
@@ -736,13 +719,12 @@ fn provider_replacement_churn_preserves_cancellation_and_reports_memory() {
     // Churn may reuse existing allocation capacity. Report page extents without
     // requiring memory growth for cancellation and continued work to be correct.
     update_unit(pic, canister_id, "start_immediate_churn");
-    for _ in 0..768 {
-        pic.tick();
-        if churn_observation(pic, canister_id).completed == 64 {
-            break;
-        }
-    }
-    let immediate = churn_observation(pic, canister_id);
+    let immediate = wait_for_probe(
+        pic,
+        768,
+        |pic| churn_observation(pic, canister_id),
+        |current| current.completed == 64,
+    );
     assert_eq!(immediate.completed, 64);
     assert_eq!(immediate.inventory_len, 1);
     assert!(!immediate.armed);

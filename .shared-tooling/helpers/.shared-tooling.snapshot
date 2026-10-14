@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.12.8
+# version	0.13.1
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	eafa07cac1fdba7d6303d061ed8af458aacf32b7
+revision	c576f79dcd6bb693ba704410884e81c5e3a226d3
 # entrypoint	scripts/ci/verify-file-checksum.sh
 # entrypoint	scripts/ci/verify-shared-tooling-snapshot.sh
 # entrypoint	scripts/ci/check-dependency-pins.sh
@@ -29,7 +29,7 @@ file	d7b179f9ceaec6e11c690c975b61f91bedc80526415f71571615064db14f0c9c	x	scripts/
 file	6fe7da8acbeb862b26047d08c63a95a5d2b93223bb9c929d65c56dd2f30551ac	x	scripts/ci/check-release-commands.sh
 file	a1a9739e4749bfa9c594c8714a89aac3c2394b87cdfbc7c27c3936c8071ece4b	x	scripts/ci/render-cargo-workspace-version.pl
 file	cc36df8e0cbd96e93b1632f6a6b5d22c562307d87627693e56c3fff40b217939	x	scripts/ci/cargo-release-metadata.sh
-file	a3c4b4868cc90165461d99611321342b2d37b5cf89727a97d781fd3ec7867bab	-	scripts/ci/fixture-lifecycle.sh
+file	ecfd7c82fd84ce4468d7be846a23961c2894239f80c817f1059fc675eaad378b	-	scripts/ci/fixture-lifecycle.sh
 file	64444da3fd34bd534a7b717c50ef89a55f821c38ea15caad8279415f540815fb	-	scripts/ci/finalize-release-changelog.awk
 file	e00937f22bd31231993ae9c1d7eda844227b39529466d017de44dbc1f0618026	-	scripts/ci/cargo-workspace-members.jq
 file	fed2573258080a0c89c7db113208a774f615ca29c372e62c1d2334e58c165654	x	scripts/ci/compare-stable-versions.pl

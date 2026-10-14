@@ -18,6 +18,7 @@ for script in bump-version finalize-changelog \
     cp "${repository_root}/scripts/release/${script}.sh" "${temporary_root}/scripts/release/"
 done
 cp "${repository_root}/scripts/ci/next-release-version.sh" \
+    "${repository_root}/scripts/ci/warn-release-prose.sh" \
     "${repository_root}/scripts/ci/check-make-execution.sh" \
     "${repository_root}/scripts/ci/run-formatting.sh" \
     "${repository_root}/scripts/ci/finalize-release-changelog.awk" "${temporary_root}/scripts/ci/"
