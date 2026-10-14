@@ -57,7 +57,8 @@ it checks valid tags, stale event names, unreachable/lightweight tags, snapshot
 corruption, failed version reads and the permitted dispatches. It remains in the
 normal full gate. The larger overlapping draft #58 is closed; its branch/evidence
 are retained. Tool setup, main/native validation and failure retention stay intact.
-Focused qualification is pending. No normal checkout, tag or release is changed.
+The actual-workflow and existing tag/publication fixture pass, as does focused
+ShellCheck. No normal checkout, tag or release is changed.
 
 ## Prior 0.22.0 delivery evidence
 
