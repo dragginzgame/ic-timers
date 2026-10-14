@@ -2,6 +2,23 @@
 
 All notable changes to this project are recorded here.
 
+## [0.22.6]
+
+### Changed
+
+- Share immutable timer identity components across clones, retaining validation,
+  value-based equality/ordering/hashing, debug output and `Send`/`Sync`. Callback
+  tokens and snapshots no longer allocate three copied strings per identity clone.
+
+### Development
+
+- Measure cohort cancellation through the exact registration's armed-wakeup
+  query instead of constructing a diagnostic snapshot. Treat lookup failures as
+  probe failures; verify repeated cancellation and absence of later callbacks.
+- Share checked failure-window construction and the pre-failure schedule proposal
+  between trap and instruction-exhaustion probes, retaining independent windows,
+  trap precedence and the same-message rollback experiment.
+
 ## [0.22.5] - 2026-10-14
 
 ### Development

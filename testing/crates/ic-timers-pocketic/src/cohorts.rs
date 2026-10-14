@@ -87,6 +87,12 @@ fn run_cohort(cohort: &str) {
         matches!(cohort, "after-completion" | "watchdog")
     );
     assert_eq!(observe(pic, canister_id).next_deadline_ns, None);
+    assert!(!update_measurement(pic, canister_id, "cancel").changed);
+    pic.advance_time(Duration::from_secs(1));
+    drive_rounds(pic, 16);
+    let cancelled = observe(pic, canister_id);
+    assert_eq!(cancelled.callbacks, completed.callbacks);
+    assert_eq!(cancelled.next_deadline_ns, None);
 
     let memory_sampling = if cohort == "watchdog" {
         let measurement = memory_sampling_measurement(pic, canister_id);

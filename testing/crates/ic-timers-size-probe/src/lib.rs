@@ -338,11 +338,9 @@ fn cancel_inner() -> bool {
         let Some(registration) = slot.as_ref() else {
             return false;
         };
-        let was_scheduled = timer_snapshot(&cohort_identity())
-            .ok()
-            .flatten()
-            .and_then(|snapshot| snapshot.next_deadline_ns())
-            .is_some();
+        let was_scheduled = registration
+            .has_armed_wakeup()
+            .unwrap_or_else(|_| ic_cdk::trap("size-probe wakeup observation failed"));
         if registration.cancel().is_err() {
             ic_cdk::trap("size-probe cancellation failed");
         }

@@ -8,7 +8,27 @@ This handoff links [release evidence](../releasing.md),
 [Shared adoption](../shared-tooling.md), [safety](../../SAFETY.md) and
 [the archive](archive-2026-10-10.md).
 
-## Delivered 0.22.4 and prepared 0.22.5
+## Delivered 0.22.5 and prepared 0.22.6
+
+Current HEAD is `6ced4341bacce7d9f08acfd9a261a6d222755b93` (released 0.22.5).
+The incoming root lock selects Metrics 0.9.6 and Testkit 0.42.0; its bytes and the
+root manifest remain unchanged. The undated 0.22.6 batch shares immutable identity
+storage, narrows cohort cancellation to exact-claim wake-up observation, and
+consolidates the trap/exhaustion probe windows and pre-failure schedule proposal.
+Public timer APIs, identity value semantics and callback authority are unchanged.
+
+The [callback owner](../design/callback-delivery-ownership.md#prepared-0226-identity-sharing-and-probe-cleanup)
+records comparable raw Wasm, PocketIC instructions and separate native allocation
+measurements, including the larger inactive baseline and initial allocation cost.
+The 155 native tests, strict affected library/probe Clippy, Rust 1.88 native/Wasm
+compilation, policy cohorts and 16 real PocketIC runtime subjects pass. The server
+was already prepared and admitted by the current root-lock Testkit adapter.
+Evidence stays at `/tmp/ic-timers-identity-reduction.y7d3dr0q/`; a sandbox socket
+failure is retained separately from the successful local-binding run. Full owner
+release/macOS qualification remains separate. No setup, Cargo metadata mutation,
+staging, commits, tags, pushes or release commands ran.
+
+## Prior delivered 0.22.4 and prepared 0.22.5
 
 Current HEAD is `09dc8c1` (released 0.22.4). The maintainer's incoming Cargo
 selection uses Testkit 0.41 and Metrics 0.9.5; this task preserves those inputs.

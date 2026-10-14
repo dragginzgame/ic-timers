@@ -1,6 +1,6 @@
 //! Bounded, deterministically ordered timer identity.
 
-use std::fmt;
+use std::{fmt, sync::Arc};
 use thiserror::Error;
 
 /// Maximum encoded length of one timer identity component.
@@ -75,8 +75,14 @@ pub enum TimerIdentityError {
 /// Stable, low-cardinality identity for one logical canister timer.
 ///
 /// Derived ordering is lexicographic by owner, subsystem, then name.
-#[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+/// Clones share immutable component storage and retain value-based equality.
+#[derive(Clone, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct TimerIdentity {
+    components: Arc<IdentityComponents>,
+}
+
+#[derive(Eq, Hash, Ord, PartialEq, PartialOrd)]
+struct IdentityComponents {
     owner: Box<str>,
     subsystem: Box<str>,
     name: Box<str>,
@@ -90,28 +96,41 @@ impl TimerIdentity {
         name: impl AsRef<str>,
     ) -> Result<Self, TimerIdentityError> {
         Ok(Self {
-            owner: validate_component(TimerIdentityField::Owner, owner)?,
-            subsystem: validate_component(TimerIdentityField::Subsystem, subsystem)?,
-            name: validate_component(TimerIdentityField::Name, name)?,
+            components: Arc::new(IdentityComponents {
+                owner: validate_component(TimerIdentityField::Owner, owner)?,
+                subsystem: validate_component(TimerIdentityField::Subsystem, subsystem)?,
+                name: validate_component(TimerIdentityField::Name, name)?,
+            }),
         })
     }
 
     /// Return the scheduling owner.
     #[must_use]
     pub fn owner(&self) -> &str {
-        &self.owner
+        &self.components.owner
     }
 
     /// Return the functional subsystem.
     #[must_use]
     pub fn subsystem(&self) -> &str {
-        &self.subsystem
+        &self.components.subsystem
     }
 
     /// Return the stable logical timer name.
     #[must_use]
     pub fn name(&self) -> &str {
-        &self.name
+        &self.components.name
+    }
+}
+
+impl fmt::Debug for TimerIdentity {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("TimerIdentity")
+            .field("owner", &self.owner())
+            .field("subsystem", &self.subsystem())
+            .field("name", &self.name())
+            .finish()
     }
 }
 
