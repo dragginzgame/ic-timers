@@ -15,6 +15,9 @@ All notable changes to this project are recorded here.
 - Keep generic graph regressions upstream and qualify the local adapter's
   selected worktree, helper binding and failure propagation.
 
+- Prepare the complete root-lock dependency cache before hosted CI's offline
+  release fixtures, including dependencies used only by unpublished probes.
+
 ## [0.22.3] - 2026-10-14
 
 ### Development
