@@ -12,6 +12,9 @@ All notable changes to this project are recorded here.
   from a shallow checkout without assuming parent history
   ([#55](https://github.com/dragginzgame/ic-timers/issues/55)).
 
+- Prepare the complete root-lock dependency cache before hosted CI's offline
+  release fixtures, including dependencies used only by unpublished probes.
+
 ## [0.22.3] - 2026-10-14
 
 ### Development

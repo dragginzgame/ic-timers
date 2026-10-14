@@ -127,7 +127,9 @@ jobs:
             echo "$GITHUB_WORKSPACE/.tools/rust/common/bin"
           } >> "$GITHUB_PATH"
       - name: Run CI gate
-        run: make ci
+        run: |
+          make fetch
+          make ci
       - name: Lint unpublished probes with internal toolchain
         run: make testing-check MSRV="$IC_TIMERS_INTERNAL_TOOLCHAIN"
       - name: Qualify native PocketIC recovery and policy cohorts

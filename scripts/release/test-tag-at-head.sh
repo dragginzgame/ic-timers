@@ -144,7 +144,7 @@ mkdir "${workflow_root}/bin" "${workflow_root}/runner"
 export GITHUB_WORKSPACE="${workflow_root}/repository" RUNNER_TEMP="${workflow_root}/runner"
 export TAG_MAKE_EVENTS="${workflow_root}/make-events" TAG_SCRIPT_EVENTS="${workflow_root}/script-events" TAG_REAL_BASH="$BASH"
 TAG_VERSION="$(cd "$GITHUB_WORKSPACE" && bash scripts/release/workspace-version.sh)"
-export TAG_VERSION GITHUB_REF_NAME="v$TAG_VERSION"
+export TAG_VERSION GITHUB_REF_NAME="v$TAG_VERSION" TAG_WORKFLOW_SCOPE=tag
 git -C "$GITHUB_WORKSPACE" config user.name 'Tag workflow fixture'
 git -C "$GITHUB_WORKSPACE" config user.email fixture@example.invalid
 git -C "$GITHUB_WORKSPACE" tag -fa "$GITHUB_REF_NAME" -m fixture > /dev/null
@@ -157,7 +157,9 @@ cat >> "${workflow_root}/bin/make" <<'STUB'
 set -euo pipefail
 printf '%s\n' "$*" >> "$TAG_MAKE_EVENTS"
 case "$*" in
-    install-tools|tools-check|fetch) ;;
+    install-tools|tools-check) ;;
+    fetch) [[ "${TAG_FAIL_FETCH:-false}" != true ]] || exit 37 ;;
+    ci) [[ "$TAG_WORKFLOW_SCOPE" == checks ]] || exit 97 ;;
     '--no-print-directory version')
         printf '%s\n' "$TAG_VERSION"
         [[ "${TAG_FAIL_VERSION:-false}" != true ]] || exit 37 ;;
@@ -204,7 +206,7 @@ for payload in DRAGGINZGAME.md audits/README.md .shared-tooling/helpers/scripts/
 done
 # Do not require parent history: CI checks out a shallow source. An independent
 # commit with the same tree is a deterministic unrelated-main counterexample.
-unrelated_main="$(printf 'unrelated main\n' | git -C "$GITHUB_WORKSPACE" commit-tree HEAD^{tree})"
+unrelated_main="$(printf 'unrelated main\n' | git -C "$GITHUB_WORKSPACE" commit-tree "HEAD^{tree}")"
 git -C "$GITHUB_WORKSPACE" update-ref refs/remotes/origin/main "$unrelated_main"
 reject_workflow
 git -C "$GITHUB_WORKSPACE" update-ref refs/remotes/origin/main HEAD
@@ -217,5 +219,25 @@ awk '/^release-check:/ { selected=1; next } selected && /^[^[:space:]#]/ { exit 
 yq -o json '.' "$repository_root/.github/workflows/ci.yml" |
     jq -e '.jobs["tag-truth"].steps | any(.name == "Archive failure evidence") and any(.name == "Upload failure evidence")
         and all(.[]; ((.run // "") | test("make[^\\n]* release-check([ \\t\\n]|$)") | not))' > /dev/null
+# The normal CI lane must prepare all root-lock sources before offline graph
+# fixtures; its default-member build does not fetch unpublished probe dependencies.
+yq -o json '.' "$repository_root/.github/workflows/ci.yml" |
+    jq -er '.jobs.checks.steps[] | select(.name == "Run CI gate") | .run' \
+    > "${workflow_root}/normal-ci.sh"
+for failed_fetch in false true; do
+    : > "$TAG_MAKE_EVENTS"
+    status=0
+    (cd "$GITHUB_WORKSPACE" && TAG_WORKFLOW_SCOPE=checks TAG_FAIL_FETCH="$failed_fetch" \
+        PATH="${workflow_root}/bin:$PATH" "$BASH" -e -o pipefail "${workflow_root}/normal-ci.sh") \
+        > "${workflow_root}/normal-ci.log" 2>&1 || status=$?
+    if [[ "$failed_fetch" == true ]]; then
+        [[ "$status" == 37 ]] || exit 1
+        printf 'fetch\n' > "${workflow_root}/expected-ci-events"
+    else
+        [[ "$status" == 0 ]] || exit 1
+        printf 'fetch\nci\n' > "${workflow_root}/expected-ci-events"
+    fi
+    cmp "${workflow_root}/expected-ci-events" "$TAG_MAKE_EVENTS"
+done
 fixture_complete=true
 echo 'Exact annotated release-tag and clean publication checks passed'
