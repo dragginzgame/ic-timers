@@ -1,17 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+metadata_checker="$script_dir/../../.shared-tooling/helpers/scripts/ci/cargo-release-metadata.sh"
 
 check_metadata() {
     # Bash 3.2 does not reliably apply errexit to functions in subshells.
     # Preserve every failed check explicitly before proceeding to the next one.
-    local version
-    version="$(bash "$script_dir/workspace-version.sh")" || return
-    [[ "$version" == "${RELEASE_VERSION:?}" ]] || return
     cargo sort --workspace --check || return
-    bash "$script_dir/check-lockfiles.sh" || return
-    awk -v heading="## [$RELEASE_VERSION] - ${RELEASE_DATE:?}" \
-        '$0 == heading { n++ } END { if (n != 1) exit 1 }' CHANGELOG.md
+    # The caller already selected the current worktree or immutable export.
+    # Clear ambient commit selection so Shared checks exactly that directory.
+    RELEASE_COMMIT= bash "$metadata_checker" check ic-timers
 }
 
 case "${1:-}" in
@@ -38,8 +36,9 @@ case "${1:-}" in
         check_metadata
         ;;
     check-committed)
-        # The current checks inspect the selected immutable tree, even when HEAD
-        # contains newer fixes. Never execute adapter scripts from that tree.
+        # Retain one immutable export for the local manifest-ordering gate;
+        # Shared owns version/changelog/complete-workspace graph admission.
+        # Never execute adapter scripts from the selected tree.
         commit="${RELEASE_COMMIT:?selected release commit is required}"
         resolved="$(git rev-parse --verify "${commit}^{commit}")"
         if [[ "$commit" != "$resolved" ]]; then

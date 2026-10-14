@@ -7,14 +7,9 @@ root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
 root="${root%/.}"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/timer-fixture-completion.XXXXXX")"
 fixture_complete=false
-finish() {
-    local status=$?
-    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
-    if [[ "$status" == 0 ]]; then rm -rf -- "$fixture"
-    else printf 'Failed fixture-completion checks retained: %s\n' "$fixture" >&2; fi
-    exit "$status"
-}
-trap finish EXIT
+# shellcheck source=scripts/ci/fixture-lifecycle.sh
+source "$root/scripts/ci/fixture-lifecycle.sh"
+trap 'fixture_finish "$?" "$fixture" "Failed fixture-completion checks retained"' EXIT
 
 # Copy each actual initialization/EXIT boundary, including this suite's own.
 # Stop before the fixture body so these probes cannot dispatch tools, builds,
@@ -37,6 +32,7 @@ fixtures=(
     scripts/release/test-version-preparation.sh:temporary_root
 )
 mkdir -p "$fixture/probe/scripts/ci" "$fixture/probe/scripts/release" "$fixture/owned scratch"
+cp -p "$root/scripts/ci/fixture-lifecycle.sh" "$fixture/probe/scripts/ci/"
 export FIXTURE_EXIT_PATH="$fixture/exit-path"
 for entry in "${fixtures[@]}"; do
     source_path="${entry%:*}"
@@ -56,7 +52,7 @@ for entry in "${fixtures[@]}"; do
         probe="$fixture/probe/$source_path"
         FIXTURE_INJECTION="$injection" FIXTURE_VARIABLE="$variable" awk '
             { print }
-            /^trap finish EXIT$/ {
+            /^trap .* EXIT$/ {
                 print "printf \"%s\\n\" \"$" ENVIRON["FIXTURE_VARIABLE"] "\" > \"$FIXTURE_EXIT_PATH\""
                 print "printf evidence > \"$" ENVIRON["FIXTURE_VARIABLE"] "/exit-evidence\""
                 print ENVIRON["FIXTURE_INJECTION"]
@@ -117,7 +113,7 @@ for assertion in retained-path status-match host-os host-architecture host-versi
     probe="$fixture/probe/scripts/ci/contradictory-assertion.sh"
     FIXTURE_INJECTION="$injection" awk '
         { print }
-        /^trap finish EXIT$/ {
+        /^trap .* EXIT$/ {
             print "printf \"%s\\n\" \"$fixture\" > \"$FIXTURE_EXIT_PATH\""
             print "printf evidence > \"$fixture/exit-evidence\""
             print ENVIRON["FIXTURE_INJECTION"]

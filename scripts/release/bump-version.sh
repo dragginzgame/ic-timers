@@ -7,33 +7,6 @@ usage() {
 
 semver_pattern='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
 
-semver_greater_than() {
-    local candidate="${1}"
-    local baseline="${2}"
-    local candidate_parts
-    local baseline_parts
-    local index
-    local candidate_part
-    local baseline_part
-
-    IFS=. read -r -a candidate_parts <<< "${candidate}"
-    IFS=. read -r -a baseline_parts <<< "${baseline}"
-    for index in 0 1 2; do
-        candidate_part="${candidate_parts[${index}]}"
-        baseline_part="${baseline_parts[${index}]}"
-        if [[ "${candidate_part}" == "${baseline_part}" ]]; then
-            continue
-        fi
-        if (( ${#candidate_part} != ${#baseline_part} )); then
-            (( ${#candidate_part} > ${#baseline_part} ))
-            return
-        fi
-        [[ "${candidate_part}" > "${baseline_part}" ]]
-        return
-    done
-    return 1
-}
-
 check_only=false
 if [[ "${1:-}" == --check ]]; then
     check_only=true
@@ -62,7 +35,9 @@ else
     new_version="$(bash scripts/ci/next-release-version.sh "$previous_version" "$requested")"
 fi
 
-if ! semver_greater_than "${new_version}" "${previous_version}"; then
+order="$(perl "$(dirname "${BASH_SOURCE[0]}")/../../.shared-tooling/helpers/scripts/ci/compare-stable-versions.pl" \
+    "${new_version}" "${previous_version}")"
+if [[ "$order" != 1 ]]; then
     echo "error: target version ${new_version} must be greater than ${previous_version}" >&2
     exit 1
 fi

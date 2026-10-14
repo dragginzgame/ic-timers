@@ -7,16 +7,9 @@ fixture_root="$(mktemp -d)"
 status_file="${fixture_root}/current.md"
 # Bash 3.2 can report zero on nounset; cleanup also requires completion.
 fixture_complete=false
-finish() {
-    local status=$?
-    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
-    if [[ "$status" == 0 ]]; then rm -rf -- "${fixture_root}"
-    else
-        printf "Failed release-prose fixture retained: %s\n" "${fixture_root}" >&2
-    fi
-    exit "$status"
-}
-trap finish EXIT
+# shellcheck source=scripts/ci/fixture-lifecycle.sh
+source "$repository_root/scripts/ci/fixture-lifecycle.sh"
+trap 'fixture_finish "$?" "$fixture_root" "Failed release-prose fixture retained"' EXIT
 
 printf '%s\n' \
     '# Current status' \

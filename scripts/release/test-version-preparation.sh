@@ -8,16 +8,9 @@ export YQ="${repository_root}/.tools/host/bin/yq"
 temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/timer-version-test.XXXXXX")"
 # Bash 3.2 can report zero on nounset; cleanup also requires completion.
 fixture_complete=false
-finish() {
-    local status=$?
-    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
-    if [[ "$status" == 0 ]]; then rm -rf -- "${temporary_root}"
-    else
-        printf "Failed version-preparation fixture retained: %s\n" "${temporary_root}" >&2
-    fi
-    exit "$status"
-}
-trap finish EXIT
+# shellcheck source=scripts/ci/fixture-lifecycle.sh
+source "$repository_root/scripts/ci/fixture-lifecycle.sh"
+trap 'fixture_finish "$?" "$temporary_root" "Failed version-preparation fixture retained"' EXIT
 git init -q "${temporary_root}"
 mkdir -p "${temporary_root}"/{scripts/release,scripts/ci,.shared-tooling/helpers/scripts/ci,docs/status,docs/changelog,crates/ic-timers/src,testing/probe/src}
 for script in bump-version finalize-changelog \
@@ -29,6 +22,10 @@ cp "${repository_root}/scripts/ci/next-release-version.sh" \
     "${repository_root}/scripts/ci/run-formatting.sh" \
     "${repository_root}/scripts/ci/finalize-release-changelog.awk" "${temporary_root}/scripts/ci/"
 cp "${repository_root}/.shared-tooling/helpers/scripts/ci/read-cargo-workspace-version.sh" \
+    "${repository_root}/.shared-tooling/helpers/scripts/ci/render-cargo-workspace-version.pl" \
+    "${repository_root}/.shared-tooling/helpers/scripts/ci/cargo-release-metadata.sh" \
+    "${repository_root}/.shared-tooling/helpers/scripts/ci/cargo-workspace-members.jq" \
+    "${repository_root}/.shared-tooling/helpers/scripts/ci/compare-stable-versions.pl" \
     "${repository_root}/.shared-tooling/helpers/scripts/ci/rewrite-local-lock-versions.pl" \
     "${temporary_root}/.shared-tooling/helpers/scripts/ci/"
 # Classification is an isolated fixture input; preparation must not run tests.
@@ -70,7 +67,7 @@ printf '%s\n' 'pub fn fixture() {}' > "${temporary_root}/testing/probe/src/lib.r
 cat > "${temporary_root}/CHANGELOG.md" <<'EOF'
 # Changelog
 
-## [Draft]
+## [0.1.1]
 
 - Fix terminal cleanup.
 
@@ -251,12 +248,16 @@ for kind in patch minor major; do
         minor) candidate=0.2.0 ;;
         major) candidate=1.0.0 ;;
     esac
+    # Each requested increment has its own explicit numbered pending release.
+    CANDIDATE="${candidate}" perl -pi -e 's/^## \[0\.1\.1\]$/## [$ENV{CANDIDATE}]/' CHANGELOG.md
+    capture_metadata preflight-files
     output="$(bash scripts/release/bump-version.sh --check "${kind}" 2>&1)"
     if [[ "${output}" != *"Release preflight passed: 0.1.0 -> ${candidate}"* ]]; then
         echo "error: ${kind} preflight selected an unexpected version: ${output}" >&2
         exit 1
     fi
-    assert_metadata_unchanged original-files
+    assert_metadata_unchanged preflight-files
+    cp -p original-files/CHANGELOG.md CHANGELOG.md
 done
 
 # README shape, freshness and presence are not release preconditions.
@@ -307,7 +308,7 @@ cat > bin/cargo <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 case "$*" in
-    'metadata --manifest-path Cargo.toml --locked --offline --format-version 1') stage=root-metadata ;;
+    'metadata --locked --offline --format-version 1') stage=root-metadata ;;
     *) stage=other ;;
 esac
 if [[ "${FIXTURE_FAIL_STAGE:-}" == "${stage}" ]]; then
@@ -344,20 +345,25 @@ for stage in root-update root-metadata interrupt; do
     assert_metadata_unchanged original-files
 done
 
-# An absent changelog is created during preparation and removed by rollback.
-# Keep the lock-update injector installed until this final rollback scenario.
+# A missing changelog is refused before mutation or the lock-update injector.
 mv CHANGELOG.md existing-changelog.md
-if output="$(PATH="${temporary_root}/bin:${PATH}" FIXTURE_FAIL_STAGE=root-update \
-    bash scripts/release/bump-version.sh patch 2>&1)"; then
-    echo 'error: version preparation accepted a failed update with no changelog' >&2
-    exit 1
-fi
-if [[ "${output}" != *'injected root-update failure'* ||
-    "${output}" != *'restoring release metadata'* ]]; then
-    echo "error: missing-changelog rollback did not reach the injected update failure: ${output}" >&2
-    exit 1
-fi
-test ! -e CHANGELOG.md
+for operation in check prepare; do
+    arguments=(patch)
+    if [[ "${operation}" == check ]]; then arguments=(--check patch); fi
+    if output="$(PATH="${temporary_root}/bin:${PATH}" FIXTURE_FAIL_STAGE=root-update \
+        bash scripts/release/bump-version.sh "${arguments[@]}" 2>&1)"; then
+        echo "error: ${operation} accepted a missing changelog" >&2
+        exit 1
+    fi
+    if [[ "${output}" == *'injected root-update failure'* ||
+        "${output}" == *'restoring release metadata'* ]]; then
+        echo "error: missing-changelog refusal occurred after mutation: ${output}" >&2
+        exit 1
+    fi
+    test ! -e CHANGELOG.md
+    cmp original-files/Cargo.toml Cargo.toml
+    cmp original-files/Cargo.lock Cargo.lock
+done
 mv existing-changelog.md CHANGELOG.md
 assert_metadata_unchanged original-files
 mv scripts/release/original-update-local-lock.sh scripts/release/update-local-lock.sh
@@ -402,7 +408,7 @@ git config user.email 'release-test@example.invalid'
 git add Cargo.toml Cargo.lock CHANGELOG.md
 git commit -qm fixture
 git branch v0.1.2
-perl -0pi -e 's/^(## \[)/## [Draft]\n\n- Next fixture release.\n\n$1/m' CHANGELOG.md
+perl -0pi -e 's/^(## \[)/## [0.1.2]\n\n- Next fixture release.\n\n$1/m' CHANGELOG.md
 bash scripts/release/bump-version.sh --check patch >/dev/null
 git tag v0.1.2
 capture_metadata tagged-files

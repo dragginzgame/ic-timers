@@ -2,14 +2,35 @@
 
 All notable changes to this project are recorded here.
 
-## [0.22.3]
+## [0.22.4]
 
 ### Fixed
 
 - Keep tag CI focused on actual tag, snapshot and locked-graph admission instead
   of repeating the broad release regression suite. Check the three actual
   adopted snapshots directly and qualify the tag step's dispatch boundary
-  ([#55 — Separate tag admission from release regressions](https://github.com/dragginzgame/ic-timers/issues/55)).
+  from a shallow checkout without assuming parent history
+  ([#55](https://github.com/dragginzgame/ic-timers/issues/55)).
+
+## [0.22.3] - 2026-10-14
+
+### Development
+
+- Adopt Shared Tooling 0.12.3 across the three reviewed snapshots. Use its
+  literal workspace-version renderer, fixture EXIT lifecycle and coordinated
+  release metadata checker instead of local copies. The refresh includes the
+  mixed-snapshot inventory fixture repair without changing tool selections.
+- Check the complete workspace's lock identities against the selected release
+  tree, retaining local manifest ordering, staged-source admission and Testkit
+  preparation.
+- Adopt the strict numbered changelog contract: reject versionless `Draft`,
+  misplaced pending releases and missing files before mutation; preserve empty
+  note advisories, historical bytes and metadata rollback.
+- Reuse Shared's coordinated member projection and graph-only admission in the
+  bump path; remove the local JSON projections and duplicate version comparison.
+- Delegate generic downloaded archive/tool-receipt verification and controlled
+  hosted failure stages to Shared, retaining Timers' identity and scenario
+  assertions, qualified pin selections and product gates.
 
 ## [0.22.2] - 2026-10-14
 

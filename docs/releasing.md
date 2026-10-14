@@ -10,6 +10,40 @@ classify the change, choose the appropriate version, run the required validation
 let the bump label the current changelog draft, and then publish the
 release through the repository's release commands.
 
+## Prepared 0.22.3 shared-owner cleanup
+
+Current HEAD is delivered 0.22.2 at
+`26f1cdfc399fd4a321b73f9484a2234cae8a43de`. This batch is repository-only:
+Shared 0.12.3 adoption and contributor-flow consolidations. It changes no timer
+source/API or canister cost. Cargo release versions remain 0.22.2; incoming Host
+0.17.11 selections are preserved. Release execution remains maintainer-owned.
+
+The [adoption record](shared-tooling.md#prepared-shared-tooling-0123) identifies
+all three exports and the approved strict changelog contract. Shared owns pure
+literal rendering, coordinated member projection and graph-only admission, exact
+stable-version comparison, finalizer increase admission, and fixture EXIT cleanup.
+Timers retains source/candidate checks, byte/mode-preserving installation, external
+lock selections and exact before-image rollback. Graph checks require no dated
+changelog, but full release metadata checks still do.
+
+The release adapter keeps one immutable export for manifest ordering, clearing
+ambient commit selection before checking that tree. Current-worktree/index
+admission, Testkit preparation and tag checks remain explicit. Generic downloaded
+archive reads, tool receipts and controlled hosted failure bodies now reuse Shared;
+Timers retains source/job/host/run/attempt, scenario and product assertions.
+The existing qualified catalog and required native/PocketIC gates remain selected.
+Shared's mutating metadata preparation and publication runner are not adopted.
+
+The changed fixtures retain numbering/refusal, historical bytes/mode, failed
+producers, literal rendering, rollback, selected-commit metadata, coherent/mixed
+member graphs, complete lock identity and evidence rejection. Snapshot integrity,
+Bash/Python syntax and locked metadata are separate from consumer fixture/native
+qualification. The maintainer approved all 15 affected shell fixtures and the
+downloaded-evidence Python suite; they pass. A missing copied helper and stale
+lockfile-fixture expectations were corrected while retaining rejection coverage.
+The live root graph check passes and the incoming root lock, real index and refs
+remain unchanged. No complete release-gate or native macOS result is inferred.
+
 ## Prepared 0.22.2 contributor cleanup
 
 The maintainer reports 0.22.1 live at
@@ -345,11 +379,13 @@ the next minor line. Honour a valid maintainer-selected target. This selects
 notes only, without changing Cargo, either lockfile or release defaults. Do not
 add `Unreleased`, an unnumbered Draft or a separate release-note queue.
 
-The explicit user-operated bump owns the final version: it labels and dates the
-single undated draft and moves it above history. No separately prepared versioned
-note or handoff status marker is required. Empty or absent drafts are presentation
-gaps and do not reject a changed release subject; a missing changelog is created.
-The maintainer should not need to fix a heading manually before deployment.
+Contributors maintain the numbered pending release as the first release section.
+The matching user-operated bump dates it automatically. Shared 0.12.0 rejects
+versionless `Draft`, a pending section below history, a headingless changelog or
+a missing file before mutation. Empty notes remain advisory. If the first release
+section is the exact previous version and no pending candidate exists, preparation
+can insert an empty candidate above that history. The maintainer approved this
+contract in place of the earlier permissive-layout exception on 2026-10-14.
 
 During preparation the helper refuses competing undated release candidates,
 a named draft that conflicts with the requested bump, or an already dated target.

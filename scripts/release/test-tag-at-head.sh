@@ -9,16 +9,9 @@ cleaner="${repository_root}/scripts/ci/ensure-clean.sh"
 temporary_root="$(mktemp -d)"
 # Bash 3.2 can report zero on nounset; cleanup also requires completion.
 fixture_complete=false
-finish() {
-    local status=$?
-    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
-    if [[ "$status" == 0 ]]; then rm -rf -- "${temporary_root}"
-    else
-        printf "Failed tag-at-head fixture retained: %s\n" "${temporary_root}" >&2
-    fi
-    exit "$status"
-}
-trap finish EXIT
+# shellcheck source=scripts/ci/fixture-lifecycle.sh
+source "$repository_root/scripts/ci/fixture-lifecycle.sh"
+trap 'fixture_finish "$?" "$temporary_root" "Failed tag-at-head fixture retained"' EXIT
 git init -q "${temporary_root}"
 cd "${temporary_root}"
 git config user.name 'ic-timers release test'
@@ -146,7 +139,7 @@ workflow_root="$temporary_root/workflow"
 mkdir "$workflow_root"
 export CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0
 # Only this disposable clone owns Git effects. All provisioning is substituted.
-git clone -q --shared --no-hardlinks "$repository_root" "${workflow_root}/repository"
+git clone -q --depth 1 --no-local --no-hardlinks "$repository_root" "${workflow_root}/repository"
 mkdir "${workflow_root}/bin" "${workflow_root}/runner"
 export GITHUB_WORKSPACE="${workflow_root}/repository" RUNNER_TEMP="${workflow_root}/runner"
 export TAG_MAKE_EVENTS="${workflow_root}/make-events" TAG_SCRIPT_EVENTS="${workflow_root}/script-events" TAG_REAL_BASH="$BASH"
@@ -209,7 +202,10 @@ for payload in DRAGGINZGAME.md audits/README.md .shared-tooling/helpers/scripts/
     if grep -Fxq 'scripts/release/check-lockfiles.sh' "$TAG_SCRIPT_EVENTS"; then exit 1; fi
     cp -p "${workflow_root}/original" "$GITHUB_WORKSPACE/$payload"
 done
-git -C "$GITHUB_WORKSPACE" update-ref refs/remotes/origin/main HEAD^
+# Do not require parent history: CI checks out a shallow source. An independent
+# commit with the same tree is a deterministic unrelated-main counterexample.
+unrelated_main="$(printf 'unrelated main\n' | git -C "$GITHUB_WORKSPACE" commit-tree HEAD^{tree})"
+git -C "$GITHUB_WORKSPACE" update-ref refs/remotes/origin/main "$unrelated_main"
 reject_workflow
 git -C "$GITHUB_WORKSPACE" update-ref refs/remotes/origin/main HEAD
 git -C "$GITHUB_WORKSPACE" tag -d "$GITHUB_REF_NAME" > /dev/null

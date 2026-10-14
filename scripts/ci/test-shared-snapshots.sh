@@ -9,16 +9,9 @@ root="${root%/.}"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/timer-snapshot-test.XXXXXX")"
 # Bash 3.2 can report zero on nounset; cleanup also requires completion.
 fixture_complete=false
-finish() {
-    local status=$?
-    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
-    if [[ "$status" == 0 ]]; then rm -rf -- "${fixture}"
-    else
-        printf "Snapshot fixtures retained: %s\n" "${fixture}" >&2
-    fi
-    exit "$status"
-}
-trap finish EXIT
+# shellcheck source=scripts/ci/fixture-lifecycle.sh
+source "$root/scripts/ci/fixture-lifecycle.sh"
+trap 'fixture_finish "$?" "$fixture" "Snapshot fixtures retained"' EXIT
 verifier="$root/scripts/ci/verify-shared-tooling-snapshot.sh"
 sources=("$root" "$root" "$root/.shared-tooling/helpers")
 manifests=(.shared-tooling.snapshot .shared-tooling-audits.snapshot .shared-tooling.snapshot)
