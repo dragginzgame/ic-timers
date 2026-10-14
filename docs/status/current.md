@@ -47,6 +47,21 @@ pass; focused fixtures, native probe compilation/Clippy and PocketIC execution
 have not run. Tests, lint and probe builds require scoped maintainer approval.
 The single draft combines this contributor cleanup with the Metrics declaration.
 
+## Prepared native Testkit setup repair
+
+Both native macOS jobs for delivered 0.22.2 fail during published Testkit 0.38.0
+CLI compilation, before reaching Timers validation. The error is Host fs 0.17.4
+retained staging's u32/u16 permission mismatch. Testkit #77 and Host #84 own the
+producer repair. This separate isolated PR selects authenticated Testkit 0.39.0
+and the repaired Host 0.17.8 family, preserving unrelated dependency selections.
+The application lock cannot repair an older CLI's separate packaged lock.
+
+Locked/offline root graph admission passes. Focused probe compilation is pending
+approval; native installation and complete host validation remain outstanding.
+#51/#52 remain open for acceptance. The producer's synthetic Intel cancellation
+failure is a separate concern (#68), not proof this consumer setup still fails.
+No local setup, PocketIC execution, version bump or release is performed.
+
 ## Prior 0.22.0 delivery evidence
 
 The maintainer reports 0.22.0 live at

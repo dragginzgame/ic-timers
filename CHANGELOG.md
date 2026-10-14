@@ -2,6 +2,14 @@
 
 All notable changes to this project are recorded here.
 
+## [0.22.3]
+
+### Development
+
+- Require published Testkit 0.39 and its repaired packaged CLI graph instead of
+  the macOS-incompatible Host selection in Testkit 0.38. Preserve the upstream
+  installer, server admission and existing timer qualification gates.
+
 ## [0.22.2] - 2026-10-14
 
 ### Changed

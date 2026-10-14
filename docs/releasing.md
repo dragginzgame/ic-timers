@@ -4316,3 +4316,25 @@ not runtime behavior or executable setup identity. Cargo inputs, tool pins and
 real index entries are preserved. No new product code, tests, lint, setup or
 release execution is added; the focused 0.21.4 permission does not cover these
 new helper bytes. The complete release gate remains maintainer-operated.
+
+## Prepared Testkit macOS setup repair
+
+Exact Timers 0.22.2 main CI passes Linux/MSRV but both macOS jobs fail before
+native validation while installing Testkit 0.38.0. Its published packaged lock
+selects Host filesystem 0.17.4; retained staging passes a u32 where Darwin's mode
+constructor requires u16. Updating Timers' application lock alone cannot repair
+the separately frozen CLI graph. [Testkit #77](https://github.com/dragginzgame/ic-testkit/issues/77)
+and [Host #84](https://github.com/dragginzgame/ic-host-tooling/issues/84) own that repair.
+
+The isolated compatible contributor update selects published Testkit 0.39.0
+(producer `d10763417b3e3a083c9de7f5b0405be97688b21e`). Its authenticated archive
+and packaged lock select the fixed Host 0.17.8 family; the application lock uses
+that coherent published minimum. Other dependency selections, package versions,
+server pins/admission and public Timers behavior are unchanged. Testkit remains
+owned by the root catalog and unpublished probes use `workspace = true`.
+
+The registry archives match their selected checksums. Locked/offline graph
+admission and focused probe compilation remain scoped separately from native
+CLI installation. No local setup or PocketIC execution is implied; actual Linux,
+Intel/Apple Silicon setup and full native validation remain required before
+closing #51/#52. The existing published 0.22.2 failures retain their source scope.
