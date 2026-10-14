@@ -26,6 +26,7 @@ cp "${repository_root}/.shared-tooling/helpers/scripts/ci/read-cargo-workspace-v
     "${repository_root}/.shared-tooling/helpers/scripts/ci/cargo-release-metadata.sh" \
     "${repository_root}/.shared-tooling/helpers/scripts/ci/cargo-workspace-members.jq" \
     "${repository_root}/.shared-tooling/helpers/scripts/ci/compare-stable-versions.pl" \
+    "${repository_root}/.shared-tooling/helpers/scripts/ci/StableVersion.pm" \
     "${repository_root}/.shared-tooling/helpers/scripts/ci/rewrite-local-lock-versions.pl" \
     "${temporary_root}/.shared-tooling/helpers/scripts/ci/"
 # Classification is an isolated fixture input; preparation must not run tests.
@@ -80,6 +81,7 @@ cat > "${temporary_root}/docs/status/current.md" <<'EOF'
 
 Read Cargo for package identity. This handoff has no release marker.
 EOF
+# shellcheck disable=SC2016 # Markdown fixture keeps literal backticks.
 printf '%s\n' '# Fixture' '| API line | `0.0` |' 'ic-timers = "=0.0.7"' \
     'ic-timers = "0.0" # Another legitimate documentation example.' \
     > "${temporary_root}/README.md"

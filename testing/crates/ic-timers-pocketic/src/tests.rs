@@ -1,4 +1,4 @@
-use super::harness::fresh_pocket_ic;
+use super::harness::{INIT_CYCLES, fresh_pocket_ic, install_probe};
 use candid::{Decode, Encode, Principal};
 use ic_testkit::pic::{CandidCallExt, PocketIc, PocketIcInstance};
 use ic_timers_test_protocol::{
@@ -7,20 +7,12 @@ use ic_timers_test_protocol::{
 use std::{env, fs, path::PathBuf, time::Duration};
 
 const TIMER_EXECUTOR_METHOD: &str = "<ic-cdk internal> timer_executor";
-const INIT_CYCLES: u128 = 2_000_000_000_000;
 
 #[test]
 fn immediate_initial_watchdog_runs_without_advancing_cadence_time() {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
-    let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
-    pic.install_canister(
-        canister_id,
-        probe_wasm(),
-        Encode!().expect("encode init"),
-        None,
-    );
+    let canister_id = install_probe(pic, probe_wasm());
 
     assert!(update_bool(pic, canister_id, "start_immediately"));
     let initial = snapshot(pic, canister_id);
@@ -52,14 +44,7 @@ fn immediate_initial_watchdog_runs_without_advancing_cadence_time() {
 fn successful_immediate_continuation_runs_again_without_waiting_for_cadence() {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
-    let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
-    pic.install_canister(
-        canister_id,
-        probe_wasm(),
-        Encode!().expect("encode init"),
-        None,
-    );
+    let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(pic, canister_id, "start"));
     update_unit(pic, canister_id, "continue_immediately_on_next_work");
 
@@ -115,14 +100,7 @@ fn successful_immediate_continuation_runs_again_without_waiting_for_cadence() {
 fn trapped_work_keeps_committed_successor_and_executor_is_private() {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
-    let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
-    pic.install_canister(
-        canister_id,
-        probe_wasm(),
-        Encode!().expect("encode init"),
-        None,
-    );
+    let canister_id = install_probe(pic, probe_wasm());
 
     assert!(update_bool(pic, canister_id, "start"));
     assert!(!update_bool(pic, canister_id, "start"));
@@ -257,14 +235,7 @@ fn assert_memory_summary_is_coherent(summary: &ProbeMemorySummary) {
 fn instruction_exhaustion_leaves_successor_for_later_progress() {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
-    let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
-    pic.install_canister(
-        canister_id,
-        probe_wasm(),
-        Encode!().expect("encode init"),
-        None,
-    );
+    let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(pic, canister_id, "start"));
 
     let exhaust_at = update_u64(pic, canister_id, "arm_exhaustion");
@@ -311,14 +282,7 @@ fn instruction_exhaustion_leaves_successor_for_later_progress() {
 fn commit_window_ensure_stop_resume_and_large_overdue_time_remain_bounded() {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
-    let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
-    pic.install_canister(
-        canister_id,
-        probe_wasm(),
-        Encode!().expect("encode init"),
-        None,
-    );
+    let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(pic, canister_id, "start"));
 
     update_unit(pic, canister_id, "stop");
@@ -361,14 +325,7 @@ fn commit_window_ensure_stop_resume_and_large_overdue_time_remain_bounded() {
 fn insufficient_cycles_defer_due_work_until_top_up() {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
-    let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
-    pic.install_canister(
-        canister_id,
-        probe_wasm(),
-        Encode!().expect("encode init"),
-        None,
-    );
+    let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(pic, canister_id, "start"));
     let (_burned, call_cost) = update_u128_pair(pic, canister_id, "burn_to_below_timer_call_cost");
     assert!(call_cost > 0);
@@ -390,14 +347,7 @@ fn insufficient_cycles_defer_due_work_until_top_up() {
 fn full_inventory_is_bounded_deterministic_and_measured() {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
-    let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
-    pic.install_canister(
-        canister_id,
-        probe_wasm(),
-        Encode!().expect("encode init"),
-        None,
-    );
+    let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(pic, canister_id, "start"));
     update_unit(pic, canister_id, "stop");
     assert_eq!(update_u64(pic, canister_id, "fill_inventory"), 64);
@@ -414,14 +364,7 @@ fn full_inventory_is_bounded_deterministic_and_measured() {
 fn cancellation_between_scheduler_and_work_makes_late_provider_delivery_harmless() {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
-    let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
-    pic.install_canister(
-        canister_id,
-        probe_wasm(),
-        Encode!().expect("encode init"),
-        None,
-    );
+    let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(pic, canister_id, "start"));
     pic.advance_time(Duration::from_secs(1));
 
@@ -505,14 +448,7 @@ fn snapshot(pic: &PocketIc, canister_id: Principal) -> ProbeSnapshot {
 fn exact_deadline_sleeps_and_registration_replacement_marks_counter_regrowth() {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
-    let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
-    pic.install_canister(
-        canister_id,
-        probe_wasm(),
-        Encode!().expect("encode init"),
-        None,
-    );
+    let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(pic, canister_id, "start"));
     let initial = snapshot(pic, canister_id);
     let first_deadline = initial.next_deadline_ns.expect("scheduled");
@@ -580,9 +516,7 @@ fn ordinary_await_allows_ingress_and_other_timers_before_completion() {
             }
             let owned = fresh_pocket_ic();
             let pic = &owned.instance;
-            let canister_id = pic.create_canister();
-            pic.add_cycles(canister_id, INIT_CYCLES);
-            pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
+            let canister_id = install_probe(pic, probe_wasm());
             let transient = command == "cancel";
             pic.update_candid_or_panic::<(), _>(
                 canister_id,
@@ -663,9 +597,7 @@ fn trapping_ordinary_probe(
 ) -> (PocketIcInstance<PocketIc>, Principal) {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
-    let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
-    pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
+    let canister_id = install_probe(pic, probe_wasm());
     pic.update_candid_or_panic::<(), _>(canister_id, "trap_ordinary_work", (before_await,));
     pic.update_candid_or_panic::<(), _>(
         canister_id,
@@ -794,9 +726,7 @@ fn churn_observation(pic: &PocketIc, canister_id: Principal) -> ChurnObservation
 fn provider_replacement_churn_preserves_cancellation_and_reports_memory() {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
-    let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
-    pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
+    let canister_id = install_probe(pic, probe_wasm());
     let before = churn_observation(pic, canister_id);
     pic.update_candid_or_panic::<(), _>(canister_id, "replace_distant_deadlines", (32_768_u32,));
     let replaced = churn_observation(pic, canister_id);
@@ -840,9 +770,7 @@ fn armed_callback_removal_releases_captures_with_registry_access() {
     for policy in 0_u8..3 {
         let owned = fresh_pocket_ic();
         let pic = &owned.instance;
-        let canister_id = pic.create_canister();
-        pic.add_cycles(canister_id, INIT_CYCLES);
-        pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
+        let canister_id = install_probe(pic, probe_wasm());
         pic.update_candid_or_panic::<(), _>(canister_id, "remove_armed_callback", (policy,));
         let removed = ordinary_observation(pic, canister_id);
         assert!(!removed.declared);
@@ -862,9 +790,7 @@ fn armed_callback_removal_releases_captures_with_registry_access() {
 fn rejected_initial_schedules_preserve_ic_inventory_and_release_captures() {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
-    let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
-    pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
+    let canister_id = install_probe(pic, probe_wasm());
     for policy in 0_u8..3 {
         for transient in [false, true] {
             let bytes = pic
@@ -892,9 +818,7 @@ fn rejected_initial_reconciliation_preserves_ic_inventory_and_releases_captures(
     let pic = &owned.instance;
     // A positive time makes now + u64::MAX overflow; never move IC time backwards.
     pic.advance_time(Duration::from_secs(1));
-    let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
-    pic.install_canister(canister_id, probe_wasm(), Encode!().unwrap(), None);
+    let canister_id = install_probe(pic, probe_wasm());
     for policy in 0_u8..3 {
         let bytes = pic
             .update_call(

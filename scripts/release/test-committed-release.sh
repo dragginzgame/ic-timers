@@ -6,7 +6,8 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export PATH="$root/.tools/host/bin:$PATH"
 export YQ="$root/.tools/host/bin/yq"
-export COMMITTED_RELEASE_REAL_CARGO="$(command -v cargo)"
+COMMITTED_RELEASE_REAL_CARGO="$(command -v cargo)"
+export COMMITTED_RELEASE_REAL_CARGO
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/committed-release-check.XXXXXX")"
 # Bash 3.2 can report zero on nounset; cleanup also requires completion.
 fixture_complete=false
@@ -35,6 +36,7 @@ cp "$root/.shared-tooling/helpers/scripts/ci/read-cargo-workspace-version.sh" \
     "$root/.shared-tooling/helpers/scripts/ci/cargo-release-metadata.sh" \
     "$root/.shared-tooling/helpers/scripts/ci/cargo-workspace-members.jq" \
     "$root/.shared-tooling/helpers/scripts/ci/compare-stable-versions.pl" \
+    "$root/.shared-tooling/helpers/scripts/ci/StableVersion.pm" \
     "$fixture/current/.shared-tooling/helpers/scripts/ci/"
 mkdir -p "$fixture/current/ci"
 cp "$root/ci/tool-versions.env" "$fixture/current/ci/"
@@ -162,28 +164,26 @@ done
 unset FAIL_ARCHIVE
 # Fail root graph admission. A later successful check must never mask
 # the original failure, including on Apple's Bash 3.2.
-for lock in Cargo.lock; do
-    : > "$EVENTS"
-    export FAIL_METADATA="$lock"
-    reject release-push-check "failed $lock resolution"
-    grep -Fq 'fixture locked metadata failure' "$fixture/output"
-    if grep -Eq '^git cat-file ' "$EVENTS"; then
-        echo 'error: push check inspected tags after failed locked resolution' >&2
-        exit 1
-    fi
-done
+lock=Cargo.lock
+: > "$EVENTS"
+export FAIL_METADATA="$lock"
+reject release-push-check "failed $lock resolution"
+grep -Fq 'fixture locked metadata failure' "$fixture/output"
+if grep -Eq '^git cat-file ' "$EVENTS"; then
+    echo 'error: push check inspected tags after failed locked resolution' >&2
+    exit 1
+fi
 unset FAIL_METADATA
-for command in 'sort --workspace --check'; do
-    : > "$EVENTS"
-    export FAIL_SORT="$command"
-    reject release-push-check "$command failure"
-    grep -Fq 'fixture manifest ordering failure' "$fixture/output"
-    # Sorting failure stops before locked resolution or tag lookup.
-    if grep -Eq '^cargo metadata |^git cat-file ' "$EVENTS"; then
-        echo 'error: committed check continued after manifest ordering failure' >&2
-        exit 1
-    fi
-done
+command='sort --workspace --check'
+: > "$EVENTS"
+export FAIL_SORT="$command"
+reject release-push-check "$command failure"
+grep -Fq 'fixture manifest ordering failure' "$fixture/output"
+# Sorting failure stops before locked resolution or tag lookup.
+if grep -Eq '^cargo metadata |^git cat-file ' "$EVENTS"; then
+    echo 'error: committed check continued after manifest ordering failure' >&2
+    exit 1
+fi
 unset FAIL_SORT
 if "$real_make" --no-print-directory release-committed-check RELEASE_COMMIT= \
     RELEASE_VERSION=0.1.0 RELEASE_DATE=2026-10-06 > "$fixture/output" 2>&1; then exit 1; fi

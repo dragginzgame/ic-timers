@@ -1,5 +1,32 @@
 # Shared Tooling adoption
 
+## Reviewed Shared Tooling 0.12.8
+
+All three canonical exports select committed
+`eafa07cac1fdba7d6303d061ed8af458aacf32b7`, preserving entrypoints and
+**78/41/18** root/audit/helper payloads. Clean-source previews precede every apply;
+new publication, CI-selection and Rust-toolchain guides are derived companions.
+The exact-version module is also derived, and both disposable metadata fixtures
+now copy it with their comparison caller. No root selection or tool pin changes.
+
+The maintainer adopted Shared's ordinary focused development/handoff cadence on
+2026-10-14. AGENTS and the active command map replace the old compile-only approval
+exception; complete release qualification and release execution remain owner-operated.
+Host/IC/Cargo catalogs and qualified Binaryen 132 remain unchanged. Snapshot
+integrity, affected snapshot/host/IC/Cargo-tool fixtures, metadata preparation and
+selected-commit fixtures, and changed local ShellCheck pass. Actual prepared host
+and IC offline checks pass; no tool install or native macOS qualification ran.
+
+Evidence is at `/tmp/ic-timers-next-three.0lpn1xkr/`. Shared
+[PR #180](https://github.com/dragginzgame/shared-tooling/pull/180) separately carries
+the pending literal-preparation/partial-evidence owner changes and extra generic
+graph regressions; dependent [Timers #54](https://github.com/dragginzgame/ic-timers/pull/54)
+pins that exact contribution source. This normal working tree adopts committed
+main 0.12.8, without applying the unmerged owner contract. The hosted CI lane also prepares the complete locked graph before offline
+fixtures; its actual workflow/order/failure proof is on refreshed Timers #56.
+Cargo inputs, real index and refs remain unchanged; the compatible 0.22.4 draft stays undated.
+
+
 ## Prepared Shared Tooling 0.12.3
 
 All three canonical exports select committed

@@ -21,23 +21,12 @@ This file is normative for automated contributors.
 - Shared [audits](audits/README.md) and [maintenance tasks](tasks/README.md)
   are procedures, not activation of schedules, commands or optional callers.
   The local validation and release exceptions below apply to them.
-- Maintainer-approved validation exception: tests, builds, lint gates and
-  deployment validation are user-owned, including focused tests, except for
-  the compile-only permission below. Do not run them without an explicit request.
-  Read-only inspection, script syntax, diff,
-  documentation and cheap release-metadata checks remain allowed. This preserves
-  the maintainer's deployment workflow rather than duplicating its validation.
-  It also applies to the baseline's full-suite-before-delivery requirement.
-- Maintainer-approved compile-only exception (2026-10-12): after Rust changes,
-  contributors may run library compile-only `cargo check` commands, including
-  the `check` and `wasm-check` targets, with locked, offline inputs
-  and `RUSTUP_AUTO_INSTALL=0`, provided required tools/dependencies are already
-  prepared and no owner validation is active. It compiles library test targets
-  without executing tests. Missing offline inputs are reported rather than
-  installed or fetched. Preserve manifests, the selected lockfile, index and refs.
-  Minimum-compiler/Wasm checks may select an already prepared toolchain/target.
-  This authorizes neither tests, doctests, Clippy, PocketIC, setup, release
-  execution nor a claim that the complete delivery gate passed.
+- Apply the shared [validation and evidence cadence](DRAGGINZGAME.md#validation-and-evidence).
+  The maintainer adopted ordinary focused development/handoff checks on
+  2026-10-14, replacing the former validation and compile-only exceptions.
+  Local commands and product evidence limits belong to the
+  [hygiene overlay](docs/audits/code-hygiene.md#inspection-and-validation-commands)
+  and [release guide](docs/releasing.md#deployment-validation).
 - Maintainer-approved contribution exception: all commits remain user-owned,
   including contribution PR commits. The shared contribution rule does not
   supersede this established workflow. Prepare local edits and reviewable PR

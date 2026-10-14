@@ -8,40 +8,64 @@ This handoff links [release evidence](../releasing.md),
 [Shared adoption](../shared-tooling.md), [safety](../../SAFETY.md) and
 [the archive](archive-2026-10-10.md).
 
-## Delivered 0.22.2 and prepared 0.22.3
+## Delivered 0.22.3 and prepared 0.22.4
 
-Current HEAD remains `26f1cdfc399fd4a321b73f9484a2234cae8a43de` (0.22.2).
-The compatible repository-only [0.22.3 batch](../releasing.md#prepared-0223-shared-owner-cleanup)
-now adopts committed Shared 0.12.3
-`ac68c74439e13f19229a35f424f968c64325cc44` through all three canonical exports
-(**75/40/17** payloads). The [adoption owner](../shared-tooling.md#prepared-shared-tooling-0123)
-records reviewed policy, preserved roots and exact qualification scope. Dirty
-Shared 0.12.4 work is excluded; local validation/commit/release exceptions remain.
+Current HEAD is `730ad01` (released 0.22.3); the previous preparation and
+qualification below retain their historical source scope. Shared snapshots now
+select reviewed 0.12.8 `eafa07cac1fdba7d6303d061ed8af458aacf32b7` across
+78/41/18 payloads, and the unchanged root catalog selects Testkit 0.40.
 
-The accepted reductions reuse canonical rendering, fixture cleanup, coordinated
-graph/member projection, exact version ordering and generic evidence mechanics.
-Local rollback, source/candidate checks, selected-tree sorting, identity/scenario
-assertions, qualified catalogs, Testkit and native/product gates remain explicit.
-All 15 previously approved shell fixtures and the Python downloaded-evidence
-suite pass at the earlier recorded inputs. Three current snapshot checks and the
-locked/offline root graph pass; the repeated snapshot fixture passes after refresh.
-No native macOS/PocketIC or complete release-gate result is inferred.
+The compatible repository-only 0.22.4 draft reuses Testkit's existing
+`InstallSpec`/`create_and_install` at all 17 fresh probe-install sites. The shared
+harness adapter retains the empty init payload, two-trillion-cycle top-up and
+anonymous install sender. Every fixture still owns a fresh instance/server;
+recovery top-ups, upgrade operations and measurement boundaries remain explicit.
+The local graph fixture now qualifies helper binding, `check-graph ic-timers`,
+ambient `RELEASE_COMMIT` clearing, selected caller worktree, exact failure status
+and one live full-workspace check. Generic negative graph fixtures belong to Shared.
 
-This inspection began with the existing batch already dirty and Host
-artifacts/fs/process 0.17.11 in the incoming lockfile. Their official archives and
-producer commit are verified; Testkit 0.38.0 remains the direct dependency owner.
-No additional Host API or direct dependency is needed. Host 0.17.10 CI passed;
-exact 0.17.11 and Shared 0.12.3 CI are still running at inspection. The old frozen
-0.12.2 inventory-fixture failure retains its historical scope; the fix now exists
-in 0.12.3 and is not a newly passing full-suite receipt. Issues #51/#52 retain
-latest-delivered hosted acceptance.
+Owner changes and the deferred Timers caller patch live at
+`/tmp/ic-timers-next-three.0lpn1xkr/`. Testkit [#89](https://github.com/dragginzgame/ic-testkit/pull/89)
+is open at `e175c60`, refreshed on released Testkit 0.41.0; Shared [#180](https://github.com/dragginzgame/shared-tooling/pull/180)
+is refreshed at `fdacbd8` and ready for review. Dirty sibling inputs are excluded. Testkit adds two generic
+multi-result Candid functions using its existing transport/error machinery;
+Shared gains empty/plausible producer-failure, stale local-row and coherently
+wrong-primary graph cases. Both have pending changelog notes. The Candid caller
+patch removes the two local raw-decoding helpers and switches four multi-result
+call sites without changing probe wire results; it must wait for owner publication.
+The current working tree retains released Testkit APIs and its existing Cargo
+inputs. The proposed API is qualified only through an isolated offline override;
+its caller patch and prepared minimum Testkit 0.41.1 requirement wait for owner
+publication. The normal checkout remains on 0.40. Shared main is adopted separately
+from the dependent PR export.
 
-Evidence stays at `/tmp/ic-timers-upstream0123.3juyp1lg/`; earlier cleanup and
-qualification are at `/tmp/ic-timers-three-owners.ylz2aykc/` and
-`/tmp/ic-timers-shared0120.UujtaKfH/`. Incoming Cargo inputs, tool selections,
-real index and refs are preserved. No version bump or real release execution ran.
-The [2026-10-13 audit](../audits/code-hygiene-2026-10-13-01.md) keeps its original
-source/method scope; no new runtime or Wasm claim follows from this inspection.
+The maintainer adopted ordinary focused checks under Shared's cadence, replacing
+AGENTS' compile-only permission rule. Rust 1.88 probe and proposed Testkit
+compilation, Rust 1.99 strict Clippy, five Candid unit tests (also requalified on
+the new Testkit 0.41 anchor), relevant local/owner
+shell fixtures and ShellCheck pass. All three snapshot integrity checks and
+actual prepared host/IC offline checks pass. No full local suite, setup, live
+PocketIC execution, version mutation or release ran. Isolated PR commits/pushes
+were expressly authorized; normal sibling checkouts, real index and refs remain
+untouched. No Wasm or instruction saving is claimed.
+
+Outstanding PRs are refreshed on released main. Timers
+[#56](https://github.com/dragginzgame/ic-timers/pull/56) now qualifies depth-one Git
+history without `HEAD^`; its tag fixture and ShellCheck pass. Both old macOS
+failures selected the obsolete Testkit/Host graph. Superseded Testkit 0.39 adoption
+[#57](https://github.com/dragginzgame/ic-timers/pull/57) is closed because released
+main already selects 0.40. Timers [#54](https://github.com/dragginzgame/ic-timers/pull/54)
+is updated at `35b2fa2`, with canonical 79/41/18 exports from Shared #180,
+current Cargo inputs, six affected shell fixtures/snapshot checks and lint passing.
+The latest head is `d8543ee`; it remains draft pending owner integration and
+exact-source refresh if needed.
+The newer hosted #56 run exposed incomplete dependency-cache preparation before
+an offline release-index fixture. The normal checks lane now runs locked `make fetch`
+before `make ci`; the actual-step fixture proves order and failed-fetch short circuit.
+The repaired #56 head is `f7d6d82`, and #54 carries the same CI prerequisite.
+The fix is also prepared in this normal worktree. macOS release verification
+already prepares its graph. Hosted checks for these newest heads remain separate
+and in progress/queued; no full hosted pass is claimed.
 
 ## Prior 0.22.0 delivery evidence
 
@@ -151,8 +175,8 @@ passes Linux checks/MSRV and Apple Silicon; Intel is queued at final
 readback. Do not close host qualification from tag success or the
 older 0.21.4 hosted results. No workflow dispatch or rerun is pending.
 
-Siblings remain read-only. Tests, builds, lint, PocketIC and setup remain
-user-owned outside explicit scoped approval; prepared locked/offline library
-compile-only checks retain the AGENTS.md exception after Rust changes. Versions,
-staging, commits, tags, pushes, publication and cleanup remain user-owned.
-Preserve incoming edits, retained artifacts and failure evidence.
+Normal sibling working checkouts remain untouched. Focused checks follow Shared's
+adopted cadence; broad local gates, setup and release execution retain their
+explicit authority. PR delivery was authorized for the isolated contributions.
+Ordinary real-worktree staging, commits, versions, tags, publication and cleanup
+remain maintainer-owned. Preserve retained artifacts and failure evidence.

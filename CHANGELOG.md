@@ -2,6 +2,23 @@
 
 All notable changes to this project are recorded here.
 
+## [0.22.4]
+
+### Development
+
+- Adopt reviewed Shared Tooling 0.12.8 across all three snapshots, including its
+  focused development/handoff validation cadence and publication-guide closure.
+  Retire the local compile-only approval rule; complete release qualification
+  retains its owner-operated gate.
+- Reuse Testkit's canister installation lifecycle across the recovery and policy
+  fixtures, retaining fresh instance ownership, explicit funding and the existing
+  measurement boundaries.
+- Keep Cargo graph regressions with their Shared implementation; narrow the local
+  fixture to selected-worktree admission, adapter binding and failure propagation.
+
+- Prepare the complete root-lock dependency cache before hosted CI's offline
+  release fixtures, including dependencies used only by unpublished probes.
+
 ## [0.22.3] - 2026-10-14
 
 ### Development

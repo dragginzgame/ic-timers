@@ -6,7 +6,7 @@ Use the [shared code-hygiene method](../../audits/code-hygiene.md) and
 [common audit contract](../../audits/README.md) from the reviewed revision
 recorded in the [audit snapshot](../../.shared-tooling-audits.snapshot).
 [AGENTS.md](../../AGENTS.md) identifies the adopted baseline and supplies local
-command authority, including its compile-only development exception. This overlay
+command authority under the shared validation cadence. This overlay
 selects product scope for a requested review, including a review before a minor
 release or after a substantial API change. It adds no automatic gate or schedule.
 
@@ -72,18 +72,18 @@ bash scripts/ci/verify-shared-tooling-snapshot.sh --manifest .shared-tooling-aud
 
 Inspect command effects before selecting additional evidence. Applicable locked
 metadata and `cargo tree --workspace --duplicates --locked --offline` inspect
-the selected graphs without upgrading them; cache preparation and dependency
-changes retain separate authority. Package-content inspection belongs with the
+the selected graphs without upgrading them. Locked dependency preparation follows
+the shared Cargo network policy; dependency upgrades retain separate authority. Package-content inspection belongs with the
 existing package owner and does not authorize packaging/build execution.
 
 | Verification class | Local selection and authority |
 | --- | --- |
-| Focused native test | A named owner regression with `cargo test --locked -p ic-timers --lib <fully-qualified-test> -- --exact`; requires an explicit request. Record that the intended test actually executed. |
-| Library compile-only development check | After Rust changes, AGENTS.md permits locked, offline `check` / `wasm-check` with already prepared tools, `RUSTUP_AUTO_INSTALL=0` and no owner validation active. Compile library test targets without executing tests; report missing inputs rather than fetching or installing. |
-| Other builds and lint | Select the affected library or workspace probe and its current toolchain/features; tests, doctests, Clippy and other builds still require an explicit request. |
-| Provider or repository lint/fixtures | Existing `provider-check` and applicable `repository-check` owners; requires an explicit request. |
+| Focused native test | A named owner regression with `cargo test --locked -p ic-timers --lib <fully-qualified-test> -- --exact`; follows the shared focused-check cadence. Record that the intended test actually executed. |
+| Library compile-only development check | Select `check` / `wasm-check` for affected library compile coverage, with locked inputs and `RUSTUP_AUTO_INSTALL=0`. Use offline mode with prepared dependencies; compile test targets without executing them. |
+| Other builds and lint | Select the affected library or workspace probe and its current toolchain/features; choose focused tests, doctests, Clippy or probe builds for the changed contract under the shared cadence. |
+| Provider or repository lint/fixtures | Existing `provider-check` and applicable focused repository fixtures under the shared cadence; a complete repository aggregate remains a broad gate. |
 | Broad gates | `make ci`, `make msrv` and `make release-verify` remain maintainer-owned. |
-| Recovery and performance | Maintained PocketIC subjects and policy cohorts selected through the release guide; requires an explicit request. |
+| Recovery and performance | Select directly affected maintained PocketIC subjects through the release guide; complete recovery/cohort qualification remains part of the owner release gate. |
 
 Only the existing cohort instruction intervals, exact loaded Wasm bytes and
 documented memory/cycle subjects support cost claims. Use comparable inputs and
