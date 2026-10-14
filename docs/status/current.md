@@ -56,8 +56,7 @@ producer repair. This separate isolated PR selects authenticated Testkit 0.39.0
 and the repaired Host 0.17.8 family, preserving unrelated dependency selections.
 The application lock cannot repair an older CLI's separate packaged lock.
 
-Locked/offline root graph admission passes. Focused probe compilation is pending
-approval; native installation and complete host validation remain outstanding.
+Locked/offline root graph admission passes. Rust 1.88 all-target probe/protocol compilation passes; native installation and complete host validation remain outstanding.
 #51/#52 remain open for acceptance. The producer's synthetic Intel cancellation
 failure is a separate concern (#68), not proof this consumer setup still fails.
 No local setup, PocketIC execution, version bump or release is performed.

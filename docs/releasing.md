@@ -4334,7 +4334,7 @@ server pins/admission and public Timers behavior are unchanged. Testkit remains
 owned by the root catalog and unpublished probes use `workspace = true`.
 
 The registry archives match their selected checksums. Locked/offline graph
-admission and focused probe compilation remain scoped separately from native
-CLI installation. No local setup or PocketIC execution is implied; actual Linux,
+admission and Rust 1.88 all-target compilation of the runtime/PocketIC/size probes
+and wire protocol pass; they remain distinct from native CLI installation. No local setup or PocketIC execution is implied; actual Linux,
 Intel/Apple Silicon setup and full native validation remain required before
 closing #51/#52. The existing published 0.22.2 failures retain their source scope.
