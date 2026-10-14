@@ -6,19 +6,19 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export PATH="$root/.tools/host/bin:$PATH"
 export YQ="$root/.tools/host/bin/yq"
-export COMMITTED_RELEASE_REAL_CARGO="$(command -v cargo)"
+COMMITTED_RELEASE_REAL_CARGO="$(command -v cargo)"
+export COMMITTED_RELEASE_REAL_CARGO
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/committed-release-check.XXXXXX")"
 # Bash 3.2 can report zero on nounset; cleanup also requires completion.
 fixture_complete=false
+# shellcheck source=scripts/ci/fixture-lifecycle.sh
+source "$root/scripts/ci/fixture-lifecycle.sh"
 finish() {
     local status=$?
-    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
-    if [[ "$status" == 0 ]]; then rm -rf -- "${fixture}"
-    else
+    if [[ "$fixture_complete" != true || "$status" != 0 ]]; then
         if [[ -f "$fixture/output" ]]; then cat "$fixture/output" >&2 || :; fi
-        printf "Failed committed-release fixture retained: %s\n" "${fixture}" >&2
     fi
-    exit "$status"
+    fixture_finish "$status" "$fixture" 'Failed committed-release fixture retained'
 }
 trap finish EXIT
 mkdir -p "$fixture/current/scripts" "$fixture/current/.shared-tooling/helpers/scripts/ci" \
@@ -33,15 +33,18 @@ cp "$root/scripts/ci/check-make-execution.sh" "$root/scripts/ci/run-formatting.s
 cp -R "$root/scripts/release" "$fixture/current/scripts/"
 cp "$root/.shared-tooling/helpers/scripts/ci/read-cargo-workspace-version.sh" \
     "$root/.shared-tooling/helpers/scripts/ci/check-release-tag.sh" \
+    "$root/.shared-tooling/helpers/scripts/ci/cargo-release-metadata.sh" \
+    "$root/.shared-tooling/helpers/scripts/ci/cargo-workspace-members.jq" \
+    "$root/.shared-tooling/helpers/scripts/ci/compare-stable-versions.pl" \
+    "$root/.shared-tooling/helpers/scripts/ci/StableVersion.pm" \
     "$fixture/current/.shared-tooling/helpers/scripts/ci/"
 mkdir -p "$fixture/current/ci"
 cp "$root/ci/tool-versions.env" "$fixture/current/ci/"
 printf '%s\n' '[workspace.package]' 'version = "0.1.0"' > "$fixture/selected/Cargo.toml"
 printf '%s\n' 'ic-timers = "=0.0.7"' > "$fixture/selected/README.md"
 printf '%s\n' '## [0.1.0] - 2026-10-06' > "$fixture/selected/CHANGELOG.md"
-for path in Cargo.lock; do
-    printf '%s\n' 'version = "0.1.0"' > "$fixture/selected/$path"
-done
+printf '%s\n' 'version = 4' '[[package]]' 'name = "ic-timers"' 'version = "0.1.0"' \
+    > "$fixture/selected/Cargo.lock"
 cp "$fixture/selected/Cargo.toml" "$fixture/current/"
 printf '%s\n' '## [0.1.1]' > "$fixture/current/CHANGELOG.md"
 printf '%s\n' 'newer HEAD metadata must not qualify an older release' > "$fixture/current/README.md"
@@ -82,13 +85,17 @@ case "$*" in
             exit 35
         fi
         ;;
-    'metadata --manifest-path Cargo.toml --locked --offline --format-version 1') lock=Cargo.lock ;;
+    'metadata --locked --offline --format-version 1') lock=Cargo.lock ;;
     *) echo "unexpected Cargo command: $*" >&2; exit 35 ;;
 esac
 if [[ "$1" == metadata ]]; then
     [[ "${FAIL_METADATA:-}" != "$lock" ]] || { echo 'fixture locked metadata failure' >&2; exit 36; }
-    version="$(sed -n 's/^version = "\([^"]*\)"$/\1/p' "$lock")"
-    printf '{"packages":[{"name":"ic-timers","version":"%s"}]}\n' "$version"
+    version="$(sed -n 's/^version = "\([^"]*\)"$/\1/p' "$lock" | head -n 1)"
+    if [[ "${EXTRA_WORKSPACE_MEMBER:-0}" == 1 ]]; then
+        printf '{"workspace_members":["timers","probe"],"packages":[{"id":"timers","name":"ic-timers","source":null,"version":"%s"},{"id":"probe","name":"probe","source":null,"version":"%s"}]}\n' "$version" "$version"
+    else
+        printf '{"workspace_members":["timers"],"packages":[{"id":"timers","name":"ic-timers","source":null,"version":"%s"}]}\n' "$version"
+    fi
 fi
 STUB
 chmod +x "$fixture/bin/git" "$fixture/bin/cargo"
@@ -102,15 +109,12 @@ check() {
 }
 reject() {
     if check "$1"; then echo "error: committed check accepted $2" >&2; exit 1; fi
-    [[ -z "$(ls -A "$fixture/tmp")" ]] || exit 1
 }
 
 for target in release-committed-check release-tagged-check release-push-check; do
     : > "$EVENTS"
     check "$target"
-    for manifest in Cargo.toml; do
-        grep -Fqx "cargo metadata --manifest-path $manifest --locked --offline --format-version 1" "$EVENTS"
-    done
+    grep -Fqx "cargo metadata --locked --offline --format-version 1" "$EVENTS"
     [[ -z "$(ls -A "$fixture/tmp")" ]] || exit 1
 done
 # Documentation need not contain canonical fields or exist in a release tree.
@@ -124,8 +128,27 @@ for path in Cargo.toml CHANGELOG.md Cargo.lock; do
     cp "$SELECTED_TREE/$path" "$fixture/saved"
     printf '%s\n' 'invalid selected release metadata' > "$SELECTED_TREE/$path"
     reject release-push-check "$path corruption"
+    # Shared owns failed metadata-check retention; outer formatting exports
+    # can be cleaned without deleting that independent diagnostic directory.
+    grep -Fq 'failed Cargo metadata check retained:' "$fixture/output"
+    [[ -n "$(ls -A "$fixture/tmp")" ]] || exit 1
     cp "$fixture/saved" "$SELECTED_TREE/$path"
 done
+# Neither an omitted workspace row nor an extra local lock row can qualify.
+export EXTRA_WORKSPACE_MEMBER=1
+: > "$EVENTS"
+reject release-push-check 'workspace member absent from the lock roster'
+grep -Fq 'workspace members and admitted lock identities must agree' "$fixture/output"
+if grep -Eq '^git cat-file ' "$EVENTS"; then exit 1; fi
+unset EXTRA_WORKSPACE_MEMBER
+cp "$SELECTED_TREE/Cargo.lock" "$fixture/saved-lock"
+printf '\n[[package]]\nname = "outside"\nversion = "0.1.0"\n' >> "$SELECTED_TREE/Cargo.lock"
+: > "$EVENTS"
+reject release-push-check 'local lock row absent from the workspace'
+grep -Fq 'workspace members and admitted lock identities must agree' "$fixture/output"
+if grep -Eq '^git cat-file ' "$EVENTS"; then exit 1; fi
+cp "$fixture/saved-lock" "$SELECTED_TREE/Cargo.lock"
+
 for kind in missing commit; do
     export TAG_TYPE="$kind"
     reject release-tagged-check "$kind tag"
@@ -141,28 +164,26 @@ done
 unset FAIL_ARCHIVE
 # Fail root graph admission. A later successful check must never mask
 # the original failure, including on Apple's Bash 3.2.
-for lock in Cargo.lock; do
-    : > "$EVENTS"
-    export FAIL_METADATA="$lock"
-    reject release-push-check "failed $lock resolution"
-    grep -Fq 'fixture locked metadata failure' "$fixture/output"
-    if grep -Eq '^git cat-file ' "$EVENTS"; then
-        echo 'error: push check inspected tags after failed locked resolution' >&2
-        exit 1
-    fi
-done
+lock=Cargo.lock
+: > "$EVENTS"
+export FAIL_METADATA="$lock"
+reject release-push-check "failed $lock resolution"
+grep -Fq 'fixture locked metadata failure' "$fixture/output"
+if grep -Eq '^git cat-file ' "$EVENTS"; then
+    echo 'error: push check inspected tags after failed locked resolution' >&2
+    exit 1
+fi
 unset FAIL_METADATA
-for command in 'sort --workspace --check'; do
-    : > "$EVENTS"
-    export FAIL_SORT="$command"
-    reject release-push-check "$command failure"
-    grep -Fq 'fixture manifest ordering failure' "$fixture/output"
-    # Sorting failure stops before locked resolution or tag lookup.
-    if grep -Eq '^cargo metadata |^git cat-file ' "$EVENTS"; then
-        echo 'error: committed check continued after manifest ordering failure' >&2
-        exit 1
-    fi
-done
+command='sort --workspace --check'
+: > "$EVENTS"
+export FAIL_SORT="$command"
+reject release-push-check "$command failure"
+grep -Fq 'fixture manifest ordering failure' "$fixture/output"
+# Sorting failure stops before locked resolution or tag lookup.
+if grep -Eq '^cargo metadata |^git cat-file ' "$EVENTS"; then
+    echo 'error: committed check continued after manifest ordering failure' >&2
+    exit 1
+fi
 unset FAIL_SORT
 if "$real_make" --no-print-directory release-committed-check RELEASE_COMMIT= \
     RELEASE_VERSION=0.1.0 RELEASE_DATE=2026-10-06 > "$fixture/output" 2>&1; then exit 1; fi

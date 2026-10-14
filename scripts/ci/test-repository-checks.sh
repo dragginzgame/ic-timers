@@ -5,16 +5,9 @@ repository_root="$(git rev-parse --show-toplevel)"
 temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/timer-repository-check-test.XXXXXX")"
 # Bash 3.2 can report zero on nounset; cleanup also requires completion.
 fixture_complete=false
-finish() {
-    local status=$?
-    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
-    if [[ "$status" == 0 ]]; then rm -rf -- "${temporary_root}"
-    else
-        printf "Failed repository-check fixture retained: %s\n" "${temporary_root}" >&2
-    fi
-    exit "$status"
-}
-trap finish EXIT
+# shellcheck source=scripts/ci/fixture-lifecycle.sh
+source "$repository_root/scripts/ci/fixture-lifecycle.sh"
+trap 'fixture_finish "$?" "$temporary_root" "Failed repository-check fixture retained"' EXIT
 
 git init -q "${temporary_root}"
 mkdir -p "${temporary_root}"/{.githooks,scripts/{ci,dev,release},.shared-tooling/helpers/scripts/ci,crates/ic-timers/src}

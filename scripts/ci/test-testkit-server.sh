@@ -7,14 +7,9 @@ fixture="$(mktemp -d "${TMPDIR:-/tmp}/timer-testkit-server.XXXXXX")"
 fixture="$(cd -P "$fixture" && printf '%s/.' "$PWD")"
 fixture="${fixture%/.}"
 fixture_complete=false
-finish() {
-    local status=$?
-    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
-    if [[ "$status" == 0 ]]; then rm -rf "$fixture"
-    else printf "Failed Testkit adapter fixture retained: %s\n" "$fixture" >&2; fi
-    exit "$status"
-}
-trap finish EXIT
+# shellcheck source=scripts/ci/fixture-lifecycle.sh
+source "$root/scripts/ci/fixture-lifecycle.sh"
+trap 'fixture_finish "$?" "$fixture" "Failed Testkit adapter fixture retained"' EXIT
 consumer="$fixture/consumer with spaces"
 mkdir -p "$consumer/scripts/dev" "$consumer/.tools/host/bin"
 cp "$root/scripts/dev/testkit-server.sh" "$consumer/scripts/dev/"

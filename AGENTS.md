@@ -5,19 +5,19 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `626fc2bd3125195520fb870b92abfec11b01454d` (0.10.2). Its provenance and
+  from revision `5732ded141e057b27eb96400b0f7bc2820d42d79` (Shared PR #180, based on 0.12.5). Its provenance and
   refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
   The remainder of this file is the IC Timers local overlay; a moving sibling
   checkout is not authority.
 - Apply the [shared audit methods](audits/README.md) from revision
-  `626fc2bd3125195520fb870b92abfec11b01454d`, recorded separately in
+  `5732ded141e057b27eb96400b0f7bc2820d42d79`, recorded separately in
   [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). That
   supplemental snapshot also supplies pinned host/IC setup at the same
   reviewed revision. The isolated
   [Cargo helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
   supplies the structured dependency checker, Cargo readers/rewrites,
   annotated-tag checker and release-command adoption checker from
-  `626fc2bd3125195520fb870b92abfec11b01454d`. All three manifests record explicit
+  `5732ded141e057b27eb96400b0f7bc2820d42d79`. All three manifests record explicit
   entrypoints and their complete derived payloads; future refreshes reuse those
   roots. Review local callers and other bundles before changing root selection.
   The exporter automatically retires only verified, unchanged owned payloads
@@ -184,9 +184,10 @@ This file is normative for automated contributors.
   changelog section. Keep it undated. Do not mutate Cargo versions
   or lockfiles, stage changes, or run version-bump or release targets.
   The user runs the matching bump target. The version helper labels the current
-  draft and adds its date automatically without running tests. Changelog layout,
-  empty notes, or a missing chosen version must not block deployment; ambiguous
-  release selection is resolved during preparation. The user runs `release-verify`
+  draft and adds its date automatically without running tests. The maintainer approved the strict numbered changelog contract on 2026-10-14:
+  reject versionless `Draft`, misplaced pending sections and missing changelog
+  files before mutation. Empty notes remain advisory; exact previous-release
+  history may seed an empty candidate when no pending section exists. The user runs `release-verify`
   as part of deployment; it must retain the normal CI,
   MSRV, probe lint, watchdog PocketIC, and policy-cohort gates. Release
   preparation explicitly installs the root-lock

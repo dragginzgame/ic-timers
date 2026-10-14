@@ -8,20 +8,13 @@ export YQ="${repository_root}/.tools/host/bin/yq"
 temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/timer-version-test.XXXXXX")"
 # Bash 3.2 can report zero on nounset; cleanup also requires completion.
 fixture_complete=false
-finish() {
-    local status=$?
-    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
-    if [[ "$status" == 0 ]]; then rm -rf -- "${temporary_root}"
-    else
-        printf "Failed version-preparation fixture retained: %s\n" "${temporary_root}" >&2
-    fi
-    exit "$status"
-}
-trap finish EXIT
+# shellcheck source=scripts/ci/fixture-lifecycle.sh
+source "$repository_root/scripts/ci/fixture-lifecycle.sh"
+trap 'fixture_finish "$?" "$temporary_root" "Failed version-preparation fixture retained"' EXIT
 git init -q "${temporary_root}"
 mkdir -p "${temporary_root}"/{scripts/release,scripts/ci,.shared-tooling/helpers/scripts/ci,docs/status,docs/changelog,crates/ic-timers/src,testing/probe/src}
 for script in bump-version finalize-changelog \
-    warn-release-prose check-bump-impact check-lockfiles workspace-version update-local-lock; do
+    warn-release-prose check-bump-impact check-lockfiles workspace-version; do
     cp "${repository_root}/scripts/release/${script}.sh" "${temporary_root}/scripts/release/"
 done
 cp "${repository_root}/scripts/ci/next-release-version.sh" \
@@ -29,7 +22,13 @@ cp "${repository_root}/scripts/ci/next-release-version.sh" \
     "${repository_root}/scripts/ci/run-formatting.sh" \
     "${repository_root}/scripts/ci/finalize-release-changelog.awk" "${temporary_root}/scripts/ci/"
 cp "${repository_root}/.shared-tooling/helpers/scripts/ci/read-cargo-workspace-version.sh" \
+    "${repository_root}/.shared-tooling/helpers/scripts/ci/render-cargo-workspace-version.pl" \
+    "${repository_root}/.shared-tooling/helpers/scripts/ci/cargo-release-metadata.sh" \
+    "${repository_root}/.shared-tooling/helpers/scripts/ci/cargo-workspace-members.jq" \
+    "${repository_root}/.shared-tooling/helpers/scripts/ci/compare-stable-versions.pl" \
+    "${repository_root}/.shared-tooling/helpers/scripts/ci/StableVersion.pm" \
     "${repository_root}/.shared-tooling/helpers/scripts/ci/rewrite-local-lock-versions.pl" \
+    "${repository_root}/.shared-tooling/helpers/scripts/ci/finalize-release-changelog.awk" \
     "${temporary_root}/.shared-tooling/helpers/scripts/ci/"
 # Classification is an isolated fixture input; preparation must not run tests.
 cat > "${temporary_root}/scripts/release/classify-release-impact.sh" <<'EOF'
@@ -70,7 +69,7 @@ printf '%s\n' 'pub fn fixture() {}' > "${temporary_root}/testing/probe/src/lib.r
 cat > "${temporary_root}/CHANGELOG.md" <<'EOF'
 # Changelog
 
-## [Draft]
+## [0.1.1]
 
 - Fix terminal cleanup.
 
@@ -83,6 +82,7 @@ cat > "${temporary_root}/docs/status/current.md" <<'EOF'
 
 Read Cargo for package identity. This handoff has no release marker.
 EOF
+# shellcheck disable=SC2016 # Fixture Markdown and Cargo examples are literal.
 printf '%s\n' '# Fixture' '| API line | `0.0` |' 'ic-timers = "=0.0.7"' \
     'ic-timers = "0.0" # Another legitimate documentation example.' \
     > "${temporary_root}/README.md"
@@ -124,31 +124,6 @@ assert_metadata_unchanged() {
 }
 
 capture_metadata original-files
-# The actual lock updater must reject invalid outputs before Cargo, temporary
-# output creation or writes, even when Bash 3.2 ignores a bare [[ ... ]] failure.
-mkdir -p lock-admission-bin lock-admission-tmp rejected-lock-directory
-printf '%s\n' 'Preserve the symlink target.' > rejected-lock-target
-ln -s rejected-lock-target rejected-lock-alias
-cat > lock-admission-bin/cargo <<'EOF'
-#!/usr/bin/env bash
-printf '%s\n' invoked >> "$LOCK_ADMISSION_EVENTS"
-exit 91
-EOF
-chmod +x lock-admission-bin/cargo
-for invalid_lock in missing-lock rejected-lock-directory rejected-lock-alias; do
-    status=0
-    LOCK_ADMISSION_EVENTS="$temporary_root/lock-admission-events" \
-        PATH="$temporary_root/lock-admission-bin:$PATH" \
-        TMPDIR="$temporary_root/lock-admission-tmp" \
-        "$BASH" scripts/release/update-local-lock.sh "$invalid_lock" 0.1.0 0.1.1 \
-        > "lock-admission-$invalid_lock.log" 2>&1 || status=$?
-    [[ "$status" == 1 && ! -e lock-admission-events ]] || exit 1
-    [[ -z "$(ls -A lock-admission-tmp)" ]] || exit 1
-    [[ ! -e missing-lock && -d rejected-lock-directory && -L rejected-lock-alias ]] || exit 1
-    printf '%s\n' 'Preserve the symlink target.' > expected-lock-target
-    cmp expected-lock-target rejected-lock-target
-    assert_metadata_unchanged original-files
-done
 # Reject malformed invocation before metadata reads, gates or mutation. A
 # misplaced --check must never be silently ignored by a real bump.
 for invocation in no-arguments missing-version extra-argument extra-version misplaced-check duplicate-check; do
@@ -188,25 +163,13 @@ for invalid in missing-table missing-version duplicate-table duplicate-version l
                 s/"0\.1\.0"/"00.1.0"/ if $package' Cargo.toml ;;
     esac
     cp Cargo.toml rejected-manifest.toml
-    for operation in read set; do
-        set --
-        if [[ "${operation}" == set ]]; then set -- set 0.1.0 0.1.1; fi
-        if bash scripts/release/workspace-version.sh "$@" >/dev/null 2>&1; then
-            echo "error: workspace version ${operation} accepted ${invalid}" >&2
-            exit 1
-        fi
-        cmp rejected-manifest.toml Cargo.toml
-    done
-done
-cp original-manifest.toml Cargo.toml
-for arguments in '0.1.7 0.1.1' '0.1.0 00.1.1'; do
-    read -r previous candidate <<< "${arguments}"
-    if bash scripts/release/workspace-version.sh set "${previous}" "${candidate}" >/dev/null 2>&1; then
-        echo "error: workspace version accepted ${arguments}" >&2
+    if bash scripts/release/workspace-version.sh >/dev/null 2>&1; then
+        echo "error: workspace version read accepted ${invalid}" >&2
         exit 1
     fi
-    cmp original-manifest.toml Cargo.toml
+    cmp rejected-manifest.toml Cargo.toml
 done
+cp original-manifest.toml Cargo.toml
 rm original-manifest.toml rejected-manifest.toml
 
 # Tag-query errors must stop both preflight and the bump before any mutation.
@@ -251,12 +214,16 @@ for kind in patch minor major; do
         minor) candidate=0.2.0 ;;
         major) candidate=1.0.0 ;;
     esac
+    # Each requested increment has its own explicit numbered pending release.
+    CANDIDATE="${candidate}" perl -pi -e 's/^## \[0\.1\.1\]$/## [$ENV{CANDIDATE}]/' CHANGELOG.md
+    capture_metadata preflight-files
     output="$(bash scripts/release/bump-version.sh --check "${kind}" 2>&1)"
     if [[ "${output}" != *"Release preflight passed: 0.1.0 -> ${candidate}"* ]]; then
         echo "error: ${kind} preflight selected an unexpected version: ${output}" >&2
         exit 1
     fi
-    assert_metadata_unchanged original-files
+    assert_metadata_unchanged preflight-files
+    cp -p original-files/CHANGELOG.md CHANGELOG.md
 done
 
 # README shape, freshness and presence are not release preconditions.
@@ -299,68 +266,57 @@ fi
 # Standard delivery ordering and Make execution admission belong to the
 # shared release runner and its adopted fixtures, not version preparation.
 
-# Inject failures after the mutating lock update and metadata check.
+# Shared owns mutation/rollback. Inject a failure and interruption into its
+# post-mutation graph check, retaining this consumer's exact files and modes.
 mkdir -p bin
 IC_TIMERS_FIXTURE_CARGO="$(command -v cargo)"
 export IC_TIMERS_FIXTURE_CARGO
 cat > bin/cargo <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-case "$*" in
-    'metadata --manifest-path Cargo.toml --locked --offline --format-version 1') stage=root-metadata ;;
-    *) stage=other ;;
+case "${1:-}" in
+    set-version|sort) echo 'unexpected manifest mutation tool' >&2; exit 91 ;;
+    metadata)
+        if grep -Fq 'version = "0.1.1"' Cargo.toml; then
+            case "${FIXTURE_FAIL_STAGE:-}" in
+                root-metadata) echo 'injected root-metadata failure' >&2; exit 23 ;;
+                interrupt) kill -TERM "$PPID"; exit 1 ;;
+            esac
+        fi ;;
 esac
-if [[ "${FIXTURE_FAIL_STAGE:-}" == "${stage}" ]]; then
-    echo "injected ${stage} failure" >&2
-    exit 1
-fi
 exec "${IC_TIMERS_FIXTURE_CARGO}" "$@"
 EOF
 chmod +x bin/cargo
-cp scripts/release/update-local-lock.sh scripts/release/original-update-local-lock.sh
-cat > scripts/release/update-local-lock.sh <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-case "$1" in Cargo.lock) stage=root-update ;; *) exit 2 ;; esac
-if [[ "${FIXTURE_FAIL_STAGE:-}" == "$stage" ]]; then
-    echo "injected ${stage} failure" >&2
-    exit 1
-fi
-if [[ "${FIXTURE_FAIL_STAGE:-}" == interrupt && "$stage" == root-update ]]; then
-    kill -TERM "$PPID"; exit 1
-fi
-bash scripts/release/original-update-local-lock.sh "$@"
-EOF
-for stage in root-update root-metadata interrupt; do
-    if output="$(PATH="${temporary_root}/bin:${PATH}" FIXTURE_FAIL_STAGE="${stage}" \
-        bash scripts/release/bump-version.sh patch 2>&1)"; then
-        echo "error: version preparation accepted injected ${stage} failure" >&2
-        exit 1
-    fi
-    if [[ "${output}" != *'restoring release metadata'* ]]; then
-        echo "error: version preparation did not roll back ${stage}: ${output}" >&2
-        exit 1
-    fi
+for stage in root-metadata interrupt; do
+    status=0
+    output="$(PATH="${temporary_root}/bin:${PATH}" FIXTURE_FAIL_STAGE="${stage}" \
+        bash scripts/release/bump-version.sh patch 2>&1)" || status=$?
+    case "$stage" in root-metadata) expected=23 ;; interrupt) expected=143 ;; esac
+    [[ "$status" == "$expected" && "$output" == *'restoring release metadata'* ]] || exit 1
     assert_metadata_unchanged original-files
 done
 
-# An absent changelog is created during preparation and removed by rollback.
-# Keep the lock-update injector installed until this final rollback scenario.
+# A missing changelog is refused before mutation.
 mv CHANGELOG.md existing-changelog.md
-if output="$(PATH="${temporary_root}/bin:${PATH}" FIXTURE_FAIL_STAGE=root-update \
-    bash scripts/release/bump-version.sh patch 2>&1)"; then
-    echo 'error: version preparation accepted a failed update with no changelog' >&2
-    exit 1
-fi
-if [[ "${output}" != *'injected root-update failure'* ||
-    "${output}" != *'restoring release metadata'* ]]; then
-    echo "error: missing-changelog rollback did not reach the injected update failure: ${output}" >&2
-    exit 1
-fi
-test ! -e CHANGELOG.md
+for operation in check prepare; do
+    arguments=(patch)
+    if [[ "${operation}" == check ]]; then arguments=(--check patch); fi
+    if output="$(PATH="${temporary_root}/bin:${PATH}" FIXTURE_FAIL_STAGE=root-metadata \
+        bash scripts/release/bump-version.sh "${arguments[@]}" 2>&1)"; then
+        echo "error: ${operation} accepted a missing changelog" >&2
+        exit 1
+    fi
+    if [[ "${output}" == *'injected root-metadata failure'* ||
+        "${output}" == *'restoring release metadata'* ]]; then
+        echo "error: missing-changelog refusal occurred after mutation: ${output}" >&2
+        exit 1
+    fi
+    test ! -e CHANGELOG.md
+    cmp original-files/Cargo.toml Cargo.toml
+    cmp original-files/Cargo.lock Cargo.lock
+done
 mv existing-changelog.md CHANGELOG.md
 assert_metadata_unchanged original-files
-mv scripts/release/original-update-local-lock.sh scripts/release/update-local-lock.sh
 
 # A failed prose advisory still runs before mutation and cannot block the bump.
 mv scripts/release/warn-release-prose.sh scripts/release/original-warn-release-prose.sh
@@ -402,7 +358,7 @@ git config user.email 'release-test@example.invalid'
 git add Cargo.toml Cargo.lock CHANGELOG.md
 git commit -qm fixture
 git branch v0.1.2
-perl -0pi -e 's/^(## \[)/## [Draft]\n\n- Next fixture release.\n\n$1/m' CHANGELOG.md
+perl -0pi -e 's/^(## \[)/## [0.1.2]\n\n- Next fixture release.\n\n$1/m' CHANGELOG.md
 bash scripts/release/bump-version.sh --check patch >/dev/null
 git tag v0.1.2
 capture_metadata tagged-files

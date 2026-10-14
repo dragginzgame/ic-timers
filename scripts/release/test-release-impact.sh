@@ -6,16 +6,9 @@ classifier="${repository_root}/scripts/release/classify-release-impact.sh"
 temporary_root="$(mktemp -d)"
 # Bash 3.2 can report zero on nounset; cleanup also requires completion.
 fixture_complete=false
-finish() {
-    local status=$?
-    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
-    if [[ "$status" == 0 ]]; then rm -rf -- "${temporary_root}"
-    else
-        printf "Failed release-impact fixture retained: %s\n" "${temporary_root}" >&2
-    fi
-    exit "$status"
-}
-trap finish EXIT
+# shellcheck source=scripts/ci/fixture-lifecycle.sh
+source "$repository_root/scripts/ci/fixture-lifecycle.sh"
+trap 'fixture_finish "$?" "$temporary_root" "Failed release-impact fixture retained"' EXIT
 
 git init -q "${temporary_root}"
 mkdir -p \

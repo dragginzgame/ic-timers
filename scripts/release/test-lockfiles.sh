@@ -8,16 +8,9 @@ checker="${repository_root}/scripts/release/check-lockfiles.sh"
 temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/timer-lockfile-test.XXXXXX")"
 # Bash 3.2 can report zero on nounset; cleanup also requires completion.
 fixture_complete=false
-finish() {
-    local status=$?
-    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
-    if [[ "$status" == 0 ]]; then rm -rf -- "${temporary_root}"
-    else
-        printf "Failed lockfile fixture retained: %s\n" "${temporary_root}" >&2
-    fi
-    exit "$status"
-}
-trap finish EXIT
+# shellcheck source=scripts/ci/fixture-lifecycle.sh
+source "$repository_root/scripts/ci/fixture-lifecycle.sh"
+trap 'fixture_finish "$?" "$temporary_root" "Failed lockfile fixture retained"' EXIT
 mkdir -p "${temporary_root}"/{crates/ic-timers/src,testing/probe/src}
 cd "${temporary_root}"
 cat > Cargo.toml <<'EOF'
@@ -32,14 +25,14 @@ EOF
 cat > crates/ic-timers/Cargo.toml <<'EOF'
 [package]
 name = "ic-timers"
-version = "0.1.0"
+version.workspace = true
 edition = "2024"
 EOF
 printf '%s\n' 'pub fn fixture() {}' > crates/ic-timers/src/lib.rs
 cat > testing/probe/Cargo.toml <<'EOF'
 [package]
 name = "probe"
-version = "0.0.0"
+version.workspace = true
 edition = "2024"
 [dependencies]
 ic-timers.workspace = true
@@ -55,7 +48,7 @@ export IC_TIMERS_FIXTURE_CARGO
 cat > bin/cargo <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
-if [[ "${1:-}" == metadata && "${3:-}" == "${FIXTURE_FAIL_METADATA:-}" ]]; then
+if [[ "$*" == "${FIXTURE_FAIL_METADATA:-}" ]]; then
     if [[ "${FIXTURE_METADATA_OUTPUT:-}" == matching ]]; then
         printf '%s\n' '{"packages":[{"name":"ic-timers","version":"0.1.0"}]}'
     fi
@@ -69,7 +62,7 @@ cp Cargo.lock original-root.lock
 for produced_output in empty matching; do
     failure_status=0
     output="$(PATH="${temporary_root}/bin:${PATH}" \
-        FIXTURE_FAIL_METADATA=Cargo.toml FIXTURE_METADATA_OUTPUT="${produced_output}" \
+        FIXTURE_FAIL_METADATA='metadata --locked --offline --format-version 1' FIXTURE_METADATA_OUTPUT="${produced_output}" \
         bash "${checker}" 2>&1)" || failure_status=$?
     if [[ "${failure_status}" != 101 || "${output}" != *'injected offline metadata failure'* ]]; then
         echo "error: metadata check lost Cargo failure for Cargo.toml: ${output}" >&2
@@ -79,8 +72,20 @@ for produced_output in empty matching; do
 done
 rm bin/cargo original-root.lock
 
+# A resolved mixed-version member must fail the coordinated graph contract.
+cp testing/probe/Cargo.toml original-probe.toml
+cp Cargo.lock original-root.lock
+perl -pi -e 's/version.workspace = true/version = "0.0.0"/' testing/probe/Cargo.toml
+cargo generate-lockfile --offline --quiet
+if output="$(bash "${checker}" 2>&1)"; then
+    echo 'error: graph admission accepted a resolved mixed-version probe' >&2; exit 1
+fi
+[[ "$output" == *'invalid coordinated workspace lock identities'* ]] || exit 1
+mv original-probe.toml testing/probe/Cargo.toml
+mv original-root.lock Cargo.lock
+
 # A stale unpublished member is as invalid as a stale library record. Locked
-# metadata must inspect the complete graph even though the library is default.
+# admission must inspect the complete graph even though the library is default.
 for package in ic-timers probe; do
     cp Cargo.lock original.lock
     IC_TIMERS_FIXTURE_PACKAGE="${package}" perl -0pi -e '
@@ -93,8 +98,8 @@ for package in ic-timers probe; do
         echo "error: accepted stale ${package} version in the root lockfile" >&2
         exit 1
     fi
-    if [[ "${output}" != *'--locked'* ]]; then
-        echo "error: lockfile rejection did not report locked resolution: ${output}" >&2
+    if [[ "${output}" != *'invalid coordinated workspace lock identities'* ]]; then
+        echo "error: lockfile rejection did not report stale local identities: ${output}" >&2
         exit 1
     fi
     cmp Cargo.lock stale.lock
@@ -103,13 +108,14 @@ done
 bash "${checker}"
 
 # A coherent lock is insufficient if the resolved crate differs from workspace truth.
-perl -pi -e 's/^version = "0\.1\.0"$/version = "0.1.1"/' crates/ic-timers/Cargo.toml
+perl -0pi -e 's/^version\.workspace = true$/version = "0.1.1"/m
+    or die "fixture inherited library version missing\n";' crates/ic-timers/Cargo.toml
 cargo generate-lockfile --offline --quiet
 if output="$(bash "${checker}" 2>&1)"; then
     echo 'error: accepted a coherent lock for the wrong workspace package version' >&2
     exit 1
 fi
-if [[ "${output}" != *'workspace.package version 0.1.0'* ]]; then
+if [[ "${output}" != *'invalid coordinated workspace lock identities'* ]]; then
     echo "error: unexpected package-version rejection: ${output}" >&2
     exit 1
 fi

@@ -7,33 +7,6 @@ usage() {
 
 semver_pattern='^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'
 
-semver_greater_than() {
-    local candidate="${1}"
-    local baseline="${2}"
-    local candidate_parts
-    local baseline_parts
-    local index
-    local candidate_part
-    local baseline_part
-
-    IFS=. read -r -a candidate_parts <<< "${candidate}"
-    IFS=. read -r -a baseline_parts <<< "${baseline}"
-    for index in 0 1 2; do
-        candidate_part="${candidate_parts[${index}]}"
-        baseline_part="${baseline_parts[${index}]}"
-        if [[ "${candidate_part}" == "${baseline_part}" ]]; then
-            continue
-        fi
-        if (( ${#candidate_part} != ${#baseline_part} )); then
-            (( ${#candidate_part} > ${#baseline_part} ))
-            return
-        fi
-        [[ "${candidate_part}" > "${baseline_part}" ]]
-        return
-    done
-    return 1
-}
-
 check_only=false
 if [[ "${1:-}" == --check ]]; then
     check_only=true
@@ -62,7 +35,9 @@ else
     new_version="$(bash scripts/ci/next-release-version.sh "$previous_version" "$requested")"
 fi
 
-if ! semver_greater_than "${new_version}" "${previous_version}"; then
+order="$(perl "$(dirname "${BASH_SOURCE[0]}")/../../.shared-tooling/helpers/scripts/ci/compare-stable-versions.pl" \
+    "${new_version}" "${previous_version}")"
+if [[ "$order" != 1 ]]; then
     echo "error: target version ${new_version} must be greater than ${previous_version}" >&2
     exit 1
 fi
@@ -89,63 +64,11 @@ if [[ "${check_only}" == true ]]; then
     exit 0
 fi
 
-# Capture only files this bump mutates, including any existing user edits.
-# Failed updates/checks and catchable interruptions restore that exact state.
-backup_directory="$(mktemp -d "${TMPDIR:-/tmp}/ic-timers-bump.XXXXXX")"
-metadata_files=(Cargo.toml Cargo.lock CHANGELOG.md)
-mutation_started=false
-bump_completed=false
-cleanup() {
-    local exit_status=$?
-    local rollback_failed=false
-    local path
-    trap - EXIT
-    if [[ "${mutation_started}" == true && "${bump_completed}" != true ]]; then
-        echo 'error: version preparation failed; restoring release metadata' >&2
-        for path in "${metadata_files[@]}"; do
-            if [[ -f "${backup_directory}/${path}" ]]; then
-                if ! cp -p -- "${backup_directory}/${path}" "${path}"; then
-                    rollback_failed=true
-                fi
-            elif ! rm -f -- "${path}"; then
-                rollback_failed=true
-            fi
-        done
-        if [[ "${rollback_failed}" == true ]]; then
-            echo "error: rollback incomplete; originals preserved in ${backup_directory}" >&2
-            exit 1
-        fi
-        if [[ "${exit_status}" == 0 ]]; then exit_status=1; fi
-    fi
-    rm -rf -- "${backup_directory}"
-    exit "${exit_status}"
-}
-trap cleanup EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
-for path in "${metadata_files[@]}"; do
-    if [[ -L "${path}" ]] || [[ -e "${path}" && ! -f "${path}" ]]; then
-        echo "error: release metadata must be a regular file: ${path}" >&2
-        exit 1
-    fi
-    mkdir -p -- "${backup_directory}/$(dirname -- "${path}")"
-    if [[ -e "${path}" ]]; then
-        cp -p -- "${path}" "${backup_directory}/${path}"
-    fi
-done
-mutation_started=true
-
-IC_TIMERS_RELEASE_PREVIOUS="${previous_version}" \
-    bash scripts/release/finalize-changelog.sh "${new_version}" "${release_date}"
-
-bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh" set "${previous_version}" "${new_version}"
-# Preserve external dependency selections; update every local workspace member.
-bash scripts/release/update-local-lock.sh Cargo.lock "$previous_version" "$new_version"
-
-# Version mutation must leave the complete root workspace graph coherent.
-# Behavioral evidence belongs to the user-operated deployment release gate.
-bash scripts/release/check-lockfiles.sh
-bump_completed=true
+# Shared owns the byte-preserving transaction and coordinated graph checks.
+# Local impact, tag, changelog preflight and advisory policy remain above.
+RELEASE_PREVIOUS="$previous_version" RELEASE_VERSION="$new_version" RELEASE_DATE="$release_date" \
+    bash "$(dirname "${BASH_SOURCE[0]}")/../../.shared-tooling/helpers/scripts/ci/cargo-release-metadata.sh" \
+    prepare ic-timers
 
 echo "Bumped: ${previous_version} -> ${new_version}"
 echo "Review with git diff; deployment validation, commits, tags, and pushes are user-owned."

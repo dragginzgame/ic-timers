@@ -2,50 +2,36 @@
 
 # Current status
 
-Last updated: 2026-10-13
+Last updated: 2026-10-14
 
 This handoff links [release evidence](../releasing.md),
 [Shared adoption](../shared-tooling.md), [safety](../../SAFETY.md) and
 [the archive](archive-2026-10-10.md).
 
-## Delivered 0.22.1 and prepared 0.22.2
+## Draft tooling ownership PR
 
-The maintainer reports 0.22.1 live; current HEAD is
-`52a0fce4082b087342f5b04db717e94bf5448193`. Shared remains adopted at 0.10.2.
-The incoming root lock selects Metrics 0.9.1 and Host artifacts/fs/process 0.17.6
-and is preserved separately from this task. No agent release execution is pending.
-The matching [main CI run](https://github.com/dragginzgame/ic-timers/actions/runs/38421039455)
-passes Linux CI, probe lint, PocketIC recovery/cohorts, MSRV and Apple Silicon.
-Intel is running; issues #51 and #52 still require complete hosted
-native acceptance. The earlier 0.22.0 main run is now cancelled.
+The maintainer requested PR delivery. Shared
+[PR #180](https://github.com/dragginzgame/shared-tooling/pull/180) provides committed
+canonical `5732ded141e057b27eb96400b0f7bc2820d42d79` (based on Shared 0.12.5, pending 0.13.0).
+The linked Timers draft adopts that exact commit through three canonical exports
+(**77/40/18** files), with complete previews before apply. It delegates fixture
+probes, safe evidence orchestration and literal metadata transactions, removing
+the local setter/lock updater. Product assertions and release policy remain.
 
-The [0.22.2 contributor cleanup](../releasing.md#prepared-0222-contributor-cleanup)
-prepares the [#53](https://github.com/dragginzgame/ic-timers/issues/53) downloaded
-verifier catalog fix, with an actual CLI fixture. Make, collection and
-verification select the qualified Binaryen 132 exception. Automatic cross-caller detection remains upstream
-[Shared #168](https://github.com/dragginzgame/shared-tooling/issues/168).
-Publication delegates clean-source inspection to the already adopted Shared
-helper, retaining the commit guard. Probe single-result Candid calls reuse
-Testkit 0.37.0; multi-argument replies and private executor rejection remain raw.
-Timer source/API and canister measurements are unchanged by the harness cleanup.
+This isolated PR includes the accepted repository-only 0.22.3 ownership batch.
+The normal checkouts remain untouched. Cargo inputs and tool catalogs match
+Timers 0.22.2; incoming Host 0.17.11 lock changes and AGENTS shortening are excluded.
+The current numbered draft is undated and Cargo version remains 0.22.2. Upstream
+integration and full native hosted qualification remain outstanding; no release,
+PocketIC execution, build or setup is implied by the focused shell evidence.
 
-The root Metrics requirement is now 0.9.1, matching the incoming selection.
-Its cached archive/checksum and released source are reviewed; arithmetic source
-and public summary types are unchanged from 0.9.0. Locked/offline native library
-and test-target compilation passes on Rust 1.99 and 1.88; Wasm library compilation
-passes on 1.88. No dependency fetch, tests, Clippy or optimized builds ran.
-The [renewed audit](../audits/code-hygiene-2026-10-13-01.md) reviews current timer
-authority, ownership, semantics and tooling. README API/startup guidance follows
-the delivered 0.22 API and the harness's single 60-second deadline.
-The source review finds no new timer correctness defect. Two std import paths
-remain a trivial probe convention correction; identity sharing and extreme
-provider-key reuse remain research, with no code change or cost claim.
-
-Before-images and incoming/index/ref observations stay at
-`/tmp/ic-timers-cleanup0222.me2TVYCf/`. Formatting, Bash syntax and diff checks
-pass; focused fixtures, native probe compilation/Clippy and PocketIC execution
-have not run. Tests, lint and probe builds require scoped maintainer approval.
-The single draft combines this contributor cleanup with the Metrics declaration.
+Focused Shared retention, rollback, collector and existing host/IC action callers
+pass. Timers retention, evidence, preparation and release-gate fixtures pass;
+ShellCheck passes. Exact-export module-copy and snapshot qualification are recorded
+with [adoption](../shared-tooling.md#shared-ownership-pr-adoption). Before-images,
+previews, isolated source and logs remain at
+`/tmp/ic-timers-owner-reductions.PaAdlrMw/`. The draft must be refreshed to the
+integrated upstream commit before delivery if its identity changes.
 
 ## Prior 0.22.0 delivery evidence
 

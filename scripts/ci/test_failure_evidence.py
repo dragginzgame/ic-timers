@@ -38,6 +38,7 @@ class DownloadedEvidenceTests(unittest.TestCase):
                             str(root), str(workspace)], check=True)
             for name in (
                 "scripts/ci/qualify-failure-evidence.sh",
+                "scripts/ci/qualify-hosted-failure.sh",
                 "scripts/ci/verify-file-checksum.sh",
                 "scripts/dev/install-host-tools.sh",
                 "scripts/dev/tool-store.sh",
