@@ -1,5 +1,32 @@
 # Shared Tooling adoption
 
+## Refreshed Shared owner PR adoption
+
+Shared [PR #180](https://github.com/dragginzgame/shared-tooling/pull/180) now selects
+`fdacbd85440873bb06598e18a2013c15dc7eefe0`, including reviewed 0.12.8 and the pending 0.13.0
+literal-preparation contract. It is an exact reviewed contribution source, not a
+published 0.13.0 claim. All three canonical exports preserve their selected roots;
+the resulting payload counts are **79/41/18**, including publication, CI-scope
+and Rust-toolchain guides. The local overlay follows the adopted focused
+validation cadence after the maintainer's 2026-10-14 instruction.
+
+The branch is refreshed on released Timers 0.22.3 and retains its Testkit 0.40
+Cargo graph. Earlier below-source evidence is historical. Generic graph cases
+now live in Shared's canonical fixture; Timers keeps its adapter/worktree smoke
+checks and complete product gates. This draft remains dependent on owner
+integration and needs a new exact export if the integrated identity differs.
+
+Focused current-source fixture completion, partial-failure evidence, literal
+version preparation, graph adapter, selected-commit admission, release-gate
+execution and snapshot regression checks pass. Changed caller ShellCheck passes.
+These are Linux/modern-Bash checks with disposable inputs/stubs, not real release
+execution or native macOS/PocketIC evidence.
+
+Current qualification and source custody live at
+`/tmp/ic-timers-next-three.0lpn1xkr/`; Linux focused checks do not qualify native
+macOS or the full release gate. No real workspace version or publication ran.
+
+
 ## Shared ownership PR adoption
 
 The maintainer requested PR delivery for the three remaining ownership reductions.

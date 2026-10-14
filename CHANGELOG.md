@@ -2,16 +2,27 @@
 
 All notable changes to this project are recorded here.
 
-## [0.22.3]
+## [0.22.4]
 
 ### Development
 
-- Adopt the committed Shared Tooling ownership PR across the three reviewed
-  snapshots, based on 0.12.5 with its pending 0.13.0 command contract. Use its
+- Adopt the reviewed Shared owner PR across all three canonical snapshots, based
+  on 0.12.8, and use its focused development/handoff validation cadence.
+- Delegate literal metadata preparation, failure rollback, safe partial-evidence
+  collection and explicit fixture retention probes to their Shared owners.
+  Remove the local workspace-version setter and lock updater; keep source,
+  ordering, identity/scenario and complete product release gates explicit.
+- Keep generic graph regressions upstream and qualify the local adapter's
+  selected worktree, helper binding and failure propagation.
+
+## [0.22.3] - 2026-10-14
+
+### Development
+
+- Adopt Shared Tooling 0.12.3 across the three reviewed snapshots. Use its
   literal workspace-version renderer, fixture EXIT lifecycle and coordinated
   release metadata checker instead of local copies. The refresh includes the
-  mixed-snapshot inventory fixture repair and exact-version module without
-  changing tool selections.
+  mixed-snapshot inventory fixture repair without changing tool selections.
 - Check the complete workspace's lock identities against the selected release
   tree, retaining local manifest ordering, staged-source admission and Testkit
   preparation.
@@ -23,11 +34,6 @@ All notable changes to this project are recorded here.
 - Delegate generic downloaded archive/tool-receipt verification and controlled
   hosted failure stages to Shared, retaining Timers' identity and scenario
   assertions, qualified pin selections and product gates.
-
-- Delegate fixture failure probes, safe tool-evidence collection and the
-  byte-preserving release metadata transaction to their canonical Shared owners.
-  Retain local host/scenario assertions, qualified tool catalogs, preflight
-  policy and failure status; remove the local version setter and lock updater.
 
 ## [0.22.2] - 2026-10-14
 

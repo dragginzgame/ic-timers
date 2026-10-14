@@ -3168,18 +3168,22 @@ gate can also be run directly before committing, tagging and pushing:
 make release-verify
 ```
 
-The maintainer's 2026-10-12 exception allows contributors to run only the existing
-compile check during development, with already prepared inputs:
+Ordinary development and handoff follow Shared's
+[validation cadence](../DRAGGINZGAME.md#validation-and-evidence), adopted by the
+maintainer on 2026-10-14. Use the local command map in the
+[hygiene overlay](audits/code-hygiene.md#inspection-and-validation-commands)
+for affected library/probe compilation, tests, lint and shell contracts.
+For example, prepared offline library compilation remains available:
 
 ```text
 CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 make --no-print-directory check
 ```
 
-This compiles library test targets without executing them. It neither fetches
-missing inputs nor replaces tests, Clippy, MSRV, probes, PocketIC or the release
-gate. Contributors wait for active owner validation to finish before compiling
-or mutating source. See [AGENTS.md](../AGENTS.md) and
-[issue #48](https://github.com/dragginzgame/ic-timers/issues/48).
+The former compile-only permission is superseded by that cadence. Focused checks
+retain their own source/host scope and do not replace the complete owner release
+gate. Wait for active validation before mutating or compiling its inputs; preserve
+Cargo selection and evidence. Versions, release execution and publication remain
+maintainer-owned; see [AGENTS.md](../AGENTS.md).
 
 The gate starts with `make fetch`: `cargo fetch --manifest-path Cargo.toml --locked`
 for the single root workspace, without restricting the target. This explicitly prepares

@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.12.5
+# version	0.12.8
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	5732ded141e057b27eb96400b0f7bc2820d42d79
+revision	fdacbd85440873bb06598e18a2013c15dc7eefe0
 # entrypoint	audits/README.md
 # entrypoint	audits/code-hygiene.md
 # entrypoint	audits/flow-convergence-and-duplication.md
@@ -44,7 +44,7 @@ file	35fd87d36a09ed0971841abf28535d43470c713a82581c2251b924da1ab8f484	-	audits/f
 file	ffdca09602c44c8aff8fc2a17588b20eb6a56e2e71fb6d42ad75087fdd65819b	-	audits/complexity-and-technical-debt.md
 file	1b64cf2ba0393ab329ec29eb05a696d47ef5933f5ab9bff6e1fe4a7e7b294075	-	audits/module-surface-hardening.md
 file	8aa442dcbe08e4092e3f5209ff5d6feac188f4959c63171dd9e6dfbff8d57366	-	audits/module-cleanup.md
-file	5699e53276fa04fe047712c8e8f4c368ee9dae39c13c6ed21f3bc81c3649822b	-	docs/consuming-snapshots.md
+file	ec9e77981a80ce16ad2ba097f4660535bc49ae4e1236c23a22b449349ec412e6	-	docs/consuming-snapshots.md
 file	15315edad497b9b165671c3f57e9f56e6ba1d206bbc635eb0ff51afaa8456bb3	-	docs/provenance.md
 file	922d482affa0a2538e3fca2a3eb07b266c7e07aabf96a71d8b8e987d97ff216a	-	docs/ic-tools.md
 file	b4e4f39c55b236fdd57d56f754b69b35980a8e7cb792a60e7e1bf20ff40e4cde	-	docs/local-setup.md
@@ -73,6 +73,7 @@ file	afacaf5289ec27b932ea6edd7e3827a9b8ec9e4bd03d2d5009adf674d258cf80	-	scripts/
 file	b936baeb21374c8718c4f35b00cd3ee09350f2315f4367559cf922ef42f68292	-	scripts/dev/cargo-tool-build.sh
 file	d70f32239de9ea0d2d2a3a0eebd2fa862746807cd797f512f95b2e46fc5faa67	x	.githooks/pre-commit
 file	9e32385247296ce95d2b15b1290c64e6b6dff15716c1c139f21ab5e5128f4be3	x	scripts/ci/check-make-execution.sh
+file	ef2ba87f4a34406c355cef9d101ec97dce72990f04b16ded721761bb59ec4df3	-	docs/rust-toolchains.md
 file	05da2ac2b805c7cf9597d4af75983efc1268d619a0fb1e42c7f6d3fdb481880b	-	ci/ic-tools.tsv
 file	a46f24404cdf654f576ba7c2ca4ff359ac00eb25ffad2e3f37d9d43ea98dc225	x	scripts/ci/cargo-tool-cache-key.sh
 file	a3c4b4868cc90165461d99611321342b2d37b5cf89727a97d781fd3ec7867bab	-	scripts/ci/fixture-lifecycle.sh

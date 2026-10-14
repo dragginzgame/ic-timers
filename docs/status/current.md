@@ -8,30 +8,23 @@ This handoff links [release evidence](../releasing.md),
 [Shared adoption](../shared-tooling.md), [safety](../../SAFETY.md) and
 [the archive](archive-2026-10-10.md).
 
-## Draft tooling ownership PR
+## Refreshed tooling ownership PR
 
-The maintainer requested PR delivery. Shared
-[PR #180](https://github.com/dragginzgame/shared-tooling/pull/180) provides committed
-canonical `5732ded141e057b27eb96400b0f7bc2820d42d79` (based on Shared 0.12.5, pending 0.13.0).
-The linked Timers draft adopts that exact commit through three canonical exports
-(**77/40/18** files), with complete previews before apply. It delegates fixture
-probes, safe evidence orchestration and literal metadata transactions, removing
-the local setter/lock updater. Product assertions and release policy remain.
+This branch is refreshed on released Timers 0.22.3 and adopts Shared owner
+`fdacbd85440873bb06598e18a2013c15dc7eefe0` through canonical root/audit/helper exports.
+Shared PR #180 retains the pending literal-preparation hard cut; this downstream
+contribution remains repository-only and compatible. Cargo inputs match current
+released main, including Testkit 0.40, rather than the superseded 0.22.2 base.
+Ordinary focused validation follows Shared's adopted cadence; full release and
+publication remain owner-operated. The local setter/lock updater are removed,
+while product assertions, source/order admission and complete gates remain.
 
-This isolated PR includes the accepted repository-only 0.22.3 ownership batch.
-The normal checkouts remain untouched. Cargo inputs and tool catalogs match
-Timers 0.22.2; incoming Host 0.17.11 lock changes and AGENTS shortening are excluded.
-The current numbered draft is undated and Cargo version remains 0.22.2. Upstream
-integration and full native hosted qualification remain outstanding; no release,
-PocketIC execution, build or setup is implied by the focused shell evidence.
-
-Focused Shared retention, rollback, collector and existing host/IC action callers
-pass. Timers retention, evidence, preparation and release-gate fixtures pass;
-ShellCheck passes. Exact-export module-copy and snapshot qualification are recorded
-with [adoption](../shared-tooling.md#shared-ownership-pr-adoption). Before-images,
-previews, isolated source and logs remain at
-`/tmp/ic-timers-owner-reductions.PaAdlrMw/`. The draft must be refreshed to the
-integrated upstream commit before delivery if its identity changes.
+All three integrity checks, six affected shell fixtures, snapshot regressions
+and changed caller ShellCheck pass on the refreshed source. No full gate is run.
+Review and qualification are at `/tmp/ic-timers-next-three.0lpn1xkr/`.
+Upstream integration remains outstanding; refresh this exact export if its source
+identity changes. The new 0.22.4 draft is undated. No release/version mutation,
+setup, PocketIC execution or native macOS qualification is claimed here.
 
 ## Prior 0.22.0 delivery evidence
 
