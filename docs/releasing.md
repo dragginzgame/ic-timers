@@ -4316,3 +4316,13 @@ not runtime behavior or executable setup identity. Cargo inputs, tool pins and
 real index entries are preserved. No new product code, tests, lint, setup or
 release execution is added; the focused 0.21.4 permission does not cover these
 new helper bytes. The complete release gate remains maintainer-operated.
+
+## Actual tag admission and regression ownership
+
+The tag-truth job retains workspace/event-tag equality, exact annotated tag
+admission, main reachability and the complete locked graph. It checks all three
+actual snapshot receipts directly. It does not dispatch the release-check
+regression roster; the focused actual-workflow fixture remains in that roster,
+owned by PR/main and the complete release gate. Existing tool setup and failure
+collection/upload remain unchanged. Main reachability and tag success do not
+prove completion of the independent native/full source qualification.

@@ -7,7 +7,8 @@ All notable changes to this project are recorded here.
 ### Fixed
 
 - Keep tag CI focused on actual tag, snapshot and locked-graph admission instead
-  of repeating the broad release regression suite
+  of repeating the broad release regression suite. Check the three actual
+  adopted snapshots directly and qualify the tag step's dispatch boundary
   ([#55 — Separate tag admission from release regressions](https://github.com/dragginzgame/ic-timers/issues/55)).
 
 ## [0.22.2] - 2026-10-14
