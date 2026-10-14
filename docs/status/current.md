@@ -8,6 +8,17 @@ This handoff links [release evidence](../releasing.md),
 [Shared adoption](../shared-tooling.md), [safety](../../SAFETY.md) and
 [the archive](archive-2026-10-10.md).
 
+## Prepared narrow tag admission
+
+Issue #55 is prepared on an isolated branch stacked on the ownership draft. Tag
+CI prepares only host parsers and locked sources, then checks actual push identity,
+clean source, annotated matching tag, main reachability, leading finalized notes,
+three snapshot receipts and the complete graph. It invokes no regression roster,
+IC/Cargo-tool provisioning or Testkit setup. The new fixture joins release-check
+and the lifecycle roster; PR/main and the complete native release gate remain.
+Focused qualification is pending approval. Other incoming dependency edits remain
+in their own working checkout. No merge, tag or release execution is performed.
+
 ## Draft tooling ownership PR
 
 The maintainer requested PR delivery. Shared

@@ -2,7 +2,7 @@
 	actions-check build bump-x check ci clean clippy docs-check ensure-clean fetch help \
 	install-hooks install-testkit-server major minor msrv package patch pocketic-cohorts pocketic-watchdog publish release-check \
 	pocketic-check provider-check \
-	release-impact release-tag-check release-verify repository-check shell-check test testing-check update-dev \
+	release-impact release-tag-admission release-tag-check release-verify repository-check shell-check test testing-check update-dev \
 	version wasm-check
 
 MSRV ?= 1.88.0
@@ -181,6 +181,7 @@ release-check:
 	bash scripts/release/test-release-gate.sh
 	bash scripts/release/test-version-preparation.sh
 	bash scripts/release/test-tag-at-head.sh
+	bash scripts/release/test-ci-tag.sh
 	bash scripts/ci/test-testkit-server.sh
 	bash scripts/ci/test-git-hook.sh
 	bash scripts/ci/test-repository-checks.sh
@@ -238,6 +239,10 @@ major:
 bump-x:
 	@if [ -z "$(VERSION)" ]; then echo "error: VERSION=x.y.z is required" >&2; exit 2; fi
 	bash scripts/release/bump-version.sh "$(VERSION)"
+
+# Pure actual-event admission; fixture regression remains in release-check.
+release-tag-admission:
+	@bash scripts/release/check-ci-tag.sh
 
 release-tag-check:
 	@bash scripts/release/check-tag-at-head.sh

@@ -314,27 +314,16 @@ jobs:
       - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067
         with:
           toolchain: ${{ env.IC_TIMERS_INTERNAL_TOOLCHAIN }}
-          components: rustfmt
       - name: Verify release tag
         shell: bash
         run: |
-          # The shared version reader needs the explicitly prepared parsers.
-          make install-tools 2>&1 | tee "$RUNNER_TEMP/tools-install.log"
-          make tools-check 2>&1 | tee "$RUNNER_TEMP/tools-check.log"
-          export PATH="$GITHUB_WORKSPACE/.tools/host/bin:$GITHUB_WORKSPACE/.tools/ic/bin:$GITHUB_WORKSPACE/.tools/rust/common/bin:$PATH"
-          expected_tag="v$(make --no-print-directory version)"
-          if [[ "$GITHUB_REF_NAME" != "$expected_tag" ]]; then
-            echo "error: event tag $GITHUB_REF_NAME does not match $expected_tag" >&2
-            exit 1
-          fi
-          if ! git merge-base --is-ancestor HEAD origin/main; then
-            echo "error: release tag commit is not reachable from main" >&2
-            exit 1
-          fi
-          make release-tag-check
+          # Tag admission needs Cargo metadata and the reviewed host parsers.
+          # IC tools, Cargo extensions, Testkit and regressions belong to PR/main.
+          make install-host-tools 2>&1 | tee "$RUNNER_TEMP/tools-install.log"
+          make host-tools-check 2>&1 | tee "$RUNNER_TEMP/tools-check.log"
+          export PATH="$GITHUB_WORKSPACE/.tools/host/bin:$PATH"
           make fetch
-          bash scripts/release/check-lockfiles.sh
-          make release-check
+          make release-tag-admission
       - name: Archive failure evidence
         if: ${{ failure() }}
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}

@@ -6,6 +6,11 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Restrict tag CI to actual event/checkout/version identity, annotated tag and
+  main reachability, finalized notes, snapshot integrity and the complete locked
+  graph. Prepare only host parsers; retain broad regressions and native/product
+  qualification in PR/main and the normal release gate. ([#55](https://github.com/dragginzgame/ic-timers/issues/55))
+
 - Adopt the committed Shared Tooling ownership PR across the three reviewed
   snapshots, based on 0.12.5 with its pending 0.13.0 command contract. Use its
   literal workspace-version renderer, fixture EXIT lifecycle and coordinated

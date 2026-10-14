@@ -23,6 +23,7 @@ fixtures=(
     scripts/ci/test-repository-checks.sh:repository_root:temporary_root
     scripts/ci/test-shared-snapshots.sh:root:fixture
     scripts/ci/test-testkit-server.sh:root:fixture
+    scripts/release/test-ci-tag.sh:repository_root:fixture
     scripts/release/test-committed-release.sh:root:fixture
     scripts/release/test-finalize-changelog.sh:repository_root:temporary_root
     scripts/release/test-lockfiles.sh:repository_root:temporary_root

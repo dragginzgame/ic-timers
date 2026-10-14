@@ -4354,3 +4354,18 @@ not runtime behavior or executable setup identity. Cargo inputs, tool pins and
 real index entries are preserved. No new product code, tests, lint, setup or
 release execution is added; the focused 0.21.4 permission does not cover these
 new helper bytes. The complete release gate remains maintainer-operated.
+
+## Actual tag admission
+
+`make release-tag-admission` inspects the tag-push checkout, requiring its exact
+CI commit/ref, a clean source tree, version-matching annotated tag, main
+reachability, leading finalized changelog section, three snapshot receipts and
+the complete locked/offline workspace graph. It performs no setup, build, test,
+Cargo extension or PocketIC dispatch. Reachability does not prove main CI passed.
+
+The tag job prepares/checks only the shared host parsers and fetches the locked
+sources before this admission. The existing `release-check` fixture roster stays
+in PR/main and the complete user-operated release gate; its new negative fixtures
+exercise actual tag admission and the tag workflow's dispatch boundary. Failure
+collection/upload remain unchanged. Qualification of required native hosts remains
+independent of tag success. This addresses #55 without weakening native gates.
