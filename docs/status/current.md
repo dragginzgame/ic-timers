@@ -2,50 +2,46 @@
 
 # Current status
 
-Last updated: 2026-10-13
+Last updated: 2026-10-14
 
 This handoff links [release evidence](../releasing.md),
 [Shared adoption](../shared-tooling.md), [safety](../../SAFETY.md) and
 [the archive](archive-2026-10-10.md).
 
-## Delivered 0.22.1 and prepared 0.22.2
+## Delivered 0.22.2 and prepared 0.22.3
 
-The maintainer reports 0.22.1 live; current HEAD is
-`52a0fce4082b087342f5b04db717e94bf5448193`. Shared remains adopted at 0.10.2.
-The incoming root lock selects Metrics 0.9.1 and Host artifacts/fs/process 0.17.6
-and is preserved separately from this task. No agent release execution is pending.
-The matching [main CI run](https://github.com/dragginzgame/ic-timers/actions/runs/38421039455)
-passes Linux CI, probe lint, PocketIC recovery/cohorts, MSRV and Apple Silicon.
-Intel is running; issues #51 and #52 still require complete hosted
-native acceptance. The earlier 0.22.0 main run is now cancelled.
+Current HEAD remains `26f1cdfc399fd4a321b73f9484a2234cae8a43de` (0.22.2).
+The compatible repository-only [0.22.3 batch](../releasing.md#prepared-0223-shared-owner-cleanup)
+now adopts committed Shared 0.12.3
+`ac68c74439e13f19229a35f424f968c64325cc44` through all three canonical exports
+(**75/40/17** payloads). The [adoption owner](../shared-tooling.md#prepared-shared-tooling-0123)
+records reviewed policy, preserved roots and exact qualification scope. Dirty
+Shared 0.12.4 work is excluded; local validation/commit/release exceptions remain.
 
-The [0.22.2 contributor cleanup](../releasing.md#prepared-0222-contributor-cleanup)
-prepares the [#53](https://github.com/dragginzgame/ic-timers/issues/53) downloaded
-verifier catalog fix, with an actual CLI fixture. Make, collection and
-verification select the qualified Binaryen 132 exception. Automatic cross-caller detection remains upstream
-[Shared #168](https://github.com/dragginzgame/shared-tooling/issues/168).
-Publication delegates clean-source inspection to the already adopted Shared
-helper, retaining the commit guard. Probe single-result Candid calls reuse
-Testkit 0.37.0; multi-argument replies and private executor rejection remain raw.
-Timer source/API and canister measurements are unchanged by the harness cleanup.
+The accepted reductions reuse canonical rendering, fixture cleanup, coordinated
+graph/member projection, exact version ordering and generic evidence mechanics.
+Local rollback, source/candidate checks, selected-tree sorting, identity/scenario
+assertions, qualified catalogs, Testkit and native/product gates remain explicit.
+All 15 previously approved shell fixtures and the Python downloaded-evidence
+suite pass at the earlier recorded inputs. Three current snapshot checks and the
+locked/offline root graph pass; the repeated snapshot fixture passes after refresh.
+No native macOS/PocketIC or complete release-gate result is inferred.
 
-The root Metrics requirement is now 0.9.1, matching the incoming selection.
-Its cached archive/checksum and released source are reviewed; arithmetic source
-and public summary types are unchanged from 0.9.0. Locked/offline native library
-and test-target compilation passes on Rust 1.99 and 1.88; Wasm library compilation
-passes on 1.88. No dependency fetch, tests, Clippy or optimized builds ran.
-The [renewed audit](../audits/code-hygiene-2026-10-13-01.md) reviews current timer
-authority, ownership, semantics and tooling. README API/startup guidance follows
-the delivered 0.22 API and the harness's single 60-second deadline.
-The source review finds no new timer correctness defect. Two std import paths
-remain a trivial probe convention correction; identity sharing and extreme
-provider-key reuse remain research, with no code change or cost claim.
+This inspection began with the existing batch already dirty and Host
+artifacts/fs/process 0.17.11 in the incoming lockfile. Their official archives and
+producer commit are verified; Testkit 0.38.0 remains the direct dependency owner.
+No additional Host API or direct dependency is needed. Host 0.17.10 CI passed;
+exact 0.17.11 and Shared 0.12.3 CI are still running at inspection. The old frozen
+0.12.2 inventory-fixture failure retains its historical scope; the fix now exists
+in 0.12.3 and is not a newly passing full-suite receipt. Issues #51/#52 retain
+latest-delivered hosted acceptance.
 
-Before-images and incoming/index/ref observations stay at
-`/tmp/ic-timers-cleanup0222.me2TVYCf/`. Formatting, Bash syntax and diff checks
-pass; focused fixtures, native probe compilation/Clippy and PocketIC execution
-have not run. Tests, lint and probe builds require scoped maintainer approval.
-The single draft combines this contributor cleanup with the Metrics declaration.
+Evidence stays at `/tmp/ic-timers-upstream0123.3juyp1lg/`; earlier cleanup and
+qualification are at `/tmp/ic-timers-three-owners.ylz2aykc/` and
+`/tmp/ic-timers-shared0120.UujtaKfH/`. Incoming Cargo inputs, tool selections,
+real index and refs are preserved. No version bump or real release execution ran.
+The [2026-10-13 audit](../audits/code-hygiene-2026-10-13-01.md) keeps its original
+source/method scope; no new runtime or Wasm claim follows from this inspection.
 
 ## Prior 0.22.0 delivery evidence
 

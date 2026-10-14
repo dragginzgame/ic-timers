@@ -17,16 +17,9 @@ fixture="${fixture%/.}"
 export SHARED_TOOLING_STORE="$fixture/shared-store"
 # Bash 3.2 can report zero on nounset; cleanup also requires completion.
 fixture_complete=false
-finish() {
-    local status=$?
-    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
-    if [[ "$status" == 0 ]]; then rm -rf -- "${fixture}"
-    else
-        printf "Failed evidence fixture retained: %s\n" "${fixture}" >&2
-    fi
-    exit "$status"
-}
-trap finish EXIT
+# shellcheck source=scripts/ci/fixture-lifecycle.sh
+source "$root/scripts/ci/fixture-lifecycle.sh"
+trap 'fixture_finish "$?" "$fixture" "Failed evidence fixture retained"' EXIT
 export GITHUB_WORKSPACE="$fixture/repo" RUNNER_TEMP="$fixture/runner"
 export GITHUB_SHA=fixture-event-sha GITHUB_JOB=fixture-job
 export RUNNER_OS=fixture-os RUNNER_ARCH=fixture-arch GITHUB_RUN_ID=123 GITHUB_RUN_ATTEMPT=2
@@ -607,7 +600,7 @@ mv "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" "$fixture/retained-evidence.
 # CI identity, a substitute download and a failing scratch Make recipe. This
 # proves local retained bytes/status; it does not dispatch or qualify uploads.
 mkdir -p "$GITHUB_WORKSPACE/scripts/ci" "$GITHUB_WORKSPACE/scripts/dev" "$GITHUB_WORKSPACE/ci"
-for script in qualify-failure-evidence run-validation-targets check-make-execution verify-file-checksum; do
+for script in qualify-failure-evidence qualify-hosted-failure run-validation-targets check-make-execution verify-file-checksum; do
     cp "$root/scripts/ci/$script.sh" "$GITHUB_WORKSPACE/scripts/ci/"
 done
 cp "$root/scripts/dev/install-host-tools.sh" "$root/scripts/dev/tool-store.sh" "$GITHUB_WORKSPACE/scripts/dev/"
@@ -672,7 +665,7 @@ git init -q "$copied"
 mkdir -p "$copied/.git/objects/info"
 printf '%s\n' "$objects" > "$copied/.git/objects/info/alternates"
 git -C "$copied" update-ref HEAD "$(git -C "$root" rev-parse HEAD)"
-for script in collect-failure-evidence qualify-failure-evidence archive-evidence \
+for script in collect-failure-evidence qualify-failure-evidence qualify-hosted-failure archive-evidence \
     select-tool-evidence run-validation-targets check-make-execution verify-file-checksum \
     verify-evidence-checksums; do
     cp "$root/scripts/ci/$script.sh" "$copied/scripts/ci/"

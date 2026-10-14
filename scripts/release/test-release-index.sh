@@ -11,15 +11,14 @@ export RELEASE_INDEX_REAL_CARGO="$(command -v cargo)"
 fixture="$(mktemp -d "${TMPDIR:-/tmp}/release-index-check.XXXXXX")"
 # Bash 3.2 can report zero on nounset; cleanup also requires completion.
 fixture_complete=false
+# shellcheck source=scripts/ci/fixture-lifecycle.sh
+source "$root/scripts/ci/fixture-lifecycle.sh"
 finish() {
     local status=$?
-    [[ "$fixture_complete" == true || "$status" != 0 ]] || status=1
-    if [[ "$status" == 0 ]]; then rm -rf -- "${fixture}"
-    else
+    if [[ "$fixture_complete" != true || "$status" != 0 ]]; then
         if [[ -f "$fixture/output" ]]; then cat "$fixture/output" >&2 || :; fi
-        printf "Failed release-index fixture retained: %s\n" "${fixture}" >&2
     fi
-    exit "$status"
+    fixture_finish "$status" "$fixture" 'Failed release-index fixture retained'
 }
 trap finish EXIT
 git clone -q --no-local --depth 1 "$root" "$fixture/repo"
@@ -35,7 +34,9 @@ set -euo pipefail
 case "$1" in
     locate-project) exec "$RELEASE_INDEX_REAL_CARGO" "$@" ;;
     sort) ;;
-    metadata) printf '{"packages":[{"name":"ic-timers","version":"%s"}]}\n' "$RELEASE_VERSION" ;;
+    # Shared admission checks the complete workspace/lock roster. Read actual
+    # locked metadata in this disposable clone; no package compilation runs.
+    metadata) exec "$RELEASE_INDEX_REAL_CARGO" "$@" ;;
     fetch)
         printf '%s\n' "$*" >> "$FETCH_EVENTS"
         printf 'fetch\n' >> "$PREPARATION_EVENTS"

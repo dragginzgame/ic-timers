@@ -4,60 +4,23 @@ This file is normative for automated contributors.
 
 ## Shared baseline and local overlay
 
-- Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md)
-  from revision `626fc2bd3125195520fb870b92abfec11b01454d` (0.10.2). Its provenance and
-  refresh boundary are recorded in [the adoption record](docs/shared-tooling.md).
-  The remainder of this file is the IC Timers local overlay; a moving sibling
-  checkout is not authority.
-- Apply the [shared audit methods](audits/README.md) from revision
-  `626fc2bd3125195520fb870b92abfec11b01454d`, recorded separately in
-  [.shared-tooling-audits.snapshot](.shared-tooling-audits.snapshot). That
-  supplemental snapshot also supplies pinned host/IC setup at the same
-  reviewed revision. The isolated
-  [Cargo helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot)
-  supplies the structured dependency checker, Cargo readers/rewrites,
-  annotated-tag checker and release-command adoption checker from
-  `626fc2bd3125195520fb870b92abfec11b01454d`. All three manifests record explicit
-  entrypoints and their complete derived payloads; future refreshes reuse those
-  roots. Review local callers and other bundles before changing root selection.
-  The exporter automatically retires only verified, unchanged owned payloads
-  outside the resulting closure; never hand-edit ownership records or use the
-  removed `--retire-file` option.
-  The root baseline snapshot owns
-  the formatter guard, Make execution admission and the adopted formatting/release
-  Make includes. Apply the
-  [dependency pinning rules](rules/dependency-pinning.md) with the exact local
-  [qualification exceptions](docs/releasing.md#dependency-pin-exceptions).
-  The [local hygiene overlay](docs/audits/code-hygiene.md) and adoption record scope
-  their product obligations. This supplements the pinned baseline's review
-  contract. Host, IC and Testkit server setup are explicit; verification is offline.
-  Testkit owns PocketIC provisioning, checksums and compatibility admission;
-  the local adapter selects its CLI from the one root lockfile. The paired baseline and maintenance
-  rule are adopted together; all three snapshots use the same reviewed revision.
-  Common setup/check/LOC, formatting, hook and release commands come from
-  [make/consumer.mk](make/consumer.mk);
-  Make, update-dev and CI select the complete host, IC and Cargo toolsets,
-  followed by the existing Testkit setup/check targets in the ordered local lists.
-  Shared Tooling owns common executable storage: host/IC and Cargo setup selects
-  verified shared bundles through checkout-local references. Cargo tools use the
-  standard tool-build environment and exact compiler/native/package/packaged-lock
-  identities; application flags and wrappers remain repository-owned. The shared
-  selector owns local Rust evidence and referenced physical generations. Adopt
-  only canonical installers; keep one store setting
-  across setup, checks and evidence. Retain earlier installations without an
-  old-bundle fallback, independent store manager or automatic deletion.
-  The snapshots own the default [host/Cargo catalog](ci/tool-versions.env) and
-  [IC catalog](ci/ic-tools.tsv). The consumer-owned
-  [qualified IC exception](ci/ic-tools-qualified.tsv) retains Binaryen 132
-  until consumer optimizer qualification supports replacing it; other versions
-  and digests match shared defaults. Make and failure-evidence collection select
-  that exception explicitly. It is excluded from immutable exports and contains
-  no PocketIC policy. A host override does not implicitly select Rust pins.
-  Optional helpers described in shared guides do not become local commands
-  without a separate caller adoption.
-  The linked [maintenance catalog](tasks/README.md) is included as reviewed
-  procedures; it activates no scheduler or agent. Local validation and release
-  exceptions below also apply to its task definitions.
+- Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md). Exact
+  revisions and payloads belong to the [baseline snapshot](.shared-tooling.snapshot),
+  [audit/setup snapshot](.shared-tooling-audits.snapshot) and
+  [Cargo helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot).
+  Review their roots and local callers together when refreshing; do not patch
+  exported files. See [adoption boundaries](docs/shared-tooling.md).
+- Common commands come from [make/consumer.mk](make/consumer.mk), with setup
+  and storage governed by [local setup](docs/local-setup.md). The ordered local
+  extensions prepare/check Testkit through the CLI selected by the root lockfile;
+  Testkit owns PocketIC server selection and admission.
+- Shared catalogs own default tool selections. The explicitly selected
+  [IC exception](ci/ic-tools-qualified.tsv) retains Binaryen 132 pending consumer
+  optimizer qualification. See [dependency exceptions](docs/releasing.md#dependency-pin-exceptions)
+  and the [local hygiene overlay](docs/audits/code-hygiene.md).
+- Shared [audits](audits/README.md) and [maintenance tasks](tasks/README.md)
+  are procedures, not activation of schedules, commands or optional callers.
+  The local validation and release exceptions below apply to them.
 - Maintainer-approved validation exception: tests, builds, lint gates and
   deployment validation are user-owned, including focused tests, except for
   the compile-only permission below. Do not run them without an explicit request.
@@ -184,9 +147,11 @@ This file is normative for automated contributors.
   changelog section. Keep it undated. Do not mutate Cargo versions
   or lockfiles, stage changes, or run version-bump or release targets.
   The user runs the matching bump target. The version helper labels the current
-  draft and adds its date automatically without running tests. Changelog layout,
-  empty notes, or a missing chosen version must not block deployment; ambiguous
-  release selection is resolved during preparation. The user runs `release-verify`
+  draft and adds its date automatically without running tests. The maintainer
+  approved Shared 0.12.0's strict changelog contract on 2026-10-14: reject
+  versionless `Draft`, misplaced pending sections and missing changelog files
+  before mutation. Empty notes remain advisory; exact previous-release history
+  may seed an empty candidate when no pending section exists. The user runs `release-verify`
   as part of deployment; it must retain the normal CI,
   MSRV, probe lint, watchdog PocketIC, and policy-cohort gates. Release
   preparation explicitly installs the root-lock
@@ -195,8 +160,9 @@ This file is normative for automated contributors.
   pins, override admission and implicit provisioning; never add a second server
   installer or compatibility route. After version mutation, update every local member in the root lockfile
   and verify the complete graph with a cheap locked metadata check. The user
-  stages the root lockfile. Do not require the maintainer to edit a changelog heading
-  by hand, prepare a test binary manually, or remember a separate evidence command.
+  stages the root lockfile. Contributors maintain the correctly numbered top
+  section; the matching bump dates it automatically. Do not require a manually
+  prepared test binary or a separate evidence command.
 - A pre-bump check may warn about free-form release prose that is likely to
   become stale, but it must remain advisory and run before version mutation.
   Never make interpreted prose a post-mutation release blocker.
