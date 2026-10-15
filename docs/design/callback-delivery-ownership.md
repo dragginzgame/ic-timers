@@ -3,6 +3,30 @@
 This records the implementation and evidence scope of the callback delivery
 change. It does not select a release or establish deployment validation.
 
+## Prepared Metrics 0.10 adoption
+
+The maintainer-selected root graph now uses Metrics 0.10. Its public
+`MeasurementSummary` removes the count/total/maximum/mean forwarding methods;
+instruction reports use `summary.aggregate()` while ordered `latest()` remains
+summary-owned. Library tests, native projections and both Wasm probes use that
+same split. Memory-page summaries and already aggregated interval values retain
+their own accessors. No provider, recording or callback-admission logic changes.
+
+Because Timers publicly re-exports this shared type, the prepared release moves
+to 0.23.0 rather than patching the published 0.22 API contract. The existing
+pending tooling batch stays in that one section; Cargo versions and lockfile
+selections remain maintainer-owned. Consumers should use the matching Metrics
+type or `ic_timers::MeasurementSummary`, with no forwarding compatibility layer.
+The earlier 0.9 qualification below remains bound to its original graph.
+
+The selected Metrics 0.10.0/Testkit 0.43.0 graph passes 155 native library tests,
+eight doctests, strict library/probe Clippy and Rust 1.88 native/test-target and
+Wasm compilation, including the runtime and all four policy probes. Format and
+diff checks pass. Commands and before-images stay at
+`/tmp/ic-timers-metrics010.6r6g297m/`. These are focused native/compile results;
+no live PocketIC, full release gate or new footprint measurement ran. The
+maintainer's Cargo inputs remain unchanged.
+
 ## Prepared 0.22.6 identity sharing and probe cleanup
 
 Timer identities share one immutable component allocation through `Arc`. Cloning

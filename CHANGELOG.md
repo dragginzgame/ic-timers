@@ -2,7 +2,15 @@
 
 All notable changes to this project are recorded here.
 
-## [0.22.7]
+## [0.23.0]
+
+### Breaking
+
+- Adopt the selected Metrics 0.10 summary API. Project instruction count, total,
+  maximum and integer means through `summary.aggregate()`; `summary.latest()`
+  remains the ordered observation. The public `MeasurementSummary` re-export
+  follows that hard cut without forwarding shims. Recording, callback attribution,
+  empty/zero behavior and probe wire fields remain unchanged.
 
 ### Development
 

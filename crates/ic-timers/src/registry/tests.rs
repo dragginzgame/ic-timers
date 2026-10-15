@@ -499,8 +499,11 @@ fn measurement_routing_rejects_a_policy_role_mismatch() {
         .expect("retained declaration should remain")
         .observability()
         .performance();
-    assert_eq!(performance.scheduler_instructions().samples(), 0);
-    assert_eq!(performance.work_instructions().samples(), 0);
+    assert_eq!(
+        performance.scheduler_instructions().aggregate().samples(),
+        0
+    );
+    assert_eq!(performance.work_instructions().aggregate().samples(), 0);
     assert_eq!(performance.scheduler_memory_pages().samples(), 0);
     assert_eq!(performance.work_memory_pages().samples(), 0);
 }

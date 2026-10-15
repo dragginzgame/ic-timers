@@ -8,6 +8,22 @@ This handoff links [release evidence](../releasing.md),
 [Shared adoption](../shared-tooling.md), [safety](../../SAFETY.md) and
 [the archive](archive-2026-10-10.md).
 
+## Prepared 0.23.0 Metrics projection repair
+
+The selected Metrics 0.10 API removes instruction-summary forwarding methods.
+Tests, report projections and both probes now use `summary.aggregate()` for
+statistics while keeping ordered `latest()` on the summary. Memory-page summaries
+and interval aggregates retain their existing APIs. The public shared-type cut
+requires minor-line 0.23.0 notes; the prior pending tooling batch is retained in
+that one section. Cargo package versions and the selected graph are unchanged.
+
+The [adoption owner](../design/callback-delivery-ownership.md#prepared-metrics-010-adoption)
+records the public boundary and qualification. The 155 native tests, eight
+doctests, strict library/probe Clippy and Rust 1.88 native/Wasm checks pass,
+including all four size-probe cohorts. Format/diff checks pass; evidence stays at
+`/tmp/ic-timers-metrics010.6r6g297m/`. No full release gate, live PocketIC, setup,
+Cargo mutation, staging, commits or release commands ran for this repair.
+
 ## PR repairs on 2026-10-15
 
 The four Timers PRs (#54/#56/#60/#61) and relevant Shared (#180/#191) and Testkit

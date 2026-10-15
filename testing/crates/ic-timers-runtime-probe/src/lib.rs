@@ -400,10 +400,10 @@ fn snapshot() -> ProbeSnapshot {
         unacknowledged: counters.unacknowledged(),
         last_unacknowledged: snapshot.observability().outcomes().last_outcome()
             == Some(TimerLastOutcome::Unacknowledged),
-        scheduler_instruction_samples: performance.scheduler_instructions().samples(),
-        scheduler_instruction_total: performance.scheduler_instructions().total(),
-        work_instruction_samples: performance.work_instructions().samples(),
-        work_instruction_total: performance.work_instructions().total(),
+        scheduler_instruction_samples: performance.scheduler_instructions().aggregate().samples(),
+        scheduler_instruction_total: performance.scheduler_instructions().aggregate().total(),
+        work_instruction_samples: performance.work_instructions().aggregate().samples(),
+        work_instruction_total: performance.work_instructions().aggregate().total(),
         scheduler_memory: probe_memory_summary(scheduler_memory),
         work_memory: probe_memory_summary(work_memory),
         ..observed

@@ -217,7 +217,11 @@ fn project_to_canic(snapshot: &TimerSnapshot) -> CanicProjection<'_> {
         stale_callbacks_since_runtime_start: counters
             .stale_wakeups()
             .saturating_add(counters.stale_work()),
-        total_instructions: observations.performance().work_instructions().total(),
+        total_instructions: observations
+            .performance()
+            .work_instructions()
+            .aggregate()
+            .total(),
     }
 }
 
