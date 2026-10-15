@@ -2,13 +2,79 @@
 
 All notable changes to this project are recorded here.
 
-## [0.22.7]
+## [0.23.3]
 
 ### Development
 
-- Refresh the reviewed release-observation owner contribution, including Bash
-  3.2-safe empty argument arrays and comparison bound to the verified base commit.
-  Preserve all three snapshot roots and the existing tool/dependency selections.
+- Update the pinned Rust toolchain setup action while preserving selected
+  compilers, target preparation and native host gates.
+
+## [0.23.2] - 2026-10-15
+
+### Changed
+
+- Remove duplicate normalization from private erased callback results. Keep
+  public result normalization and registry terminal arbitration; the adversarial
+  registry test now receives the contradictory directive it intends to reject.
+
+### Development
+
+- Fill the capacity probe from one inventory observation and retain only its
+  extra-name counter, rather than unused registration handles and repeated
+  full-inventory copies.
+- Delegate controlled hosted-scenario artifact verification to Shared Tooling,
+  retaining Timers' source/run identity, qualified pins and collector coverage.
+- Share the complete CI tool preparation sequence across Linux, MSRV and macOS,
+  preserving failed-command statuses, captured logs and PATH publication order.
+- Keep registry-only fixture methods and dummy callback factories in the test
+  module rather than the production implementation.
+- Delegate hosted qualification admission and evidence-parent creation to Shared
+  Tooling. Keep Timers' path selection and require rejection before filesystem
+  effects, including for invalid stages, nonmanual runs and foreign checkouts.
+
+## [0.23.1] - 2026-10-15
+
+### Development
+
+- Delegate manifest ordering and immutable release-source custody to Shared's
+  metadata checker, retaining exact-commit admission and failed-check evidence.
+  Explicitly preserve failed sorting/metadata producer statuses under Bash 3.2.
+- Consolidate duplicate native probe helpers and move wide `ProbeSnapshot`
+  serialization coverage into the native protocol suite, including optional
+  registration and memory fields.
+
+- Share the four failure archive/upload pairs through one local action, retaining
+  Timers' archive layout, artifact identity and upload after collection failure.
+- Delegate selected assertion-retention probes to Shared Tooling and use its
+  physical-path allocator throughout the 15 consumer-owned shell fixtures.
+  Qualify relative, spaced and symlinked temporary roots without weakening
+  failure-status, completion or retained-evidence checks.
+- Refresh the three canonical snapshots from the qualified Shared assertion
+  contribution; include the release-input validator in the disposable version
+  preparation fixture's companion files.
+
+## [0.23.0] - 2026-10-15
+
+### Breaking
+
+- Adopt the selected Metrics 0.10 summary API. Project instruction count, total,
+  maximum and integer means through `summary.aggregate()`; `summary.latest()`
+  remains the ordered observation. The public `MeasurementSummary` re-export
+  follows that hard cut without forwarding shims. Recording, callback attribution,
+  empty/zero behavior and probe wire fields remain unchanged.
+
+### Development
+
+- Adopt the qualified Shared release-observation repair across all three
+  snapshots. Fix Bash 3.2 empty-array admission and compare against the verified
+  base commit; retain current snapshot roots, tools and application dependencies.
+
+- Keep tag CI focused on actual annotated-tag/version, main reachability,
+  adopted-snapshot integrity and locked-graph admission. Leave broad release
+  regressions in PR/main and the owner release gate. Qualify the actual workflow
+  from a shallow checkout, including rejected tags, corrupt snapshots, failed
+  version reads and failed dependency preparation
+  ([#55](https://github.com/dragginzgame/ic-timers/issues/55)).
 
 ## [0.22.6] - 2026-10-14
 

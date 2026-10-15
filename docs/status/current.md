@@ -2,13 +2,151 @@
 
 # Current status
 
-Last updated: 2026-10-14
+Last updated: 2026-10-15
 
 This handoff links [release evidence](../releasing.md),
 [Shared adoption](../shared-tooling.md), [safety](../../SAFETY.md) and
 [the archive](archive-2026-10-10.md).
 
-## Delivered 0.22.5 and prepared 0.22.6
+## Prepared 0.23.2 boundary and fixture cleanup
+
+Released base is `2d54724` (0.23.1). Private erased results preserve raw inputs;
+public policy-specific constructors still normalize invariant failures, and the
+registry still stops them before schedule resolution. The negative registry test
+now proves its contradictory directive reaches that boundary. Five test-only
+registry helpers and their dummy factories live entirely in the test module.
+
+All three 84/41/18 exports select Shared [PR #209](https://github.com/dragginzgame/shared-tooling/pull/209)
+`db17f58`, stacked on #208 and retaining the reviewed #206/#203 APIs. Shared admits hosted
+qualification before creating its evidence parent; Timers only selects paths
+and delegates. Broader pending Shared 0.15 adoption remains separate.
+
+The capacity probe reads inventory once and retains only a name counter for its
+inactive extras. Registration-handle drops leave retained declarations owned by
+the registry. Shared's independent verifier now owns controlled scenario statuses,
+bytes, modes and rejected-download/log checks. Timers retains source/run identity,
+qualified pins and collector integration. One local composite action owns the
+three identical CI tool preparation bodies, with failure/log/PATH ordering covered
+by substitute Make commands. No production timer behavior or public API changes.
+
+The 155 native library tests, strict library Clippy and Rust 1.88 Wasm compilation
+pass using locked/offline inputs. Owner admission/alias/refusal fixtures pass on
+Linux Bash 5 and genuine Bash 3.2. Timers evidence/completion fixtures pass on
+both shells; snapshot corruption and integrity checks pass. Canonical previews are
+retained at `/tmp/ic-timers-boundary-cleanup.nn0vf58q/`. No setup, hosted dispatch,
+live PocketIC, Cargo version mutation or release execution is included.
+
+The follow-up passes Shared's three Python tests, Timers' two downloaded-evidence
+tests, current/genuine Bash 3.2 evidence/action fixtures, snapshot corruption,
+tag/publication fixtures, Actionlint and strict Rust 1.99 runtime-probe Clippy.
+Rust 1.88 native/probe test-target and Wasm compile checks pass locked/offline.
+ShellCheck adds no diagnostics to the pre-existing SC2155 warning. Existing
+repeated-fill/64-entry PocketIC assertions remain for the owner's live gate;
+no live PocketIC or optimized Wasm measurement ran. Evidence and canonical
+previews are at `/tmp/ic-timers-probe-ci-cleanup.3474kcag/`. Incoming Cargo inputs,
+normal index content and refs are preserved; only the isolated Shared PR branch
+was committed/pushed.
+
+## Delivered repository-only 0.23.1 reductions
+
+Released base is `b498bb7` (0.23.0). Four CI failure archive/upload pairs now
+call one Timers-owned composite action. Its archive paths, artifact identity,
+uploader pin and collection diagnostics remain; upload is attempted even after
+collection failure. This changes repository CI only, with no runtime or Wasm claim.
+
+Shared [PR #206](https://github.com/dragginzgame/shared-tooling/pull/206) adds
+opt-in manifest ordering inside its selected metadata source, retaining the
+assertion probing from [#203](https://github.com/dragginzgame/shared-tooling/pull/203).
+All three 84/41/18 exports select exact contribution `1444f1e`. The release
+adapter delegates immutable export custody to Shared, while current/prepared
+checks clear ambient commit selection. Timers retains five assertions and inputs;
+15 consumer-owned fixtures now use `fixture_create`. The copied actual boundaries
+cover relative/spaced/symlinked TMPDIR values and inherited CDPATH. The disposable
+version fixture copies the newly derived release-input validator with its caller.
+
+The earlier allocator/action batch passed all 15 consumer fixtures and its
+four Bash 3.2 subjects. The manifest-order follow-up passes the five affected
+consumer shell fixtures, including committed checks, index/preflight custody,
+release gates, graph admission and snapshot corruption. Committed, index and
+gate fixtures also pass with genuine Bash 3.2 selected for child scripts.
+Shared's metadata suite
+passes on Linux Bash 5 and genuine Bash 3.2; local adapter/fixture ShellCheck
+passes. The 84/41/18 snapshot payloads verify at the current contribution pin.
+
+The native PocketIC harness now owns the two duplicated fixed-round/update
+utilities. Wide `ProbeSnapshot` serialization is qualified in the native protocol
+suite with populated optional registration/memory fields. Both protocol tests,
+Rust 1.88 probe compilation and strict Rust 1.99 probe/protocol Clippy pass using
+locked/offline inputs. No timer API, canister implementation or Wasm changed.
+The further cleanup evidence is at `/tmp/ic-timers-source-cleanup.zsxyfwj8/`.
+
+The incoming Testkit 0.44 Cargo edits are preserved. Normal index content and
+refs remain user-owned. Evidence and canonical export previews are at
+`/tmp/ic-timers-fixture-reductions.so0rzdpu/`. No setup, full release gate, live PocketIC or hosted workflow dispatch is part
+of this repository-only batch.
+
+## Prepared 0.23.0 Metrics projection repair
+
+The selected Metrics 0.10 API removes instruction-summary forwarding methods.
+Tests, report projections and both probes now use `summary.aggregate()` for
+statistics while keeping ordered `latest()` on the summary. Memory-page summaries
+and interval aggregates retain their existing APIs. The public shared-type cut
+requires minor-line 0.23.0 notes; the prior pending tooling batch is retained in
+that one section. Cargo package versions and the selected graph are unchanged.
+
+The [adoption owner](../design/callback-delivery-ownership.md#prepared-metrics-010-adoption)
+records the public boundary and qualification. The 155 native tests, eight
+doctests, strict library/probe Clippy and Rust 1.88 native/Wasm checks pass,
+including all four size-probe cohorts. Format/diff checks pass; evidence stays at
+`/tmp/ic-timers-metrics010.6r6g297m/`. No full release gate, live PocketIC, setup,
+Cargo mutation, staging, commits or release commands ran for this repair.
+
+## PR repairs on 2026-10-15
+
+The four Timers PRs (#54/#56/#60/#61) and relevant Shared (#180/#191) and Testkit
+(#89/#96) contributions are refreshed on current main in isolated worktrees.
+Normal fast-forward topic pushes preserve published/shared history; no PR was
+merged. Descriptions record the final source, focused checks and hosted gaps.
+Shared #180 includes #191 to retain current Timers roots; #54 stays draft pending
+owner integration. The other PRs await their newly scheduled hosted checks.
+
+The normal worktree adopts canonical 82/41/18 snapshots at qualified Shared #191
+`7af7c54ecd549c039d9f41e5c8ad51f926f22b11`. Genuine Bash 3.2 reproduces the fixed
+release-change boundary. Owner release-change/prose and Timers' impact, corruption,
+rollback, evidence and gate fixtures pass for their recorded candidate graphs.
+Both Testkit candidates pass five focused native tests, strict library Clippy and
+Rust 1.88 library/test-target compilation. No full local gate, setup or live
+PocketIC execution ran. Cargo edits present on arrival remain byte-for-byte intact;
+the normal checkout's staged content and refs are unchanged. Only isolated PR
+branches were committed/pushed. Evidence stays at `/tmp/ic-timers-pr-repairs.bxk863zt/`.
+
+## Previous delivered 0.22.6 and prepared 0.22.7
+
+Current HEAD is `076cebe241131043e5c8474f376ca66e975cbfdf` (released 0.22.6).
+The compatible, repository-only 0.22.7 draft brings the tag-admission separation
+from [PR #56](https://github.com/dragginzgame/ic-timers/pull/56) into the normal
+worktree for [#55](https://github.com/dragginzgame/ic-timers/issues/55). Tags check
+their actual version, annotated tag, main reachability, three snapshot payloads
+and locked graph without dispatching the broad release regression roster.
+PR/main and the owner release gate retain that roster and the new workflow
+fixture. Complete tool setup, failure evidence and native source gates stay intact.
+
+The actual-workflow fixture passes from a shallow disposable clone, including
+failed version reads, contradictory tags, each corrupt snapshot, failed fetch,
+invalid lock admission, and normal CI's fetch-before-gate failure propagation.
+Syntax, source-following ShellCheck, documentation links, workflow-body-only
+comparison and diff checks pass. Cargo inputs, real index and refs are unchanged.
+Evidence stays at `/tmp/ic-timers-tag-admission.cbz4i7j9/`. No Rust source, builds,
+setup, live PocketIC, release execution or remote issue/PR mutation ran.
+
+The released main CI run is still in progress at inspection; #51/#52 remain open
+for supported native-host acceptance. #59 owns the separately prepared Metrics
+0.10 API cut. Upstream notes also mark Testkit 0.43 pending; registry publication
+could not be independently checked because the API returned HTTP 403. Neither
+dependency is adopted. This repository-only batch normally waits for code-bearing
+work instead of requiring another published package identity.
+
+## Prior delivered 0.22.5 and prepared 0.22.6
 
 Current HEAD is `6ced4341bacce7d9f08acfd9a261a6d222755b93` (released 0.22.5).
 The incoming root lock selects Metrics 0.9.6 and Testkit 0.42.0; its bytes and the

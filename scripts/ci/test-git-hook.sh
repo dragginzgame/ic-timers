@@ -5,11 +5,11 @@ set -euo pipefail
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
 repository_root="$(git rev-parse --show-toplevel)"
 source "${repository_root}/ci/tool-versions.env"
-temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/timer-hook-test.XXXXXX")"
-# Bash 3.2 can report zero on nounset; cleanup also requires completion.
-fixture_complete=false
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$repository_root/scripts/ci/fixture-lifecycle.sh"
+temporary_root="$(fixture_create "${TMPDIR:-/tmp}/timer-hook-test.XXXXXX")"
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
 trap 'fixture_finish "$?" "$temporary_root" "Failed hook fixture retained"' EXIT
 bash "${repository_root}/scripts/ci/check-format-tools.sh" \
     "${SHARED_TOOLING_CARGO_SORT_VERSION}"

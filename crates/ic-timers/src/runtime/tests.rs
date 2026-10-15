@@ -167,7 +167,14 @@ fn dropped_ordinary_deliveries_retire_confirmed_scheduled_and_running_work() {
                     assert_eq!(observations.counters().unacknowledged(), 1);
                     assert_eq!(observations.counters().work_started(), u64::from(started));
                     assert_eq!(observations.counters().work_completed(), 0);
-                    assert_eq!(observations.performance().work_instructions().samples(), 0);
+                    assert_eq!(
+                        observations
+                            .performance()
+                            .work_instructions()
+                            .aggregate()
+                            .samples(),
+                        0
+                    );
                     assert_eq!(
                         observations.outcomes().last_outcome(),
                         Some(TimerLastOutcome::Unacknowledged)
@@ -1435,7 +1442,7 @@ fn ordinary_callback_borrow_failure_stops_without_invoking_or_measuring_work() {
             assert_eq!(counters.work_completed(), 1);
             assert_eq!(counters.invariant_failure(), 1);
             let performance = snapshot.observability().performance();
-            assert_eq!(performance.work_instructions().samples(), 0);
+            assert_eq!(performance.work_instructions().aggregate().samples(), 0);
             assert_eq!(performance.work_memory_pages().samples(), 0);
             assert!(!has_armed_wakeup_claim(&claim).unwrap());
         } else {
@@ -1785,8 +1792,8 @@ fn stale_reused_identity_callback_cannot_change_handles_or_measurements() {
     assert!(run_next_due());
     let completed = timer_snapshot(replacement.identity()).unwrap().unwrap();
     let performance = completed.observability().performance();
-    assert_eq!(performance.work_instructions().samples(), 1);
-    assert_eq!(performance.work_instructions().total(), 7);
+    assert_eq!(performance.work_instructions().aggregate().samples(), 1);
+    assert_eq!(performance.work_instructions().aggregate().total(), 7);
     assert_eq!(performance.work_memory_pages().samples(), 1);
     assert_eq!(
         performance.work_memory_pages().latest(),
@@ -3392,11 +3399,11 @@ fn assert_icydb_lifecycle_measurements(snapshot: &TimerSnapshot) {
     for (measurement, samples) in [
         (
             "scheduler instructions",
-            performance.scheduler_instructions().samples(),
+            performance.scheduler_instructions().aggregate().samples(),
         ),
         (
             "work instructions",
-            performance.work_instructions().samples(),
+            performance.work_instructions().aggregate().samples(),
         ),
         (
             "scheduler memory",
@@ -3781,11 +3788,14 @@ fn registration_identity_survives_control_but_changes_on_replacement_and_restart
         assert!(run_next_due());
     }
     let completed = snapshot().observability().performance();
-    assert_eq!(completed.work_instructions().samples(), 2);
-    assert_eq!(completed.work_instructions().total(), 14);
-    assert_eq!(completed.work_instructions().mean(), Ok(Some(7)));
+    assert_eq!(completed.work_instructions().aggregate().samples(), 2);
+    assert_eq!(completed.work_instructions().aggregate().total(), 14);
+    assert_eq!(
+        completed.work_instructions().aggregate().mean(),
+        Ok(Some(7))
+    );
     assert_eq!(completed.work_instructions().latest(), Some(7));
-    assert_eq!(completed.work_instructions().maximum(), Some(7));
+    assert_eq!(completed.work_instructions().aggregate().maximum(), Some(7));
     assert_eq!(
         completed.scheduler_instructions(),
         crate::MeasurementSummary::EMPTY
@@ -3815,9 +3825,9 @@ fn registration_identity_survives_control_but_changes_on_replacement_and_restart
     );
     assert_ne!(regrown.registration_id(), before.registration_id());
     let regrown_work = regrown.observability().performance().work_instructions();
-    assert_eq!(regrown_work.samples(), 3);
-    assert_eq!(regrown_work.total(), 21);
-    assert_eq!(regrown_work.mean(), Ok(Some(7)));
+    assert_eq!(regrown_work.aggregate().samples(), 3);
+    assert_eq!(regrown_work.aggregate().total(), 21);
+    assert_eq!(regrown_work.aggregate().mean(), Ok(Some(7)));
     // Arithmetic alone accepts a reset followed by larger measurements.
     // Different registration identities forbid treating this as one interval.
     let misleading_interval = regrown_work

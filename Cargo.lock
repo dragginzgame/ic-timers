@@ -802,9 +802,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-artifacts"
-version = "0.18.2"
+version = "0.18.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31b28d7e2d78a59977320625394e533850516e3f1c2b671a5909d833d73d6cdf"
+checksum = "1982764700cbd842dff38e2900765a3a4966ae91fe90fc621610f29fd50b144b"
 dependencies = [
  "flate2",
  "leb128",
@@ -815,9 +815,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-fs"
-version = "0.18.2"
+version = "0.18.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4a5c93188fbfb88e22dd1d7938b84a6f68d8ace2e3881935d13d73c3055fa0ce"
+checksum = "b75f9df5e34066e63b696f3055f9b3a997bf316dad6d4d98650ab44e3285e4ec"
 dependencies = [
  "ic-host-artifacts",
  "rustix",
@@ -825,9 +825,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-process"
-version = "0.18.2"
+version = "0.18.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "277e18f76a599425c828995d5c13a118fabc93344663e6c206d32a6081a451fc"
+checksum = "232cf91a9b05c6af7159b0b1d8608115c27dc35285c981f83ece02ee6f092e73"
 dependencies = [
  "ic-host-artifacts",
  "ic-host-fs",
@@ -848,15 +848,15 @@ dependencies = [
 
 [[package]]
 name = "ic-metrics"
-version = "0.9.6"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2e743e0e40b8bb69b6807b18c767e51625ce711bc7f672fb30c0460c9b07f76"
+checksum = "5c420eeed28236735e3dc6c88baf25b27d5a9357555f75248556b0117476f9ac"
 
 [[package]]
 name = "ic-testkit"
-version = "0.42.0"
+version = "0.44.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1bdb7fb04e3a78bad29b19b1198a48ab7e69679f75f1fd3c3cf62a7768a8a484"
+checksum = "b16f197bc1fc53fdc45f5c865fbca08262df64eb6c98338f00aa606d7dc33fe7"
 dependencies = [
  "candid",
  "ic-cdk",
@@ -874,7 +874,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers"
-version = "0.22.6"
+version = "0.23.2"
 dependencies = [
  "ic-cdk-timers",
  "ic-metrics",
@@ -884,7 +884,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers-pocketic"
-version = "0.22.6"
+version = "0.23.2"
 dependencies = [
  "candid",
  "ic-testkit",
@@ -893,7 +893,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers-runtime-probe"
-version = "0.22.6"
+version = "0.23.2"
 dependencies = [
  "candid",
  "ic-cdk",
@@ -903,7 +903,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers-size-probe"
-version = "0.22.6"
+version = "0.23.2"
 dependencies = [
  "candid",
  "ic-cdk",
@@ -913,7 +913,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers-test-protocol"
-version = "0.22.6"
+version = "0.23.2"
 dependencies = [
  "candid",
  "serde",

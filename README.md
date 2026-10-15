@@ -309,18 +309,20 @@ unregister/re-register changes it. Increasing numbers alone cannot detect a rese
 Callback `generation()` does not identify a counter lifetime.
 
 Event counters and memory sample counts conservatively treat `u64::MAX` as
-saturated. Instruction measurements use Metrics 0.9 ordered `MeasurementSummary`
+saturated. Instruction measurements use Metrics 0.10 ordered `MeasurementSummary`
 values with `u128` totals and integer means, and `u64` samples and counts. Totals
 above `u64::MAX` remain exact. An exactly reached cap remains exact, while actual
 count/total overflow
-is recorded by `aggregate().samples_overflowed()` and `total_overflowed()`.
-`mean()` returns `Ok(None)` for no completed samples, `Ok(Some(0))` for a completed
+is recorded by `aggregate().samples_overflowed()` and `aggregate().total_overflowed()`.
+Project count, total, maximum and means through `summary.aggregate()`; the
+ordered latest observation remains `summary.latest()`.
+`aggregate().mean()` returns `Ok(None)` for no completed samples, `Ok(Some(0))` for a completed
 zero measurement, and an error after actual overflow. Latest and maximum samples
 remain available after overflow. Preserve the tracked summary when computing a
 mean or an admitted interval; clipped count/total fields alone lose overflow
 provenance. Numeric interval admission does not establish registration continuity.
 
-The summary exposes checked `scaled_mean(scale)` for
+Use the checked `summary.aggregate().scaled_mean(scale)` for
 fractional reports. It computes `floor(total * scale / samples)` from the tracked
 total, preserving fractions lost by scaling an already rounded integer mean.
 It distinguishes empty from measured zero and returns `SampleCountOverflow` on
@@ -328,10 +330,10 @@ actual count overflow even when scale is zero. An exact count bounds the scaled
 result within `u128`; there is no separate projection-error case.
 
 Use `ic_timers::MeasurementSummary` or the same Metrics package when exchanging
-these values with other libraries: the prepared Timers 0.22 cut uses Metrics 0.9.
+these values with other libraries: the prepared Timers 0.23 cut uses Metrics 0.10.
 Older Metrics lines have distinct Rust types. Preserve
 wide totals in reports/codecs, or use checked conversions when a narrower
-consumer field is required. The [adoption owner](docs/design/callback-delivery-ownership.md#prepared-metrics-09-adoption)
+consumer field is required. The [adoption owner](docs/design/callback-delivery-ownership.md#prepared-metrics-010-adoption)
 records the selected graph and qualification limits.
 
 Each instruction measurement covers the accepted `ic-timers` execution

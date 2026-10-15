@@ -15,7 +15,7 @@ mod ordinary;
 thread_local! {
     static REGISTRATION: RefCell<Option<WatchdogRegistration>> = const { RefCell::new(None) };
     static SECONDARY_REGISTRATION: RefCell<Option<WatchdogRegistration>> = const { RefCell::new(None) };
-    static EXTRA_REGISTRATIONS: RefCell<Vec<WatchdogRegistration>> = const { RefCell::new(Vec::new()) };
+    static NEXT_EXTRA_NAME: Cell<u64> = const { Cell::new(0) };
     static COMPLETED_WORK: Cell<u64> = const { Cell::new(0) };
     static SECONDARY_COMPLETED_WORK: Cell<u64> = const { Cell::new(0) };
     static TRAP_WINDOW: Cell<Option<(u64, u64)>> = const { Cell::new(None) };
@@ -304,35 +304,30 @@ fn burn_to_below_timer_call_cost() -> (u128, u128) {
 
 #[ic_cdk::update]
 fn fill_inventory() -> u64 {
-    loop {
-        let current = match timer_inventory() {
-            Ok(inventory) => inventory.len(),
-            Err(_) => ic_cdk::trap("inventory lookup failed"),
-        };
-        if current >= MAX_TIMER_REGISTRATIONS {
-            return current as u64;
-        }
-        let index = EXTRA_REGISTRATIONS.with_borrow(Vec::len);
+    let current = timer_inventory()
+        .unwrap_or_else(|_| ic_cdk::trap("inventory lookup failed"))
+        .len();
+    let cadence = TimerCadence::from_nanos(CADENCE_NS)
+        .unwrap_or_else(|_| ic_cdk::trap("extra probe cadence is invalid"));
+    for _ in current..MAX_TIMER_REGISTRATIONS {
+        let index = NEXT_EXTRA_NAME.with(Cell::get);
         let name = format!("extra-{index:02}");
         let identity = match TimerIdentity::try_new("ic-timers", "runtime-probe", name) {
             Ok(identity) => identity,
             Err(_) => ic_cdk::trap("extra probe identity is invalid"),
         };
-        let cadence = match TimerCadence::from_nanos(CADENCE_NS) {
-            Ok(cadence) => cadence,
-            Err(_) => ic_cdk::trap("extra probe cadence is invalid"),
-        };
-        let registration = match register_watchdog(
+        // Retained declarations belong to the registry; these inert extras
+        // need no caller-held control capabilities after registration.
+        let _ = register_watchdog(
             identity,
             cadence,
             TimerStart::Retained { initial: None },
             |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
-        ) {
-            Ok(registration) => registration,
-            Err(_) => ic_cdk::trap("extra watchdog registration failed"),
-        };
-        EXTRA_REGISTRATIONS.with_borrow_mut(|registrations| registrations.push(registration));
+        )
+        .unwrap_or_else(|_| ic_cdk::trap("extra watchdog registration failed"));
+        NEXT_EXTRA_NAME.with(|next| next.set(index + 1));
     }
+    MAX_TIMER_REGISTRATIONS as u64
 }
 
 #[ic_cdk::query]
@@ -400,10 +395,10 @@ fn snapshot() -> ProbeSnapshot {
         unacknowledged: counters.unacknowledged(),
         last_unacknowledged: snapshot.observability().outcomes().last_outcome()
             == Some(TimerLastOutcome::Unacknowledged),
-        scheduler_instruction_samples: performance.scheduler_instructions().samples(),
-        scheduler_instruction_total: performance.scheduler_instructions().total(),
-        work_instruction_samples: performance.work_instructions().samples(),
-        work_instruction_total: performance.work_instructions().total(),
+        scheduler_instruction_samples: performance.scheduler_instructions().aggregate().samples(),
+        scheduler_instruction_total: performance.scheduler_instructions().aggregate().total(),
+        work_instruction_samples: performance.work_instructions().aggregate().samples(),
+        work_instruction_total: performance.work_instructions().aggregate().total(),
         scheduler_memory: probe_memory_summary(scheduler_memory),
         work_memory: probe_memory_summary(work_memory),
         ..observed

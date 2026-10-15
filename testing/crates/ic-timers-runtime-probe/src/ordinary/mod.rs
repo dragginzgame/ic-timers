@@ -284,6 +284,7 @@ fn ordinary_observation() -> OrdinaryObservation {
                 .observability()
                 .performance()
                 .work_instructions()
+                .aggregate()
                 .samples()
         }),
         captures_dropped: CAPTURES_DROPPED.with(Cell::get),
