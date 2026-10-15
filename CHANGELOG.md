@@ -2,6 +2,15 @@
 
 All notable changes to this project are recorded here.
 
+## [0.22.7]
+
+### Development
+
+- Complete the shared ownership adoption for literal version preparation,
+  metadata rollback and partial-evidence collection. Regenerate all three bundles
+  from the qualified combined owner contribution, including Bash 3.2-safe release
+  observation; retain current package versions, dependency selections and gates.
+
 ## [0.22.6] - 2026-10-14
 
 ### Changed

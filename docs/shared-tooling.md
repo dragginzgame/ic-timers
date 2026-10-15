@@ -1,5 +1,22 @@
 # Shared Tooling adoption
 
+## Refreshed owner contribution for Timers PR #54
+
+The three canonical bundles select `949d54ead61e15cc992f2071ae4031dcfa6b0f76` on
+[Shared #180](https://github.com/dragginzgame/shared-tooling/pull/180), including
+[Shared #191](https://github.com/dragginzgame/shared-tooling/pull/191). Payload
+roots remain 82/41/18. Preserve the current release-observation roots while
+adopting literal metadata preparation, rollback and safe partial-evidence
+collection together. Current Shared 0.14.0 notes remain pending integration.
+
+Canonical previews and applies preserve verified before-images. The nested
+helper bundle uses a disposable Git root with verified copyback. Focused owner
+fixtures and Timers' version-preparation, lockfile, fixture completion, failure
+evidence, release-impact and gate-ordering checks pass under genuine Bash 3.2.
+Cargo inputs, selected tools, runtime APIs and native product gates are unchanged.
+Evidence remains at `/tmp/ic-timers-pr-repairs.bxk863zt/`; hosted native CI must
+qualify this refreshed PR head separately.
+
 ## Prepared release-change ownership
 
 All three exports select reviewed contribution

@@ -8,6 +8,16 @@ This handoff links [release evidence](../releasing.md),
 [Shared adoption](../shared-tooling.md), [safety](../../SAFETY.md) and
 [the archive](archive-2026-10-10.md).
 
+## Refreshed PR #54 on delivered 0.22.6
+
+This branch preserves the current published Cargo graph and public timer source.
+The ownership cut is prepared against current main, with coherent canonical
+Shared #180/#191 snapshots and compatible undated 0.22.7 notes. Focused Bash 3.2
+owner/caller checks pass; source-following ShellCheck also passes. The previous
+updater-copy fixture is reconciled with the removed local mutation path. See the
+[adoption record](../shared-tooling.md#refreshed-owner-contribution-for-timers-pr-54).
+Required hosted native checks remain independent; no release ran.
+
 ## Delivered 0.22.5 and prepared 0.22.6
 
 Current HEAD is `6ced4341bacce7d9f08acfd9a261a6d222755b93` (released 0.22.5).
