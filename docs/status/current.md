@@ -2,13 +2,58 @@
 
 # Current status
 
-Last updated: 2026-10-14
+Last updated: 2026-10-15
 
 This handoff links [release evidence](../releasing.md),
 [Shared adoption](../shared-tooling.md), [safety](../../SAFETY.md) and
 [the archive](archive-2026-10-10.md).
 
-## Delivered 0.22.5 and prepared 0.22.6
+## PR repairs on 2026-10-15
+
+The four Timers PRs (#54/#56/#60/#61) and relevant Shared (#180/#191) and Testkit
+(#89/#96) contributions are refreshed on current main in isolated worktrees.
+Normal fast-forward topic pushes preserve published/shared history; no PR was
+merged. Descriptions record the final source, focused checks and hosted gaps.
+Shared #180 includes #191 to retain current Timers roots; #54 stays draft pending
+owner integration. The other PRs await their newly scheduled hosted checks.
+
+The normal worktree adopts canonical 82/41/18 snapshots at qualified Shared #191
+`7af7c54ecd549c039d9f41e5c8ad51f926f22b11`. Genuine Bash 3.2 reproduces the fixed
+release-change boundary. Owner release-change/prose and Timers' impact, corruption,
+rollback, evidence and gate fixtures pass for their recorded candidate graphs.
+Both Testkit candidates pass five focused native tests, strict library Clippy and
+Rust 1.88 library/test-target compilation. No full local gate, setup or live
+PocketIC execution ran. Cargo edits present on arrival remain byte-for-byte intact;
+the normal checkout's staged content and refs are unchanged. Only isolated PR
+branches were committed/pushed. Evidence stays at `/tmp/ic-timers-pr-repairs.bxk863zt/`.
+
+## Previous delivered 0.22.6 and prepared 0.22.7
+
+Current HEAD is `076cebe241131043e5c8474f376ca66e975cbfdf` (released 0.22.6).
+The compatible, repository-only 0.22.7 draft brings the tag-admission separation
+from [PR #56](https://github.com/dragginzgame/ic-timers/pull/56) into the normal
+worktree for [#55](https://github.com/dragginzgame/ic-timers/issues/55). Tags check
+their actual version, annotated tag, main reachability, three snapshot payloads
+and locked graph without dispatching the broad release regression roster.
+PR/main and the owner release gate retain that roster and the new workflow
+fixture. Complete tool setup, failure evidence and native source gates stay intact.
+
+The actual-workflow fixture passes from a shallow disposable clone, including
+failed version reads, contradictory tags, each corrupt snapshot, failed fetch,
+invalid lock admission, and normal CI's fetch-before-gate failure propagation.
+Syntax, source-following ShellCheck, documentation links, workflow-body-only
+comparison and diff checks pass. Cargo inputs, real index and refs are unchanged.
+Evidence stays at `/tmp/ic-timers-tag-admission.cbz4i7j9/`. No Rust source, builds,
+setup, live PocketIC, release execution or remote issue/PR mutation ran.
+
+The released main CI run is still in progress at inspection; #51/#52 remain open
+for supported native-host acceptance. #59 owns the separately prepared Metrics
+0.10 API cut. Upstream notes also mark Testkit 0.43 pending; registry publication
+could not be independently checked because the API returned HTTP 403. Neither
+dependency is adopted. This repository-only batch normally waits for code-bearing
+work instead of requiring another published package identity.
+
+## Prior delivered 0.22.5 and prepared 0.22.6
 
 Current HEAD is `6ced4341bacce7d9f08acfd9a261a6d222755b93` (released 0.22.5).
 The incoming root lock selects Metrics 0.9.6 and Testkit 0.42.0; its bytes and the

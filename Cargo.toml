@@ -26,8 +26,8 @@ categories = ["asynchronous", "wasm"]
 candid = "0.10"
 ic-cdk = "=0.20.3"
 ic-cdk-timers = "=1.0.0"
-ic-metrics = "0.9.1"
-ic-testkit = "0.42"
+ic-metrics = "0.10"
+ic-testkit = "0.43"
 ic-timers = { path = "crates/ic-timers" }
 ic-timers-test-protocol = { path = "testing/crates/ic-timers-test-protocol" }
 ic0 = "=1.2.0"

@@ -2,6 +2,21 @@
 
 All notable changes to this project are recorded here.
 
+## [0.22.7]
+
+### Development
+
+- Adopt the qualified Shared release-observation repair across all three
+  snapshots. Fix Bash 3.2 empty-array admission and compare against the verified
+  base commit; retain current snapshot roots, tools and application dependencies.
+
+- Keep tag CI focused on actual annotated-tag/version, main reachability,
+  adopted-snapshot integrity and locked-graph admission. Leave broad release
+  regressions in PR/main and the owner release gate. Qualify the actual workflow
+  from a shallow checkout, including rejected tags, corrupt snapshots, failed
+  version reads and failed dependency preparation
+  ([#55](https://github.com/dragginzgame/ic-timers/issues/55)).
+
 ## [0.22.6] - 2026-10-14
 
 ### Changed

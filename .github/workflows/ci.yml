@@ -334,9 +334,13 @@ jobs:
             exit 1
           fi
           make release-tag-check
+          # Inspect actual adopted payloads; regression fixtures stay in PR/main.
+          bash scripts/ci/verify-shared-tooling-snapshot.sh
+          bash scripts/ci/verify-shared-tooling-snapshot.sh --manifest .shared-tooling-audits.snapshot
+          bash .shared-tooling/helpers/scripts/ci/verify-shared-tooling-snapshot.sh \
+            --consumer .shared-tooling/helpers
           make fetch
           bash scripts/release/check-lockfiles.sh
-          make release-check
       - name: Archive failure evidence
         if: ${{ failure() }}
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
