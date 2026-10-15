@@ -1,70 +1,80 @@
 # Shared Tooling adoption
 
-## Refreshed Shared owner PR adoption
+## Prepared release-change ownership
 
-Shared [PR #180](https://github.com/dragginzgame/shared-tooling/pull/180) now selects
-`fdacbd85440873bb06598e18a2013c15dc7eefe0`, including reviewed 0.12.8 and the pending 0.13.0
-literal-preparation contract. It is an exact reviewed contribution source, not a
-published 0.13.0 claim. All three canonical exports preserve their selected roots;
-the resulting payload counts are **79/41/18**, including publication, CI-scope
-and Rust-toolchain guides. The local overlay follows the adopted focused
-validation cadence after the maintainer's 2026-10-14 instruction.
+All three exports select reviewed contribution
+`c576f79dcd6bb693ba704410884e81c5e3a226d3` on
+[Shared PR #191](https://github.com/dragginzgame/shared-tooling/pull/191), across
+**82/41/18** payloads. This extends the earlier advisory contribution with a
+complete NUL-separated change collector and its semantic fixture, retaining
+the existing roots and adding only these two direct entrypoints. Source includes
+committed Shared 0.13.1; the proposed helpers have pending 0.13.2 notes, not a
+publication claim. Host/Cargo/default IC catalogs and Binaryen 132 are unchanged.
 
-The branch is refreshed on released Timers 0.22.3 and retains its Testkit 0.40
-Cargo graph. Earlier below-source evidence is historical. Generic graph cases
-now live in Shared's canonical fixture; Timers keeps its adapter/worktree smoke
-checks and complete product gates. This draft remains dependent on owner
-integration and needs a new exact export if the integrated identity differs.
+The local adapter streams the owner output, drains it and checks final success
+before emitting package impact. It allocates no caller observation file; the
+owner excludes only its own fresh scratch file when TMPDIR is inside the tree.
+Timers retains its exact crate path rules. Generic filenames, staged paths,
+producer failures and missing-history cases belong to Shared; caller binding,
+path policy, partial-failure rejection and complete draining remain local.
 
-Focused current-source fixture completion, partial-failure evidence, literal
-version preparation, graph adapter, selected-commit admission, release-gate
-execution and snapshot regression checks pass. Changed caller ShellCheck passes.
-These are Linux/modern-Bash checks with disposable inputs/stubs, not real release
-execution or native macOS/PocketIC evidence.
+The staged prior inputs prevented a direct exporter refresh. Canonical previews
+and applies ran against an isolated copy of the current working tree. Every
+owned before-image was checked before copying the qualified export back; the
+real index, Cargo inputs and normal sibling checkouts remain unchanged.
+Evidence is retained at `/tmp/ic-timers-owner-cleanup.Qa4P1qIr/`. Shared #180's
+independent release-preparation contract remains outside this adoption.
 
-Current qualification and source custody live at
-`/tmp/ic-timers-next-three.0lpn1xkr/`; Linux focused checks do not qualify native
-macOS or the full release gate. No real workspace version or publication ran.
+## Prepared release-prose ownership
 
+All three exports select reviewed contribution
+`f50adc5ba6389bee8cdd9528346f25dbd1112a48` from
+[Shared PR #191](https://github.com/dragginzgame/shared-tooling/pull/191), based on
+committed 0.13.0. This is an exact contribution pin, not a published 0.13.1 claim.
+Root entrypoints add the advisory and its semantic fixture; payloads are
+**80/41/18**. Complete previews precede apply. The update also carries 0.13.0's
+compatible fixture-allocation helper; existing callers retain their cleanup
+behavior. Host/Cargo/default IC catalogs and qualified Binaryen 132 are unchanged.
 
-## Shared ownership PR adoption
+Timers' release wrapper selects the owner's checker while retaining target/file
+arguments and the caller's working directory. The local fixture qualifies that
+binding and failure propagation, then runs the owner's exported semantic suite.
+Version-preparation fixtures copy the new owner helper with the adapter. Prose
+checks remain advisory before metadata mutation. Shared #180's separate
+release-preparation contract is outside this adoption.
 
-The maintainer requested PR delivery for the three remaining ownership reductions.
-[Shared PR #180](https://github.com/dragginzgame/shared-tooling/pull/180) supplies
-canonical commit `5732ded141e057b27eb96400b0f7bc2820d42d79`, based on released Shared 0.12.5
-and containing a numbered pending 0.13.0 command-contract change. This consumer PR
-adopts that exact commit through all three canonical exports: **77/40/18** files.
-It remains a draft pending upstream integration and native hosted qualification;
-the commit is not represented as a released Shared version or a full gate receipt.
+Preparation, source/preview records and focused evidence are retained at
+`/tmp/ic-timers-three-reductions.YIlCM7hu/`. Cargo inputs and normal sibling
+working checkouts remain untouched by this task. The compatible repository-only
+batch uses undated 0.22.5 notes; full release and native macOS qualification remain
+maintainer-owned. No timer API, production Wasm or instruction saving is claimed.
 
-Complete previews precede all applies. The root adds the retention-probe helper and the referenced Cargo publication
-guide (Shared #176); optional publication execution is not activated.
-metadata companions derive the literal renderer and exact-version module. Other
-roots remain selected and no payload is retired. Normal working checkouts remain
-untouched; incoming Host lock changes and AGENTS shortening are excluded from this
-contribution. Cargo versions, manifests, selected lock, pins and Wasm profile match
-Timers 0.22.2. The local overlay retains user-owned validation and release effects.
+## Reviewed Shared Tooling 0.12.8
 
-Timers delegates explicit fixture root/directory probes, safe tool collection and
-byte-preserving metadata transactions. It retains the fifteen-fixture roster,
-five mandatory assertion probes, identity/scenario assertions, qualified Binaryen
-catalog and preflight policy. The local setter and lock updater are removed.
-Shared collection keeps statuses 0/1/2 and receipts for original selector/archive
-failures. Failed partial selections never admit physical-store payloads; safe
-local evidence is retained without following redirected roots or links. Timers
-preserves original failure statuses. Shared preparation changes only the literal
-root version, preserves external selections/modes and restores original files
-on failure or catchable interruption. Consumer ordering checks remain explicit.
+All three canonical exports select committed
+`eafa07cac1fdba7d6303d061ed8af458aacf32b7`, preserving entrypoints and
+**78/41/18** root/audit/helper payloads. Clean-source previews precede every apply;
+new publication, CI-selection and Rust-toolchain guides are derived companions.
+The exact-version module is also derived, and both disposable metadata fixtures
+now copy it with their comparison caller. No root selection or tool pin changes.
 
-Focused Shared retention, metadata/rollback, collector and host/IC action callers
-pass; Timers fixture completion, failure evidence, version preparation and the
-release-gate fixture pass against the integration candidate. ShellCheck passes.
-The refreshed exact export also requires the version module in disposable local
-fixtures; its changed callers, snapshot qualification and the locked/offline complete
-graph check also pass.
-These Linux/modern-Bash results supply no native macOS/Bash 3.2, PocketIC or full
-release qualification. Evidence and before-images remain at
-`/tmp/ic-timers-owner-reductions.PaAdlrMw/`. No real release/version mutation ran.
+The maintainer adopted Shared's ordinary focused development/handoff cadence on
+2026-10-14. AGENTS and the active command map replace the old compile-only approval
+exception; complete release qualification and release execution remain owner-operated.
+Host/IC/Cargo catalogs and qualified Binaryen 132 remain unchanged. Snapshot
+integrity, affected snapshot/host/IC/Cargo-tool fixtures, metadata preparation and
+selected-commit fixtures, and changed local ShellCheck pass. Actual prepared host
+and IC offline checks pass; no tool install or native macOS qualification ran.
+
+Evidence is at `/tmp/ic-timers-next-three.0lpn1xkr/`. Shared
+[PR #180](https://github.com/dragginzgame/shared-tooling/pull/180) separately carries
+the pending literal-preparation/partial-evidence owner changes and extra generic
+graph regressions; dependent [Timers #54](https://github.com/dragginzgame/ic-timers/pull/54)
+pins that exact contribution source. This normal working tree adopts committed
+main 0.12.8, without applying the unmerged owner contract. The hosted CI lane also prepares the complete locked graph before offline
+fixtures; its actual workflow/order/failure proof is on refreshed Timers #56.
+Cargo inputs, real index and refs remain unchanged; the compatible 0.22.4 draft stays undated.
+
 
 ## Prepared Shared Tooling 0.12.3
 

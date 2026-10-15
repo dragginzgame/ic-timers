@@ -119,24 +119,18 @@ fn install_watchdog_with_initial_schedule(immediate: bool) -> bool {
                 let should_trap = TRAP_WINDOW
                     .with(Cell::get)
                     .is_some_and(|(start, end)| now_ns >= start && now_ns < end);
-                if should_trap {
+                let should_exhaust = EXHAUST_WINDOW
+                    .with(Cell::get)
+                    .is_some_and(|(start, end)| now_ns >= start && now_ns < end);
+                if should_trap || should_exhaust {
                     if context
                         .reconcile_schedule(Some(TimerSchedule::At(now_ns + 60 * CADENCE_NS)))
                         .is_err()
                     {
                         ic_cdk::trap("deadline proposal failed");
                     }
-                    ic_cdk::trap("intentional watchdog work trap");
-                }
-                let should_exhaust = EXHAUST_WINDOW
-                    .with(Cell::get)
-                    .is_some_and(|(start, end)| now_ns >= start && now_ns < end);
-                if should_exhaust {
-                    if context
-                        .reconcile_schedule(Some(TimerSchedule::At(now_ns + 60 * CADENCE_NS)))
-                        .is_err()
-                    {
-                        ic_cdk::trap("deadline proposal failed");
+                    if should_trap {
+                        ic_cdk::trap("intentional watchdog work trap");
                     }
                     exhaust_message_instructions();
                 }
@@ -245,30 +239,26 @@ fn install_secondary_watchdog() -> bool {
 
 #[ic_cdk::update]
 fn arm_trap() -> u64 {
-    let trap_at_ns = match ic_cdk::api::time().checked_add(CADENCE_NS) {
-        Some(value) => value,
-        None => ic_cdk::trap("trap deadline overflow"),
-    };
-    let trap_until_ns = match trap_at_ns.checked_add(CADENCE_NS) {
-        Some(value) => value,
-        None => ic_cdk::trap("trap window overflow"),
-    };
-    TRAP_WINDOW.with(|window| window.set(Some((trap_at_ns, trap_until_ns))));
-    trap_at_ns
+    let window = failure_window();
+    TRAP_WINDOW.with(|target| target.set(Some(window)));
+    window.0
 }
 
 #[ic_cdk::update]
 fn arm_exhaustion() -> u64 {
-    let exhaust_at_ns = match ic_cdk::api::time().checked_add(CADENCE_NS) {
-        Some(value) => value,
-        None => ic_cdk::trap("exhaustion deadline overflow"),
-    };
-    let exhaust_until_ns = match exhaust_at_ns.checked_add(CADENCE_NS) {
-        Some(value) => value,
-        None => ic_cdk::trap("exhaustion window overflow"),
-    };
-    EXHAUST_WINDOW.with(|window| window.set(Some((exhaust_at_ns, exhaust_until_ns))));
-    exhaust_at_ns
+    let window = failure_window();
+    EXHAUST_WINDOW.with(|target| target.set(Some(window)));
+    window.0
+}
+
+fn failure_window() -> (u64, u64) {
+    let start = ic_cdk::api::time()
+        .checked_add(CADENCE_NS)
+        .unwrap_or_else(|| ic_cdk::trap("failure deadline overflow"));
+    let end = start
+        .checked_add(CADENCE_NS)
+        .unwrap_or_else(|| ic_cdk::trap("failure window overflow"));
+    (start, end)
 }
 
 #[ic_cdk::update]

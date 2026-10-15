@@ -3,6 +3,57 @@
 This records the implementation and evidence scope of the callback delivery
 change. It does not select a release or establish deployment validation.
 
+## Prepared 0.22.6 identity sharing and probe cleanup
+
+Timer identities share one immutable component allocation through `Arc`. Cloning
+no longer copies the three strings. Validation, component access, value-based
+equality/ordering/hashing, debug fields and public auto-traits remain unchanged.
+One private component type preserves named fields; registration claims and
+callback generations still supply authority independently of storage sharing.
+Snapshots remain inert and retain no callbacks or provider handles.
+
+The cancellation cohort now queries its exact registration's armed wake-up,
+trapping on lookup failure instead of silently treating it as an absent snapshot.
+Its changed flag describes an armed wake-up, not every possible logical deadline.
+The maintained cohort boundary observes completed work before cancellation;
+repeated cancellation and subsequent time advancement must remain inactive.
+Failure probes share checked window construction and one pre-failure schedule
+proposal, retaining independent half-open windows and trap precedence.
+
+Compared with `6ced4341bacce7d9f08acfd9a261a6d222755b93` using the preserved
+incoming lock (`5f9ed11441775b7eb6dc20eade12a1dfe29ac06dafb65dcf4d5e78526896a019`),
+Rust 1.88.0 and the unchanged thin-LTO `timer-probe` profile:
+
+| Raw linked artifact | Before bytes | After bytes | Delta |
+| --- | ---: | ---: | ---: |
+| Inactive baseline | 263,403 | 265,217 | +1,814 |
+| Once | 324,779 | 321,107 | -3,672 |
+| AfterCompletion | 325,524 | 321,955 | -3,569 |
+| Watchdog | 326,859 | 322,864 | -3,995 |
+| Runtime recovery probe | 639,519 | 626,924 | -12,595 |
+
+On admitted PocketIC 16.1.0, cancellation intervals fell from 16,335 to 6,862
+instructions for Once, 26,003 to 11,845 for AfterCompletion, and 23,020 to 9,039
+for Watchdog. Watchdog scheduler samples fell from 21,494 to 15,321 instructions.
+All other measured active-cohort start, duplicate ensure, snapshot, inventory and
+work intervals decreased. These are probe subjects, not whole-application savings
+or a new optimizer policy. The graph selects Metrics 0.9.6 and Testkit 0.42.0.
+
+A separate native Rust 1.99 allocation measurement for 1,000 clones of
+`("owner", "subsystem", "name")` fell from 3,000 allocations/18,000 requested
+bytes to zero. The native identity value shrank from 48 to 8 bytes. Initial
+construction instead uses four allocations/82 requested bytes versus three/18;
+preallocated vector storage is excluded. These are native allocation/layout
+observations, not IC heap-page measurements. Sharing each string separately was
+also measured and rejected because all four Wasm artifacts grew.
+
+The 155 native library tests, strict library/probe Clippy, minimum-Rust native/Wasm
+compilation, policy cohorts and all 16 runtime PocketIC subjects pass. Final cohort
+hashes equal the measured identity candidate's hashes. Artifacts, failed sandbox
+socket attempt, allocation source, commands and logs remain at
+`/tmp/ic-timers-identity-reduction.y7d3dr0q/`. The real Cargo inputs are preserved;
+no full release gate, macOS qualification, setup or release execution ran.
+
 ## Prepared 0.22.1 relative-deadline cleanup
 
 Callback retries now use the existing relative `TimerSchedule` resolution path,

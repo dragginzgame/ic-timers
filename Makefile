@@ -119,18 +119,12 @@ pocketic-watchdog: pocketic-check
 		cargo +$(MSRV) test -p ic-timers-pocketic --locked tests::
 
 pocketic-cohorts: pocketic-check
-	+CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-baseline" \
-		cargo +$(MSRV) build -p ic-timers-size-probe \
-		--profile timer-probe --target wasm32-unknown-unknown --locked
-	+CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-once" \
-		cargo +$(MSRV) build -p ic-timers-size-probe \
-		--profile timer-probe --target wasm32-unknown-unknown --locked --no-default-features --features once
-	+CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-after-completion" \
-		cargo +$(MSRV) build -p ic-timers-size-probe \
-		--profile timer-probe --target wasm32-unknown-unknown --locked --no-default-features --features after-completion
-	+CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-watchdog" \
-		cargo +$(MSRV) build -p ic-timers-size-probe \
-		--profile timer-probe --target wasm32-unknown-unknown --locked --no-default-features --features watchdog
+	+@set -e; for cohort in baseline once after-completion watchdog; do \
+		CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-$$cohort" \
+			cargo +$(MSRV) build -p ic-timers-size-probe \
+			--profile timer-probe --target wasm32-unknown-unknown --locked \
+			--no-default-features --features "$$cohort"; \
+	done
 	+@set -e; server="$$(bash scripts/dev/testkit-server.sh check)"; \
 		POCKET_IC_BIN="$$server" \
 		IC_TIMERS_COHORT_ROOT="$(CURDIR)/testing/target" \
