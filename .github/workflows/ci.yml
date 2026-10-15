@@ -67,26 +67,11 @@ jobs:
         run: |
           bash scripts/ci/test-repository-checks.sh
           make msrv testing-check
-      - name: Archive failure evidence
+      - name: Retain failure evidence
         if: ${{ failure() }}
-        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
-        run: |
-          if ! bash scripts/ci/collect-failure-evidence.sh > "$RUNNER_TEMP/ic-timers-collection.log" 2>&1; then
-            cat "$RUNNER_TEMP/ic-timers-collection.log" >&2
-            exit 1
-          fi
-          cat "$RUNNER_TEMP/ic-timers-collection.log"
-      - name: Upload failure evidence
-        if: ${{ failure() }}
-        # actions/upload-artifact v7.0.1
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: ./.github/actions/retain-timers-failure-evidence
         with:
           name: ic-timers-failure-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}-${{ github.run_attempt }}
-          path: |
-            ${{ runner.temp }}/ic-timers-failure-evidence.tar.gz
-            ${{ runner.temp }}/ic-timers-collection.log
-          compression-level: 0
-          if-no-files-found: warn
 
   checks:
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
@@ -138,26 +123,11 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.failure_stage == 'late' }}
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: bash scripts/ci/qualify-failure-evidence.sh late
-      - name: Archive failure evidence
+      - name: Retain failure evidence
         if: ${{ failure() }}
-        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
-        run: |
-          if ! bash scripts/ci/collect-failure-evidence.sh > "$RUNNER_TEMP/ic-timers-collection.log" 2>&1; then
-            cat "$RUNNER_TEMP/ic-timers-collection.log" >&2
-            exit 1
-          fi
-          cat "$RUNNER_TEMP/ic-timers-collection.log"
-      - name: Upload failure evidence
-        if: ${{ failure() }}
-        # actions/upload-artifact v7.0.1
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: ./.github/actions/retain-timers-failure-evidence
         with:
           name: ic-timers-failure-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}-${{ github.run_attempt }}
-          path: |
-            ${{ runner.temp }}/ic-timers-failure-evidence.tar.gz
-            ${{ runner.temp }}/ic-timers-collection.log
-          compression-level: 0
-          if-no-files-found: warn
 
   macos:
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
@@ -230,26 +200,11 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.failure_stage == 'late' }}
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: bash scripts/ci/qualify-failure-evidence.sh late
-      - name: Archive failure evidence
+      - name: Retain failure evidence
         if: ${{ failure() }}
-        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
-        run: |
-          if ! bash scripts/ci/collect-failure-evidence.sh > "$RUNNER_TEMP/ic-timers-collection.log" 2>&1; then
-            cat "$RUNNER_TEMP/ic-timers-collection.log" >&2
-            exit 1
-          fi
-          cat "$RUNNER_TEMP/ic-timers-collection.log"
-      - name: Upload failure evidence
-        if: ${{ failure() }}
-        # actions/upload-artifact v7.0.1
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: ./.github/actions/retain-timers-failure-evidence
         with:
           name: ic-timers-failure-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}-${{ github.run_attempt }}
-          path: |
-            ${{ runner.temp }}/ic-timers-failure-evidence.tar.gz
-            ${{ runner.temp }}/ic-timers-collection.log
-          compression-level: 0
-          if-no-files-found: warn
 
   # Inspect bytes downloaded from the existing failure uploader. The original
   # jobs retain their failure; this separate manual-only job supplies acceptance
@@ -341,23 +296,8 @@ jobs:
             --consumer .shared-tooling/helpers
           make fetch
           bash scripts/release/check-lockfiles.sh
-      - name: Archive failure evidence
+      - name: Retain failure evidence
         if: ${{ failure() }}
-        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
-        run: |
-          if ! bash scripts/ci/collect-failure-evidence.sh > "$RUNNER_TEMP/ic-timers-collection.log" 2>&1; then
-            cat "$RUNNER_TEMP/ic-timers-collection.log" >&2
-            exit 1
-          fi
-          cat "$RUNNER_TEMP/ic-timers-collection.log"
-      - name: Upload failure evidence
-        if: ${{ failure() }}
-        # actions/upload-artifact v7.0.1
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: ./.github/actions/retain-timers-failure-evidence
         with:
           name: ic-timers-failure-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}-${{ github.run_attempt }}
-          path: |
-            ${{ runner.temp }}/ic-timers-failure-evidence.tar.gz
-            ${{ runner.temp }}/ic-timers-collection.log
-          compression-level: 0
-          if-no-files-found: warn

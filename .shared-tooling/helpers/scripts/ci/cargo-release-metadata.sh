@@ -8,8 +8,15 @@ ROOT="${BASH_SOURCE[0]}"
 [[ "$ROOT" == /* ]] || ROOT="$PWD/$ROOT"
 ROOT="$(cd -P "${ROOT%/*}/../.." && printf '%s/.' "$PWD")"
 ROOT="${ROOT%/.}"
-[[ $# == 2 ]] || { echo 'usage: cargo-release-metadata.sh prepare|check|check-graph PRIMARY_PACKAGE' >&2; exit 2; }
+[[ $# == 2 || $# == 3 ]] || { echo 'usage: cargo-release-metadata.sh prepare|check|check-graph PRIMARY_PACKAGE [--manifest-order]' >&2; exit 2; }
 operation="$1" primary="$2"
+check_manifest_order=false
+if [[ $# == 3 ]]; then
+    [[ "$operation" == check && "$3" == --manifest-order ]] || {
+        echo '--manifest-order is supported only by check' >&2; exit 2;
+    }
+    check_manifest_order=true
+fi
 [[ "$primary" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || { echo 'invalid primary package identity' >&2; exit 2; }
 reader="$ROOT/scripts/ci/read-cargo-workspace-version.sh"
 
@@ -138,6 +145,11 @@ case "$operation" in
         if [[ "$operation" == check ]]; then
             regular_metadata "$selected_root" CHANGELOG.md
         fi
+        if [[ "$check_manifest_order" == true ]]; then
+            # Check the same selected source as the graph, using the caller's
+            # prepared Cargo tool. Never execute scripts from the export.
+            (cd "$selected_root" && cargo sort --workspace --check) || exit $?
+        fi
         observed_version="$(bash "$reader" "$selected_root/Cargo.toml")"
         if [[ "$operation" == check ]]; then
             [[ "$observed_version" == "${RELEASE_VERSION:?}" ]] || exit 1
@@ -145,7 +157,9 @@ case "$operation" in
                 '$0 == heading { count++ } END { if (count != 1) exit 1 }' "$selected_root/CHANGELOG.md"
         fi
         lock_packages "$selected_root" "$observed_version" > "$temporary/local-packages"
-        (cd "$selected_root" && cargo metadata --locked --offline --format-version 1) > "$temporary/metadata.json"
+        # Bash 3.2 can otherwise continue after a failed subshell producer,
+        # including one that left plausible metadata behind.
+        (cd "$selected_root" && cargo metadata --locked --offline --format-version 1) > "$temporary/metadata.json" || exit $?
         workspace_packages "$temporary/metadata.json" "$observed_version" "$temporary/local-packages"
         complete=true
         ;;

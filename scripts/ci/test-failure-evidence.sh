@@ -5,21 +5,57 @@ root="${BASH_SOURCE[0]}"
 [[ "$root" == /* ]] || root="$PWD/$root"
 root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
 root="${root%/.}"
-temporary="${TMPDIR:-/tmp}"
-[[ "$temporary" == /* ]] || temporary="$PWD/$temporary"
-temporary="$(cd -P "$temporary" && printf '%s/.' "$PWD")"
-temporary="${temporary%/.}"
-fixture="$(mktemp -d "$temporary/timer-evidence-test.XXXXXX")"
-fixture="$(cd -P "$fixture" && printf '%s/.' "$PWD")"
-fixture="${fixture%/.}"
+# shellcheck source=scripts/ci/fixture-lifecycle.sh
+source "$root/scripts/ci/fixture-lifecycle.sh"
+fixture="$(fixture_create "${TMPDIR:-/tmp}/timer-evidence-test.XXXXXX")"
 # All actual installer/check/collector calls in this fixture share an isolated
 # store; no developer installation can be read, mutated or reused accidentally.
 export SHARED_TOOLING_STORE="$fixture/shared-store"
 # Bash 3.2 can report zero on nounset; cleanup also requires completion.
 fixture_complete=false
-# shellcheck source=scripts/ci/fixture-lifecycle.sh
-source "$root/scripts/ci/fixture-lifecycle.sh"
 trap 'fixture_finish "$?" "$fixture" "Failed evidence fixture retained"' EXIT
+# Qualify the local action's actual collection body with controlled collectors.
+# Upload stays a hosted operation; its pinned call and failure admission are
+# checked here rather than invoking GitHub from a fixture.
+"$root/.tools/host/bin/yq" -o json '.' "$root/.github/actions/retain-timers-failure-evidence/action.yml" > "$fixture/action.json"
+# shellcheck disable=SC2016 # GitHub expressions are literal action metadata.
+"$root/.tools/host/bin/jq" -e '
+    .runs.using == "composite" and (.runs.steps | length) == 2 and
+    .runs.steps[0].if == "${{ always() }}" and
+    .runs.steps[0].shell == "/bin/bash --noprofile --norc -e -o pipefail {0}" and
+    .runs.steps[1].if == "${{ always() }}" and
+    .runs.steps[1].uses == "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" and
+    .runs.steps[1].with == {
+        "name": "${{ inputs.name }}",
+        "path": "${{ runner.temp }}/ic-timers-failure-evidence.tar.gz\n${{ runner.temp }}/ic-timers-collection.log\n",
+        "compression-level": 0, "if-no-files-found": "warn"
+    }' "$fixture/action.json" > /dev/null
+# shellcheck disable=SC2016 # Compare literal caller expressions.
+"$root/.tools/host/bin/yq" -o json '.' "$root/.github/workflows/ci.yml" |
+    "$root/.tools/host/bin/jq" -e '
+        [.jobs[].steps[] | select(.uses == "./.github/actions/retain-timers-failure-evidence")] |
+        length == 4 and all(.[];
+            .if == "${{ failure() }}" and .with.name ==
+                "ic-timers-failure-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}-${{ github.run_attempt }}")' > /dev/null
+"$root/.tools/host/bin/jq" -er '.runs.steps[0].run' "$fixture/action.json" > "$fixture/action.sh"
+mkdir -p "$fixture/action-repository/scripts/ci" "$fixture/action-runner"
+cat > "$fixture/action-repository/scripts/ci/collect-failure-evidence.sh" <<'COLLECTOR'
+printf 'collector stdout\n'
+printf 'collector stderr\n' >&2
+exit "$ACTION_COLLECTOR_STATUS"
+COLLECTOR
+printf 'collector stdout\ncollector stderr\n' > "$fixture/action-expected.log"
+for collector_status in 0 37; do
+    action_status=0
+    (cd "$fixture/action-repository" && ACTION_COLLECTOR_STATUS="$collector_status" \
+        RUNNER_TEMP="$fixture/action-runner" "$BASH" -e -o pipefail "$fixture/action.sh") \
+        > "$fixture/action-$collector_status.log" 2>&1 || action_status=$?
+    action_expected=0
+    [[ "$collector_status" == 0 ]] || action_expected=1
+    [[ "$action_status" == "$action_expected" ]] || exit 1
+    cmp "$fixture/action-expected.log" "$fixture/action-runner/ic-timers-collection.log"
+    cmp "$fixture/action-expected.log" "$fixture/action-$collector_status.log"
+done
 export GITHUB_WORKSPACE="$fixture/repo" RUNNER_TEMP="$fixture/runner"
 export GITHUB_SHA=fixture-event-sha GITHUB_JOB=fixture-job
 export RUNNER_OS=fixture-os RUNNER_ARCH=fixture-arch GITHUB_RUN_ID=123 GITHUB_RUN_ATTEMPT=2

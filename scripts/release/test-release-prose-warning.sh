@@ -2,10 +2,10 @@
 set -euo pipefail
 
 repository_root="$(git rev-parse --show-toplevel)"
-fixture="$(mktemp -d "${TMPDIR:-/tmp}/timers-prose-adapter.XXXXXX")"
-fixture_complete=false
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$repository_root/scripts/ci/fixture-lifecycle.sh"
+fixture="$(fixture_create "${TMPDIR:-/tmp}/timers-prose-adapter.XXXXXX")"
+fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Failed prose-adapter fixture retained"' EXIT
 mkdir -p "$fixture/consumer with spaces/scripts/release" "$fixture/consumer with spaces/scripts/ci" "$fixture/caller"
 cp "$repository_root/scripts/release/warn-release-prose.sh" "$fixture/consumer with spaces/scripts/release/"

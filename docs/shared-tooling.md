@@ -1,5 +1,56 @@
 # Shared Tooling adoption
 
+## Manifest ordering in the selected release source
+
+The current 84/41/18 canonical bundles select
+`1444f1efddfc32b0c921f2e8dcd2b2428e61aa26` from
+[Shared PR #206](https://github.com/dragginzgame/shared-tooling/pull/206), building
+on the previously adopted [#203](https://github.com/dragginzgame/shared-tooling/pull/203).
+Existing roots and tool catalogs are unchanged. VERSION remains 0.14.0 with
+pending 0.14.1 notes; the exact contribution pin is not a publication claim.
+
+Timers opts into `check ic-timers --manifest-order`. Shared checks manifest
+ordering and the locked graph in one current or immutable source and owns its
+cleanup/failure retention. Explicit producer statuses prevent Bash 3.2 from
+accepting failed sorting or plausible metadata from a failed command. The local
+adapter retains source policy and requires
+an explicit frozen commit for committed checks, but no longer exports a tree.
+Prepared/current checks explicitly clear ambient commit selection. Consumer
+fixtures require one archive and one order check and reject failures before
+later graph or tag checks. No selected-tree adapter is executed.
+
+Owner fixtures pass on Linux Bash 5 and genuine Bash 3.2; focused consumer
+qualification and export previews are retained at
+`/tmp/ic-timers-source-cleanup.zsxyfwj8/`. The helper bundle uses a disposable Git
+root and verified before-images for canonical copyback. Runtime behavior and
+Wasm are unchanged; full owner/native-host qualification remains separate.
+
+## Selected assertion probing and consumer fixture allocation
+
+All three canonical exports select Shared contribution
+`a18c57603730b7a3a5038b1af04e722719d4db38` from
+[PR #203](https://github.com/dragginzgame/shared-tooling/pull/203), refreshed on
+Shared main `1769928`. Source VERSION remains 0.14.0 with pending 0.14.1 notes;
+this is an exact contribution pin, not a published version claim. Existing roots
+remain, with only `scripts/ci/fixture-retention-probes.sh` added to the root
+bundle (**84/41/18** payloads). The derived release-input validator follows its existing release callers.
+Host/IC/Cargo tool catalogs and the Binaryen exception are unchanged.
+
+Shared owns assertion selection mechanics, the initialization/EXIT prefix,
+reachability receipt and retained-evidence admission. Timers retains its five
+assertions and contradictory bindings. All 15 consumer fixture roots use the
+already adopted `fixture_create`; copied-prefix checks exercise relative,
+spaced and symlinked TMPDIR values, inherited CDPATH, cleanup and failure retention.
+Shared owns rejected allocation-layout qualification.
+
+Canonical previews precede applies, and the nested helper export uses a
+disposable Git root with verified before-images. The local failure action remains
+Timers-owned because its archive is the product evidence contract. No generic
+Shared archive replacement, timer runtime/API change or Wasm saving is claimed.
+Preparation and focused qualification are retained at
+`/tmp/ic-timers-fixture-reductions.so0rzdpu/`; hosted upload and native macOS
+qualification remain separate.
+
 ## Qualified macOS release-observation repair
 
 All three canonical bundles select Shared contribution

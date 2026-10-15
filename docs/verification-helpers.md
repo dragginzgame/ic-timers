@@ -612,6 +612,17 @@ configuration or Make includes). The checker exports existing HEAD, overlays
 the named inputs plus the Makefile, hook, installer and Make execution check,
 and stages them only in temporary repositories. It never creates commits or
 activates the real checkout's hook.
+Pass `--rust-sources` immediately after the fourth argument to discover current
+Git-maintained Rust files and Cargo manifests, including unignored additions.
+The checker applies their edits/additions and tracked deletions only to its
+disposable checkout. Keep selected perturbation inputs and additional Make,
+configuration or tooling files explicit. This option avoids maintaining a
+second per-module source roster; it does not change formatter or workspace policy.
+The companion `scripts/ci/select-rust-formatting-sources.sh ROOT` publishes a
+complete NUL-separated relative-path selection only after Git and path admission
+succeed. It rejects symlinks, nonregular current files and physical escapes;
+tracked missing paths represent deletions. Ignored untracked files and unrelated
+extensions are omitted. Neither command stages or edits the real source checkout.
 README.md must exist as an unrelated-edit preservation input. Tracked files must
 be regular files, matching the shared hook's support contract.
 This includes unrelated historical symlinks: the checker rejects them before
@@ -708,3 +719,35 @@ return 2 rather than wrapping an invalid status to success. The helper performs
 no cleanup, reporting or process exit. Capture refusal in an explicit conditional
 under errexit. `fixture_finish` uses this admission before its existing cleanup
 policy; qualification runners can instead retain all success and failure evidence.
+
+## Assertion retention probes
+
+Source `scripts/ci/fixture-retention-probes.sh` for
+`fixture_probe_assertion OWNER PROBE_ROOT SOURCE_ROOT NAME [ARGUMENTS...]`.
+The default probe contradicts the first status assertion in a lower-case
+`root`/`fixture` owner and runs its existing setup. Consumers retain the fixture
+roster and arguments.
+
+For an assertion in a workflow or another script, pass
+`--selected ASSERTION_SOURCE LITERAL_PREFIX BINDINGS` after `NAME` instead.
+Exactly one source line must match the literal prefix after leading whitespace.
+The child runs only the owner's initialization through its EXIT trap, followed
+by caller bindings and the selected assertion. Bindings are trusted shell source
+maintained by the caller; never pass user input. Bodies that build, install or
+mutate Git are excluded in this mode. Keep contradictory values and product
+assertion selection in the consumer.
+
+Both modes require the supported root anchor and EXIT boundary, evidence
+retention, status 1, and a receipt proving the intended assertion was reached.
+Ignored assertions and earlier setup failures are rejected. The focused owner
+suite is `scripts/ci/test-fixture-assertion-probe.sh`.
+
+## Manifest ordering in selected release sources
+
+`cargo-release-metadata.sh check PRIMARY_PACKAGE --manifest-order` additionally
+runs `cargo sort --workspace --check` in the same source selected for metadata
+admission. With `RELEASE_COMMIT`, Shared owns the one immutable export, exact
+commit admission, cleanup and failure retention. Consumers retain the opt-in
+policy and prepare the Cargo tool; this check performs no installation or
+manifest mutation. Other check callers remain unchanged. The flag is rejected
+for `prepare` and `check-graph`. Scripts from the selected export are never run.

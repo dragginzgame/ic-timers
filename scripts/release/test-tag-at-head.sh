@@ -6,11 +6,11 @@ export PATH="${repository_root}/.tools/host/bin:${PATH}"
 export YQ="${repository_root}/.tools/host/bin/yq"
 checker="${repository_root}/scripts/release/check-tag-at-head.sh"
 cleaner="${repository_root}/scripts/ci/ensure-clean.sh"
-temporary_root="$(mktemp -d)"
-# Bash 3.2 can report zero on nounset; cleanup also requires completion.
-fixture_complete=false
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$repository_root/scripts/ci/fixture-lifecycle.sh"
+temporary_root="$(fixture_create "${TMPDIR:-/tmp}/timer-tag-at-head.XXXXXX")"
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
 trap 'fixture_finish "$?" "$temporary_root" "Failed tag-at-head fixture retained"' EXIT
 git init -q "${temporary_root}"
 cd "${temporary_root}"
@@ -226,7 +226,7 @@ reject_workflow
 awk '/^release-check:/ { selected=1; next } selected && /^[^[:space:]#]/ { exit } selected { print }' "$repository_root/Makefile" |
     grep -Fq 'bash scripts/release/test-tag-at-head.sh'
 yq -o json '.' "$repository_root/.github/workflows/ci.yml" |
-    jq -e '.jobs["tag-truth"].steps | any(.name == "Archive failure evidence") and any(.name == "Upload failure evidence")
+    jq -e '.jobs["tag-truth"].steps | any(.uses == "./.github/actions/retain-timers-failure-evidence" and .if == "${{ failure() }}")
         and all(.[]; ((.run // "") | test("make[^\\n]* release-check([ \\t\\n]|$)") | not))' > /dev/null
 # The normal CI lane must prepare all root-lock sources before offline graph
 # fixtures; its default-member build does not fetch unpublished probe dependencies.

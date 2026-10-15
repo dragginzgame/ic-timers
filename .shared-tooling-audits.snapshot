@@ -2,7 +2,7 @@
 # version	0.14.0
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	7af7c54ecd549c039d9f41e5c8ad51f926f22b11
+revision	1444f1efddfc32b0c921f2e8dcd2b2428e61aa26
 # entrypoint	audits/README.md
 # entrypoint	audits/code-hygiene.md
 # entrypoint	audits/flow-convergence-and-duplication.md

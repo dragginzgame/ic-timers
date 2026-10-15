@@ -2,6 +2,27 @@
 
 All notable changes to this project are recorded here.
 
+## [0.23.1]
+
+### Development
+
+- Delegate manifest ordering and immutable release-source custody to Shared's
+  metadata checker, retaining exact-commit admission and failed-check evidence.
+  Explicitly preserve failed sorting/metadata producer statuses under Bash 3.2.
+- Consolidate duplicate native probe helpers and move wide `ProbeSnapshot`
+  serialization coverage into the native protocol suite, including optional
+  registration and memory fields.
+
+- Share the four failure archive/upload pairs through one local action, retaining
+  Timers' archive layout, artifact identity and upload after collection failure.
+- Delegate selected assertion-retention probes to Shared Tooling and use its
+  physical-path allocator throughout the 15 consumer-owned shell fixtures.
+  Qualify relative, spaced and symlinked temporary roots without weakening
+  failure-status, completion or retained-evidence checks.
+- Refresh the three canonical snapshots from the qualified Shared assertion
+  contribution; include the release-input validator in the disposable version
+  preparation fixture's companion files.
+
 ## [0.23.0] - 2026-10-15
 
 ### Breaking

@@ -8,6 +8,44 @@ This handoff links [release evidence](../releasing.md),
 [Shared adoption](../shared-tooling.md), [safety](../../SAFETY.md) and
 [the archive](archive-2026-10-10.md).
 
+## Prepared repository-only 0.23.1 reductions
+
+Released base is `b498bb7` (0.23.0). Four CI failure archive/upload pairs now
+call one Timers-owned composite action. Its archive paths, artifact identity,
+uploader pin and collection diagnostics remain; upload is attempted even after
+collection failure. This changes repository CI only, with no runtime or Wasm claim.
+
+Shared [PR #206](https://github.com/dragginzgame/shared-tooling/pull/206) adds
+opt-in manifest ordering inside its selected metadata source, retaining the
+assertion probing from [#203](https://github.com/dragginzgame/shared-tooling/pull/203).
+All three 84/41/18 exports select exact contribution `1444f1e`. The release
+adapter delegates immutable export custody to Shared, while current/prepared
+checks clear ambient commit selection. Timers retains five assertions and inputs;
+15 consumer-owned fixtures now use `fixture_create`. The copied actual boundaries
+cover relative/spaced/symlinked TMPDIR values and inherited CDPATH. The disposable
+version fixture copies the newly derived release-input validator with its caller.
+
+The earlier allocator/action batch passed all 15 consumer fixtures and its
+four Bash 3.2 subjects. The manifest-order follow-up passes the five affected
+consumer shell fixtures, including committed checks, index/preflight custody,
+release gates, graph admission and snapshot corruption. Committed, index and
+gate fixtures also pass with genuine Bash 3.2 selected for child scripts.
+Shared's metadata suite
+passes on Linux Bash 5 and genuine Bash 3.2; local adapter/fixture ShellCheck
+passes. The 84/41/18 snapshot payloads verify at the current contribution pin.
+
+The native PocketIC harness now owns the two duplicated fixed-round/update
+utilities. Wide `ProbeSnapshot` serialization is qualified in the native protocol
+suite with populated optional registration/memory fields. Both protocol tests,
+Rust 1.88 probe compilation and strict Rust 1.99 probe/protocol Clippy pass using
+locked/offline inputs. No timer API, canister implementation or Wasm changed.
+The further cleanup evidence is at `/tmp/ic-timers-source-cleanup.zsxyfwj8/`.
+
+The incoming Testkit 0.44 Cargo edits are preserved. Normal index content and
+refs remain user-owned. Evidence and canonical export previews are at
+`/tmp/ic-timers-fixture-reductions.so0rzdpu/`. No setup, full release gate, live PocketIC or hosted workflow dispatch is part
+of this repository-only batch.
+
 ## Prepared 0.23.0 Metrics projection repair
 
 The selected Metrics 0.10 API removes instruction-summary forwarding methods.

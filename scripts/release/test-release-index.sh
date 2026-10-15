@@ -8,11 +8,11 @@ root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export PATH="$root/.tools/host/bin:$PATH"
 export YQ="$root/.tools/host/bin/yq"
 export RELEASE_INDEX_REAL_CARGO="$(command -v cargo)"
-fixture="$(mktemp -d "${TMPDIR:-/tmp}/release-index-check.XXXXXX")"
-# Bash 3.2 can report zero on nounset; cleanup also requires completion.
-fixture_complete=false
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$root/scripts/ci/fixture-lifecycle.sh"
+fixture="$(fixture_create "${TMPDIR:-/tmp}/release-index-check.XXXXXX")"
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
 finish() {
     local status=$?
     if [[ "$fixture_complete" != true || "$status" != 0 ]]; then
