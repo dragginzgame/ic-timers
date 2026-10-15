@@ -3,9 +3,13 @@
 ## Current authority
 
 One [snapshot](../.shared-tooling.snapshot) records the exact reviewed source,
-entrypoint roots and all **127** payload hashes/modes. It selects [Shared PR #217](https://github.com/dragginzgame/shared-tooling/pull/217)
-`61ddfdc25ad0f4342b5e324e5798897f16c43996`: committed Shared 0.15 source plus
-read-only changelog preflight and verified snapshot handover. This is exact
+entrypoint roots and all **133** payload hashes/modes. It selects [Shared PR #227](https://github.com/dragginzgame/shared-tooling/pull/227)
+`314a1a97854be8523e54273284533de4dd5f6f58`, stacked on
+[#224](https://github.com/dragginzgame/shared-tooling/pull/224) and building on merged
+[#217](https://github.com/dragginzgame/shared-tooling/pull/217) and
+[#218](https://github.com/dragginzgame/shared-tooling/pull/218): committed Shared
+0.15 source plus changelog preflight, snapshot handover, Rust preparation and
+focused verifier qualification, common hosted preparation and Make-fixture setup. This is exact
 contribution provenance, not an upstream release or hosted acceptance claim.
 The [baseline](../DRAGGINZGAME.md) and [local overlay](../AGENTS.md) govern scope.
 
@@ -41,11 +45,33 @@ obsolete manifests are retired; their canonical owners remain. Local Cargo-helpe
 callers now use `scripts/ci/` directly.
 
 Only one snapshot integrity check and one physical export layout remain. The
-consumer corruption fixture still rejects governance, audit and Cargo payload
-corruption and untrusted checksum helpers. Selected workflow bodies use stable
+consumer corruption fixture still rejects corruption of actual governance, audit
+and Cargo payloads. Generic untrusted-helper rejection belongs to Shared's
+verifier fixture. Selected workflow bodies use stable
 step IDs through Shared's complete-input extractor; Timers retains actual-step
 execution, ordering and failure assertions. Changelog preflight is read-only;
 coordinated Shared preparation is the sole metadata writer.
+
+Local setup and hosted Rust lanes call `scripts/dev/prepare-rust-toolchain.sh`.
+Timers' `prepare-rust.sh` owns the full development/MSRV component policy;
+the tag lane retains its narrower rustfmt selection. `make update-dev` passes
+its existing MSRV selection and prepares both compilers before common tools.
+Validation targets never invoke setup. The one added installer root yields 128
+payloads; canonical preview retains the previous 127 payloads.
+
+Two further entrypoints select generic snapshot and downloaded-evidence owner
+fixtures, yielding 130 payloads. Timers keeps actual export corruption, collector
+integration, source/run identity and qualified-catalog selection. Generic archive,
+receipt and directory/helper rejection cases run at their canonical owner.
+Release callers use the Shared stable-version and graph readers directly; the
+worktree graph selection still explicitly clears ambient `RELEASE_COMMIT`.
+
+Three more entrypoints select the common hosted preparation action, its execution
+fixture and a disposable Make-fixture bootstrap, yielding 133 payloads. Timers
+keeps compiler/cache/product policy, local tool extensions and fixture assertions.
+The bootstrap copies only the canonical common Make skeleton; each caller still
+supplies its own Makefile, catalogs and stubs. Shared's existing Make-consumer
+fixture qualifies that layout without a second bootstrap-only suite.
 
 ## Refreshing and qualification
 

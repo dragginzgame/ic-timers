@@ -5,7 +5,7 @@ metadata_checker="$script_dir/../../scripts/ci/cargo-release-metadata.sh"
 
 case "${1:-}" in
     preflight)
-        previous_version="$(bash scripts/release/workspace-version.sh)" || exit $?
+        previous_version="$(bash scripts/ci/read-cargo-workspace-version.sh --stable Cargo.toml)" || exit $?
         [[ "$previous_version" == "${RELEASE_PREVIOUS:?}" ]] || exit 1
         bash "$script_dir/../ci/check-release-source.sh" \
             --allow Cargo.toml --allow Cargo.lock --allow CHANGELOG.md

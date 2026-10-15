@@ -26,16 +26,12 @@ git update-ref HEAD "${source_commit}"
 git read-tree HEAD
 git checkout-index --all
 cp "${repository_root}/Makefile" Makefile
-mkdir -p make
-cp "${repository_root}/make/consumer.mk" "${repository_root}/make/tools.mk" "${repository_root}/make/rust-format.mk" \
-    "${repository_root}/make/release.mk" "${repository_root}/make/execution.mk" make/
+bash "$repository_root/scripts/ci/prepare-make-fixture.sh" "$repository_root" "$temporary_root/repo"
 mkdir -p ci
 cp "${repository_root}/ci/tool-versions.env" ci/
 # The current fmt prerequisite must also exist in the fixture's exact index.
 cp -p "${repository_root}/scripts/ci/check-format-tools.sh" \
     scripts/ci/
-cp -p "${repository_root}/scripts/ci/check-make-execution.sh" \
-    "${repository_root}/scripts/ci/run-formatting.sh" scripts/ci/
 # The fixture overlays both members into the one root-owned workspace.
 mkdir -p crates/hook-fixture/src testing/crates/hook-probe/src
 cat > Cargo.toml <<'EOF'
@@ -55,7 +51,7 @@ edition.workspace = true
 EOF
     printf 'pub fn fixture( ){}\n' > "${member}/src/lib.rs"
 done
-git add Makefile make/consumer.mk make/tools.mk make/rust-format.mk make/release.mk make/execution.mk ci/tool-versions.env Cargo.toml \
+git add Makefile make/ ci/tool-versions.env Cargo.toml \
     crates/hook-fixture testing/crates/hook-probe \
     scripts/ci/check-format-tools.sh scripts/ci/check-make-execution.sh scripts/ci/run-formatting.sh
 printf 'unrelated working edit\n' >> README.md

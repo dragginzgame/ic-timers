@@ -75,14 +75,7 @@ fi
 mkdir "${temporary_root}/workspace with spaces"
 ln -s 'workspace with spaces' "${temporary_root}/workspace-alias"
 cp "${makefile}" "${temporary_root}/workspace with spaces/Makefile"
-mkdir -p "${temporary_root}/workspace with spaces/make"
-cp "${repository_root}/make/consumer.mk" "${repository_root}/make/tools.mk" "${repository_root}/make/rust-format.mk" \
-    "${repository_root}/make/release.mk" "${repository_root}/make/execution.mk" \
-    "${temporary_root}/workspace with spaces/make/"
-mkdir -p "${temporary_root}/workspace with spaces/scripts/ci"
-cp "${repository_root}/scripts/ci/check-make-execution.sh" \
-    "${repository_root}/scripts/ci/run-formatting.sh" \
-    "${temporary_root}/workspace with spaces/scripts/ci/"
+bash "$repository_root/scripts/ci/prepare-make-fixture.sh" "$repository_root" "$temporary_root/workspace with spaces"
 cd "${temporary_root}/workspace-alias"
 fixture_root="$(pwd -P)"
 git init -q

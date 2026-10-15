@@ -483,8 +483,11 @@ remain defined in [AGENTS.md](AGENTS.md).
 
 Normal development and hosted CI use Rust 1.99.0. Hosted CI also lints every
 supported probe configuration with both Rust 1.99.0 and Rust 1.91.0.
-Prepare the complete pinned toolsets through `make update-dev`, or prepare the
-Rust toolchain and run `make install-tools` followed by `make tools-check`.
+`make update-dev` explicitly prepares both compilers with Clippy, rustfmt and
+the Wasm target before installing/checking the common toolsets and hook. Local
+setup and CI use the same reviewed Rust installer; validation remains offline.
+For manual setup, prepare both Rust toolchains and run `make install-tools`
+followed by `make tools-check`.
 Common Cargo tools use `.tools/rust/common/bin`; update interactive shell PATH
 exports when adopting the
 [new installation contract](docs/evidence/shared-tooling-history.md#shared-tooling-060-cargo-storage-adoption).

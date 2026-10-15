@@ -148,14 +148,14 @@ while IFS=$'\t' read -r record _digest _mode path; do
     cp -p "$repository_root/$path" "${workflow_root}/repository/$path"
 done < "$repository_root/.shared-tooling.snapshot"
 cp "$repository_root/.shared-tooling.snapshot" "${workflow_root}/repository/"
-for adapter in check-tag-at-head check-lockfiles workspace-version; do
-    cp "$repository_root/scripts/release/$adapter.sh" "${workflow_root}/repository/scripts/release/"
-done
+cp "$repository_root/scripts/release/check-tag-at-head.sh" "${workflow_root}/repository/scripts/release/"
 mkdir "${workflow_root}/bin" "${workflow_root}/runner"
 export GITHUB_WORKSPACE="${workflow_root}/repository" RUNNER_TEMP="${workflow_root}/runner"
 export TAG_MAKE_EVENTS="${workflow_root}/make-events" TAG_SCRIPT_EVENTS="${workflow_root}/script-events" TAG_REAL_BASH="$BASH"
-TAG_VERSION="$(cd "$GITHUB_WORKSPACE" && bash scripts/release/workspace-version.sh)"
+TAG_VERSION="$(cd "$GITHUB_WORKSPACE" && bash scripts/ci/read-cargo-workspace-version.sh --stable Cargo.toml)"
 export TAG_VERSION GITHUB_REF_NAME="v$TAG_VERSION" TAG_WORKFLOW_SCOPE=tag
+# The actual tag graph check must select the current worktree despite ambient intent.
+export RELEASE_COMMIT=unrelated-saved-release
 git -C "$GITHUB_WORKSPACE" config user.name 'Tag workflow fixture'
 git -C "$GITHUB_WORKSPACE" config user.email fixture@example.invalid
 git -C "$GITHUB_WORKSPACE" tag -fa "$GITHUB_REF_NAME" -m fixture > /dev/null
@@ -196,7 +196,7 @@ run_workflow
 printf 'install-tools\ntools-check\n--no-print-directory version\nrelease-tag-check\nfetch\n' > "${workflow_root}/expected-make-events"
 cmp "${workflow_root}/expected-make-events" "$TAG_MAKE_EVENTS"
 for expected in 'scripts/ci/verify-shared-tooling-snapshot.sh' \
-    'scripts/release/check-lockfiles.sh'; do
+    'scripts/ci/cargo-release-metadata.sh check-graph ic-timers'; do
     grep -Fxq "$expected" "$TAG_SCRIPT_EVENTS"
 done
 reject_workflow() {
@@ -211,17 +211,17 @@ for payload in DRAGGINZGAME.md audits/README.md scripts/ci/dependency-pins.jq; d
     cp -p "$GITHUB_WORKSPACE/$payload" "${workflow_root}/original"
     printf '\nchanged\n' >> "$GITHUB_WORKSPACE/$payload"
     reject_workflow
-    if grep -Fxq 'scripts/release/check-lockfiles.sh' "$TAG_SCRIPT_EVENTS"; then exit 1; fi
+    if grep -Fxq 'scripts/ci/cargo-release-metadata.sh check-graph ic-timers' "$TAG_SCRIPT_EVENTS"; then exit 1; fi
     cp -p "${workflow_root}/original" "$GITHUB_WORKSPACE/$payload"
 done
 TAG_FAIL_FETCH=true reject_workflow
 grep -Fxq fetch "$TAG_MAKE_EVENTS"
-if grep -Fxq 'scripts/release/check-lockfiles.sh' "$TAG_SCRIPT_EVENTS"; then exit 1; fi
+if grep -Fxq 'scripts/ci/cargo-release-metadata.sh check-graph ic-timers' "$TAG_SCRIPT_EVENTS"; then exit 1; fi
 # An otherwise admitted event still needs its actual coordinated lock graph.
 cp -p "$GITHUB_WORKSPACE/Cargo.lock" "${workflow_root}/original-lock"
 printf 'version = 4\n' > "$GITHUB_WORKSPACE/Cargo.lock"
 reject_workflow
-grep -Fxq 'scripts/release/check-lockfiles.sh' "$TAG_SCRIPT_EVENTS"
+grep -Fxq 'scripts/ci/cargo-release-metadata.sh check-graph ic-timers' "$TAG_SCRIPT_EVENTS"
 cp -p "${workflow_root}/original-lock" "$GITHUB_WORKSPACE/Cargo.lock"
 # Do not require parent history: CI checks out a shallow source. An independent
 # commit with the same tree is a deterministic unrelated-main counterexample.

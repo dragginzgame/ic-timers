@@ -42,19 +42,17 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/ic-timers-fixtures"
           printf 'TMPDIR=%s/ic-timers-fixtures\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
-      # dtolnay/rust-toolchain v1
-      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067
-        with:
-          toolchain: ${{ env.IC_TIMERS_MSRV }}
-          components: clippy, rustfmt
-          targets: wasm32-unknown-unknown
+      - name: Prepare minimum Rust toolchain
+        id: prepare-rust-minimum
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: bash scripts/dev/prepare-rust.sh "$IC_TIMERS_MSRV"
       - name: Pin cargo and rustc to MSRV
         shell: bash
         run: echo "RUSTUP_TOOLCHAIN=$IC_TIMERS_MSRV" >> "$GITHUB_ENV"
       # Swatinem/rust-cache v2
       - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
       - name: Prepare and check the complete toolset
-        uses: ./.github/actions/prepare-timers-tools
+        uses: ./.github/actions/prepare-common-tools
       - name: Check native and Wasm MSRV, provider visibility and nested probes
         run: |
           bash scripts/ci/test-repository-checks.sh
@@ -82,19 +80,17 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.failure_stage == 'early' }}
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: bash scripts/ci/qualify-failure-evidence.sh early
-      # dtolnay/rust-toolchain v1
-      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067
-        with:
-          toolchain: ${{ env.IC_TIMERS_INTERNAL_TOOLCHAIN }}
-          components: clippy, rustfmt
-          targets: wasm32-unknown-unknown
+      - name: Prepare development Rust toolchain
+        id: prepare-rust-development
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: bash scripts/dev/prepare-rust.sh "$IC_TIMERS_INTERNAL_TOOLCHAIN"
       - name: Pin cargo and rustc to internal toolchain
         shell: bash
         run: echo "RUSTUP_TOOLCHAIN=$IC_TIMERS_INTERNAL_TOOLCHAIN" >> "$GITHUB_ENV"
       # Swatinem/rust-cache v2
       - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
       - name: Prepare and check the complete toolset
-        uses: ./.github/actions/prepare-timers-tools
+        uses: ./.github/actions/prepare-common-tools
       - name: Run CI gate
         id: ci-gate
         run: |
@@ -151,25 +147,21 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.failure_stage == 'early' }}
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: bash scripts/ci/qualify-failure-evidence.sh early
-      # dtolnay/rust-toolchain v1
-      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067
-        with:
-          toolchain: ${{ env.IC_TIMERS_MSRV }}
-          components: clippy, rustfmt
-          targets: wasm32-unknown-unknown
-      # dtolnay/rust-toolchain v1
-      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067
-        with:
-          toolchain: ${{ env.IC_TIMERS_INTERNAL_TOOLCHAIN }}
-          components: clippy, rustfmt
-          targets: wasm32-unknown-unknown
+      - name: Prepare minimum Rust toolchain
+        id: prepare-rust-minimum
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: bash scripts/dev/prepare-rust.sh "$IC_TIMERS_MSRV"
+      - name: Prepare development Rust toolchain
+        id: prepare-rust-development
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: bash scripts/dev/prepare-rust.sh "$IC_TIMERS_INTERNAL_TOOLCHAIN"
       - name: Pin cargo and rustc to internal toolchain
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: echo "RUSTUP_TOOLCHAIN=$IC_TIMERS_INTERNAL_TOOLCHAIN" >> "$GITHUB_ENV"
       # Swatinem/rust-cache v2
       - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae
       - name: Prepare and check the complete toolset
-        uses: ./.github/actions/prepare-timers-tools
+        uses: ./.github/actions/prepare-common-tools
       - name: Run the complete native release gate
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: make release-verify
@@ -211,7 +203,9 @@ jobs:
       # actions/checkout v6
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
       - name: Check evidence rejection cases
-        run: python3 scripts/ci/test_failure_evidence.py
+        run: |
+          python3 scripts/ci/test-failure-evidence.py
+          python3 scripts/ci/test_failure_evidence.py
       - name: Download the original failed-job artifact
         # actions/download-artifact v8, as qualified by Shared Tooling 0.1.20
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
@@ -244,11 +238,10 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/ic-timers-fixtures"
           printf 'TMPDIR=%s/ic-timers-fixtures\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
-      # dtolnay/rust-toolchain v1
-      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067
-        with:
-          toolchain: ${{ env.IC_TIMERS_INTERNAL_TOOLCHAIN }}
-          components: rustfmt
+      - name: Prepare development Rust toolchain
+        id: prepare-rust-development
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: bash scripts/dev/prepare-rust-toolchain.sh "$IC_TIMERS_INTERNAL_TOOLCHAIN" --component rustfmt
       - name: Verify release tag
         id: release-tag
         shell: bash
@@ -270,7 +263,7 @@ jobs:
           # Inspect actual adopted payloads; regression fixtures stay in PR/main.
           bash scripts/ci/verify-shared-tooling-snapshot.sh
           make fetch
-          bash scripts/release/check-lockfiles.sh
+          RELEASE_COMMIT='' bash scripts/ci/cargo-release-metadata.sh check-graph ic-timers
       - name: Retain failure evidence
         if: ${{ failure() }}
         uses: ./.github/actions/retain-timers-failure-evidence

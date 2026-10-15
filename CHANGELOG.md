@@ -12,6 +12,29 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Adopt Shared's common hosted tool-preparation action and Make-fixture bootstrap.
+  Retain local compiler/cache/product policy and fixture stubs/assertions; remove
+  the private action and repeated common-file copy lists.
+- Remove tracked Python bytecode and ignore interpreter cache directories.
+
+- Reuse Shared's focused snapshot/archive verifier fixtures. Keep Timers' actual
+  export, collector, source/run identity and qualified-pin checks; retire generic
+  rejection permutations from the local fixtures.
+- Call canonical workspace-version and graph readers directly. Remove their
+  forwarding scripts and adapter-only graph fixture; retain stable-version,
+  worktree-selection, failure-status and pre-mutation checks at real callers.
+
+- Call Shared's release-prose advisory directly and retire the local forwarding
+  script and forwarding-only fixture. Preserve pre-mutation, non-blocking checks.
+
+- Delegate multi-result probe calls to the selected Testkit Candid helpers;
+  retain the raw provider-ingress rejection boundary and existing reply shapes.
+- Reuse Shared's fixture-prefix renderer for collector failure probes, retaining
+  the complete exit/completion and evidence assertions.
+- Share explicit Rust installation across local setup and hosted CI. `update-dev`
+  now prepares the selected MSRV with Clippy/rustfmt and the Wasm target too;
+  checks continue to require prepared inputs without installing them.
+
 - Consolidate Shared snapshot ownership and reuse the canonical changelog
   preflight and workflow-step extraction owners from
   [Shared #217](https://github.com/dragginzgame/shared-tooling/pull/217). Retire

@@ -18,6 +18,7 @@ source "$root/scripts/ci/fixture-retention-probes.sh"
 # release helpers, Git mutation or another fixture. Shared copies stay upstream.
 # Each entry selects source path, scratch variable and repository-root variable.
 fixtures=(
+    scripts/ci/test-rust-preparation.sh:fixture:root
     scripts/ci/test-failure-evidence.sh:fixture:root
     scripts/ci/test-fixture-completion.sh:fixture:root
     scripts/ci/test-git-hook.sh:temporary_root:repository_root
@@ -25,11 +26,9 @@ fixtures=(
     scripts/ci/test-shared-snapshots.sh:fixture:root
     scripts/ci/test-testkit-server.sh:fixture:root
     scripts/release/test-committed-release.sh:fixture:root
-    scripts/release/test-lockfiles.sh:temporary_root:repository_root
     scripts/release/test-release-gate.sh:temporary_root:repository_root
     scripts/release/test-release-impact.sh:temporary_root:repository_root
     scripts/release/test-release-index.sh:fixture:root
-    scripts/release/test-release-prose-warning.sh:fixture:repository_root
     scripts/release/test-tag-at-head.sh:temporary_root:repository_root
     scripts/release/test-version-preparation.sh:temporary_root:repository_root
 )

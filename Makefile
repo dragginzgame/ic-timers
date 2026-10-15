@@ -59,7 +59,7 @@ help:
 	@echo "  release-resume VERSION=x.y.z Resume exact saved shared release intent"
 
 version:
-	@bash scripts/release/workspace-version.sh
+	@bash scripts/ci/read-cargo-workspace-version.sh --stable Cargo.toml
 
 # Prepare every target's locked sources before offline metadata validation.
 fetch:
@@ -145,13 +145,16 @@ shell-check:
 release-check:
 	bash scripts/ci/test-fixture-completion.sh
 	+$(MAKE) --no-print-directory shared-tooling-check
+	bash scripts/ci/test-snapshot-verifier.sh
 	bash scripts/ci/test-shared-snapshots.sh
 	bash scripts/ci/test-host-tools.sh
 	bash scripts/ci/test-tool-commands.sh
 	bash scripts/ci/test-rust-tools.sh
+	bash scripts/ci/test-rust-preparation.sh
 	bash scripts/ci/test-cloc.sh
 	bash scripts/ci/test-failure-evidence.sh
 	bash scripts/ci/test-format-tools.sh
+	bash scripts/ci/test-prepare-common-tools.sh
 	bash scripts/ci/test-make-consumer.sh
 	bash scripts/ci/test-ic-tools.sh
 	bash scripts/ci/test-evidence-checksums.sh
@@ -167,8 +170,8 @@ release-check:
 	bash scripts/ci/test-release-changelog.sh
 	bash scripts/ci/test-workflow-step.sh
 	bash scripts/release/test-release-impact.sh
-	bash scripts/release/test-lockfiles.sh
-	bash scripts/release/test-release-prose-warning.sh
+	RELEASE_COMMIT='' bash scripts/ci/cargo-release-metadata.sh check-graph ic-timers
+	bash scripts/ci/test-release-prose-warning.sh
 	bash scripts/release/test-release-gate.sh
 	bash scripts/release/test-version-preparation.sh
 	bash scripts/release/test-tag-at-head.sh
@@ -212,7 +215,7 @@ clean:
 	+cargo clean
 
 update-dev:
-	bash scripts/dev/update-dev.sh
+	bash scripts/dev/update-dev.sh "$(MSRV)"
 
 ensure-clean:
 	@bash scripts/ci/ensure-clean.sh
@@ -244,7 +247,7 @@ format-tools-check fmt fmt-check: override RUST_TOOL_VERSIONS = $(CURDIR)/ci/too
 .PHONY: release-version release-preflight release-prepare-version release-prepared-check release-files release-commit-check release-committed-check release-tagged-check release-push-check
 
 release-version:
-	@bash scripts/release/workspace-version.sh
+	@bash scripts/ci/read-cargo-workspace-version.sh --stable Cargo.toml
 release-preflight:
 	@bash scripts/release/adapter.sh preflight
 release-prepare-version:

@@ -14,6 +14,8 @@ export SHARED_TOOLING_STORE="$fixture/shared-store"
 # Bash 3.2 can report zero on nounset; cleanup also requires completion.
 fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Failed evidence fixture retained"' EXIT
+# shellcheck source=scripts/ci/fixture-retention-probes.sh
+source "$root/scripts/ci/fixture-retention-probes.sh"
 # Qualify the local action's actual collection body with controlled collectors.
 # Upload stays a hosted operation; its pinned call and failure admission are
 # checked here rather than invoking GitHub from a fixture.
@@ -57,71 +59,14 @@ for collector_status in 0 37; do
     cmp "$fixture/action-expected.log" "$fixture/action-runner/ic-timers-collection.log"
     cmp "$fixture/action-expected.log" "$fixture/action-$collector_status.log"
 done
-# Run the consolidated tool preparation body with substitute Make commands.
-# Neither installers nor the real developer tool store are touched.
-"$root/.tools/host/bin/yq" -o json '.' "$root/.github/actions/prepare-timers-tools/action.yml" > "$fixture/prepare-action.json"
-"$root/.tools/host/bin/jq" -e '
-    .runs.using == "composite" and (.runs.steps | length) == 1 and
-    .runs.steps[0].shell == "/bin/bash --noprofile --norc -e -o pipefail {0}"
-' "$fixture/prepare-action.json" > /dev/null
+# Shared qualifies the action mechanics; Timers retains actual job selection,
+# local Make extension ordering and collector/log/upload integration checks.
 # shellcheck disable=SC2016 # $job is a jq binding, not a shell variable.
 "$root/.tools/host/bin/yq" -o json '.' "$root/.github/workflows/ci.yml" |
     "$root/.tools/host/bin/jq" -e '
         [.jobs | to_entries[] | .key as $job | .value.steps[] |
-            select(.uses == "./.github/actions/prepare-timers-tools") | $job] |
+            select(.uses == "./.github/actions/prepare-common-tools") | $job] |
         sort == ["checks", "macos", "msrv"]' > /dev/null
-"$root/.tools/host/bin/jq" -e '.runs.steps' "$fixture/prepare-action.json" > "$fixture/prepare-steps.json"
-bash "$root/scripts/ci/extract-workflow-step.sh" "$fixture/prepare-steps.json" prepare-tools > "$fixture/prepare-action.sh"
-mkdir -p "$fixture/prepare-bin" "$fixture/prepare runner" "$fixture/prepare checkout"
-cat > "$fixture/prepare-bin/make" <<'MAKE'
-#!/usr/bin/env bash
-set -euo pipefail
-printf '%s\n' "$*" >> "$PREPARE_CALLS"
-printf '%s stdout\n' "$*"
-printf '%s stderr\n' "$*" >&2
-case "$*" in
-    install-tools) exit "$PREPARE_INSTALL_STATUS" ;;
-    tools-check) exit "$PREPARE_CHECK_STATUS" ;;
-    *) exit 99 ;;
-esac
-MAKE
-chmod +x "$fixture/prepare-bin/make"
-for failure in success install check; do
-    install_status=0 check_status=0 expected=0
-    case "$failure" in
-        install) install_status=37 expected=37 ;;
-        check) check_status=41 expected=41 ;;
-    esac
-    rm -f "$fixture/prepare runner/tools-install.log" "$fixture/prepare runner/tools-check.log"
-    : > "$fixture/prepare-calls"
-    printf 'existing PATH entry\n' > "$fixture/prepare-path"
-    prepare_status=0
-    PATH="$fixture/prepare-bin:$PATH" PREPARE_CALLS="$fixture/prepare-calls" \
-        PREPARE_INSTALL_STATUS="$install_status" PREPARE_CHECK_STATUS="$check_status" \
-        RUNNER_TEMP="$fixture/prepare runner" GITHUB_WORKSPACE="$fixture/prepare checkout" \
-        GITHUB_PATH="$fixture/prepare-path" \
-        "$BASH" --noprofile --norc -e -o pipefail "$fixture/prepare-action.sh" \
-        > "$fixture/prepare-$failure.log" 2>&1 || prepare_status=$?
-    [[ "$prepare_status" == "$expected" ]] || exit 1
-    printf 'install-tools stdout\ninstall-tools stderr\n' > "$fixture/expected-install.log"
-    cmp "$fixture/expected-install.log" "$fixture/prepare runner/tools-install.log"
-    printf 'install-tools\n' > "$fixture/expected-calls"
-    printf 'existing PATH entry\n' > "$fixture/expected-path"
-    if [[ "$failure" == install ]]; then
-        [[ ! -e "$fixture/prepare runner/tools-check.log" ]] || exit 1
-    else
-        printf 'tools-check\n' >> "$fixture/expected-calls"
-        printf 'tools-check stdout\ntools-check stderr\n' > "$fixture/expected-check.log"
-        cmp "$fixture/expected-check.log" "$fixture/prepare runner/tools-check.log"
-    fi
-    if [[ "$failure" == success ]]; then
-        printf '%s\n' "$fixture/prepare checkout/.tools/host/bin" \
-            "$fixture/prepare checkout/.tools/ic/bin" "$fixture/prepare checkout/.tools/rust/common/bin" \
-            >> "$fixture/expected-path"
-    fi
-    cmp "$fixture/expected-calls" "$fixture/prepare-calls"
-    cmp "$fixture/expected-path" "$fixture/prepare-path"
-done
 export GITHUB_WORKSPACE="$fixture/repo" RUNNER_TEMP="$fixture/runner"
 export GITHUB_SHA=fixture-event-sha GITHUB_JOB=fixture-job
 export RUNNER_OS=fixture-os RUNNER_ARCH=fixture-arch GITHUB_RUN_ID=123 GITHUB_RUN_ATTEMPT=2
@@ -130,7 +75,8 @@ mkdir -p "$GITHUB_WORKSPACE" "$RUNNER_TEMP"
 # tool selection or archiving. Existing full collection cases below still prove
 # the successful archive path. Use the invoking Bash, including native Bash 3.2.
 mkdir -p "$fixture/collector-probe/scripts/ci" "$fixture/collector scratch"
-export CI_EVIDENCE_EXIT_PATH="$fixture/collector-exit-path"
+export RETENTION_EXIT_PATH="$fixture/collector-exit-path"
+export RETENTION_SOURCE_ROOT="$root"
 for failure in nounset command nonzero premature completed failed-completion; do
     # shellcheck disable=SC2016 # Expanded only by the disposable collector copy.
     case "$failure" in
@@ -141,30 +87,20 @@ for failure in nounset command nonzero premature completed failed-completion; do
         completed) injection='collection_complete=true; exit 0'; expected=0 ;;
         failed-completion) injection='collection_complete=true; exit 23'; expected=23 ;;
     esac
-    COLLECTOR_INJECTION="$injection" awk '
-        { print }
-        /^trap finish EXIT$/ {
-            print "printf \"%s\\n\" \"$metadata\" > \"$CI_EVIDENCE_EXIT_PATH\""
-            print "printf evidence > \"$metadata/exit-evidence\""
-            print ENVIRON["COLLECTOR_INJECTION"]
-            print "exit 99"
-            injected=1
-            exit
-        }
-        END { if (!injected) exit 1 }
-    ' "$root/scripts/ci/collect-failure-evidence.sh" \
-        > "$fixture/collector-probe/scripts/ci/collect-failure-evidence.sh"
-    rm -f -- "$CI_EVIDENCE_EXIT_PATH"
+    fixture_probe_prefix "$root/scripts/ci/collect-failure-evidence.sh" \
+        "$fixture/collector-probe/scripts/ci/collect-failure-evidence.sh" \
+        script_root metadata "$injection"
+    rm -f -- "$RETENTION_EXIT_PATH"
     status=0
     RUNNER_TEMP="$fixture/collector scratch" \
         "$BASH" "$fixture/collector-probe/scripts/ci/collect-failure-evidence.sh" \
         > "$fixture/collector-exit-$failure.log" 2>&1 || status=$?
     [[ "$status" == "$expected" ]] || exit 1
-    retained="$(cat "$CI_EVIDENCE_EXIT_PATH")"
+    retained="$(cat "$RETENTION_EXIT_PATH")"
     [[ -n "$retained" ]] || exit 1
     if [[ "$expected" == 0 ]]; then [[ ! -e "$retained" ]] || exit 1
     else
-        [[ -d "$retained" && "$(cat "$retained/exit-evidence")" == evidence ]] || exit 1
+        [[ -d "$retained" && "$(cat "$retained/exit-evidence")" == 'retained evidence' ]] || exit 1
         grep -Fq "Failed evidence collection retained: $retained" "$fixture/collector-exit-$failure.log"
     fi
 done
@@ -673,7 +609,7 @@ chmod +x "$fixture/retention-bin/tool-stub"
 for tool in git cargo cp; do ln -s tool-stub "$fixture/retention-bin/$tool"; done
 retained_inputs=()
 for script in scripts/release/test-committed-release.sh scripts/release/test-release-index.sh \
-    scripts/release/test-lockfiles.sh scripts/ci/test-repository-checks.sh; do
+    scripts/ci/test-repository-checks.sh; do
     name="${script##*/}"
     scratch="$RUNNER_TEMP/ic-timers-fixtures/retention cases/$name"
     mkdir -p "$scratch"

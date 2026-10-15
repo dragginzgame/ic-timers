@@ -7,7 +7,8 @@ set -euo pipefail
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 export PATH="$root/.tools/host/bin:$PATH"
 export YQ="$root/.tools/host/bin/yq"
-export RELEASE_INDEX_REAL_CARGO="$(command -v cargo)"
+RELEASE_INDEX_REAL_CARGO="$(command -v cargo)"
+export RELEASE_INDEX_REAL_CARGO
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$root/scripts/ci/fixture-lifecycle.sh"
 fixture="$(fixture_create "${TMPDIR:-/tmp}/release-index-check.XXXXXX")"
@@ -26,7 +27,8 @@ mkdir "$fixture/bin" "$fixture/tmp"
 export FETCH_EVENTS="$fixture/fetch-events"
 export PREPARATION_EVENTS="$fixture/preparation-events"
 : > "$PREPARATION_EVENTS"
-export RELEASE_INDEX_REAL_MAKE="$(command -v make)"
+RELEASE_INDEX_REAL_MAKE="$(command -v make)"
+export RELEASE_INDEX_REAL_MAKE
 real_bash="$(command -v bash)"
 printf '#!%s\n' "$real_bash" > "$fixture/bin/cargo"
 cat >> "$fixture/bin/cargo" <<'STUB'
@@ -70,9 +72,11 @@ chmod +x "$fixture/bin/make"
 export PATH="$fixture/bin:$PATH" TMPDIR="$fixture/tmp"
 cd "$fixture/repo"
 original_head="$(git rev-parse HEAD)"
-export RELEASE_VERSION="$(bash "$root/scripts/release/workspace-version.sh")"
+RELEASE_VERSION="$(bash "$root/scripts/ci/read-cargo-workspace-version.sh" --stable "$PWD/Cargo.toml")"
+export RELEASE_VERSION
 export RELEASE_PREVIOUS="$RELEASE_VERSION"
-export RELEASE_DATE="$(sed -n "s/^## \[$RELEASE_VERSION\] - //p" CHANGELOG.md)"
+RELEASE_DATE="$(sed -n "s/^## \[$RELEASE_VERSION\] - //p" CHANGELOG.md)"
+export RELEASE_DATE
 # CI's main checkout need not contain release tags. Supply the impact owner's
 # prerequisite locally, without fetching history or changing the source repo.
 git tag -f "v$RELEASE_PREVIOUS" "$original_head" > /dev/null
@@ -150,7 +154,8 @@ rm unexpected-source.rs
 
 # Real Git guards must reject failed producers, even when they emit plausible
 # metadata paths first. No failure may become successful empty-path admission.
-export RELEASE_INDEX_REAL_GIT="$(command -v git)"
+RELEASE_INDEX_REAL_GIT="$(command -v git)"
+export RELEASE_INDEX_REAL_GIT
 printf '#!%s\n' "$real_bash" > "$fixture/bin/git"
 cat >> "$fixture/bin/git" <<'STUB'
 set -euo pipefail
@@ -197,7 +202,7 @@ export RELEASE_INDEX_REAL_BASH="$real_bash"
 printf '#!%s\n' "$real_bash" > "$fixture/bin/bash"
 cat >> "$fixture/bin/bash" <<'STUB'
 set -euo pipefail
-if [[ "${1:-}" == scripts/release/workspace-version.sh && -n "${FAIL_VERSION_READ:-}" ]]; then
+if [[ "${1:-}" == scripts/ci/read-cargo-workspace-version.sh && -n "${FAIL_VERSION_READ:-}" ]]; then
     case "$FAIL_VERSION_READ" in
         matching) printf '%s\n' "$RELEASE_PREVIOUS" ;;
         empty) ;;
@@ -235,7 +240,8 @@ done
 # A clean release preflight fetches, sets up and admits the selected tool, in
 # order. Every failure stops before later effects or release metadata mutation.
 cp CHANGELOG.md "$fixture/original-changelog"
-export RELEASE_VERSION="$(bash "$root/scripts/ci/next-release-version.sh" "$RELEASE_PREVIOUS" patch)"
+RELEASE_VERSION="$(bash "$root/scripts/ci/next-release-version.sh" "$RELEASE_PREVIOUS" patch)"
+export RELEASE_VERSION
 # HEAD may already contain an undated draft when CI checks a preparation commit.
 # Give this isolated scenario one candidate rather than adding a second draft.
 printf '# Changelog\n\n## [%s]\n\n- Cache preparation fixture.\n\n## [%s] - %s\n\n- Prior fixture.\n' \

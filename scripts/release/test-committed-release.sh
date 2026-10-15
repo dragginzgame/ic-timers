@@ -24,12 +24,7 @@ trap finish EXIT
 mkdir -p "$fixture/current/scripts" "$fixture/current/scripts/ci" \
     "$fixture/selected" "$fixture/bin" "$fixture/tmp"
 cp "$root/Makefile" "$fixture/current/"
-mkdir -p "$fixture/current/make"
-cp "$root/make/consumer.mk" "$root/make/tools.mk" "$root/make/rust-format.mk" \
-    "$root/make/release.mk" "$root/make/execution.mk" "$fixture/current/make/"
-mkdir -p "$fixture/current/scripts/ci"
-cp "$root/scripts/ci/check-make-execution.sh" "$root/scripts/ci/run-formatting.sh" \
-    "$fixture/current/scripts/ci/"
+bash "$root/scripts/ci/prepare-make-fixture.sh" "$root" "$fixture/current"
 cp -R "$root/scripts/release" "$fixture/current/scripts/"
 cp "$root/scripts/ci/read-cargo-workspace-version.sh" \
     "$root/scripts/ci/check-release-tag.sh" \

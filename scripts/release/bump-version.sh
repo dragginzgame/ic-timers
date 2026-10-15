@@ -27,7 +27,7 @@ case "${requested}" in
         ;;
 esac
 
-previous_version="$(bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh")"
+previous_version="$(bash scripts/ci/read-cargo-workspace-version.sh --stable "$PWD/Cargo.toml")"
 
 if [[ "${requested}" =~ ^[0-9] ]]; then
     new_version="${requested}"
@@ -54,7 +54,7 @@ bash scripts/release/check-bump-impact.sh "${release_impact}" "${previous_versio
 
 release_date="${IC_TIMERS_RELEASE_DATE:-$(date -u +%F)}"
 bash scripts/ci/check-release-changelog.sh "$new_version" "$previous_version" "$release_date" CHANGELOG.md
-if ! bash scripts/release/warn-release-prose.sh "${new_version}"; then
+if ! bash scripts/ci/warn-release-prose.sh "${new_version}" docs/status/current.md; then
     echo "warning: advisory release-prose check could not run; continuing" >&2
 fi
 

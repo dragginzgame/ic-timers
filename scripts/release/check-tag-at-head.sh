@@ -4,7 +4,7 @@ script_root="$(cd "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd -P)"
 
 case "$#" in
     0)
-        version="$(bash "$(dirname -- "${BASH_SOURCE[0]}")/workspace-version.sh")"
+        version="$(bash "$script_root/scripts/ci/read-cargo-workspace-version.sh" --stable "$PWD/Cargo.toml")"
         selected_commit="$(git rev-parse HEAD)"
         ;;
     2)

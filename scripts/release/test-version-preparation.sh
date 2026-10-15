@@ -14,7 +14,7 @@ trap 'fixture_finish "$?" "$temporary_root" "Failed version-preparation fixture 
 git init -q "${temporary_root}"
 mkdir -p "${temporary_root}"/{scripts/release,scripts/ci,docs/status,docs/changelog,crates/ic-timers/src,testing/probe/src}
 for script in bump-version \
-    warn-release-prose check-bump-impact check-lockfiles workspace-version; do
+    check-bump-impact; do
     cp "${repository_root}/scripts/release/${script}.sh" "${temporary_root}/scripts/release/"
 done
 cp "${repository_root}/scripts/ci/next-release-version.sh" \
@@ -166,7 +166,7 @@ for invalid in missing-table missing-version duplicate-table duplicate-version l
                 s/"0\.1\.0"/"00.1.0"/ if $package' Cargo.toml ;;
     esac
     cp Cargo.toml rejected-manifest.toml
-    if bash scripts/release/workspace-version.sh >/dev/null 2>&1; then
+    if bash scripts/ci/read-cargo-workspace-version.sh --stable Cargo.toml >/dev/null 2>&1; then
         echo "error: workspace version read accepted ${invalid}" >&2
         exit 1
     fi
@@ -322,10 +322,11 @@ mv existing-changelog.md CHANGELOG.md
 assert_metadata_unchanged original-files
 
 # A failed prose advisory still runs before mutation and cannot block the bump.
-mv scripts/release/warn-release-prose.sh scripts/release/original-warn-release-prose.sh
-cat > scripts/release/warn-release-prose.sh <<'EOF'
+mv scripts/ci/warn-release-prose.sh scripts/ci/original-warn-release-prose.sh
+cat > scripts/ci/warn-release-prose.sh <<'EOF'
 #!/usr/bin/env bash
-bash scripts/release/workspace-version.sh > advisory-version
+[[ "$#" == 2 && "$1" == 0.1.1 && "$2" == docs/status/current.md ]] || exit 2
+bash scripts/ci/read-cargo-workspace-version.sh --stable Cargo.toml > advisory-version
 exit 1
 EOF
 output="$(bash scripts/release/bump-version.sh patch 2>&1)"
@@ -334,15 +335,15 @@ if [[ "${output}" != *'advisory release-prose check could not run; continuing'* 
     exit 1
 fi
 grep -Fqx 0.1.0 advisory-version
-mv scripts/release/original-warn-release-prose.sh scripts/release/warn-release-prose.sh
+mv scripts/ci/original-warn-release-prose.sh scripts/ci/warn-release-prose.sh
 test ! -f unexpected-gate
 grep -Fqx '  version = "0.1.1" # Workspace truth; preserve spacing and this comment.' Cargo.toml
-test "$(bash scripts/release/workspace-version.sh)" = 0.1.1
+test "$(bash scripts/ci/read-cargo-workspace-version.sh --stable Cargo.toml)" = 0.1.1
 grep -Fqx '## [0.1.0]' CHANGELOG.md
 cmp original-files/README.md README.md
 # The earlier dependency version must survive the bump unchanged.
 grep -Fqx 'version = "0.1.0"' Cargo.toml
-bash scripts/release/check-lockfiles.sh
+RELEASE_COMMIT='' bash scripts/ci/cargo-release-metadata.sh check-graph ic-timers
 grep -Fqx 'Unrelated work must survive preparation.' unrelated.txt
 fixture_tags="$(git tag --list)"
 if git rev-parse --verify HEAD >/dev/null 2>&1 || [[ -n "${fixture_tags}" ]]; then

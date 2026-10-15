@@ -1,8 +1,10 @@
 use super::harness::{
     INIT_CYCLES, drive_rounds, fresh_pocket_ic, install_probe, update_unit, wait_for_probe,
 };
-use candid::{Decode, Encode, Principal};
-use ic_testkit::pic::{CandidCallExt, PocketIc, PocketIcInstance};
+use candid::{Encode, Principal};
+use ic_testkit::pic::{
+    CandidCallExt, PocketIc, PocketIcInstance, query_candid_args, update_candid_args,
+};
 use ic_timers_test_protocol::{
     ChurnObservation, OrdinaryObservation, ProbeMemorySummary, ProbeSnapshot,
 };
@@ -395,28 +397,19 @@ fn update_u64(pic: &PocketIc, canister_id: Principal, method: &str) -> u64 {
 }
 
 fn update_u128_pair(pic: &PocketIc, canister_id: Principal, method: &str) -> (u128, u128) {
-    let bytes = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            method,
-            Encode!().expect("encode call"),
-        )
-        .unwrap_or_else(|error| panic!("update {method}: {error:?}"));
-    Decode!(&bytes, u128, u128).unwrap_or_else(|error| panic!("decode {method}: {error}"))
+    update_candid_args(pic, canister_id, Principal::anonymous(), method, ())
+        .expect("probe multi-result update succeeds")
 }
 
 fn query_inventory_measurement(pic: &PocketIc, canister_id: Principal) -> (u64, u64, bool) {
-    let bytes = pic
-        .query_call(
-            canister_id,
-            Principal::anonymous(),
-            "inventory_measurement",
-            Encode!().expect("encode inventory query"),
-        )
-        .unwrap_or_else(|error| panic!("query inventory measurement: {error:?}"));
-    Decode!(&bytes, u64, u64, bool)
-        .unwrap_or_else(|error| panic!("decode inventory measurement: {error}"))
+    query_candid_args(
+        pic,
+        canister_id,
+        Principal::anonymous(),
+        "inventory_measurement",
+        (),
+    )
+    .expect("probe inventory query succeeds")
 }
 
 fn snapshot(pic: &PocketIc, canister_id: Principal) -> ProbeSnapshot {
@@ -768,15 +761,15 @@ fn rejected_initial_schedules_preserve_ic_inventory_and_release_captures() {
     let canister_id = install_probe(pic, probe_wasm());
     for policy in 0_u8..3 {
         for transient in [false, true] {
-            let bytes = pic
-                .update_call(
-                    canister_id,
-                    Principal::anonymous(),
-                    "reject_initial_schedule",
-                    Encode!(&policy, &transient).unwrap(),
-                )
-                .unwrap();
-            assert_eq!(Decode!(&bytes, bool, u64, bool).unwrap(), (true, 1, true));
+            let result: (bool, u64, bool) = update_candid_args(
+                pic,
+                canister_id,
+                Principal::anonymous(),
+                "reject_initial_schedule",
+                (policy, transient),
+            )
+            .expect("initial schedule rejection observation");
+            assert_eq!(result, (true, 1, true));
         }
     }
     pic.advance_time(Duration::from_secs(2));
@@ -795,18 +788,15 @@ fn rejected_initial_reconciliation_preserves_ic_inventory_and_releases_captures(
     pic.advance_time(Duration::from_secs(1));
     let canister_id = install_probe(pic, probe_wasm());
     for policy in 0_u8..3 {
-        let bytes = pic
-            .update_call(
-                canister_id,
-                Principal::anonymous(),
-                "reject_initial_reconciliation",
-                Encode!(&policy).unwrap(),
-            )
-            .unwrap();
-        assert_eq!(
-            Decode!(&bytes, bool, bool, u64, bool).unwrap(),
-            (true, true, 1, true)
-        );
+        let result: (bool, bool, u64, bool) = update_candid_args(
+            pic,
+            canister_id,
+            Principal::anonymous(),
+            "reject_initial_reconciliation",
+            (policy,),
+        )
+        .expect("initial reconciliation rejection observation");
+        assert_eq!(result, (true, true, 1, true));
     }
     pic.advance_time(Duration::from_secs(2));
     drive_rounds(pic, 8);

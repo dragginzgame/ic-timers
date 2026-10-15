@@ -54,7 +54,7 @@ for mode in setup check; do
     cmp "$fixture/expected-installer" "$fixture/installer-arguments"
     printf '%s\n' "$mode" --directory "$consumer/.tools/testkit-server" > "$fixture/expected-owner"
     cmp "$fixture/expected-owner" "$fixture/owner-arguments"
-    if [[ "$mode" == check ]]; then expected=true; else expected=unset; fi
+    if [[ "$mode" == check ]]; then expected=true; else expected='unset'; fi
     printf '%s\n' "$expected" > "$fixture/expected-offline"
     cmp "$fixture/expected-offline" "$fixture/offline"
     cmp "$fixture/expected-offline" "$fixture/installer-offline"
@@ -94,11 +94,8 @@ cmp "$fixture/next-lock" "$consumer/Cargo.lock"
 # and owner effects. Upstream tests own tool downloads/receipts; this proves the
 # local Testkit extension runs after common setup/check even under parallel Make.
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
-mkdir -p "$consumer/make" "$consumer/scripts/ci"
 cp "$root/Makefile" "$consumer/"
-cp "$root/make/consumer.mk" "$root/make/tools.mk" "$root/make/rust-format.mk" "$root/make/release.mk" \
-    "$root/make/execution.mk" "$consumer/make/"
-cp "$root/scripts/ci/check-make-execution.sh" "$consumer/scripts/ci/"
+bash "$root/scripts/ci/prepare-make-fixture.sh" "$root" "$consumer"
 cp "$fixture/next-lock" "$consumer/Cargo.lock"
 export TESTKIT_AGGREGATE_LOG="$fixture/aggregate-commands"
 cat > "$fixture/common-installer" <<'EOF'

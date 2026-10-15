@@ -151,61 +151,31 @@ class DownloadedEvidenceTests(unittest.TestCase):
                 # Shared owns scenario-format rejection permutations. Keep the
                 # collector integration, identity, pin selection and a corrupt
                 # status case here to prove the caller actually delegates.
-                write({"./" + name: value for name, value in files.items()})
-                verify_archive(archive, stage, identity, tool_pins)
-                if stage == "late":
-                    receipt = b"# original installation notes\n" + b"\n".join(reversed(ic_pins.splitlines())) + b"\n"
-                    write(dict(files, **{"tool-evidence/ic/pins.tsv": (receipt, 0o644)}))
-                    verify_archive(archive, stage, identity, tool_pins)
                 write(files)
                 with self.assertRaises(ValueError):
                     verify_archive(archive, "late" if stage == "early" else "early", identity, tool_pins)
                 for key in identity:
                     with self.assertRaises(ValueError):
                         verify_archive(archive, stage, dict(identity, **{key: "different"}), tool_pins)
-                mutations = [
-                    (scenario + "/status.txt", (b"status=0\n", 0o644)),
-                    ("../outside", (b"unsafe", 0o644)),
-                    ("./../outside", (b"unsafe", 0o644)),
-                    ("/outside", (b"unsafe", 0o644)),
-                    ("inside/./outside", (b"unsafe", 0o644)),
-                    ("inside//outside", (b"unsafe", 0o644)),
-                    ("././outside", (b"unsafe", 0o644)),
-                ]
+                # Owner fixtures cover generic archive/receipt permutations.
+                # These counterexamples prove this consumer actually delegates.
+                mutations = [(scenario + "/status.txt", (b"status=0\n", 0o644)),
+                             ("../outside", (b"unsafe", 0o644))]
                 if stage == "late":
-                    mutations.extend([
-                        ("tool-evidence/host/caller-pins", (b"wrong pins\n", 0o644)),
-                        ("tool-evidence/ic/caller-pins", (b"wrong pins\n", 0o644)),
-                        ("tool-evidence/ic/pins.tsv", (b"wrong receipt pins\n", 0o644)),
-                        ("tool-evidence/ic/pins.tsv", (ic_pins.replace(b"0.5.4", b"0.5.5"), 0o644)),
-                        ("tool-evidence/ic/pins.tsv", (ic_pins.replace(b"0" * 64, b"1" * 64, 1), 0o644)),
-                        ("tool-evidence/ic/pins.tsv", (ic_pins + ic_pins.splitlines()[0] + b"\n", 0o644)),
-                        ("tool-evidence/ic/host", (b"darwin-arm64\n", 0o644)),
-                        ("tool-evidence/ic/files.sha256", (b"", 0o644)),
-                        ("tool-evidence/host/check.log", (b"", 0o644)),
-                        ("tool-evidence/ic/check.log", (b"", 0o644)),
-                        ("tool-evidence/host/selection.txt", (b"/checkout/.tools/host-set.ABC123\n\n", 0o644)),
-                        (".tools/host-set.ABC123/bin/jq", (b"bulky active payload", 0o755)),
-                        (".tools/ic-set.ABC123/bin/quill", (b"bulky active payload", 0o755)),
-                    ])
+                    mutations.append(("tool-evidence/ic/host", (b"darwin-arm64\n", 0o644)))
                 for name, replacement in mutations:
                     write(dict(files, **{name: replacement}))
                     with self.assertRaises(ValueError):
                         verify_archive(archive, stage, identity, tool_pins)
-                for name in files:
-                    write({key: value for key, value in files.items() if key != name})
-                    with self.assertRaises(ValueError):
-                        verify_archive(archive, stage, identity, tool_pins)
+                write({key: value for key, value in files.items() if key != "identity.txt"})
+                with self.assertRaises(ValueError):
+                    verify_archive(archive, stage, identity, tool_pins)
                 duplicate = tarfile.TarInfo("identity.txt")
                 write(files, duplicate)
                 with self.assertRaises(ValueError):
                     verify_archive(archive, stage, identity, tool_pins)
-                alias_duplicate = tarfile.TarInfo("./identity.txt")
-                write(files, alias_duplicate)
-                with self.assertRaises(ValueError):
-                    verify_archive(archive, stage, identity, tool_pins)
-                link = tarfile.TarInfo(scenario + "/after.txt")
-                link.type, link.linkname = tarfile.SYMTYPE, "before.txt"
+                link = tarfile.TarInfo("identity.txt")
+                link.type, link.linkname = tarfile.SYMTYPE, scenario + "/before.txt"
                 write({key: value for key, value in files.items() if key != link.name}, link)
                 with self.assertRaises(ValueError):
                     verify_archive(archive, stage, identity, tool_pins)

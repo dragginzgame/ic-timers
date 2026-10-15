@@ -1,4 +1,5 @@
-name: Prepare Timers tools
+name: Prepare common tools
+# Shared companions: make/consumer.mk
 description: Install and check the selected complete toolset, retaining logs and publishing PATH.
 runs:
   using: composite
