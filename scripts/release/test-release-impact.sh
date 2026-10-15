@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 repository_root="$(git rev-parse --show-toplevel)"
-temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/timers-impact-adapter.XXXXXX")"
-fixture_complete=false
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$repository_root/scripts/ci/fixture-lifecycle.sh"
+temporary_root="$(fixture_create "${TMPDIR:-/tmp}/timers-impact-adapter.XXXXXX")"
+fixture_complete=false
 trap 'fixture_finish "$?" "$temporary_root" "Failed release-impact fixture retained"' EXIT
 mkdir -p "$temporary_root/consumer with spaces/scripts/release" "$temporary_root/consumer with spaces/scripts/ci" "$temporary_root/caller"
 cp "$repository_root/scripts/release/classify-release-impact.sh" "$temporary_root/consumer with spaces/scripts/release/"

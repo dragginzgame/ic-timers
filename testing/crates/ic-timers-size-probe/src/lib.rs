@@ -152,10 +152,10 @@ fn observe() -> CohortObservation<&'static str> {
         work_started: counters.work_started(),
         work_completed: counters.work_completed(),
         coalesced: counters.coalesced(),
-        scheduler_instruction_samples: performance.scheduler_instructions().samples(),
-        scheduler_instruction_total: performance.scheduler_instructions().total(),
-        work_instruction_samples: performance.work_instructions().samples(),
-        work_instruction_total: performance.work_instructions().total(),
+        scheduler_instruction_samples: performance.scheduler_instructions().aggregate().samples(),
+        scheduler_instruction_total: performance.scheduler_instructions().aggregate().total(),
+        work_instruction_samples: performance.work_instructions().aggregate().samples(),
+        work_instruction_total: performance.work_instructions().aggregate().total(),
         ..observed
     }
 }

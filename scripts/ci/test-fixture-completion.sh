@@ -5,11 +5,13 @@ root="${BASH_SOURCE[0]}"
 [[ "$root" == /* ]] || root="$PWD/$root"
 root="$(cd -P "${root%/*}/../.." && printf '%s/.' "$PWD")"
 root="${root%/.}"
-fixture="$(mktemp -d "${TMPDIR:-/tmp}/timer-fixture-completion.XXXXXX")"
-fixture_complete=false
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$root/scripts/ci/fixture-lifecycle.sh"
+fixture="$(fixture_create "${TMPDIR:-/tmp}/timer-fixture-completion.XXXXXX")"
+fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Failed fixture-completion checks retained"' EXIT
+# shellcheck source=scripts/ci/fixture-retention-probes.sh
+source "$root/scripts/ci/fixture-retention-probes.sh"
 
 # Copy each actual initialization/EXIT boundary, including this suite's own.
 # Stop before the fixture body so these probes cannot dispatch tools, builds,
@@ -34,48 +36,53 @@ fixtures=(
 mkdir -p "$fixture/probe/scripts/ci" "$fixture/probe/scripts/release" "$fixture/owned scratch"
 cp -p "$root/scripts/ci/fixture-lifecycle.sh" "$fixture/probe/scripts/ci/"
 export FIXTURE_EXIT_PATH="$fixture/exit-path"
-for entry in "${fixtures[@]}"; do
-    source_path="${entry%:*}"
-    variable="${entry##*:}"
-    # Canonical completed bodies must opt in after their required assertions.
-    grep -Fxq 'fixture_complete=true' "$root/$source_path"
-    for failure in nounset command nonzero premature completed failed-completion; do
-        # shellcheck disable=SC2016 # Expanded only by the disposable prefix copy.
-        case "$failure" in
-            nounset) injection='unset FIXTURE_UNBOUND; printf "%s\n" "$FIXTURE_UNBOUND"'; expected=1 ;;
-            command) injection='false'; expected=1 ;;
-            nonzero) injection='exit 23'; expected=23 ;;
-            premature) injection='exit 0'; expected=1 ;;
-            completed) injection='fixture_complete=true; exit 0'; expected=0 ;;
-            failed-completion) injection='fixture_complete=true; exit 23'; expected=23 ;;
-        esac
-        probe="$fixture/probe/$source_path"
-        FIXTURE_INJECTION="$injection" FIXTURE_VARIABLE="$variable" awk '
-            { print }
-            /^trap .* EXIT$/ {
-                print "printf \"%s\\n\" \"$" ENVIRON["FIXTURE_VARIABLE"] "\" > \"$FIXTURE_EXIT_PATH\""
-                print "printf evidence > \"$" ENVIRON["FIXTURE_VARIABLE"] "/exit-evidence\""
-                print ENVIRON["FIXTURE_INJECTION"]
-                print "exit 99"
-                injected=1
-                exit
-            }
-            END { if (!injected) exit 1 }
-        ' "$root/$source_path" > "$probe"
-        rm -f -- "$FIXTURE_EXIT_PATH"
-        status=0
-        TMPDIR="$fixture/owned scratch" "$BASH" "$probe" \
-            > "$fixture/${source_path##*/}-$failure.log" 2>&1 || status=$?
-        if [[ "$status" != "$expected" ]]; then
-            printf '%s: %s returned %s, expected %s\n' "$source_path" "$failure" "$status" "$expected" >&2
-            exit 1
-        fi
-        retained="$(cat "$FIXTURE_EXIT_PATH")"
-        [[ -n "$retained" ]] || exit 1
-        if [[ "$expected" == 0 ]]; then [[ ! -e "$retained" ]] || exit 1
-        else
-            [[ -d "$retained" && "$(cat "$retained/exit-evidence")" == evidence ]] || exit 1
-        fi
+ln -s "$fixture/owned scratch" "$fixture/aliased scratch"
+relative_scratch="$(perl -MFile::Spec -e 'print File::Spec->abs2rel($ARGV[0], $ARGV[1])' "$fixture/owned scratch" "$root")"
+for scratch in "$fixture/owned scratch" "$relative_scratch" "$fixture/aliased scratch"; do
+    for entry in "${fixtures[@]}"; do
+        source_path="${entry%:*}"
+        variable="${entry##*:}"
+        # Canonical completed bodies must opt in after their required assertions.
+        grep -Fxq 'fixture_complete=true' "$root/$source_path"
+        for failure in nounset command nonzero premature completed failed-completion; do
+            # shellcheck disable=SC2016 # Expanded only by the disposable prefix copy.
+            case "$failure" in
+                nounset) injection='unset FIXTURE_UNBOUND; printf "%s\n" "$FIXTURE_UNBOUND"'; expected=1 ;;
+                command) injection='false'; expected=1 ;;
+                nonzero) injection='exit 23'; expected=23 ;;
+                premature) injection='exit 0'; expected=1 ;;
+                completed) injection='fixture_complete=true; exit 0'; expected=0 ;;
+                failed-completion) injection='fixture_complete=true; exit 23'; expected=23 ;;
+            esac
+            probe="$fixture/probe/$source_path"
+            FIXTURE_INJECTION="$injection" FIXTURE_VARIABLE="$variable" awk '
+                { print }
+                /^trap .* EXIT$/ {
+                    print "printf \"%s\\n\" \"$" ENVIRON["FIXTURE_VARIABLE"] "\" > \"$FIXTURE_EXIT_PATH\""
+                    print "printf evidence > \"$" ENVIRON["FIXTURE_VARIABLE"] "/exit-evidence\""
+                    print ENVIRON["FIXTURE_INJECTION"]
+                    print "exit 99"
+                    injected=1
+                    exit
+                }
+                END { if (!injected) exit 1 }
+            ' "$root/$source_path" > "$probe"
+            rm -f -- "$FIXTURE_EXIT_PATH"
+            status=0
+            (cd "$root" && CDPATH="$fixture" TMPDIR="$scratch" "$BASH" "$probe") \
+                > "$fixture/${source_path##*/}-$failure.log" 2>&1 || status=$?
+            if [[ "$status" != "$expected" ]]; then
+                printf '%s: %s returned %s, expected %s\n' "$source_path" "$failure" "$status" "$expected" >&2
+                exit 1
+            fi
+            retained="$(cat "$FIXTURE_EXIT_PATH")"
+            [[ -n "$retained" ]] || exit 1
+            [[ "$retained" == "$fixture/owned scratch/"* ]] || exit 1
+            if [[ "$expected" == 0 ]]; then [[ ! -e "$retained" ]] || exit 1
+            else
+                [[ -d "$retained" && "$(cat "$retained/exit-evidence")" == evidence ]] || exit 1
+            fi
+        done
     done
 done
 # A completion marker cannot detect an assertion that Bash 3.2 silently skips.
@@ -105,32 +112,10 @@ for assertion in retained-path status-match host-os host-architecture host-versi
             assertion_prefix='[[ "$host_version" == 15.* ]]'
             ;;
     esac
-    assertion_line="$(FIXTURE_ASSERTION="$assertion_prefix" awk '
-        { line=$0; sub(/^[[:space:]]*/, "", line) }
-        index(line, ENVIRON["FIXTURE_ASSERTION"]) == 1 { print; found++ }
-        END { if (found != 1) exit 1 }
-    ' "$root/$assertion_source")" || exit 1
-    printf -v injection 'retained=""; status=0; expected=1; host_os=Linux; host_arch=wrong; EXPECTED_ARCHITECTURE=arm64; host_version=14.0\n%s\nfixture_complete=true; exit 0' "$assertion_line"
-    probe="$fixture/probe/scripts/ci/contradictory-assertion.sh"
-    FIXTURE_INJECTION="$injection" awk '
-        { print }
-        /^trap .* EXIT$/ {
-            print "printf \"%s\\n\" \"$fixture\" > \"$FIXTURE_EXIT_PATH\""
-            print "printf evidence > \"$fixture/exit-evidence\""
-            print ENVIRON["FIXTURE_INJECTION"]
-            injected=1
-            exit
-        }
-        END { if (!injected) exit 1 }
-    ' "$root/scripts/ci/test-fixture-completion.sh" > "$probe"
-    rm -f -- "$FIXTURE_EXIT_PATH"
-    status=0
-    TMPDIR="$fixture/owned scratch" "$BASH" "$probe" \
-        > "$fixture/contradictory-$assertion.log" 2>&1 || status=$?
-    [[ "$status" == 1 ]] || exit 1
-    retained="$(cat "$FIXTURE_EXIT_PATH")"
-    [[ -n "$retained" && -d "$retained" && "$(cat "$retained/exit-evidence")" == evidence ]] || exit 1
-    grep -Fq "Failed fixture-completion checks retained: $retained" "$fixture/contradictory-$assertion.log"
+    # shellcheck disable=SC2016 # Contradictory inputs belong to the child probe.
+    fixture_probe_assertion "$root/scripts/ci/test-fixture-completion.sh" "$fixture" "$root" "$assertion" \
+        --selected "$root/$assertion_source" "$assertion_prefix" \
+        'retained=""; status=0; expected=1; host_os=Linux; host_arch=wrong; EXPECTED_ARCHITECTURE=arm64; host_version=14.0' || exit 1
 done
 fixture_complete=true
 echo 'Local fixture completion, mandatory assertions, failure status and evidence retention checks passed'

@@ -10,6 +10,23 @@ classify the change, choose the appropriate version, run the required validation
 let the bump label the current changelog draft, and then publish the
 release through the repository's release commands.
 
+## Completed 0.23.1 native acceptance
+
+Released **0.23.1**, `2d54724bc836ca09308d6742bf95c3f1ddecc3f4`, has complete
+[main-source qualification](https://github.com/dragginzgame/ic-timers/actions/runs/38707139274):
+[Linux CI/probes/PocketIC](https://github.com/dragginzgame/ic-timers/actions/runs/38707139274/job/116329230960),
+[native/Wasm MSRV](https://github.com/dragginzgame/ic-timers/actions/runs/38707139274/job/116329230845),
+[Intel macOS](https://github.com/dragginzgame/ic-timers/actions/runs/38707139274/job/116329231002)
+and [Apple Silicon](https://github.com/dragginzgame/ic-timers/actions/runs/38707139274/job/116329231069)
+pass. Both macOS jobs ran the complete native release gate. Its graph selects
+Metrics 0.10.0, Testkit 0.44.0 and Shared `1444f1e` across 84/41/18 payloads,
+retaining the explicit Binaryen 132 catalog. This closes #52/#55/#59; the earlier
+#51 adoption is superseded by the qualified Metrics 0.10 cut. PR #56 is closed
+as already delivered. Earlier failed/cancelled runs keep their original scope.
+This receipt does not qualify the later 0.23.2 source or pending PR graphs.
+
+The following preparation records retain their historical source scope.
+
 ## Prepared 0.22.3 shared-owner cleanup
 
 Current HEAD is delivered 0.22.2 at
@@ -407,10 +424,8 @@ current worktree and does not require a preparatory commit. A
 repository-only subject emits an advisory but may proceed when the maintainer
 has explicitly invoked the bump or release target.
 
-`scripts/release/workspace-version.sh` reads `[workspace.package].version`.
-The Shared coordinated metadata preparer owns its literal mutation, local lock
-updates and rollback; the former local setter and lock updater are removed.
-The repository manifest uses one literal,
+One helper, `scripts/release/workspace-version.sh`, owns reading and changing
+`[workspace.package].version`. The repository manifest uses one literal,
 double-quoted canonical SemVer field in that table. Table order, indentation
 and trailing comments do not select a dependency version. Missing, duplicate
 or noncanonical workspace versions fail before mutation or staging. The writer
@@ -666,6 +681,10 @@ The non-release `make patch`, `make minor`, `make major`, and
 review without running build, lint or test suites.
 
 ### Host support
+
+Current completed acceptance is the [0.23.1 receipt](#completed-0231-native-acceptance)
+above. The following records describe earlier sources, including their historical
+queue/outage states; they do not reopen completed issues or qualify newer edits.
 
 The released 0.16.3 workflow adds Linux execution of the existing PocketIC
 recovery and policy-cohort targets after CI/probe lint. Testkit's root-lock
@@ -4358,3 +4377,13 @@ not runtime behavior or executable setup identity. Cargo inputs, tool pins and
 real index entries are preserved. No new product code, tests, lint, setup or
 release execution is added; the focused 0.21.4 permission does not cover these
 new helper bytes. The complete release gate remains maintainer-operated.
+
+## Actual tag admission and regression ownership
+
+The tag-truth job retains workspace/event-tag equality, exact annotated tag
+admission, main reachability and the complete locked graph. It checks all three
+actual snapshot receipts directly. It does not dispatch the release-check
+regression roster; the focused actual-workflow fixture remains in that roster,
+owned by PR/main and the complete release gate. Existing tool setup and failure
+collection/upload remain unchanged. Main reachability and tag success do not
+prove completion of the independent native/full source qualification.

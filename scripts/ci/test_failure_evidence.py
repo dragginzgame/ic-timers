@@ -148,29 +148,9 @@ class DownloadedEvidenceTests(unittest.TestCase):
                     result = subprocess.run(command, env=env, capture_output=True)
                     self.assertNotEqual(result.returncode, 0)
                     self.assertIn(b"ic-tools-qualified.tsv", result.stderr)
-                if stage == "early":
-                    # Earlier physical checkout slots cannot stand in for the
-                    # current retained shared generation. Reject malformed or
-                    # ambiguous candidates and links without following them.
-                    for wrong_path in (
-                        scenario + "/consumer/.tools/host-set.ABC123/bin/jq",
-                        scenario + "/tool-store/host-invalid/set.ABC123/bin/jq",
-                        scenario + "/tool-store/host-" + "0" * 64 + "/set.invalid-name/bin/jq",
-                    ):
-                        entries = {key: value for key, value in files.items() if key != payload}
-                        entries[wrong_path] = files[payload]
-                        write(entries)
-                        with self.assertRaises(ValueError):
-                            verify_archive(archive, stage, identity, tool_pins)
-                    other_candidate = payload.replace("set.ABC123", "set.DEF456")
-                    write(dict(files, **{other_candidate: files[payload]}))
-                    with self.assertRaises(ValueError):
-                        verify_archive(archive, stage, identity, tool_pins)
-                    link = tarfile.TarInfo(payload)
-                    link.type, link.linkname = tarfile.SYMTYPE, "elsewhere"
-                    write({key: value for key, value in files.items() if key != payload}, link)
-                    with self.assertRaises(ValueError):
-                        verify_archive(archive, stage, identity, tool_pins)
+                # Shared owns scenario-format rejection permutations. Keep the
+                # collector integration, identity, pin selection and a corrupt
+                # status case here to prove the caller actually delegates.
                 write({"./" + name: value for name, value in files.items()})
                 verify_archive(archive, stage, identity, tool_pins)
                 if stage == "late":
@@ -184,11 +164,7 @@ class DownloadedEvidenceTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         verify_archive(archive, stage, dict(identity, **{key: "different"}), tool_pins)
                 mutations = [
-                    (scenario + "/after.txt", (b"changed\n", 0o640)),
-                    (scenario + "/before.txt", (f"controlled {stage} input\n".encode(), 0o644)),
                     (scenario + "/status.txt", (b"status=0\n", 0o644)),
-                    (scenario + "/scenario.log", (b"unrelated setup outage\n", 0o644)),
-                    (payload, (b"damaged retained bytes\n", 0o644)),
                     ("../outside", (b"unsafe", 0o644)),
                     ("./../outside", (b"unsafe", 0o644)),
                     ("/outside", (b"unsafe", 0o644)),

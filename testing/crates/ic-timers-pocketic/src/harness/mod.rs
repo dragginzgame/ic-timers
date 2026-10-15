@@ -2,7 +2,7 @@
 
 use candid::{Encode, Principal};
 use ic_testkit::pic::{
-    CanisterInstallExt, InstallSpec, PocketIc, PocketIcBuilder, PocketIcInstance,
+    CandidCallExt, CanisterInstallExt, InstallSpec, PocketIc, PocketIcBuilder, PocketIcInstance,
     PocketIcStartupConfig, tick_until,
 };
 use std::{convert::Infallible, env, fmt::Debug, path::PathBuf, task::Poll, time::Duration};
@@ -51,4 +51,16 @@ pub fn fresh_pocket_ic() -> PocketIcInstance<PocketIc> {
     PocketIcStartupConfig::spawn(binary, STARTUP_TIMEOUT)
         .build_instance(PocketIcBuilder::new().with_application_subnet())
         .expect("construct a fresh owned PocketIC instance through ic-testkit")
+}
+
+/// Drain exactly the caller-selected number of rounds without readiness polling.
+pub fn drive_rounds(pic: &PocketIc, count: usize) {
+    for _ in 0..count {
+        pic.tick();
+    }
+}
+
+/// Invoke an anonymous update with no arguments or return values.
+pub fn update_unit(pic: &PocketIc, canister_id: Principal, method: &str) {
+    pic.update_candid_or_panic::<(), _>(canister_id, method, ());
 }

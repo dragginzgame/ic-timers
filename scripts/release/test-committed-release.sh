@@ -8,11 +8,11 @@ export PATH="$root/.tools/host/bin:$PATH"
 export YQ="$root/.tools/host/bin/yq"
 COMMITTED_RELEASE_REAL_CARGO="$(command -v cargo)"
 export COMMITTED_RELEASE_REAL_CARGO
-fixture="$(mktemp -d "${TMPDIR:-/tmp}/committed-release-check.XXXXXX")"
-# Bash 3.2 can report zero on nounset; cleanup also requires completion.
-fixture_complete=false
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$root/scripts/ci/fixture-lifecycle.sh"
+fixture="$(fixture_create "${TMPDIR:-/tmp}/committed-release-check.XXXXXX")"
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
 finish() {
     local status=$?
     if [[ "$fixture_complete" != true || "$status" != 0 ]]; then
@@ -58,6 +58,7 @@ set -euo pipefail
 printf 'git %s\n' "$*" >> "$EVENTS"
 case "$*" in
     "rev-parse --verify $SELECTED_COMMIT^{commit}") printf '%s\n' "$SELECTED_COMMIT" ;;
+    "cat-file -t $SELECTED_COMMIT") printf 'commit\n' ;;
     'rev-parse HEAD') printf '%s\n' "$CURRENT_COMMIT" ;;
     "archive --format=tar $SELECTED_COMMIT")
         [[ "${FAIL_ARCHIVE:-0}" != before ]] || exit 31
@@ -80,6 +81,7 @@ case "$*" in
     'locate-project --workspace --message-format plain --manifest-path '*)
         exec "$COMMITTED_RELEASE_REAL_CARGO" "$@" ;;
     'sort --workspace --check')
+        cmp "$SELECTED_TREE/Cargo.toml" Cargo.toml
         if [[ "${FAIL_SORT:-}" == "$*" ]]; then
             echo 'fixture manifest ordering failure' >&2
             exit 35
@@ -115,6 +117,8 @@ for target in release-committed-check release-tagged-check release-push-check; d
     : > "$EVENTS"
     check "$target"
     grep -Fqx "cargo metadata --locked --offline --format-version 1" "$EVENTS"
+    [[ "$(grep -Fxc "git archive --format=tar $SELECTED_COMMIT" "$EVENTS")" == 1 ]] || exit 1
+    [[ "$(grep -Fxc 'cargo sort --workspace --check' "$EVENTS")" == 1 ]] || exit 1
     [[ -z "$(ls -A "$fixture/tmp")" ]] || exit 1
 done
 # Documentation need not contain canonical fields or exist in a release tree.
@@ -128,8 +132,7 @@ for path in Cargo.toml CHANGELOG.md Cargo.lock; do
     cp "$SELECTED_TREE/$path" "$fixture/saved"
     printf '%s\n' 'invalid selected release metadata' > "$SELECTED_TREE/$path"
     reject release-push-check "$path corruption"
-    # Shared owns failed metadata-check retention; outer formatting exports
-    # can be cleaned without deleting that independent diagnostic directory.
+    # Shared retains the selected export with failed metadata evidence.
     grep -Fq 'failed Cargo metadata check retained:' "$fixture/output"
     [[ -n "$(ls -A "$fixture/tmp")" ]] || exit 1
     cp "$fixture/saved" "$SELECTED_TREE/$path"
@@ -139,14 +142,14 @@ export EXTRA_WORKSPACE_MEMBER=1
 : > "$EVENTS"
 reject release-push-check 'workspace member absent from the lock roster'
 grep -Fq 'workspace members and admitted lock identities must agree' "$fixture/output"
-if grep -Eq '^git cat-file ' "$EVENTS"; then exit 1; fi
+if grep -Eq '^git cat-file -t refs/tags/' "$EVENTS"; then exit 1; fi
 unset EXTRA_WORKSPACE_MEMBER
 cp "$SELECTED_TREE/Cargo.lock" "$fixture/saved-lock"
 printf '\n[[package]]\nname = "outside"\nversion = "0.1.0"\n' >> "$SELECTED_TREE/Cargo.lock"
 : > "$EVENTS"
 reject release-push-check 'local lock row absent from the workspace'
 grep -Fq 'workspace members and admitted lock identities must agree' "$fixture/output"
-if grep -Eq '^git cat-file ' "$EVENTS"; then exit 1; fi
+if grep -Eq '^git cat-file -t refs/tags/' "$EVENTS"; then exit 1; fi
 cp "$fixture/saved-lock" "$SELECTED_TREE/Cargo.lock"
 
 for kind in missing commit; do
@@ -169,7 +172,7 @@ lock=Cargo.lock
 export FAIL_METADATA="$lock"
 reject release-push-check "failed $lock resolution"
 grep -Fq 'fixture locked metadata failure' "$fixture/output"
-if grep -Eq '^git cat-file ' "$EVENTS"; then
+if grep -Eq '^git cat-file -t refs/tags/' "$EVENTS"; then
     echo 'error: push check inspected tags after failed locked resolution' >&2
     exit 1
 fi
@@ -180,7 +183,7 @@ export FAIL_SORT="$command"
 reject release-push-check "$command failure"
 grep -Fq 'fixture manifest ordering failure' "$fixture/output"
 # Sorting failure stops before locked resolution or tag lookup.
-if grep -Eq '^cargo metadata |^git cat-file ' "$EVENTS"; then
+if grep -Eq '^cargo metadata |^git cat-file -t refs/tags/' "$EVENTS"; then
     echo 'error: committed check continued after manifest ordering failure' >&2
     exit 1
 fi
