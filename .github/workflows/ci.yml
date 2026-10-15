@@ -1,7 +1,7 @@
 name: CI
 
 env:
-  IC_TIMERS_MSRV: 1.88.0
+  IC_TIMERS_MSRV: 1.91.0
   IC_TIMERS_INTERNAL_TOOLCHAIN: 1.99.0
 
 permissions:
@@ -96,6 +96,7 @@ jobs:
       - name: Prepare and check the complete toolset
         uses: ./.github/actions/prepare-timers-tools
       - name: Run CI gate
+        id: ci-gate
         run: |
           make fetch
           make ci
@@ -249,6 +250,7 @@ jobs:
           toolchain: ${{ env.IC_TIMERS_INTERNAL_TOOLCHAIN }}
           components: rustfmt
       - name: Verify release tag
+        id: release-tag
         shell: bash
         run: |
           # The shared version reader needs the explicitly prepared parsers.
@@ -267,9 +269,6 @@ jobs:
           make release-tag-check
           # Inspect actual adopted payloads; regression fixtures stay in PR/main.
           bash scripts/ci/verify-shared-tooling-snapshot.sh
-          bash scripts/ci/verify-shared-tooling-snapshot.sh --manifest .shared-tooling-audits.snapshot
-          bash .shared-tooling/helpers/scripts/ci/verify-shared-tooling-snapshot.sh \
-            --consumer .shared-tooling/helpers
           make fetch
           bash scripts/release/check-lockfiles.sh
       - name: Retain failure evidence

@@ -4,7 +4,7 @@
 
 Use the [shared code-hygiene method](../../audits/code-hygiene.md) and
 [common audit contract](../../audits/README.md) from the reviewed revision
-recorded in the [audit snapshot](../../.shared-tooling-audits.snapshot).
+recorded in the [snapshot](../../.shared-tooling.snapshot).
 [AGENTS.md](../../AGENTS.md) identifies the adopted baseline and supplies local
 command authority under the shared validation cadence. This overlay
 selects product scope for a requested review, including a review before a minor
@@ -67,7 +67,6 @@ git diff --check
 rg 'unwrap\(|expect\(|panic!|todo!|unimplemented!|TODO|FIXME|HACK' crates/ic-timers/src
 rg 'pub(\(| )|ic_cdk_timers|ic-cdk-timers' crates/ic-timers/src Cargo.toml crates/ic-timers/Cargo.toml
 bash scripts/ci/verify-shared-tooling-snapshot.sh
-bash scripts/ci/verify-shared-tooling-snapshot.sh --manifest .shared-tooling-audits.snapshot
 ```
 
 Inspect command effects before selecting additional evidence. Applicable locked
@@ -100,6 +99,6 @@ all existing dated reports. The old checklist can be retrieved at
 [released 0.13.5](https://github.com/dragginzgame/ic-timers/blob/98c4b296d7461525c15a01e30adbe33b75bcfa38/docs/audits/code-hygiene.md)
 for historical reproduction; it is ineligible for new runs. Aggregate comparison
 with that method is `N/A (method change)`; unchanged individual assertions retain
-their original proof scope. The [adoption review](../shared-tooling.md#audit-method-adoption-review)
+their original proof scope. The [adoption review](../evidence/shared-tooling-history.md#audit-method-adoption-review)
 maps the retired questions and walks an existing report without executing a
 fresh product audit.

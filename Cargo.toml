@@ -10,7 +10,7 @@ default-members = ["crates/ic-timers"]
 resolver = "3"
 
 [workspace.package]
-rust-version = "1.88.0"
+rust-version = "1.91.0"
 edition = "2024"
 version = "0.24.0"
 license = "MIT"
@@ -26,8 +26,8 @@ categories = ["asynchronous", "wasm"]
 candid = "0.10"
 ic-cdk = "=0.20.3"
 ic-cdk-timers = "=1.0.0"
-ic-metrics = "0.10"
-ic-testkit = "0.45"
+ic-metrics = "0.11"
+ic-testkit = "0.46"
 ic-timers = { path = "crates/ic-timers" }
 ic-timers-test-protocol = { path = "testing/crates/ic-timers-test-protocol" }
 ic0 = "=1.2.0"

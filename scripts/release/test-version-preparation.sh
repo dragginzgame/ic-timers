@@ -12,8 +12,8 @@ temporary_root="$(fixture_create "${TMPDIR:-/tmp}/timer-version-test.XXXXXX")"
 fixture_complete=false
 trap 'fixture_finish "$?" "$temporary_root" "Failed version-preparation fixture retained"' EXIT
 git init -q "${temporary_root}"
-mkdir -p "${temporary_root}"/{scripts/release,scripts/ci,.shared-tooling/helpers/scripts/ci,docs/status,docs/changelog,crates/ic-timers/src,testing/probe/src}
-for script in bump-version finalize-changelog \
+mkdir -p "${temporary_root}"/{scripts/release,scripts/ci,docs/status,docs/changelog,crates/ic-timers/src,testing/probe/src}
+for script in bump-version \
     warn-release-prose check-bump-impact check-lockfiles workspace-version; do
     cp "${repository_root}/scripts/release/${script}.sh" "${temporary_root}/scripts/release/"
 done
@@ -22,16 +22,17 @@ cp "${repository_root}/scripts/ci/next-release-version.sh" \
     "${repository_root}/scripts/ci/warn-release-prose.sh" \
     "${repository_root}/scripts/ci/check-make-execution.sh" \
     "${repository_root}/scripts/ci/run-formatting.sh" \
-    "${repository_root}/scripts/ci/finalize-release-changelog.awk" "${temporary_root}/scripts/ci/"
-cp "${repository_root}/.shared-tooling/helpers/scripts/ci/read-cargo-workspace-version.sh" \
-    "${repository_root}/.shared-tooling/helpers/scripts/ci/render-cargo-workspace-version.pl" \
-    "${repository_root}/.shared-tooling/helpers/scripts/ci/cargo-release-metadata.sh" \
-    "${repository_root}/.shared-tooling/helpers/scripts/ci/cargo-workspace-members.jq" \
-    "${repository_root}/.shared-tooling/helpers/scripts/ci/compare-stable-versions.pl" \
-    "${repository_root}/.shared-tooling/helpers/scripts/ci/StableVersion.pm" \
-    "${repository_root}/.shared-tooling/helpers/scripts/ci/rewrite-local-lock-versions.pl" \
-    "${repository_root}/.shared-tooling/helpers/scripts/ci/finalize-release-changelog.awk" \
-    "${temporary_root}/.shared-tooling/helpers/scripts/ci/"
+    "${repository_root}/scripts/ci/finalize-release-changelog.awk" \
+    "${repository_root}/scripts/ci/check-release-changelog.sh" "${temporary_root}/scripts/ci/"
+cp "${repository_root}/scripts/ci/read-cargo-workspace-version.sh" \
+    "${repository_root}/scripts/ci/render-cargo-workspace-version.pl" \
+    "${repository_root}/scripts/ci/cargo-release-metadata.sh" \
+    "${repository_root}/scripts/ci/cargo-workspace-members.jq" \
+    "${repository_root}/scripts/ci/compare-stable-versions.pl" \
+    "${repository_root}/scripts/ci/StableVersion.pm" \
+    "${repository_root}/scripts/ci/rewrite-local-lock-versions.pl" \
+    "${repository_root}/scripts/ci/finalize-release-changelog.awk" \
+    "${temporary_root}/scripts/ci/"
 # Classification is an isolated fixture input; preparation must not run tests.
 cat > "${temporary_root}/scripts/release/classify-release-impact.sh" <<'EOF'
 #!/usr/bin/env bash

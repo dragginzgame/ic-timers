@@ -37,7 +37,8 @@ trap 'fixture_finish "$?" "$fixture" "Failed evidence fixture retained"' EXIT
         length == 4 and all(.[];
             .if == "${{ failure() }}" and .with.name ==
                 "ic-timers-failure-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}-${{ github.run_attempt }}")' > /dev/null
-"$root/.tools/host/bin/jq" -er '.runs.steps[0].run' "$fixture/action.json" > "$fixture/action.sh"
+"$root/.tools/host/bin/jq" -e '.runs.steps' "$fixture/action.json" > "$fixture/action-steps.json"
+bash "$root/scripts/ci/extract-workflow-step.sh" "$fixture/action-steps.json" collect-evidence > "$fixture/action.sh"
 mkdir -p "$fixture/action-repository/scripts/ci" "$fixture/action-runner"
 cat > "$fixture/action-repository/scripts/ci/collect-failure-evidence.sh" <<'COLLECTOR'
 printf 'collector stdout\n'
@@ -69,7 +70,8 @@ done
         [.jobs | to_entries[] | .key as $job | .value.steps[] |
             select(.uses == "./.github/actions/prepare-timers-tools") | $job] |
         sort == ["checks", "macos", "msrv"]' > /dev/null
-"$root/.tools/host/bin/jq" -er '.runs.steps[0].run' "$fixture/prepare-action.json" > "$fixture/prepare-action.sh"
+"$root/.tools/host/bin/jq" -e '.runs.steps' "$fixture/prepare-action.json" > "$fixture/prepare-steps.json"
+bash "$root/scripts/ci/extract-workflow-step.sh" "$fixture/prepare-steps.json" prepare-tools > "$fixture/prepare-action.sh"
 mkdir -p "$fixture/prepare-bin" "$fixture/prepare runner" "$fixture/prepare checkout"
 cat > "$fixture/prepare-bin/make" <<'MAKE'
 #!/usr/bin/env bash

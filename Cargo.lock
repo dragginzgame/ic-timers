@@ -802,9 +802,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-artifacts"
-version = "0.18.6"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1982764700cbd842dff38e2900765a3a4966ae91fe90fc621610f29fd50b144b"
+checksum = "30bbd9c353b97a2604995e35f3f21baeed9b594dfc91f1ab2877b192f03227d8"
 dependencies = [
  "flate2",
  "leb128",
@@ -815,9 +815,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-fs"
-version = "0.18.6"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b75f9df5e34066e63b696f3055f9b3a997bf316dad6d4d98650ab44e3285e4ec"
+checksum = "0dcfe7c0f16d3fe129284a41bfcd790c1e9d38c6d58ba15c95835d292e7770c5"
 dependencies = [
  "ic-host-artifacts",
  "rustix",
@@ -825,9 +825,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-process"
-version = "0.18.6"
+version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "232cf91a9b05c6af7159b0b1d8608115c27dc35285c981f83ece02ee6f092e73"
+checksum = "04818158227c4074535d7e4aa50ea834b4cc527181fe9a5c162214f986e52a1a"
 dependencies = [
  "ic-host-artifacts",
  "ic-host-fs",
@@ -853,17 +853,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5c420eeed28236735e3dc6c88baf25b27d5a9357555f75248556b0117476f9ac"
 
 [[package]]
-name = "ic-testkit"
-version = "0.45.0"
+name = "ic-metrics"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd2d6773dc05ce2282e06593a455ab8ae9cb74e04a6ef9fafabaac16af62bdad"
+checksum = "971f86ca91894bd391121895c7ce5368730bef652198a65ed0a0cba5271a30d7"
+
+[[package]]
+name = "ic-testkit"
+version = "0.46.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a30ff6ffc64795791a41a3ababade13a709c6a6ddc634fa36bc8812e7bcd1dd"
 dependencies = [
  "candid",
  "ic-cdk",
  "ic-host-artifacts",
  "ic-host-fs",
  "ic-host-process",
- "ic-metrics",
+ "ic-metrics 0.10.1",
  "libc",
  "pocket-ic",
  "serde",
@@ -877,7 +883,7 @@ name = "ic-timers"
 version = "0.24.0"
 dependencies = [
  "ic-cdk-timers",
- "ic-metrics",
+ "ic-metrics 0.11.0",
  "ic0",
  "thiserror 2.0.18",
 ]

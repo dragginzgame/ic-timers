@@ -16,9 +16,9 @@ trap 'fixture_finish "$?" "$temporary_root" "Failed lockfile fixture retained"' 
 # fixture qualifies the local adapter's helper selection, context and status.
 consumer="${temporary_root}/consumer"
 caller="${temporary_root}/caller"
-mkdir -p "$consumer/scripts/release" "$consumer/.shared-tooling/helpers/scripts/ci" "$caller"
+mkdir -p "$consumer/scripts/release" "$consumer/scripts/ci" "$caller"
 cp "$checker" "$consumer/scripts/release/check-lockfiles.sh"
-helper="$consumer/.shared-tooling/helpers/scripts/ci/cargo-release-metadata.sh"
+helper="$consumer/scripts/ci/cargo-release-metadata.sh"
 cat > "$helper" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail

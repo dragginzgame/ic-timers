@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-metadata_checker="$script_dir/../../.shared-tooling/helpers/scripts/ci/cargo-release-metadata.sh"
+metadata_checker="$script_dir/../../scripts/ci/cargo-release-metadata.sh"
 
 case "${1:-}" in
     preflight)

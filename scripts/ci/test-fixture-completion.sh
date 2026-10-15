@@ -25,7 +25,6 @@ fixtures=(
     scripts/ci/test-shared-snapshots.sh:fixture:root
     scripts/ci/test-testkit-server.sh:fixture:root
     scripts/release/test-committed-release.sh:fixture:root
-    scripts/release/test-finalize-changelog.sh:temporary_root:repository_root
     scripts/release/test-lockfiles.sh:temporary_root:repository_root
     scripts/release/test-release-gate.sh:temporary_root:repository_root
     scripts/release/test-release-impact.sh:temporary_root:repository_root

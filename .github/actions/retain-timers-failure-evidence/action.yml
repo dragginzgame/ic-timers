@@ -9,6 +9,7 @@ runs:
   steps:
     - name: Archive failure evidence
       if: ${{ always() }}
+      id: collect-evidence
       shell: /bin/bash --noprofile --norc -e -o pipefail {0}
       run: |
         if ! bash scripts/ci/collect-failure-evidence.sh > "$RUNNER_TEMP/ic-timers-collection.log" 2>&1; then

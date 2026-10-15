@@ -95,7 +95,7 @@ The maintainer-operated `make release-verify` retains this fail-fast order:
 3. `pocketic-check` for offline admission.
 4. `ci`: Actions/pins, shell syntax, provider boundary, formatting, library
    compilation/lint, release fixtures, public docs, tests and Wasm/package checks.
-5. `msrv`: native/test-target and Wasm library compilation plus doctests on 1.88.
+5. `msrv`: native/test-target and Wasm library compilation plus doctests on 1.91.
 6. `testing-check`: probe/protocol lint and each of the four exclusive cohorts.
 7. `pocketic-watchdog`: the maintained real-canister runtime/recovery subjects.
 8. `pocketic-cohorts`: baseline/Once/AfterCompletion/Watchdog Wasm and instruction
@@ -114,8 +114,8 @@ retain their separate authority. Missing offline inputs are reported rather
 than silently fetched or installed.
 
 Full Rust/probe/MSRV validation runs on PRs and `main`. The smaller tag lane
-checks the actual annotated tag/version, main reachability, all three snapshot
-payloads and the locked graph without repeating broad release fixtures or full
+checks the actual annotated tag/version, main reachability, the unified snapshot
+payload and the locked graph without repeating broad release fixtures or full
 Rust builds for the same commit. A successful tag lane alone is not product
 qualification.
 

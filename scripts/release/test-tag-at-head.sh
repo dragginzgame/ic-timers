@@ -140,6 +140,17 @@ mkdir "$workflow_root"
 export CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0
 # Only this disposable clone owns Git effects. All provisioning is substituted.
 git clone -q --depth 1 --no-local --no-hardlinks "$repository_root" "${workflow_root}/repository"
+# Exercise the current caller/export layout even before these edits are committed.
+# The disposable shallow clone supplies real history; only its worktree is overlaid.
+while IFS=$'\t' read -r record _digest _mode path; do
+    [[ "$record" == file ]] || continue
+    mkdir -p "${workflow_root}/repository/$(dirname "$path")"
+    cp -p "$repository_root/$path" "${workflow_root}/repository/$path"
+done < "$repository_root/.shared-tooling.snapshot"
+cp "$repository_root/.shared-tooling.snapshot" "${workflow_root}/repository/"
+for adapter in check-tag-at-head check-lockfiles workspace-version; do
+    cp "$repository_root/scripts/release/$adapter.sh" "${workflow_root}/repository/scripts/release/"
+done
 mkdir "${workflow_root}/bin" "${workflow_root}/runner"
 export GITHUB_WORKSPACE="${workflow_root}/repository" RUNNER_TEMP="${workflow_root}/runner"
 export TAG_MAKE_EVENTS="${workflow_root}/make-events" TAG_SCRIPT_EVENTS="${workflow_root}/script-events" TAG_REAL_BASH="$BASH"
@@ -151,7 +162,8 @@ git -C "$GITHUB_WORKSPACE" tag -fa "$GITHUB_REF_NAME" -m fixture > /dev/null
 git -C "$GITHUB_WORKSPACE" update-ref refs/remotes/origin/main HEAD
 # Execute the actual workflow body, including its real tag, snapshot and graph guards.
 yq -o json '.' "$repository_root/.github/workflows/ci.yml" |
-    jq -er '.jobs["tag-truth"].steps[] | select(.name == "Verify release tag") | .run' > "${workflow_root}/workflow.sh"
+    jq -e '.jobs["tag-truth"].steps' > "${workflow_root}/tag-steps.json"
+bash "$repository_root/scripts/ci/extract-workflow-step.sh" "${workflow_root}/tag-steps.json" release-tag > "${workflow_root}/workflow.sh"
 printf '#!%s\n' "$BASH" > "${workflow_root}/bin/make"
 cat >> "${workflow_root}/bin/make" <<'STUB'
 set -euo pipefail
@@ -184,8 +196,6 @@ run_workflow
 printf 'install-tools\ntools-check\n--no-print-directory version\nrelease-tag-check\nfetch\n' > "${workflow_root}/expected-make-events"
 cmp "${workflow_root}/expected-make-events" "$TAG_MAKE_EVENTS"
 for expected in 'scripts/ci/verify-shared-tooling-snapshot.sh' \
-    'scripts/ci/verify-shared-tooling-snapshot.sh --manifest .shared-tooling-audits.snapshot' \
-    '.shared-tooling/helpers/scripts/ci/verify-shared-tooling-snapshot.sh --consumer .shared-tooling/helpers' \
     'scripts/release/check-lockfiles.sh'; do
     grep -Fxq "$expected" "$TAG_SCRIPT_EVENTS"
 done
@@ -197,7 +207,7 @@ reject_workflow() {
 GITHUB_REF_NAME=v0.0.0 reject_workflow
 TAG_FAIL_VERSION=true reject_workflow
 # Actual failed snapshot admission must stop before graph validation.
-for payload in DRAGGINZGAME.md audits/README.md .shared-tooling/helpers/scripts/ci/dependency-pins.jq; do
+for payload in DRAGGINZGAME.md audits/README.md scripts/ci/dependency-pins.jq; do
     cp -p "$GITHUB_WORKSPACE/$payload" "${workflow_root}/original"
     printf '\nchanged\n' >> "$GITHUB_WORKSPACE/$payload"
     reject_workflow
@@ -231,8 +241,8 @@ yq -o json '.' "$repository_root/.github/workflows/ci.yml" |
 # The normal CI lane must prepare all root-lock sources before offline graph
 # fixtures; its default-member build does not fetch unpublished probe dependencies.
 yq -o json '.' "$repository_root/.github/workflows/ci.yml" |
-    jq -er '.jobs.checks.steps[] | select(.name == "Run CI gate") | .run' \
-    > "${workflow_root}/normal-ci.sh"
+    jq -e '.jobs.checks.steps' > "${workflow_root}/ci-steps.json"
+bash "$repository_root/scripts/ci/extract-workflow-step.sh" "${workflow_root}/ci-steps.json" ci-gate > "${workflow_root}/normal-ci.sh"
 for failed_fetch in false true; do
     : > "$TAG_MAKE_EVENTS"
     status=0

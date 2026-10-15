@@ -14,5 +14,5 @@ case "$#" in
     *) echo 'usage: check-tag-at-head.sh [COMMIT_SHA VERSION]' >&2; exit 2 ;;
 esac
 
-exec bash "$script_root/.shared-tooling/helpers/scripts/ci/check-release-tag.sh" \
+exec bash "$script_root/scripts/ci/check-release-tag.sh" \
     "$selected_commit" "$version"

@@ -3,7 +3,8 @@ description: Install and check the selected complete toolset, retaining logs and
 runs:
   using: composite
   steps:
-    - shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+    - id: prepare-tools
+      shell: /bin/bash --noprofile --norc -e -o pipefail {0}
       run: |
         make install-tools 2>&1 | tee "$RUNNER_TEMP/tools-install.log"
         make tools-check 2>&1 | tee "$RUNNER_TEMP/tools-check.log"

@@ -35,7 +35,7 @@ else
     new_version="$(bash scripts/ci/next-release-version.sh "$previous_version" "$requested")"
 fi
 
-order="$(perl "$(dirname "${BASH_SOURCE[0]}")/../../.shared-tooling/helpers/scripts/ci/compare-stable-versions.pl" \
+order="$(perl "$(dirname "${BASH_SOURCE[0]}")/../../scripts/ci/compare-stable-versions.pl" \
     "${new_version}" "${previous_version}")"
 if [[ "$order" != 1 ]]; then
     echo "error: target version ${new_version} must be greater than ${previous_version}" >&2
@@ -53,8 +53,7 @@ release_impact="$(
 bash scripts/release/check-bump-impact.sh "${release_impact}" "${previous_version}"
 
 release_date="${IC_TIMERS_RELEASE_DATE:-$(date -u +%F)}"
-IC_TIMERS_RELEASE_PREVIOUS="${previous_version}" \
-    bash scripts/release/finalize-changelog.sh --check "${new_version}" "${release_date}"
+bash scripts/ci/check-release-changelog.sh "$new_version" "$previous_version" "$release_date" CHANGELOG.md
 if ! bash scripts/release/warn-release-prose.sh "${new_version}"; then
     echo "warning: advisory release-prose check could not run; continuing" >&2
 fi
@@ -67,7 +66,7 @@ fi
 # Shared owns the byte-preserving transaction and coordinated graph checks.
 # Local impact, tag, changelog preflight and advisory policy remain above.
 RELEASE_PREVIOUS="$previous_version" RELEASE_VERSION="$new_version" RELEASE_DATE="$release_date" \
-    bash "$(dirname "${BASH_SOURCE[0]}")/../../.shared-tooling/helpers/scripts/ci/cargo-release-metadata.sh" \
+    bash "$(dirname "${BASH_SOURCE[0]}")/../../scripts/ci/cargo-release-metadata.sh" \
     prepare ic-timers
 
 echo "Bumped: ${previous_version} -> ${new_version}"

@@ -4,59 +4,53 @@
 
 Last updated: 2026-10-15
 
-## Prepared 0.24 hard cut and owner reductions
+## Prepared 0.25 compiler and contributor-owner cleanup
 
-Released base is 0.23.2 at `227c51e085c328eb4ef682d554bf638f9f647843`.
-Cargo versions remain unchanged; incoming Testkit 0.45 manifest/lock edits are
-preserved. The unpublished harness now uses the selected Testkit fallible-only
-Candid/install API with explicit test expectations. The single undated 0.24.0
-draft retains the prepared package-local
-MIT license fix and adds this public API cut.
+Released base is 0.24.0 at `50b535a5936e885a727e6dade20f029d8a9113c2`.
+The maintainer requested Rust 1.91.0 as MSRV. Manifests, Make/probe commands,
+CI and current consumer instructions now agree. The supported build requirement
+change uses one undated 0.25.0 draft; Cargo package versions remain unchanged.
+Incoming Metrics 0.11, Testkit 0.46 and Host 0.19 Cargo selections are preserved.
 
-`TimerObservabilitySnapshot::epoch()` and its duplicate stored epoch are removed.
-Read the epoch through `TimerSnapshot::registration_id().epoch()` and keep the
-registration ID alongside copied statistics. The registry owns the epoch and
-supplies it to standalone and inventory snapshots. Existing continuity tests
-cover cancel, replacement and restart; policy snapshots now also compare both
-projection paths. No timer scheduling, callback or recovery semantics change.
+One canonical snapshot selects reviewed
+`61ddfdc25ad0f4342b5e324e5798897f16c43996` from
+[Shared PR #217](https://github.com/dragginzgame/shared-tooling/pull/217).
+The verified handover retires eighteen nested copies and two old manifests;
+127 payloads retain the prior canonical union plus four new helper/fixture roots.
+The [adoption guide](../shared-tooling.md) records ownership and qualification;
+its [full prior receipts](../evidence/shared-tooling-history.md) remain historical.
 
-All three canonical Shared bundles select reviewed contribution
-`58bad48b701fbcc32d932ac60969aa347bb61c71`, integrated Shared 0.15 plus #209,
-with 85/43/18 payloads. The previously isolated #54 caller changes are adopted:
-Shared owns metadata mutation/rollback and safe partial tool-evidence collection.
-The completion suite delegates prefix rendering while retaining its fifteen
-actual fixture boundaries, path/failure matrix and selected mandatory assertions.
-See the [adoption owner](../shared-tooling.md#prepared-024-owner-adoption).
+Shared's read-only changelog preflight replaces the local independent writer;
+coordinated metadata preparation remains the sole writer. Its generic fixture
+is upstream; Timers keeps actual bump/rollback and source/index assertions.
+Workflow bodies use stable IDs and Shared's unique complete-input extractor.
+Timers retains ordering, logging, tag and upload assertions. One corruption
+fixture tests the single export, restoring each mutated payload before the next.
+Timer runtime source and semantics are unchanged by these reductions.
 
-The [release guide](../releasing.md) is current procedure. Its former receipts
-remain in [release history](../evidence/release-history.md); the preceding full
-handoff is [archived](archive-2026-10-15.md). Historical source/graph qualifications
-do not admit this new batch. No Wasm or instruction saving is claimed.
+## Evidence and remaining acceptance
 
-## Qualification and remaining delivery
+Before-images, canonical preview/apply and focused logs are retained at
+`/tmp/ic-timers-owner-consolidation.eggohebc/`. Rust 1.91 library native/Wasm
+and probe compilation, 155 native tests and doctests pass. Shared's new owner
+fixtures and existing retirement checks pass on Bash 5/genuine Bash 3.2;
+full snapshot distribution, affected ShellCheck and owner doc links pass. The
+interrupted-publication retry fixture also passes on both shells.
+Timers' completion, corruption, failure evidence, version rollback, committed/tag,
+index, gate and repository fixtures pass; the six directly affected Bash 3.2
+subjects also pass. All four cohorts and the runtime probe compile to Wasm on 1.91. Strict library/
+probe Clippy passes on prepared Rust 1.99; the 1.91 Clippy component is absent,
+so its lint gate remains unrun. Moved-link results are retained with their source
+scope in the same evidence directory.
 
-Focused results and custody are retained at
-`/tmp/ic-timers-epoch-docs.z5u0v9wt/`. Native library tests, strict library Clippy,
-Bash 5/genuine Bash 3.2 completion, version rollback and evidence fixtures pass.
-Rust 1.88 native/Wasm library and probe compilation, probe Clippy, doctests,
-public docs, snapshot integrity/corruption, affected release/Make fixtures,
-Python evidence tests and moved-link checks pass. The initial probe failure from
-removed Testkit convenience methods is retained alongside its successful repair. No setup, live PocketIC, full owner
-release gate, hosted dispatch, version mutation or normal Git mutation is included.
+The last recorded all-host acceptance remains [0.23.1](../evidence/release-history.md#completed-0231-native-acceptance),
+not this source/compiler/graph. Full owner/native macOS, hosted upload and live
+PocketIC qualification remain separate. No setup, hosted dispatch, full release
+gate or release execution ran. Git index/refs and sibling normal checkouts remain
+untouched; the isolated Shared contribution branch alone was committed/pushed.
 
-The last completed all-host receipt is [0.23.1](../evidence/release-history.md#completed-0231-native-acceptance),
-not this source or the incoming Testkit 0.45 graph. Issues #51/#52/#55/#59 and
-superseded PR #56 are closed with that exact receipt. [License #62](https://github.com/dragginzgame/ic-timers/issues/62)
-awaits delivery. [Snapshot #63](https://github.com/dragginzgame/ic-timers/issues/63)
-owns the separate verified ownership handover; three bundles remain here.
-
-PRs [#54](https://github.com/dragginzgame/ic-timers/pull/54),
-[#60](https://github.com/dragginzgame/ic-timers/pull/60),
-[#61](https://github.com/dragginzgame/ic-timers/pull/61) and
-[Shared #209](https://github.com/dragginzgame/shared-tooling/pull/209) retain their
-isolated review branches. #54's source is now adopted locally; the two Actions
-pin changes remain separate. No PR merge is claimed. Previous repair receipts
-remain at `/tmp/ic-timers-issue-pr-followup.k9op1zwx/` and in the archive.
-
-Normal staging, commits, versions, tags, pushes, publication and cleanup remain
-maintainer-owned. Preserve Cargo inputs, index/refs and retained evidence.
+[Snapshot #63](https://github.com/dragginzgame/ic-timers/issues/63) has its local
+implementation prepared and upstream PR linked; delivered/native-host acceptance
+remains outstanding. Earlier release and license receipts retain their source
+scope in [release history](../evidence/release-history.md).
+Normal staging, commits, versions, tags, publication and cleanup stay user-owned.

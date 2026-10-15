@@ -5,7 +5,7 @@
 	release-impact release-tag-check release-verify repository-check shell-check test testing-check update-dev \
 	version wasm-check
 
-MSRV ?= 1.88.0
+MSRV ?= 1.91.0
 VERSION ?=
 LOCAL_TOOL_INSTALL_TARGETS := install-testkit-server
 LOCAL_TOOL_CHECK_TARGETS := pocketic-check
@@ -134,21 +134,17 @@ pocketic-cohorts: pocketic-check
 # Keep the established gate entry point; the shared owner also checks Cargo
 # declarations and the tracked root lockfile for all maintained members.
 actions-check: host-tools-check
-	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/check-dependency-pins.sh \
+	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/check-dependency-pins.sh \
 		--consumer "$(CURDIR)" --cargo-inheritance
 
 shell-check:
-	@set -e; for script in .githooks/pre-commit scripts/ci/*.sh scripts/dev/*.sh scripts/release/*.sh \
-		.shared-tooling/helpers/scripts/ci/*.sh; do \
+	@set -e; for script in .githooks/pre-commit scripts/ci/*.sh scripts/dev/*.sh scripts/release/*.sh; do \
 		bash -n "$$script"; \
 	done
 
 release-check:
 	bash scripts/ci/test-fixture-completion.sh
 	+$(MAKE) --no-print-directory shared-tooling-check
-	bash scripts/ci/verify-shared-tooling-snapshot.sh --manifest .shared-tooling-audits.snapshot
-	bash .shared-tooling/helpers/scripts/ci/verify-shared-tooling-snapshot.sh \
-		--consumer "$(CURDIR)/.shared-tooling/helpers"
 	bash scripts/ci/test-shared-snapshots.sh
 	bash scripts/ci/test-host-tools.sh
 	bash scripts/ci/test-tool-commands.sh
@@ -159,16 +155,17 @@ release-check:
 	bash scripts/ci/test-make-consumer.sh
 	bash scripts/ci/test-ic-tools.sh
 	bash scripts/ci/test-evidence-checksums.sh
-	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/test-dependency-pins.sh
-	YQ="$(CURDIR)/.tools/host/bin/yq" bash .shared-tooling/helpers/scripts/ci/test-cargo-metadata.sh
-	perl .shared-tooling/helpers/scripts/ci/test-local-lock-versions.pl
+	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/test-dependency-pins.sh
+	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/test-cargo-metadata.sh
+	perl scripts/ci/test-local-lock-versions.pl
 	bash scripts/ci/test-release-runner.sh
-	bash .shared-tooling/helpers/scripts/ci/check-release-commands.sh "$(CURDIR)" \
+	bash scripts/ci/check-release-commands.sh "$(CURDIR)" \
 		ci/tool-versions.env make/consumer.mk make/tools.mk make/rust-format.mk make/release.mk \
 		make/execution.mk scripts/ci/check-make-execution.sh scripts/ci/run-formatting.sh
 	bash scripts/release/test-committed-release.sh
 	bash scripts/release/test-release-index.sh
-	bash scripts/release/test-finalize-changelog.sh
+	bash scripts/ci/test-release-changelog.sh
+	bash scripts/ci/test-workflow-step.sh
 	bash scripts/release/test-release-impact.sh
 	bash scripts/release/test-lockfiles.sh
 	bash scripts/release/test-release-prose-warning.sh

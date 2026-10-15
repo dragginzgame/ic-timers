@@ -64,7 +64,7 @@ checked integer/fractional means. First lifecycle reconciliation remains atomic;
 see the [earlier release notes](CHANGELOG.md#0210---2026-10-12) for that contract.
 
 IC Timers is written in Rust 2024 and supports Rust
-1.88.0 and newer. It uses `ic-cdk-timers` 1.0.0 as its private, underlying
+1.91.0 and newer. It uses `ic-cdk-timers` 1.0.0 as its private, underlying
 timer service.
 
 One IC Timers runtime can manage up to 64 named timers and 128 timer handles.
@@ -474,20 +474,20 @@ remain defined in [AGENTS.md](AGENTS.md).
 | `make cloc` | Report Rust LOC/test counts for all root workspace members |
 | `make fmt` / `make fmt-check` | Sort manifests and format or check Rust for all workspace members |
 | `make ci` | Run the normal warning-denied checks, native tests, Wasm build, and package checks |
-| `make msrv` | Check the library and its doctests with Rust 1.88.0 |
-| `make testing-check` | Check workspace formatting and lint supported unpublished probes with Rust 1.88.0 |
+| `make msrv` | Check the library and its doctests with Rust 1.91.0 |
+| `make testing-check` | Check workspace formatting and lint supported unpublished probes with Rust 1.91.0 |
 | `make repository-check` | Validate repository-only documentation, evidence, or tooling work |
 | `make pocketic-watchdog` | Run the focused real-canister watchdog recovery matrix |
 | `make pocketic-cohorts` | Compare real-canister policy cohorts and measurements |
 | `make release-impact` | Classify changes as crate-impacting, repository-only, or absent |
 
 Normal development and hosted CI use Rust 1.99.0. Hosted CI also lints every
-supported probe configuration with both Rust 1.99.0 and Rust 1.88.0.
+supported probe configuration with both Rust 1.99.0 and Rust 1.91.0.
 Prepare the complete pinned toolsets through `make update-dev`, or prepare the
 Rust toolchain and run `make install-tools` followed by `make tools-check`.
 Common Cargo tools use `.tools/rust/common/bin`; update interactive shell PATH
 exports when adopting the
-[new installation contract](docs/shared-tooling.md#shared-tooling-060-cargo-storage-adoption).
+[new installation contract](docs/evidence/shared-tooling-history.md#shared-tooling-060-cargo-storage-adoption).
 `make actions-check` verifies the bundle offline and delegates
 Actions and Cargo declaration checks to the reviewed shared parser; it never
 downloads tools. See the [setup and pin boundaries](docs/releasing.md#structured-dependency-checks-and-host-parsers).

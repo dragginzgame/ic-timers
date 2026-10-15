@@ -5,10 +5,9 @@ This file is normative for automated contributors.
 ## Shared baseline and local overlay
 
 - Apply the [reviewed Shared Tooling baseline](DRAGGINZGAME.md). Exact
-  revisions and payloads belong to the [baseline snapshot](.shared-tooling.snapshot),
-  [audit/setup snapshot](.shared-tooling-audits.snapshot) and
-  [Cargo helper snapshot](.shared-tooling/helpers/.shared-tooling.snapshot).
-  Review their roots and local callers together when refreshing; do not patch
+  revision, entrypoints and payloads belong to the single
+  [snapshot](.shared-tooling.snapshot), including audits, setup and Cargo helpers.
+  Review its roots and local callers together when refreshing; do not patch
   exported files. See [adoption boundaries](docs/shared-tooling.md).
 - Common commands come from [make/consumer.mk](make/consumer.mk), with setup
   and storage governed by [local setup](docs/local-setup.md). The ordered local

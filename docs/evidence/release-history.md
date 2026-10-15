@@ -41,7 +41,7 @@ Shared 0.12.3 adoption and contributor-flow consolidations. It changes no timer
 source/API or canister cost. Cargo release versions remain 0.22.2; incoming Host
 0.17.11 selections are preserved. Release execution remains maintainer-owned.
 
-The [adoption record](../shared-tooling.md#prepared-shared-tooling-0123) identifies
+The [adoption record](shared-tooling-history.md#prepared-shared-tooling-0123) identifies
 all three exports and the approved strict changelog contract. Shared owns pure
 literal rendering, coordinated member projection and graph-only admission, exact
 stable-version comparison, finalizer increase admission, and fixture EXIT cleanup.
@@ -145,7 +145,7 @@ Issues [#51](https://github.com/dragginzgame/ic-timers/issues/51) and
 [#52](https://github.com/dragginzgame/ic-timers/issues/52) have delivered source
 adoptions, but remain open for their final hosted native acceptance.
 
-The later [Shared 0.10.2 refresh](../shared-tooling.md#prepared-shared-tooling-0102)
+The later [Shared 0.10.2 refresh](shared-tooling-history.md#prepared-shared-tooling-0102)
 is repository-only work under undated 0.22.1 notes. No timer source, Cargo input,
 pin, installer/build-policy identity or gate membership changes. Common tool
 cache transport is not newly enabled. Integrity/syntax/documentation checks do
@@ -262,7 +262,7 @@ Timers re-export or coordinate Metrics 0.9. This requires undated 0.22.0 notes,
 superseding the prepared 0.21.5 patch. Cargo versions, release execution and
 publication remain maintainer-owned.
 
-The [Shared 0.10 adoption](../shared-tooling.md#prepared-shared-tooling-0100) owns
+The [Shared 0.10 adoption](shared-tooling-history.md#prepared-shared-tooling-0100) owns
 canonical host/Cargo and IC catalogs. Make explicitly selects
 `ci/ic-tools-qualified.tsv` for the retained Binaryen 132 exception, and failure
 collection uses that same file. Other tool versions/digests match shared defaults.
@@ -305,7 +305,7 @@ Historical adoption evidence below remains tied to its
 recorded versions, workspace shapes and hosts.
 
 The [host record](#host-support) and
-[Shared Tooling adoption](../shared-tooling.md#shared-tooling-committed-0132-follow-up)
+[Shared Tooling adoption](shared-tooling-history.md#shared-tooling-committed-0132-follow-up)
 record current source and qualification gaps. Released 0.14.21 passes the complete
 hosted native gates and matching tag truth, including its selected Metrics graph.
 The earlier missing-package offline inspection remains historical. The compatible
@@ -416,7 +416,7 @@ Both finalizer calls receive the bump's validated previous package version;
 undated numbered sections at or below it are retained as history. Version
 components compare by length and text without floating-point conversion.
 Same-date finalization is still refused. See the
-[finalizer review](../shared-tooling.md#changelog-finalizer-review-and-history-fix)
+[finalizer review](shared-tooling-history.md#changelog-finalizer-review-and-history-fix)
 for the ownership and fixture scope.
 The 0.14.12 draft delegates selection and pending-body formatting to the shared
 AWK owner, preserving historical bytes. The local wrapper owns reader/selector
@@ -587,7 +587,7 @@ unavailable observations retain the selected plan and failure evidence. The
 canonical runner fixture owns these refusal and exact-version repair/retry cases;
 the local committed-release fixture checks explicit direct-policy selection as
 well as immutable metadata/receipt binding. Both remain user-operated gates.
-The [adoption owner](../shared-tooling.md#shared-tooling-0123-preparation) records
+The [adoption owner](shared-tooling-history.md#shared-tooling-0123-preparation) records
 preparation and upstream/consumer qualification limits;
 [#29](https://github.com/dragginzgame/ic-timers/issues/29) closed after the
 unchanged adoption passed both complete native gates in 0.14.15.
@@ -670,7 +670,7 @@ status and the path to complete retained stdout/stderr; Make then returns its
 normal recipe-failure status. In CI, the wrapper uses RUNNER_TEMP and the local
 failure collector archives `formatting.*` there. Local runs otherwise use TMPDIR
 or /tmp. Successful logs remove themselves. The
-[0.2.11 adoption owner](../shared-tooling.md#shared-tooling-0211-formatting-and-make-admission)
+[0.2.11 adoption owner](shared-tooling-history.md#shared-tooling-0211-formatting-and-make-admission)
 records source identity and pending consumer qualification.
 
 The vendored formatting hook exports the index to disposable scratch, formats
@@ -824,7 +824,7 @@ passes. [Main CI](https://github.com/dragginzgame/ic-timers/actions/runs/3765529
 passes Linux, MSRV and both complete native macOS gates. The released lock
 contains Testkit 0.21.2, Metrics 0.2.9,
 all four split Host packages at 0.4.6 and PocketIC 16.0.0. The source-bound
-[adoption acceptance](../shared-tooling.md#consumer-adoption-qualification)
+[adoption acceptance](shared-tooling-history.md#consumer-adoption-qualification)
 closes #24/#25/#28 and records subsequent complete current-release host acceptance.
 #23's original early/late failing jobs and six verified downloads remain required.
 
@@ -1118,7 +1118,7 @@ Homebrew on both macOS hosts, before fixtures, with a command-availability check
 The shared snapshot, ordinary offline validation and the complete gate stay
 unchanged. Shell/source/diff inspection is repair evidence; rerunning native
 qualification remains maintainer-owned. Details belong in the
-[adoption owner](../shared-tooling.md#structured-checker-ci-repair).
+[adoption owner](shared-tooling-history.md#structured-checker-ci-repair).
 
 Pushed 0.14.2 at `88aedf0a5353d176037062ae262dd67bae11beae` passed
 [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/37489635619)
@@ -1135,7 +1135,7 @@ passed its exact-tag/main-ancestry checks. At that inspection it was the latest 
 qualification, including formatter prerequisites, changelog preparation and the
 earlier Cargo/IC helper wiring. Registry publication was not independently
 checked. These results do not qualify the later 0.14.4 tag-checker and tooling
-worktree. The [0.1.11 refresh owner](../shared-tooling.md#shared-tooling-0111-refresh)
+worktree. The [0.1.11 refresh owner](shared-tooling-history.md#shared-tooling-0111-refresh)
 records exact upstream all-host evidence and pending consumer qualification.
 
 For release commit `49e4e8a25025c6a6329c993ea85255341474682b` (0.14.4),
@@ -1158,7 +1158,7 @@ command checker and release runner command substitutes. Both macOS gates record
 142 native tests, 14 PocketIC runtime subjects, doctests and policy cohorts.
 This completed consumer qualification closed #17/#18 for the actual adopted
 0.1.12 wiring. The
-[adoption owner](../shared-tooling.md#shared-tooling-0112-adoption) records its scope
+[adoption owner](shared-tooling-history.md#shared-tooling-0112-adoption) records its scope
 and the separate unqualified Make-mode boundary reported upstream. Normal hosted
 success does not qualify ignore-errors or non-executing Make modes. Registry
 publication was not independently checked. No new local validation ran during
@@ -1168,7 +1168,7 @@ Released 0.14.6 adopts Shared Tooling 0.1.13 and moves
 the three host/probe packages under the independent `testing/crates/` root.
 Source-bound upstream Linux/macOS success and cheap consumer locked metadata,
 path/hash and integrity inspection are recorded in the
-[workspace adoption owner](../shared-tooling.md#shared-tooling-0113-workspace-adoption).
+[workspace adoption owner](shared-tooling-history.md#shared-tooling-0113-workspace-adoption).
 At `0c90c391dff5960a7502fc15a0718b03631f2515`,
 [main CI](https://github.com/dragginzgame/ic-timers/actions/runs/37584151377)
 passed Linux, MSRV and both complete native macOS gates.
@@ -1189,7 +1189,7 @@ Matching [tag CI](https://github.com/dragginzgame/ic-timers/actions/runs/3759289
 passed. The logs record Make admission, gate, hook and collector fixtures passing
 on Linux and both macOS hosts; #20 closes with this complete source-bound
 qualification. New .8 edits retain their own pending qualification. See the
-[Make admission owner](../shared-tooling.md#shared-tooling-0114-make-admission).
+[Make admission owner](shared-tooling-history.md#shared-tooling-0114-make-admission).
 
 Version preparation uses Bash, Perl, Git, Cargo and the explicitly installed
 jq/yq parser pair. It owns regular metadata
@@ -1403,7 +1403,7 @@ neither those new fixtures nor the hosted dispatches ran during preparation.
 
 Released #24/#25/#28 are closed after 0.14.13 supplies the missing complete
 Intel gate for the unchanged 0.14.12 adoption. The
-[source-bound acceptance](../shared-tooling.md#consumer-adoption-qualification)
+[source-bound acceptance](shared-tooling-history.md#consumer-adoption-qualification)
 records exact source identity, the 82 unchanged files and each native host's
 actual dependency graph. Apple Silicon subsequently passed at the exact 0.14.13
 source as well. The maintained driver/collector fixture now passes all three
@@ -1514,7 +1514,7 @@ The following records describe the earlier archiver-only preparation.
 
 The 0.14.17 draft prepares
 [#30](https://github.com/dragginzgame/ic-timers/issues/30) through the reviewed
-0.1.26 [snapshot](../shared-tooling.md#shared-tooling-0126-preparation).
+0.1.26 [snapshot](shared-tooling-history.md#shared-tooling-0126-preparation).
 `collect-failure-evidence.sh` still owns checkout/event/job/host/run/attempt
 identity and selection: fixture scratch, release-state validation logs, native
 validation logs and all host/IC candidate sets. It passes root/relative-path
@@ -1575,7 +1575,7 @@ The maintained fixture adds copied consumer scripts under a physical checkout
 ending in a newline, inherited CDPATH, a matching workspace alias, a different
 workspace rejection and a newline-ending runner directory. It drives both stages
 and compares retained status/input/log bytes after actual shared archiving.
-The reviewed [Shared Tooling 0.1.27 refresh](../shared-tooling.md#shared-tooling-0127-preparation)
+The reviewed [Shared Tooling 0.1.27 refresh](shared-tooling-history.md#shared-tooling-0127-preparation)
 repairs the canonical bootstrap, so these additional cases now copy the real
 installer/logger and their companions. The temporary path-only substitutes are
 removed. Both normal and newline-ending path cases check the real retained
@@ -1624,7 +1624,7 @@ No new dispatch, local verifier execution or release operation ran in that revie
 At the frozen source, full installer retention remains selected. The compact
 selector's corrected db039 full/compact transport now passes all three native
 hosts; current consumer preparation is recorded in the
-[adoption owner](../shared-tooling.md#compact-consumer-evidence-preparation).
+[adoption owner](shared-tooling-history.md#compact-consumer-evidence-preparation).
 No consumer archive-size saving or stronger IC recovery guarantee is claimed.
 The frozen observations qualify 0.14.17's archiver and original graph, not later
 path changes, compact selection, unrelated outages or other package identities.
@@ -1719,7 +1719,7 @@ an inherited external snapshot cannot replace the indexed prerequisite checker.
 Their pin input is bound to the indexed `ci/tool-versions.env`, preserving the
 previous consumer-owned formatter selection rather than ambient host pin routing.
 Fixture wiring and pending native qualification belong in the
-[adoption owner](../shared-tooling.md#shared-tooling-0211-formatting-and-make-admission).
+[adoption owner](shared-tooling-history.md#shared-tooling-0211-formatting-and-make-admission).
 
 The adjacent `make/execution.mk` admits the running Make executable before
 recipes, using the probe beside the selected include. Shared 0.2.11 probes
@@ -1786,13 +1786,13 @@ there is no independent testing manifest. The refreshed reporter isolates its
 fixture workspaces and excludes configured build output, including aliases.
 Fleet tooling inventories now run centrally from Shared Tooling; this consumer
 does not select the optional reporter or its dedicated regression suite. The
-[current adoption owner](../shared-tooling.md#shared-tooling-committed-0134-follow-up)
+[current adoption owner](shared-tooling-history.md#shared-tooling-committed-0134-follow-up)
 records that selection boundary. Counts do not establish instruction or Wasm
 savings.
 
-The [0.1.18 adoption owner](../shared-tooling.md#shared-tooling-0118-refresh)
+The [0.1.18 adoption owner](shared-tooling-history.md#shared-tooling-0118-refresh)
 records source inspection and pending Linux/native macOS consumer qualification.
-Current [Shared 0.3 adoption](../shared-tooling.md#shared-tooling-030-complete-toolset)
+Current [Shared 0.3 adoption](shared-tooling-history.md#shared-tooling-030-complete-toolset)
 includes the complete Cargo toolset in both aggregates. `update-dev` bootstraps
 the pinned Rust toolchain, calls `install-tools` then `tools-check`, and installs
 the formatting hook. CI prepares its declared toolchain before the same ordered
@@ -1845,7 +1845,7 @@ no shared-server reuse or recovery guarantee.
 
 Shared archive selection preserves failed CLI builds and Testkit `.setup-v1-*`
 attempts without selecting successful server bundles. Scope and pending native
-qualification belong in the [adoption record](../shared-tooling.md#shared-tooling-020-hard-cut).
+qualification belong in the [adoption record](shared-tooling-history.md#shared-tooling-020-hard-cut).
 Ordinary validation never downloads. Setup neither deploys a canister nor selects
 credentials or a network target.
 
@@ -2399,7 +2399,7 @@ and controlled artifact acceptance.
 [Shared 0.6.2 CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38143010876)
 passes Linux portable, lint/security and ARM portable; Intel is still queued.
 That source describes the released graph. Pending 0.17.13 now adopts
-[Shared 0.6.3](../shared-tooling.md#shared-tooling-063-committed-preparation-restart);
+[Shared 0.6.3](shared-tooling-history.md#shared-tooling-063-committed-preparation-restart);
 qualification is not inferred from moving sibling status or publication alone.
 
 Incoming maintainer Cargo.lock selects Testkit **0.33.8**, with Host **0.13.5**,
@@ -2435,7 +2435,7 @@ canonical committed-preparation restart contract.
 
 The pending 0.17.11 contributor-tooling patch adopts Shared 0.6.1
 `731909525038c58d6f80b498e80f8630b11c685d` through 56/33/11 canonical exports.
-[The adoption owner](../shared-tooling.md#shared-tooling-061-failure-and-native-fixture-corrections)
+[The adoption owner](shared-tooling-history.md#shared-tooling-061-failure-and-native-fixture-corrections)
 records the reviewed source, preserved inputs, failure semantics and required
 setup. No local installer patch or reduced validation gate is introduced.
 Source-bound consumer native qualification remains under
@@ -2471,7 +2471,7 @@ diff and cheap locked offline metadata are the preparation checks.
 
 Released **0.17.10** adopts committed Shared **0.6.0**
 `75180980a0c4e4252d8a915aaecfaefd92bf9a4e` through **56/33/11** exports.
-[The adoption owner](../shared-tooling.md#shared-tooling-060-cargo-storage-adoption)
+[The adoption owner](shared-tooling-history.md#shared-tooling-060-cargo-storage-adoption)
 records exact source, required companion, preserved inputs and previews. Cargo
 storage now follows the same per-user owner as host/IC tools, through exact source,
 packaged-lock, compiler and native-environment identities. Common command PATH
@@ -2549,7 +2549,7 @@ This acceptance/feedback record creates no new changelog or release subject.
 Released **0.17.9** adopts committed Shared **0.5.0**
 `a306180ce534227fcb98b882fba9a526d5d747e0` through the **56/32/11** canonical
 exports. The supplemental export adds the required store helper and fixture;
-[the adoption record](../shared-tooling.md#shared-tooling-050-storage-adoption)
+[the adoption record](shared-tooling-history.md#shared-tooling-050-storage-adoption)
 owns previews, source and preserved inputs. This replaces the interrupted 0.4.2
 policy-only adoption. No local store manager or executable relocation is added.
 
@@ -2739,7 +2739,7 @@ tests. Earlier 0.17.6 evidence remains bound to its original graph.
 
 Released **0.17.7** includes reviewed Shared **0.3.11**
 `db143ae9ae140eb66826c413360723d23c078f66` through all three exports;
-[the adoption owner](../shared-tooling.md#shared-tooling-0311-portability-setup-and-diagnostics)
+[the adoption owner](shared-tooling-history.md#shared-tooling-0311-portability-setup-and-diagnostics)
 records exact source and the corrected version annotation from Shared #114.
 The incoming root lock selects Host 0.12.10;
 the adoption preserves that maintainer change without selecting another version.
@@ -2813,7 +2813,7 @@ obligations of [#38](https://github.com/dragginzgame/ic-timers/issues/38),
 [#39](https://github.com/dragginzgame/ic-timers/issues/39) or
 [#40](https://github.com/dragginzgame/ic-timers/issues/40).
 
-Pending **0.17.6** adopts the [Shared 0.3.8 exports](../shared-tooling.md#shared-tooling-038-mandatory-assertions)
+Pending **0.17.6** adopts the [Shared 0.3.8 exports](shared-tooling-history.md#shared-tooling-038-mandatory-assertions)
 and repairs [#41](https://github.com/dragginzgame/ic-timers/issues/41). The
 production release adapter explicitly refuses a successfully read but mismatching
 workspace version before source admission, fetch or setup. The local lock updater
@@ -2865,7 +2865,7 @@ complete native acceptance for this graph or the pending tooling repair.
 
 Pending **0.17.5** adopts committed Shared **0.3.6** through all three exports,
 repairs failed hook observations and delegates Testkit CLI lock selection to the
-shared installer. The [adoption owner](../shared-tooling.md#shared-tooling-036-hook-and-lock-selection)
+shared installer. The [adoption owner](shared-tooling-history.md#shared-tooling-036-hook-and-lock-selection)
 records exact source, changed consumers, failure cases and permitted inspection.
 The incoming maintainer-owned catalog/lock separately select Testkit **0.33.0**,
 Host **0.12.4** and Metrics **0.5.4**; those bytes and the index are preserved.
@@ -3061,7 +3061,7 @@ for this released graph, independently of the new incoming selections.
 
 This source adds explicit staged/working lock-preservation assertions, forbidden
 directory cases, selected-CLI failure isolation and ordered preflight preparation.
-The [Shared adoption owner](../shared-tooling.md#shared-tooling-0213-selected-cli-preparation)
+The [Shared adoption owner](shared-tooling-history.md#shared-tooling-0213-selected-cli-preparation)
 records their scope; prior 0.16.5 logs qualify only that earlier source.
 Downloaded `/tmp/ic-timers-0166-{linux,intel,arm}-job.log` files now prove actual
 hook formatting and failure isolation, directory admission, Testkit adapter
@@ -3393,7 +3393,7 @@ lightweight/wrong tags, invalid metadata or failed checks stop recovery.
 The compatible 0.14.4 worktree delegates those checks to the recorded shared
 `check-release-tag.sh`; the local adapter retains only identity selection.
 Diagnostics come from the shared owner, including the selected SHA for a wrong
-target. The [adoption record](../shared-tooling.md#annotated-tag-checker-adoption)
+target. The [adoption record](shared-tooling-history.md#annotated-tag-checker-adoption)
 owns source, unchanged caller contracts and pending qualification.
 When newer fixes exist, completing the older release does not implicitly publish
 those fixes: the runner validates them afresh before preparing the requested
@@ -3503,7 +3503,7 @@ passes Linux native, MSRV and Intel, with ARM queued at inspection.
 These upstream results and metadata do not qualify the consumer's new graph.
 No contributor Cargo mutation, build/test/lint/setup, commit or release runs.
 Snapshot directory admission belongs to the
-[0.2.12 adoption owner](../shared-tooling.md#shared-tooling-0212-directory-admission).
+[0.2.12 adoption owner](shared-tooling-history.md#shared-tooling-0212-directory-admission).
 
 ### Host 0.11 ownership review
 
@@ -4265,7 +4265,7 @@ direct dependencies, one Timers identity and one Metrics 0.8.0 package.
 The lock graph shrinks from 299 to 288 packages by retiring unused build-tool
 dependencies; this is a graph count, not a measured build-time or Wasm saving.
 
-The paired [Shared 0.9.7 refresh](../shared-tooling.md#prepared-shared-tooling-097)
+The paired [Shared 0.9.7 refresh](shared-tooling-history.md#prepared-shared-tooling-097)
 retains the current roots and 67/35/11 payloads. Integrity and syntax pass, and
 incoming Cargo files, pins and real index entries match saved inputs. Rust
 product source and probe imports are unchanged. No new native/probe execution,
@@ -4295,7 +4295,7 @@ and [run 38288927426](https://github.com/dragginzgame/ic-timers/actions/runs/382
 pass at 2026-10-13 readback. These exact-source results remain separate from
 newer tooling preparation.
 
-The [0.9.10 refresh](../shared-tooling.md#prepared-shared-tooling-0910) is a later
+The [0.9.10 refresh](shared-tooling-history.md#prepared-shared-tooling-0910) is a later
 repository-only batch under undated 0.21.2 notes, separate from that acceptance.
 It supersedes the earlier prepared 0.9.8 selection and removes the Make adapter
 because the canonical fixture now isolates its compiler context and creates no
@@ -4321,7 +4321,7 @@ Hosted [run 38363085866](https://github.com/dragginzgame/ic-timers/actions/runs/
 passes and [run 38363085915](https://github.com/dragginzgame/ic-timers/actions/runs/38363085915)
 is in progress at inspection. No complete new hosted/macOS acceptance is claimed.
 
-The [Shared 0.9.13 refresh](../shared-tooling.md#prepared-shared-tooling-0913) is later
+The [Shared 0.9.13 refresh](shared-tooling-history.md#prepared-shared-tooling-0913) is later
 repository-only preparation under undated 0.21.3 notes. The incoming maintainer
 lockfile selects Metrics 0.8.2 and deranged 0.5.9; preserve those bytes rather than
 restoring the delivered selection. This tooling refresh does not qualify that
@@ -4377,7 +4377,7 @@ Hosted [run 38375894239](https://github.com/dragginzgame/ic-timers/actions/runs/
 is in progress and [run 38375894348](https://github.com/dragginzgame/ic-timers/actions/runs/38375894348)
 is queued at inspection; no complete new hosted/macOS acceptance is claimed.
 
-The later [Shared 0.9.14 refresh](../shared-tooling.md#prepared-shared-tooling-0914)
+The later [Shared 0.9.14 refresh](shared-tooling-history.md#prepared-shared-tooling-0914)
 is repository-only work under undated 0.21.5 notes. It changes CI log inspection,
 not runtime behavior or executable setup identity. Cargo inputs, tool pins and
 real index entries are preserved. No new product code, tests, lint, setup or

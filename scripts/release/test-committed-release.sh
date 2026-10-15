@@ -21,7 +21,7 @@ finish() {
     fixture_finish "$status" "$fixture" 'Failed committed-release fixture retained'
 }
 trap finish EXIT
-mkdir -p "$fixture/current/scripts" "$fixture/current/.shared-tooling/helpers/scripts/ci" \
+mkdir -p "$fixture/current/scripts" "$fixture/current/scripts/ci" \
     "$fixture/selected" "$fixture/bin" "$fixture/tmp"
 cp "$root/Makefile" "$fixture/current/"
 mkdir -p "$fixture/current/make"
@@ -31,13 +31,13 @@ mkdir -p "$fixture/current/scripts/ci"
 cp "$root/scripts/ci/check-make-execution.sh" "$root/scripts/ci/run-formatting.sh" \
     "$fixture/current/scripts/ci/"
 cp -R "$root/scripts/release" "$fixture/current/scripts/"
-cp "$root/.shared-tooling/helpers/scripts/ci/read-cargo-workspace-version.sh" \
-    "$root/.shared-tooling/helpers/scripts/ci/check-release-tag.sh" \
-    "$root/.shared-tooling/helpers/scripts/ci/cargo-release-metadata.sh" \
-    "$root/.shared-tooling/helpers/scripts/ci/cargo-workspace-members.jq" \
-    "$root/.shared-tooling/helpers/scripts/ci/compare-stable-versions.pl" \
-    "$root/.shared-tooling/helpers/scripts/ci/StableVersion.pm" \
-    "$fixture/current/.shared-tooling/helpers/scripts/ci/"
+cp "$root/scripts/ci/read-cargo-workspace-version.sh" \
+    "$root/scripts/ci/check-release-tag.sh" \
+    "$root/scripts/ci/cargo-release-metadata.sh" \
+    "$root/scripts/ci/cargo-workspace-members.jq" \
+    "$root/scripts/ci/compare-stable-versions.pl" \
+    "$root/scripts/ci/StableVersion.pm" \
+    "$fixture/current/scripts/ci/"
 mkdir -p "$fixture/current/ci"
 cp "$root/ci/tool-versions.env" "$fixture/current/ci/"
 printf '%s\n' '[workspace.package]' 'version = "0.1.0"' > "$fixture/selected/Cargo.toml"

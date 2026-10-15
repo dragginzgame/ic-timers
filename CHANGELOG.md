@@ -2,6 +2,23 @@
 
 All notable changes to this project are recorded here.
 
+## [0.25.0]
+
+### Breaking
+
+- Raise the minimum supported Rust version to 1.91.0 across manifests, native/
+  Wasm qualification, probe commands and hosted CI. This also admits the incoming
+  workspace-selected Metrics 0.11 minimum compiler requirement.
+
+### Development
+
+- Consolidate Shared snapshot ownership and reuse the canonical changelog
+  preflight and workflow-step extraction owners from
+  [Shared #217](https://github.com/dragginzgame/shared-tooling/pull/217). Retire
+  the nested helper copies, obsolete manifests and independent changelog writer.
+- Keep the active adoption guide compact; preserve source-bound receipts and
+  historical links in its evidence archive.
+
 ## [0.24.0] - 2026-10-15
 
 ### Breaking
@@ -708,7 +725,7 @@ All notable changes to this project are recorded here.
   and failure evidence are retained
   ([#36](https://github.com/dragginzgame/ic-timers/issues/36),
   [shared #98](https://github.com/dragginzgame/shared-tooling/issues/98),
-  [adoption owner](docs/shared-tooling.md#shared-tooling-030-complete-toolset)).
+  [adoption owner](docs/evidence/shared-tooling-history.md#shared-tooling-030-complete-toolset)).
 - Align public measurement summaries with Metrics 0.4. Consumers exchanging
   these types must select Metrics 0.4 or use `ic_timers::MeasurementSummary`;
   arithmetic and timer lifecycle behavior are unchanged
@@ -735,7 +752,7 @@ All notable changes to this project are recorded here.
   logs, retain partial logs/fetch errors, and distinguish completed successful
   runs with no failure logs. No CI rerun or timer behavior change is introduced
   ([shared #97](https://github.com/dragginzgame/shared-tooling/issues/97),
-  [adoption owner](docs/shared-tooling.md#shared-tooling-0214-ci-inspection)).
+  [adoption owner](docs/evidence/shared-tooling-history.md#shared-tooling-0214-ci-inspection)).
 - Use Testkit 0.29 and Host 0.11 for native qualification and selected CLI setup.
   The existing PocketIC harness needs no adapter; timer APIs remain unchanged
   ([testkit #47](https://github.com/dragginzgame/ic-testkit/issues/47),
@@ -754,7 +771,7 @@ All notable changes to this project are recorded here.
 - Refresh all three snapshots to committed Shared Tooling 0.2.13. Reject
   LF/CR directory names before snapshot export/verification can trim them into
   a different checkout; cover all consumer selections and physical aliases
-  ([adoption owner](docs/shared-tooling.md#shared-tooling-0212-directory-admission),
+  ([adoption owner](docs/evidence/shared-tooling-history.md#shared-tooling-0212-directory-admission),
   [shared #95](https://github.com/dragginzgame/shared-tooling/issues/95)).
 - Retain the incoming Testkit 0.28.1, Host 0.10.2 and Metrics 0.3.7 selections.
   Host rejects directory-suffixed publication targets; Metrics arithmetic source
@@ -764,7 +781,7 @@ All notable changes to this project are recorded here.
   then check it offline; failed CLI admission names its selection and the local
   setup command.
   Add preparation-order/failure, offline-policy and parallel early-refusal cases
-  ([adoption owner](docs/shared-tooling.md#shared-tooling-0213-selected-cli-preparation),
+  ([adoption owner](docs/evidence/shared-tooling-history.md#shared-tooling-0213-selected-cli-preparation),
   [shared #96](https://github.com/dragginzgame/shared-tooling/issues/96)).
 - Record the Host 0.11 review: native Testkit tooling owns adoption; the timer
   library has no Host dependency. Keep the selected 0.10 graph until Testkit's
@@ -778,7 +795,7 @@ All notable changes to this project are recorded here.
   selected-file refresh confirmation after the formatter's one success line.
 - Refresh all three snapshots to committed Shared Tooling 0.2.11, retaining
   source-version/revision diagnostics and consumer dependency/tool selections
-  ([adoption owner](docs/shared-tooling.md#shared-tooling-0211-formatting-and-make-admission)).
+  ([adoption owner](docs/evidence/shared-tooling-history.md#shared-tooling-0211-formatting-and-make-admission)).
 - Print one formatting success line; retain full stdout/stderr on failure with
   its exit status and log path. Carry the canonical reporter through disposable
   Make/index fixtures and archive its failed logs in CI
@@ -805,7 +822,7 @@ All notable changes to this project are recorded here.
   recursive command arguments.
   Propagate companions to disposable Make/index fixtures and isolate the shared
   release smoke checker from ambient snapshot routing
-  ([adoption owner](docs/shared-tooling.md#shared-tooling-028-make-admission),
+  ([adoption owner](docs/evidence/shared-tooling-history.md#shared-tooling-028-make-admission),
   [shared #30](https://github.com/dragginzgame/shared-tooling/issues/30)).
 - Separate direct-delivery assignment from export for GNU Make 3.81 parsing.
   Keep the consumer policy authoritative under environment and command-line
@@ -833,7 +850,7 @@ All notable changes to this project are recorded here.
   ([shared #92](https://github.com/dragginzgame/shared-tooling/issues/92)).
 - This batch is repository-only maintenance; timer APIs and production code are
   unchanged. Consumer fixture execution and native qualification remain pending
-  ([adoption owner](docs/shared-tooling.md#shared-tooling-026-make-adoption)).
+  ([adoption owner](docs/evidence/shared-tooling-history.md#shared-tooling-026-make-adoption)).
 - Run the maintained PocketIC recovery and policy-cohort targets in Linux PR/main
   CI after probe lint, using the prepared internal toolchain and Testkit-admitted
   server. This adds actual product startup evidence to the existing setup and
