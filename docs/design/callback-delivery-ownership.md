@@ -416,7 +416,7 @@ completion/control/replacement/reset sequence. Metrics owns private count-overfl
 construction and arithmetic internals. Native runtime reset is deterministic
 test evidence, not an IC upgrade/recovery guarantee. Existing PocketIC recovery
 and cohort gates remain required for their own claims. The
-[0.17.8 release evidence](../releasing.md#0178-release-evidence) records actual
+[0.17.8 release evidence](../evidence/release-history.md#0178-release-evidence) records actual
 execution of the new cases on Linux and both native macOS architectures. No local
 tests are rerun during inspection; earlier Metrics 0.5 qualification remains
 source-bound below.
@@ -449,7 +449,7 @@ Metrics 0.5; its root lock selects one Timers 0.17.0 and one Metrics 0.5.0. This
 removes the reported duplicate Metrics selection in that graph without claiming
 new downstream compilation or changing sibling files. Existing released Linux library, recovery/cohort,
 MSRV and tag results are recorded by the
-[release owner](../releasing.md#0170-release-acceptance). Both macOS jobs now pass;
+[release owner](../evidence/release-history.md#0170-release-acceptance). Both macOS jobs now pass;
 their downloaded logs establish complete source-bound qualification for
 [#37](https://github.com/dragginzgame/ic-timers/issues/37). No Wasm/instruction delta is
 measured by these source/graph checks, and no contributor test/build ran.
@@ -682,7 +682,7 @@ against released 0.18.0 rather than reusing an older graph's size/cost figures.
 
 Delivered in Timers 0.21.0 at `a6b518722438d2f7e2dccd7ccfef07debc35b5b3`.
 [#50 is closed](https://github.com/dragginzgame/ic-timers/issues/50#issuecomment-6129282698)
-from its completed standard release acceptance; the [delivery owner](../releasing.md#021-delivery-and-issue-50-acceptance)
+from its completed standard release acceptance; the [delivery owner](../evidence/release-history.md#021-delivery-and-issue-50-acceptance)
 separates that graph from later contributor dependencies and hosted CI gaps.
 Preparation observations below retain their original scope.
 
@@ -721,7 +721,7 @@ PocketIC 16.1.0. Inputs, metadata, commands and logs are retained at
 These initial checks execute no tests. Subsequent explicitly approved focused
 0.21 checks on the atomic lifecycle source pass all 154 native subjects, nine
 doctests on Rust 1.99.0 and 1.88.0, library/probe Clippy and runtime/four-cohort
-Wasm compilation; the [release owner](../releasing.md#prepared-021-first-lifecycle-reconciliation)
+Wasm compilation; the [release owner](../evidence/release-history.md#prepared-021-first-lifecycle-reconciliation)
 retains their exact source/graph/commands at
 `/tmp/ic-timers-021-reconciliation.sFVjKHjS/`. IC runtime/policy cohorts and the
 complete release gate remain outstanding; #50 stays open pending that acceptance.
@@ -731,7 +731,7 @@ No Wasm, heap or instruction savings are claimed.
 ## Prepared 0.21.4 callback ownership simplification
 
 The maintainer reports this cleanup delivered/live at 0.21.4. The
-[delivery evidence](../releasing.md#0214-delivery-and-prepared-0215-tooling)
+[delivery evidence](../evidence/release-history.md#0214-delivery-and-prepared-0215-tooling)
 records the completed full-gate receipt separately from initial focused checks.
 
 Internal callback aliases store their erased closures directly as
@@ -756,7 +756,7 @@ Existing native subjects cover mutable/repeated callbacks, suspended work,
 reentrant capture destruction, first-reconciliation cleanup/retry and later
 callback ownership. All 154 pass under the maintainer's focused approval;
 library Clippy also passes with warnings denied. The
-[release owner](../releasing.md#0213-delivery-and-prepared-0214-cleanup) retains
+[release owner](../evidence/release-history.md#0213-delivery-and-prepared-0214-cleanup) retains
 exact compiler/test commands and evidence; full IC/cohort qualification was
 still outstanding at that preparation. Source changes require no public migration.
 No measured Wasm, heap or instruction savings are claimed; removing

@@ -451,12 +451,7 @@ struct Entry {
 }
 
 impl Entry {
-    const fn new(
-        claim_generation: u64,
-        kind: EntryKind,
-        lifetime: DeclarationLifetime,
-        epoch: TimerEpoch,
-    ) -> Self {
+    const fn new(claim_generation: u64, kind: EntryKind, lifetime: DeclarationLifetime) -> Self {
         let scheduling_mode = match kind.policy() {
             TimerPolicy::Once => TimerSchedulingMode::Once,
             TimerPolicy::AfterCompletion { .. } => TimerSchedulingMode::AfterCompletion,
@@ -474,11 +469,11 @@ impl Entry {
             confirmed_wakeup_generation: None,
             wakeup: None,
             work: None,
-            observability: TimerObservabilitySnapshot::new(epoch),
+            observability: TimerObservabilitySnapshot::EMPTY,
         }
     }
 
-    const fn snapshot(&self, identity: TimerIdentity) -> TimerSnapshot {
+    const fn snapshot(&self, identity: TimerIdentity, epoch: TimerEpoch) -> TimerSnapshot {
         let state = match &self.kind {
             EntryKind::Ordinary { control, .. } => match control.registration {
                 TimerRegistration::Inactive { reason } => {
@@ -522,7 +517,7 @@ impl Entry {
 
         TimerSnapshot::new(
             identity,
-            TimerRegistrationId::new(self.observability.epoch(), self.claim_generation),
+            TimerRegistrationId::new(epoch, self.claim_generation),
             self.kind.policy(),
             self.lifetime,
             state,
@@ -701,7 +696,7 @@ impl TimerRegistry {
         self.next_claim_generation = claim_generation;
         self.entries.insert(
             identity.clone(),
-            Entry::new(claim_generation, kind, lifetime, self.epoch),
+            Entry::new(claim_generation, kind, lifetime),
         );
         Ok(RegistrationClaim {
             identity,
@@ -1546,7 +1541,7 @@ impl TimerRegistry {
     pub(crate) fn snapshot(&self, identity: &TimerIdentity) -> Option<TimerSnapshot> {
         self.entries
             .get(identity)
-            .map(|entry| entry.snapshot(identity.clone()))
+            .map(|entry| entry.snapshot(identity.clone(), self.epoch))
     }
 
     pub(crate) fn inventory(&self) -> TimerInventorySnapshot {
@@ -1554,7 +1549,7 @@ impl TimerRegistry {
             self.epoch,
             self.entries
                 .iter()
-                .map(|(identity, entry)| entry.snapshot(identity.clone()))
+                .map(|(identity, entry)| entry.snapshot(identity.clone(), self.epoch))
                 .collect(),
         )
     }

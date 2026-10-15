@@ -16,32 +16,35 @@ source "$root/scripts/ci/fixture-retention-probes.sh"
 # Copy each actual initialization/EXIT boundary, including this suite's own.
 # Stop before the fixture body so these probes cannot dispatch tools, builds,
 # release helpers, Git mutation or another fixture. Shared copies stay upstream.
+# Each entry selects source path, scratch variable and repository-root variable.
 fixtures=(
-    scripts/ci/test-failure-evidence.sh:fixture
-    scripts/ci/test-fixture-completion.sh:fixture
-    scripts/ci/test-git-hook.sh:temporary_root
-    scripts/ci/test-repository-checks.sh:temporary_root
-    scripts/ci/test-shared-snapshots.sh:fixture
-    scripts/ci/test-testkit-server.sh:fixture
-    scripts/release/test-committed-release.sh:fixture
-    scripts/release/test-finalize-changelog.sh:temporary_root
-    scripts/release/test-lockfiles.sh:temporary_root
-    scripts/release/test-release-gate.sh:temporary_root
-    scripts/release/test-release-impact.sh:temporary_root
-    scripts/release/test-release-index.sh:fixture
-    scripts/release/test-release-prose-warning.sh:fixture
-    scripts/release/test-tag-at-head.sh:temporary_root
-    scripts/release/test-version-preparation.sh:temporary_root
+    scripts/ci/test-failure-evidence.sh:fixture:root
+    scripts/ci/test-fixture-completion.sh:fixture:root
+    scripts/ci/test-git-hook.sh:temporary_root:repository_root
+    scripts/ci/test-repository-checks.sh:temporary_root:repository_root
+    scripts/ci/test-shared-snapshots.sh:fixture:root
+    scripts/ci/test-testkit-server.sh:fixture:root
+    scripts/release/test-committed-release.sh:fixture:root
+    scripts/release/test-finalize-changelog.sh:temporary_root:repository_root
+    scripts/release/test-lockfiles.sh:temporary_root:repository_root
+    scripts/release/test-release-gate.sh:temporary_root:repository_root
+    scripts/release/test-release-impact.sh:temporary_root:repository_root
+    scripts/release/test-release-index.sh:fixture:root
+    scripts/release/test-release-prose-warning.sh:fixture:repository_root
+    scripts/release/test-tag-at-head.sh:temporary_root:repository_root
+    scripts/release/test-version-preparation.sh:temporary_root:repository_root
 )
 mkdir -p "$fixture/probe/scripts/ci" "$fixture/probe/scripts/release" "$fixture/owned scratch"
-cp -p "$root/scripts/ci/fixture-lifecycle.sh" "$fixture/probe/scripts/ci/"
-export FIXTURE_EXIT_PATH="$fixture/exit-path"
+RETENTION_EXIT_PATH="$fixture/exit-path"
+export RETENTION_EXIT_PATH RETENTION_SOURCE_ROOT="$root"
 ln -s "$fixture/owned scratch" "$fixture/aliased scratch"
 relative_scratch="$(perl -MFile::Spec -e 'print File::Spec->abs2rel($ARGV[0], $ARGV[1])' "$fixture/owned scratch" "$root")"
 for scratch in "$fixture/owned scratch" "$relative_scratch" "$fixture/aliased scratch"; do
     for entry in "${fixtures[@]}"; do
-        source_path="${entry%:*}"
-        variable="${entry##*:}"
+        root_variable="${entry##*:}"
+        subject="${entry%:*}"
+        source_path="${subject%:*}"
+        variable="${subject##*:}"
         # Canonical completed bodies must opt in after their required assertions.
         grep -Fxq 'fixture_complete=true' "$root/$source_path"
         for failure in nounset command nonzero premature completed failed-completion; do
@@ -55,19 +58,8 @@ for scratch in "$fixture/owned scratch" "$relative_scratch" "$fixture/aliased sc
                 failed-completion) injection='fixture_complete=true; exit 23'; expected=23 ;;
             esac
             probe="$fixture/probe/$source_path"
-            FIXTURE_INJECTION="$injection" FIXTURE_VARIABLE="$variable" awk '
-                { print }
-                /^trap .* EXIT$/ {
-                    print "printf \"%s\\n\" \"$" ENVIRON["FIXTURE_VARIABLE"] "\" > \"$FIXTURE_EXIT_PATH\""
-                    print "printf evidence > \"$" ENVIRON["FIXTURE_VARIABLE"] "/exit-evidence\""
-                    print ENVIRON["FIXTURE_INJECTION"]
-                    print "exit 99"
-                    injected=1
-                    exit
-                }
-                END { if (!injected) exit 1 }
-            ' "$root/$source_path" > "$probe"
-            rm -f -- "$FIXTURE_EXIT_PATH"
+            fixture_probe_prefix "$root/$source_path" "$probe" "$root_variable" "$variable" "$injection"
+            rm -f -- "$RETENTION_EXIT_PATH"
             status=0
             (cd "$root" && CDPATH="$fixture" TMPDIR="$scratch" "$BASH" "$probe") \
                 > "$fixture/${source_path##*/}-$failure.log" 2>&1 || status=$?
@@ -75,12 +67,12 @@ for scratch in "$fixture/owned scratch" "$relative_scratch" "$fixture/aliased sc
                 printf '%s: %s returned %s, expected %s\n' "$source_path" "$failure" "$status" "$expected" >&2
                 exit 1
             fi
-            retained="$(cat "$FIXTURE_EXIT_PATH")"
+            retained="$(cat "$RETENTION_EXIT_PATH")"
             [[ -n "$retained" ]] || exit 1
             [[ "$retained" == "$fixture/owned scratch/"* ]] || exit 1
             if [[ "$expected" == 0 ]]; then [[ ! -e "$retained" ]] || exit 1
             else
-                [[ -d "$retained" && "$(cat "$retained/exit-evidence")" == evidence ]] || exit 1
+                [[ -d "$retained" && "$(cat "$retained/exit-evidence")" == 'retained evidence' ]] || exit 1
             fi
         done
     done

@@ -2,6 +2,34 @@
 
 All notable changes to this project are recorded here.
 
+## [0.24.0]
+
+### Breaking
+
+- Remove `TimerObservabilitySnapshot::epoch()`. Read the epoch through
+  `TimerSnapshot::registration_id().epoch()` and keep that registration identity
+  alongside copied measurements. Registration-local statistics no longer retain
+  a duplicate epoch, so equality compares measurements alone. Cancellation and
+  registration replacement semantics remain.
+
+### Development
+
+- Adopt reviewed Shared 0.15 plus the independent hosted-evidence verifier at
+  exact contribution `58bad48`. Delegate release metadata mutation/rollback and
+  partial tool-evidence collection to their canonical owners; remove local
+  version setters and the lock update adapter.
+- Use Shared's fixture-prefix renderer while preserving the fifteen-fixture
+  path/failure matrix and selected mandatory assertion probes.
+- Keep the active release guide and session handoff compact. Preserve earlier
+  receipts in release/status archives and point historical links to their owner.
+
+### Fixed
+
+- Update unpublished probe callers for the incoming Testkit 0.45 fallible-only
+  Candid/install API, retaining explicit failure expectations at test boundaries.
+- Include the existing MIT license text in the published `ic-timers` crate.
+  Preserve the root license's holder, year and wording.
+
 ## [0.23.2] - 2026-10-15
 
 ### Changed
@@ -711,7 +739,7 @@ All notable changes to this project are recorded here.
 - Use Testkit 0.29 and Host 0.11 for native qualification and selected CLI setup.
   The existing PocketIC harness needs no adapter; timer APIs remain unchanged
   ([testkit #47](https://github.com/dragginzgame/ic-testkit/issues/47),
-  [graph owner](docs/releasing.md#testkit-029-and-host-011-preparation)).
+  [graph owner](docs/evidence/release-history.md#testkit-029-and-host-011-preparation)).
 
 ## [0.16.6] - 2026-10-10
 
@@ -731,7 +759,7 @@ All notable changes to this project are recorded here.
 - Retain the incoming Testkit 0.28.1, Host 0.10.2 and Metrics 0.3.7 selections.
   Host rejects directory-suffixed publication targets; Metrics arithmetic source
   is unchanged. No timer adapter or public semantic change is needed
-  ([graph owner](docs/releasing.md#0166-incoming-host-and-metrics-graph)).
+  ([graph owner](docs/evidence/release-history.md#0166-incoming-host-and-metrics-graph)).
 - Prepare the selected Testkit CLI/server after release preflight admission,
   then check it offline; failed CLI admission names its selection and the local
   setup command.
@@ -762,7 +790,7 @@ All notable changes to this project are recorded here.
 - Retain the incoming Metrics 0.3.6 lock selection. Its seven published Rust
   source files are identical to 0.3.5, so no arithmetic adapter change is needed;
   the refreshed graph needs separate qualification
-  ([graph owner](docs/releasing.md#metrics-036-incoming-graph)).
+  ([graph owner](docs/evidence/release-history.md#metrics-036-incoming-graph)).
 
 ## [0.16.4] - 2026-10-09
 
@@ -787,7 +815,7 @@ All notable changes to this project are recorded here.
   selections. Testkit and Metrics library sources are unchanged from the released
   graph; Host changes only response decoding outside our harness callers. No new
   Host adapter or timer API is needed. Qualification remains separate from 0.16.3
-  ([qualification owner](docs/releasing.md#host-094-graph-preparation)).
+  ([qualification owner](docs/evidence/release-history.md#host-094-graph-preparation)).
 
 ## [0.16.3] - 2026-10-09
 
@@ -840,7 +868,7 @@ All notable changes to this project are recorded here.
   harness and server CLI. Startup errors retain the original cause, bounded
   output and separate command/server cleanup failures. Timer APIs are unchanged;
   native acceptance remains pending
-  ([qualification owner](docs/releasing.md#testkit-027-preparation)).
+  ([qualification owner](docs/evidence/release-history.md#testkit-027-preparation)).
 
 ## [0.16.0] - 2026-10-09
 

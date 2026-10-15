@@ -1,5 +1,35 @@
 # Shared Tooling adoption
 
+## Prepared 0.24 owner adoption
+
+All three canonical bundles select exact reviewed contribution
+`58bad48b701fbcc32d932ac60969aa347bb61c71` from
+[Shared PR #209](https://github.com/dragginzgame/shared-tooling/pull/209), based
+on integrated Shared 0.15 main `d0510ca`. Payload counts are **85/43/18**;
+entrypoint roots, tool catalogs and the explicit Binaryen exception remain.
+This adopts the previously isolated [Timers PR #54](https://github.com/dragginzgame/ic-timers/pull/54)
+callers into the normal worktree without copying its Cargo selections.
+
+Shared owns coordinated metadata mutation, rollback and graph checks. Timers
+retains source/impact/tag policy and delegates the transaction; its separate
+workspace setter and lock-update adapter are removed. The failure collector
+retains product/run/source identity and the qualified IC catalog, delegating
+safe partial tool collection and archiving to Shared. Consumer fixtures preserve
+exact failure propagation, byte/mode rollback and incomplete evidence receipts.
+
+The completion suite now calls `fixture_probe_prefix` with explicit root and
+scratch variables. Its fifteen actual initialization boundaries still cover
+relative, spaced and aliased scratch paths, inherited CDPATH, six completion/
+failure cases and five selected mandatory assertions. No fixture body runs in
+these prefix probes. Canonical previews precede applies; the nested helper
+export uses a disposable Git root and verified before-images for copyback.
+
+Focused qualification and source custody are recorded in the
+[current handoff](status/current.md). This is exact contribution provenance,
+not a claim of upstream publication or hosted acceptance. The separate
+[snapshot consolidation](https://github.com/dragginzgame/ic-timers/issues/63)
+remains out of scope; all three current ownership bundles remain.
+
 ## Independent controlled-scenario verification
 
 The three 84/41/18 canonical bundles select exact contribution
@@ -995,12 +1025,12 @@ normal direct targets to archive superseded preparation intent from a clean
 descendant commit, recompute the requested increment from current metadata and
 repeat full validation. Unchanged-HEAD preparation, explicit resume, staging and
 later phases retain their exact recovery contracts. The
-[local adapter review](releasing.md#changed-source-at-preparation-intent) confirms
+[local adapter review](evidence/release-history.md#changed-source-at-preparation-intent) confirms
 local-only metadata preparation and no per-version receipt replacement path.
 The contributor adoption retired no real plan, release state or evidence.
 The subsequent maintainer release journal is complete for source
 `560c9a55f0679380fa6933222acfac564da9ebec`; the release commit is its sole child.
-[Current consumer qualification](releasing.md#01713-delivery-and-remaining-issue-acceptance)
+[Current consumer qualification](evidence/release-history.md#01713-delivery-and-remaining-issue-acceptance)
 keeps hosted/native and controlled artifact acceptance separate from delivery.
 
 Host **0.14.0** is published at
@@ -1037,7 +1067,7 @@ The exporter requires no new companions or optional caller adoption.
 plan/phase/base/candidate/saved/current source before refusing stale validation.
 Prepare-phase refusal links the canonical guarded maintainer procedure. It does
 not automatically retire intent, relabel validation or relax effects admission.
-[The local preparation boundary](releasing.md#changed-source-at-preparation-intent)
+[The local preparation boundary](evidence/release-history.md#changed-source-at-preparation-intent)
 records why Timers' temporary backups cannot supply missing durable-journal proof.
 Common setup paths and build policy are unchanged since 0.6.1; this refresh adds
 no forced reinstall. Machete/Audit remain optional and have no new local caller.
@@ -1099,7 +1129,7 @@ has passed lint/security; portable Linux is running and both native jobs are que
 at inspection. [#44](https://github.com/dragginzgame/ic-timers/issues/44) remains
 open for complete consumer/native acceptance, including its existing controlled
 artifact boundary. Earlier released source remains separately qualified at
-[the release owner](releasing.md#01710-release-qualification).
+[the release owner](evidence/release-history.md#01710-release-qualification).
 
 ## Shared Tooling 0.6.0 Cargo storage adoption
 
@@ -1153,7 +1183,7 @@ syntax/integrity checks are not behavioral acceptance.
 
 Catalog/lock, Binaryen 132 and other consumer pins, incoming local repairs and
 index are preserved. Tests/builds/lint/setup and release effects remain user-owned.
-The [release owner](releasing.md#shared-060-cargo-storage-adoption) records exact
+The [release owner](evidence/release-history.md#shared-060-cargo-storage-adoption) records exact
 scope and qualification; no measured Wasm or runtime instruction delta is claimed.
 
 Preparation passes all three snapshot integrity checks, changed Bash and embedded
@@ -1163,7 +1193,7 @@ inputs. Results are recorded at the preparation path above; no behavioral fixtur
 installation, build or lint is executed. Progress is recorded on
 [#44](https://github.com/dragginzgame/ic-timers/issues/44#issuecomment-6108726659).
 
-The [released 0.17.10 qualification record](releasing.md#01710-release-qualification)
+The [released 0.17.10 qualification record](evidence/release-history.md#01710-release-qualification)
 now establishes Linux/MSRV acceptance and an ordinary Intel failure-artifact round
 trip, while native acceptance remains open. Shared #124 has actual Intel consumer
 corroboration; Shared #120 tracks additional Cargo installer failure/lock corrections
@@ -1221,7 +1251,7 @@ These are prepared cases, not executed qualification.
 setup/check, corruption/interruption, formatting and Linux/Intel/ARM consumer
 acceptance open. The [exact-source upstream run](https://github.com/dragginzgame/shared-tooling/actions/runs/38132790945)
 was queued at inspection; availability and earlier evidence do not qualify it.
-The [release owner](releasing.md#shared-050-storage-adoption) owns acceptance.
+The [release owner](evidence/release-history.md#shared-050-storage-adoption) owns acceptance.
 The [package-impact rules](../rules/changelogs.md#classify-the-released-packages-own-impact)
 classify this contributor-only adoption as a compatible library patch; no timer
 API, runtime semantics or consumer build requirement changes. No measured Wasm
@@ -1292,7 +1322,7 @@ without another parser, configuration route or installer.
 and retained validation diagnostics one predicate; context headings remain
 explicit. [Timers #42](https://github.com/dragginzgame/ic-timers/issues/42) owns
 consumer adoption and the strengthened real-release-adapter cases at the
-[release owner](releasing.md#shared-0311-portability-diagnostic-and-setup-adoption).
+[release owner](evidence/release-history.md#shared-0311-portability-diagnostic-and-setup-adoption).
 The producer's [exact-source CI](https://github.com/dragginzgame/shared-tooling/actions/runs/38075978465)
 has successful Linux, Intel/ARM macOS and lint jobs at observation. That result is separate from consumer native
 qualification; no existing 0.17.6 evidence admits these new bytes.
@@ -1336,7 +1366,7 @@ Bash 3.2. A final completion marker cannot catch that continuation. Selected
 shared fixtures, the failure-retention action and Cargo installer guards now
 require explicit failure. [Timers #41](https://github.com/dragginzgame/ic-timers/issues/41)
 tracks the corresponding local repair, with the actual guards, cases and
-qualification boundary at the [release owner](releasing.md#mandatory-bash-32-assertions).
+qualification boundary at the [release owner](evidence/release-history.md#mandatory-bash-32-assertions).
 Shared 0.3.8 also supplies reviewed package-archive qualification guidance;
 its optional qualification command is unselected. Latest-only CI concurrency
 was already delivered in 0.17.5 and remains unchanged. No optimizer, Node,
@@ -1350,7 +1380,7 @@ timer API or product Wasm/instruction behavior.
 Consumer acceptance is now established for released **0.17.6**
 `3174935874796c3ffae30b0dfcf9c0c8f4557322`: completed exact-source Linux and both
 native macOS logs execute the mandatory assertion, hook, collector and fixture
-cases against these exports. The [release acceptance owner](releasing.md#0176-release-acceptance)
+cases against these exports. The [release acceptance owner](evidence/release-history.md#0176-release-acceptance)
 records job identities, raw evidence and scope, including closure of Timers
 #38–#41. Inspection of existing logs does not execute a new gate or qualify
 unadopted upstream source.
@@ -1426,7 +1456,7 @@ optimizer qualification helper outside our export. The 0.3.5 repair clears
 inherited log/summary selections in the producer's validation-runner fixture,
 which Timers does not select. Its analogous consumer-owned release-gate fixture
 gap is repaired locally, with evidence at the
-[release owner](releasing.md#0173-delivery-and-fixture-log-isolation).
+[release owner](evidence/release-history.md#0173-delivery-and-fixture-log-isolation).
 
 [Timers #40](https://github.com/dragginzgame/ic-timers/issues/40) tracks adoption
 of the hook observation repair in
@@ -1487,7 +1517,7 @@ is queued at observation. This refresh supplies no new executed fixture, native
 host, timer or PocketIC qualification. The maintainer-owned gate retains those
 obligations. The incoming root catalog/lock now select Testkit 0.32.0, all four
 Host 0.12.2 packages and Metrics 0.5.1; the
-[graph record](releasing.md#0172-preparation-inputs) owns that separate selection.
+[graph record](evidence/release-history.md#0172-preparation-inputs) owns that separate selection.
 This inspection preserves those inputs and adds no dependency/version mutation.
 
 Permitted checks pass: integrity for all 56/30/11 snapshot files, syntax for 38
@@ -1541,7 +1571,7 @@ snapshot or its local fixture changes. No contributor test/build/lint/setup or
 release command runs. Current offline metadata inspection stops at the uncached
 maintainer-selected Metrics 0.5.1 archive; that selection is preserved rather than
 fetched or reverted. Host/Testkit graph review has its
-[release owner](releasing.md#host-0122-and-testkit-032-review).
+[release owner](evidence/release-history.md#host-0122-and-testkit-032-review).
 
 Permitted preparation checks pass: integrity for all 56/30/11 snapshot files,
 syntax for 38 shell scripts and 24 embedded Bash bodies, seven new local
@@ -1587,7 +1617,7 @@ acceptance. Its exact-source
 Linux regression and lint/security, with both native macOS jobs queued at
 observation; no earlier result qualifies this revision. Released
 0.17.0's Linux/MSRV/tag proof has its
-[release owner](releasing.md#0170-release-acceptance), with both native macOS jobs
+[release owner](evidence/release-history.md#0170-release-acceptance), with both native macOS jobs
 still queued. [#36](https://github.com/dragginzgame/ic-timers/issues/36) remains open
 for complete released 0.3.0 adoption qualification. New 0.3.1 consumer execution
 belongs to the normal user-operated gate; no contributor test/build/lint/setup
@@ -1664,7 +1694,7 @@ are unchanged. These checks do not execute the new aggregate or its fixtures.
 [Consumer feedback](https://github.com/dragginzgame/ic-timers/issues/36#issuecomment-6096551930)
 records this preparation. Subsequent downloaded 0.17.0 Intel/ARM logs complete
 consumer acceptance alongside Linux/MSRV/tag evidence at the
-[release owner](releasing.md#0170-release-acceptance); this resolves #36 without
+[release owner](evidence/release-history.md#0170-release-acceptance); this resolves #36 without
 qualifying later dependency graphs, shared revisions or fixture repairs.
 
 ## Shared Tooling 0.2.14 CI inspection
@@ -1690,7 +1720,7 @@ owns the helper's regression coverage; consumers do not duplicate its test suite
 The snapshot refresh preserves its released Cargo/pin inputs and the real index.
 Subsequent maintainer catalog/lock edits select Testkit 0.29 and Host 0.11;
 those incoming bytes are preserved, with the separate
-[graph owner](releasing.md#testkit-029-and-host-011-preparation) recording scope.
+[graph owner](evidence/release-history.md#testkit-029-and-host-011-preparation) recording scope.
 No contributor tests, builds, lint, tool setup
 or release effects run under the existing local command-authority exceptions.
 The complete user-operated gate remains unchanged. Exact-source
@@ -1764,7 +1794,7 @@ and its GitHub description remain aligned. No tests or tool setup were executed.
 passes Linux portable and lint/security, with ARM running and Intel queued at
 inspection. Source/integrity/syntax/documentation/locked-metadata checks remain
 preparation evidence. Released 0.16.6 qualification is recorded separately in the
-[source-bound owner](releasing.md#0166-release-acceptance).
+[source-bound owner](evidence/release-history.md#0166-release-acceptance).
 [#96](https://github.com/dragginzgame/shared-tooling/issues/96) owns shared delivery
 and remaining consumer coordination, independently of directory admission #95.
 [Consumer feedback](https://github.com/dragginzgame/shared-tooling/issues/96#issuecomment-6095895802)
@@ -1873,7 +1903,7 @@ The exact Shared source now passes
 [all three hosted profiles](https://github.com/dragginzgame/shared-tooling/actions/runs/38034912323);
 Shared #30/#91/#92 are closed. Released consumer **0.16.5**
 `0d7b85ec6658f91421bd13c44fa19592d8cc029e` passes matching Linux/MSRV/tag checks.
-[The graph owner](releasing.md#0165-linux-and-tag-acceptance) scopes actual hook,
+[The graph owner](evidence/release-history.md#0165-linux-and-tag-acceptance) scopes actual hook,
 release, product and collector evidence. Both native consumer jobs now pass.
 [#35](https://github.com/dragginzgame/ic-timers/issues/35) retains the pending .6
 explicit working/index lock-preservation proof; new snapshots/graph/fixtures do
@@ -1952,7 +1982,7 @@ prepared fixture evidence.
 A subsequent latest-source check confirms Shared HEAD still equals this exact
 0.2.9 revision with no dirty source to adopt. The pushed 0.16.4 Linux job has now
 passed, including the version-preparation correction and actual product/hook
-subjects; [the qualification owner](releasing.md#testkit-028-and-host-010-released-graph)
+subjects; [the qualification owner](evidence/release-history.md#testkit-028-and-host-010-released-graph)
 binds those results to the released 0.2.8 consumer and selected library graph.
 It does not qualify this pending snapshot refresh or close native acceptance.
 No further code change is justified by this review; Shared #30 still owns the
@@ -1963,7 +1993,7 @@ The released **0.16.4** consumer passes all three hosts, including actual hook,
 release and product subjects; #34 is closed with source-bound Testkit acceptance.
 Those consumer results select Shared 0.2.8, so this pending 0.2.9 export does not
 inherit execution qualification. New cc/smallvec/syn lock edits remain separate.
-[The graph owner](releasing.md#testkit-028-and-host-010-released-graph) records
+[The graph owner](evidence/release-history.md#testkit-028-and-host-010-released-graph) records
 native raw logs, distinct canister toolchains and incoming metadata scope.
 
 The original #35 Make/formatter adoption is qualified, but its new
@@ -2507,7 +2537,7 @@ report passing actual release-index, runner and installer/evidence fixtures;
 matching [tag truth](https://github.com/dragginzgame/ic-timers/actions/runs/37819731178)
 passes. #31/#32 are closed. Earlier cancelled upstream and uncached offline
 observations remain historical. All six frozen 0.14.17 round trips are also
-complete at their [evidence owner](releasing.md#evidence-path-repair-and-01417-qualification).
+complete at their [evidence owner](evidence/release-history.md#evidence-path-repair-and-01417-qualification).
 
 Consumer compact qualification remains open on #30: user-operated fixture and
 full native gates, then source-bound early/late hosted transport at the eventual
@@ -2671,7 +2701,7 @@ other tool records are preserved. Shared setup/admission helpers still receive
 that same explicit matrix. The upstream default guide/fixture may describe a
 16.0.0 synthetic/default set; those immutable bytes do not qualify or select the
 consumer's runtime pair. Binary hashes and the independent host/URL fixture stay
-local. See [artifact provenance and qualification limits](releasing.md#pocketic-artifact-pins).
+local. See [artifact provenance and qualification limits](evidence/release-history.md#pocketic-artifact-pins).
 
 This ownership change prevents a later snapshot refresh from silently replacing
 product-reviewed pins. The strict PocketIC version/hash and complete native gate
@@ -2710,7 +2740,7 @@ and the finding is not a claim of archive loss. No immutable payload is patched.
 Source/export bytes/modes/overlaps, all three integrity checks, syntax and diff
 checks are preparation evidence. No local tests/builds/lint, installation or
 release effects ran. Existing explicitly authorized hosted observations remain
-source-bound in the [evidence owner](releasing.md#evidence-path-repair-and-01417-qualification).
+source-bound in the [evidence owner](evidence/release-history.md#evidence-path-repair-and-01417-qualification).
 The snapshot follow-up alone has no expected production Wasm, heap or timer
 instruction delta and does not justify a runtime feature or hard cut.
 
@@ -2738,7 +2768,7 @@ substitutes with the repaired real owners and their companions, checking both
 controlled failure statuses and retained download/log bytes. No named function,
 method or type is removed. Public timer behavior and production Wasm, instruction
 and heap costs are unchanged. The incoming Testkit graph remains separately
-owned in the [dependency record](releasing.md#testkit-024-selection).
+owned in the [dependency record](evidence/release-history.md#testkit-024-selection).
 
 All three exported integrity checks, source byte/mode/overlap inspection, syntax
 and diff checks are preparation evidence. No tests, builds, lint, installation,
@@ -2751,7 +2781,7 @@ selection/pin/receipt/candidate assertions: the producer now writes separate
 IC/Rust install/check logs. Both native macOS jobs are queued. This is not complete
 compact-policy acceptance. [Feedback is recorded on Shared #66](https://github.com/dragginzgame/shared-tooling/issues/66#issuecomment-6060214674); compact retention
 remains deferred, with no size or collection-time saving claimed. The
-[consumer evidence owner](releasing.md#evidence-path-repair-and-01417-qualification)
+[consumer evidence owner](evidence/release-history.md#evidence-path-repair-and-01417-qualification)
 keeps the already-dispatched frozen 0.14.17 observations separate from this draft.
 Local [#30](https://github.com/dragginzgame/ic-timers/issues/30) remains open through
 adapter acceptance and the compact-selection obligation.
@@ -2778,7 +2808,7 @@ validation/commit/release exceptions, explicit direct delivery, native gates,
 local pins and strict PocketIC admission remain.
 
 The local collector delegates generic tar mechanics to the new shared helper.
-The [consumer contract and qualification](releasing.md#shared-failure-archiver-adoption)
+The [consumer contract and qualification](evidence/release-history.md#shared-failure-archiver-adoption)
 remain locally owned. No named function, method or type is removed; only the
 collector's inline tar option assembly is replaced. Existing Python verification
 is adjusted in place; no new Python tool or prerequisite is introduced.
@@ -2839,7 +2869,7 @@ Testkit 0.22 / Host 0.5.1 adoption requires its own consumer gate. Separate
 explicitly authorized early/late runs now qualify all six hosted failure
 artifacts at released 0.14.15 and close
 [#23](https://github.com/dragginzgame/ic-timers/issues/23#issuecomment-6057617574);
-see the [evidence owner](releasing.md#hosted-qualification-at-01415). The active
+see the [evidence owner](evidence/release-history.md#hosted-qualification-at-01415). The active
 installed-tool overcollection finding remains separate on #30.
 
 ## Shared Tooling 0.1.23 preparation

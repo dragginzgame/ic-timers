@@ -178,16 +178,19 @@ fn update_measurement(
     canister_id: Principal,
     method: &str,
 ) -> OperationMeasurement {
-    pic.update_candid_or_panic(canister_id, method, ())
+    pic.update_candid(canister_id, method, ())
+        .expect("probe update succeeds")
 }
 
 fn memory_sampling_measurement(
     pic: &PocketIc,
     canister_id: Principal,
 ) -> MemorySamplingMeasurement {
-    pic.update_candid_or_panic(canister_id, "memory_sampling_overhead", ())
+    pic.update_candid(canister_id, "memory_sampling_overhead", ())
+        .expect("probe update succeeds")
 }
 
 fn observe(pic: &PocketIc, canister_id: Principal) -> CohortObservation {
-    pic.query_candid_or_panic(canister_id, "observe", ())
+    pic.query_candid(canister_id, "observe", ())
+        .expect("probe query succeeds")
 }

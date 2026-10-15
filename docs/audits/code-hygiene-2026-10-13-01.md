@@ -246,7 +246,7 @@ remains incomplete, and provider limits remain operational obligations.
 Keep the single prepared 0.22.2 patch: Metrics 0.9.1 declaration, verifier
 selection repair, Shared clean-source reuse and Testkit Candid-call consolidation.
 The exact scope and evidence owner are in
-[releasing.md](../releasing.md#prepared-0222-contributor-cleanup).
+[releasing.md](../evidence/release-history.md#prepared-0222-contributor-cleanup).
 No new runtime feature, persistence model, optimizer policy or hard cut is
 justified by this audit. Expected runtime cost change from the unchanged Metrics
 arithmetic is none; linked Wasm/instruction deltas are unmeasured. Acceptance

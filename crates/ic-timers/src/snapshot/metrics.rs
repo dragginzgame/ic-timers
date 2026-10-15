@@ -1,6 +1,6 @@
 //! Saturating registration-local counters and bounded callback measurements.
 
-use super::{TimerCompletion, TimerCompletionOutcome, TimerEpoch, TimerOutcomeSnapshot};
+use super::{TimerCompletion, TimerCompletionOutcome, TimerOutcomeSnapshot};
 use ic_metrics::MeasurementSummary;
 
 /// Registration-local timer event counters.
@@ -418,24 +418,23 @@ impl TimerPerformance {
     }
 }
 
-/// Epoch-scoped outcomes, counters, and performance for one timer.
+/// Registration-scoped outcomes, counters, and performance for one timer.
+///
+/// These values compare measurements, not registration identity. Keep the parent
+/// snapshot's [`super::TimerSnapshot::registration_id`] alongside copied values.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TimerObservabilitySnapshot {
-    epoch: TimerEpoch,
     outcomes: TimerOutcomeSnapshot,
     counters: TimerCounters,
     performance: TimerPerformance,
 }
 
 impl TimerObservabilitySnapshot {
-    pub(crate) const fn new(epoch: TimerEpoch) -> Self {
-        Self {
-            epoch,
-            outcomes: TimerOutcomeSnapshot::EMPTY,
-            counters: TimerCounters::EMPTY,
-            performance: TimerPerformance::EMPTY,
-        }
-    }
+    pub(crate) const EMPTY: Self = Self {
+        outcomes: TimerOutcomeSnapshot::EMPTY,
+        counters: TimerCounters::EMPTY,
+        performance: TimerPerformance::EMPTY,
+    };
 
     pub(crate) const fn record_completion(
         &mut self,
@@ -471,19 +470,13 @@ impl TimerObservabilitySnapshot {
         self.performance.record_work(instructions, memory);
     }
 
-    /// Return the observation epoch.
-    #[must_use]
-    pub const fn epoch(self) -> TimerEpoch {
-        self.epoch
-    }
-
     /// Return latest outcomes and functional failure state.
     #[must_use]
     pub const fn outcomes(self) -> TimerOutcomeSnapshot {
         self.outcomes
     }
 
-    /// Return registration-local event counters within this epoch.
+    /// Return registration-local event counters.
     #[must_use]
     pub const fn counters(self) -> TimerCounters {
         self.counters

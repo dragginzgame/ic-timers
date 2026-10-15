@@ -70,7 +70,7 @@ downloaded as a 373,200,529-byte ZIP. Of 766,116,256 regular-file tar bytes,
 active IC and host bundles occupy 743,871,580 and 22,231,146 respectively:
 over 99.99%. This is a consumer measurement, not a shared artifact measurement.
 The archive hash and original observations remain with
-[the evidence owner](../releasing.md#hosted-qualification-at-01415) and
+[the evidence owner](../evidence/release-history.md#hosted-qualification-at-01415) and
 [#30](https://github.com/dragginzgame/ic-timers/issues/30#issuecomment-6057035304).
 
 **Why/change.** Compressing and transporting installed executables obscures a

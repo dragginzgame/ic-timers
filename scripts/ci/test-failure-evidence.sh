@@ -546,14 +546,14 @@ cmp "$GITHUB_WORKSPACE/target/validation-failures/raw.log" \
     "$fixture/failed-selection-extracted/target/validation-failures/raw.log"
 cmp "$rust_slot/install.log" \
     "$fixture/failed-selection-extracted/.tools/rust/cargo-sort-2.1.4-bin-cargo-sort-release/installed/install.log"
-printf 'status=23\nshared_collection=incomplete\n' > "$fixture/expected-selection-status"
-cmp "$fixture/expected-selection-status" "$fixture/failed-selection-extracted/tool-evidence/selection-status.txt"
+printf '23\n' > "$fixture/expected-selection-status"
+cmp "$fixture/expected-selection-status" "$fixture/failed-selection-extracted/tool-evidence/selection-status"
 grep -Fxq 'injected selection failure' "$fixture/failed-selection-extracted/tool-evidence/selection.log"
 retained_selections=("$RUNNER_TEMP"/ic-timers-evidence.*)
 test "${#retained_selections[@]}" -eq 1
 printf '%s\0%s\0partial-selection\0' "$fixture/external-rust" not-selected > "$fixture/expected-selection-output"
-cmp "$fixture/expected-selection-output" "${retained_selections[0]}/tool-selections.nul"
-cmp "$fixture/expected-selection-output" "$fixture/failed-selection-extracted/tool-evidence/partial-selections.nul"
+cmp "$fixture/expected-selection-output" "${retained_selections[0]}/tool-evidence/selections.nul"
+cmp "$fixture/expected-selection-output" "$fixture/failed-selection-extracted/tool-evidence/selections.nul"
 cmp "$fixture/extracted/identity.txt" "${retained_selections[0]}/identity.txt"
 tar -tzf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" > "$fixture/failed-selection-paths"
 if grep -Eq '(^|/)not-selected$' "$fixture/failed-selection-paths"; then exit 1; fi
@@ -580,9 +580,8 @@ for layout in physical no-tools redirected; do
     extracted="$fixture/rejected-store-$layout-extracted"
     cmp "$GITHUB_WORKSPACE/target/validation-failures/raw.log" "$extracted/target/validation-failures/raw.log"
     cmp "$GITHUB_WORKSPACE/.git/release-state/validation-failures/raw.log" "$extracted/validation-failures/raw.log"
-    printf 'status=%s\nshared_collection=incomplete\n' "$collection_status" > "$fixture/expected-rejection-status"
-    cmp "$fixture/expected-rejection-status" "$extracted/tool-evidence/selection-status.txt"
-    grep -Fxq 'shared_collection=incomplete' "$extracted/tool-evidence/selection-status.txt"
+    printf '%s\n' "$collection_status" > "$fixture/expected-rejection-status"
+    cmp "$fixture/expected-rejection-status" "$extracted/tool-evidence/selection-status"
     grep -Fq 'tool store root may not be a symlink' "$extracted/tool-evidence/selection.log"
     if [[ "$layout" == physical ]]; then
         cmp "$rust_slot/install.log" \
@@ -653,7 +652,8 @@ if env -u RUNNER_TEMP bash "$root/scripts/ci/collect-failure-evidence.sh" > "$fi
 # and the original status must survive their EXIT handlers; no builds or real
 # Git writes are selected by these substitute tools.
 mkdir -p "$fixture/retention-bin"
-export RETENTION_REAL_GIT="$(command -v git)"
+RETENTION_REAL_GIT="$(command -v git)"
+export RETENTION_REAL_GIT
 cat > "$fixture/retention-bin/tool-stub" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -782,7 +782,7 @@ git init -q "$copied"
 mkdir -p "$copied/.git/objects/info"
 printf '%s\n' "$objects" > "$copied/.git/objects/info/alternates"
 git -C "$copied" update-ref HEAD "$(git -C "$root" rev-parse HEAD)"
-for script in collect-failure-evidence qualify-failure-evidence qualify-hosted-failure archive-evidence \
+for script in collect-failure-evidence collect-tool-evidence qualify-failure-evidence qualify-hosted-failure archive-evidence \
     select-tool-evidence run-validation-targets check-make-execution verify-file-checksum \
     verify-evidence-checksums; do
     cp "$root/scripts/ci/$script.sh" "$copied/scripts/ci/"

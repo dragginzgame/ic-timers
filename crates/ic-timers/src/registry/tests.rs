@@ -2739,7 +2739,11 @@ fn initial_snapshots_are_policy_specific_and_coherent() {
         );
         assert_eq!(snapshot.next_deadline_ns(), None);
         assert_eq!(snapshot.generation(), None);
-        assert_eq!(snapshot.observability().epoch(), TimerEpoch::new(7, 10));
+        assert_eq!(snapshot.registration_id().epoch(), inventory.epoch());
+        assert_eq!(
+            registry.snapshot(snapshot.identity()).as_ref(),
+            Some(snapshot)
+        );
     }
 }
 

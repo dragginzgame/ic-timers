@@ -385,11 +385,13 @@ fn probe_wasm() -> Vec<u8> {
 }
 
 fn update_bool(pic: &PocketIc, canister_id: Principal, method: &str) -> bool {
-    pic.update_candid_or_panic(canister_id, method, ())
+    pic.update_candid(canister_id, method, ())
+        .expect("probe update succeeds")
 }
 
 fn update_u64(pic: &PocketIc, canister_id: Principal, method: &str) -> u64 {
-    pic.update_candid_or_panic(canister_id, method, ())
+    pic.update_candid(canister_id, method, ())
+        .expect("probe update succeeds")
 }
 
 fn update_u128_pair(pic: &PocketIc, canister_id: Principal, method: &str) -> (u128, u128) {
@@ -418,7 +420,8 @@ fn query_inventory_measurement(pic: &PocketIc, canister_id: Principal) -> (u64, 
 }
 
 fn snapshot(pic: &PocketIc, canister_id: Principal) -> ProbeSnapshot {
-    pic.query_candid_or_panic(canister_id, "snapshot", ())
+    pic.query_candid(canister_id, "snapshot", ())
+        .expect("probe query succeeds")
 }
 
 #[test]
@@ -477,11 +480,13 @@ fn exact_deadline_sleeps_and_registration_replacement_marks_counter_regrowth() {
 }
 
 fn update_deadline(pic: &PocketIc, canister_id: Principal, method: &str, deadline: u64) {
-    pic.update_candid_or_panic::<(), _>(canister_id, method, (deadline,));
+    pic.update_candid::<(), _>(canister_id, method, (deadline,))
+        .expect("probe update succeeds");
 }
 
 fn ordinary_observation(pic: &PocketIc, canister_id: Principal) -> OrdinaryObservation {
-    pic.query_candid_or_panic(canister_id, "ordinary_observation", ())
+    pic.query_candid(canister_id, "ordinary_observation", ())
+        .expect("probe query succeeds")
 }
 
 #[test]
@@ -495,11 +500,12 @@ fn ordinary_await_allows_ingress_and_other_timers_before_completion() {
             let pic = &owned.instance;
             let canister_id = install_probe(pic, probe_wasm());
             let transient = command == "cancel";
-            pic.update_candid_or_panic::<(), _>(
+            pic.update_candid::<(), _>(
                 canister_id,
                 "start_ordinary",
                 (after_completion, transient),
-            );
+            )
+            .expect("probe update succeeds");
             let suspended = wait_for_probe(
                 pic,
                 32,
@@ -569,12 +575,10 @@ fn trapping_ordinary_probe(
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
     let canister_id = install_probe(pic, probe_wasm());
-    pic.update_candid_or_panic::<(), _>(canister_id, "trap_ordinary_work", (before_await,));
-    pic.update_candid_or_panic::<(), _>(
-        canister_id,
-        "start_ordinary",
-        (after_completion, transient),
-    );
+    pic.update_candid::<(), _>(canister_id, "trap_ordinary_work", (before_await,))
+        .expect("probe update succeeds");
+    pic.update_candid::<(), _>(canister_id, "start_ordinary", (after_completion, transient))
+        .expect("probe update succeeds");
     (owned, canister_id)
 }
 
@@ -657,11 +661,12 @@ fn ordinary_continuation_trap_retires_running_work_and_releases_expired_authorit
                     if command != "unregister" {
                         update_unit(pic, canister_id, "discard_expired_ordinary_claim");
                     }
-                    pic.update_candid_or_panic::<(), _>(
+                    pic.update_candid::<(), _>(
                         canister_id,
                         "start_ordinary",
                         (after_completion, false),
-                    );
+                    )
+                    .expect("probe update succeeds");
                 } else {
                     // The original retained capability can rearm explicitly.
                     update_deadline(pic, canister_id, "reconcile_ordinary_at", 0);
@@ -687,7 +692,8 @@ fn ordinary_continuation_trap_retires_running_work_and_releases_expired_authorit
 }
 
 fn churn_observation(pic: &PocketIc, canister_id: Principal) -> ChurnObservation {
-    pic.query_candid_or_panic(canister_id, "churn_observation", ())
+    pic.query_candid(canister_id, "churn_observation", ())
+        .expect("probe query succeeds")
 }
 
 #[test]
@@ -696,7 +702,8 @@ fn provider_replacement_churn_preserves_cancellation_and_reports_memory() {
     let pic = &owned.instance;
     let canister_id = install_probe(pic, probe_wasm());
     let before = churn_observation(pic, canister_id);
-    pic.update_candid_or_panic::<(), _>(canister_id, "replace_distant_deadlines", (32_768_u32,));
+    pic.update_candid::<(), _>(canister_id, "replace_distant_deadlines", (32_768_u32,))
+        .expect("probe update succeeds");
     let replaced = churn_observation(pic, canister_id);
     assert_eq!(replaced.inventory_len, 1);
     assert!(!replaced.armed);
@@ -738,7 +745,8 @@ fn armed_callback_removal_releases_captures_with_registry_access() {
         let owned = fresh_pocket_ic();
         let pic = &owned.instance;
         let canister_id = install_probe(pic, probe_wasm());
-        pic.update_candid_or_panic::<(), _>(canister_id, "remove_armed_callback", (policy,));
+        pic.update_candid::<(), _>(canister_id, "remove_armed_callback", (policy,))
+            .expect("probe update succeeds");
         let removed = ordinary_observation(pic, canister_id);
         assert!(!removed.declared);
         assert!(!removed.armed);

@@ -61,7 +61,7 @@ but it does not promise that a task will happen exactly once.
 
 The 0.22 line uses Metrics 0.9 instruction summaries with `u128` totals and
 checked integer/fractional means. First lifecycle reconciliation remains atomic;
-see the [earlier release notes](CHANGELOG.md#0210) for that contract.
+see the [earlier release notes](CHANGELOG.md#0210---2026-10-12) for that contract.
 
 IC Timers is written in Rust 2024 and supports Rust
 1.88.0 and newer. It uses `ic-cdk-timers` 1.0.0 as its private, underlying
@@ -306,7 +306,10 @@ Before subtracting cumulative measurements, compare `registration_id()` within
 the same canister, compare the same callback role and units, and require advancing
 source times and append-only continuity. Cancellation preserves the identifier;
 unregister/re-register changes it. Increasing numbers alone cannot detect a reset.
-Callback `generation()` does not identify a counter lifetime.
+Callback `generation()` does not identify a counter lifetime. Keep the registration
+ID alongside copied observability values; `registration_id().epoch()` supplies
+the runtime reset boundary. Observability values contain only registration-local
+measurements.
 
 Event counters and memory sample counts conservatively treat `u64::MAX` as
 saturated. Instruction measurements use Metrics 0.10 ordered `MeasurementSummary`

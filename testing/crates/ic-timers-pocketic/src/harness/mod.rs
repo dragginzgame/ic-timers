@@ -34,10 +34,11 @@ pub fn wait_for_probe<T: Debug>(
 
 /// Install one probe with the fixtures' explicit funding and empty init payload.
 pub fn install_probe(pic: &PocketIc, wasm: Vec<u8>) -> Principal {
-    pic.create_and_install(
+    pic.try_create_and_install(
         InstallSpec::new(wasm, Encode!().expect("encode probe init"), INIT_CYCLES)
             .label("ic-timers probe"),
     )
+    .expect("install funded timer probe")
 }
 
 /// Testkit retains the server and drops the instance before stopping it.
@@ -62,5 +63,6 @@ pub fn drive_rounds(pic: &PocketIc, count: usize) {
 
 /// Invoke an anonymous update with no arguments or return values.
 pub fn update_unit(pic: &PocketIc, canister_id: Principal, method: &str) {
-    pic.update_candid_or_panic::<(), _>(canister_id, method, ());
+    pic.update_candid::<(), _>(canister_id, method, ())
+        .expect("probe update succeeds");
 }
