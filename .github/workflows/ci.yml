@@ -43,7 +43,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/ic-timers-fixtures"
           printf 'TMPDIR=%s/ic-timers-fixtures\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       # dtolnay/rust-toolchain v1
-      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067
+      - uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f
         with:
           toolchain: ${{ env.IC_TIMERS_MSRV }}
           components: clippy, rustfmt
@@ -106,7 +106,7 @@ jobs:
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: bash scripts/ci/qualify-failure-evidence.sh early
       # dtolnay/rust-toolchain v1
-      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067
+      - uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f
         with:
           toolchain: ${{ env.IC_TIMERS_INTERNAL_TOOLCHAIN }}
           components: clippy, rustfmt
@@ -197,13 +197,13 @@ jobs:
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: bash scripts/ci/qualify-failure-evidence.sh early
       # dtolnay/rust-toolchain v1
-      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067
+      - uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f
         with:
           toolchain: ${{ env.IC_TIMERS_MSRV }}
           components: clippy, rustfmt
           targets: wasm32-unknown-unknown
       # dtolnay/rust-toolchain v1
-      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067
+      - uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f
         with:
           toolchain: ${{ env.IC_TIMERS_INTERNAL_TOOLCHAIN }}
           components: clippy, rustfmt
@@ -313,7 +313,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/ic-timers-fixtures"
           printf 'TMPDIR=%s/ic-timers-fixtures\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
       # dtolnay/rust-toolchain v1
-      - uses: dtolnay/rust-toolchain@7e38f4b43b4db5c8dd498af069a4f6196df1d067
+      - uses: dtolnay/rust-toolchain@e2a55d2ffb04f378e9626c28d38b36d230d1e12f
         with:
           toolchain: ${{ env.IC_TIMERS_INTERNAL_TOOLCHAIN }}
           components: rustfmt
