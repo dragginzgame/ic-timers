@@ -2,15 +2,64 @@
 
 All notable changes to this project are recorded here.
 
-## [0.22.4]
+## [0.22.7]
 
-### Fixed
+### Development
 
-- Keep tag CI focused on actual tag, snapshot and locked-graph admission instead
-  of repeating the broad release regression suite. Check the three actual
-  adopted snapshots directly and qualify the tag step's dispatch boundary
-  from a shallow checkout without assuming parent history
+- Keep tag CI focused on actual annotated-tag/version, main reachability,
+  adopted-snapshot integrity and locked-graph admission. Leave broad release
+  regressions in PR/main and the owner release gate. Qualify the actual workflow
+  from a shallow checkout, including rejected tags, corrupt snapshots, failed
+  version reads and failed dependency preparation
   ([#55](https://github.com/dragginzgame/ic-timers/issues/55)).
+
+## [0.22.6] - 2026-10-14
+
+### Changed
+
+- Share immutable timer identity components across clones, retaining validation,
+  value-based equality/ordering/hashing, debug output and `Send`/`Sync`. Callback
+  tokens and snapshots no longer allocate three copied strings per identity clone.
+
+### Development
+
+- Measure cohort cancellation through the exact registration's armed-wakeup
+  query instead of constructing a diagnostic snapshot. Treat lookup failures as
+  probe failures; verify repeated cancellation and absence of later callbacks.
+- Share checked failure-window construction and the pre-failure schedule proposal
+  between trap and instruction-exhaustion probes, retaining independent windows,
+  trap precedence and the same-message rollback experiment.
+
+## [0.22.5] - 2026-10-14
+
+### Development
+
+- Reuse Testkit's bounded readiness poller for five probe waits, preserving
+  tick-before-observation boundaries and reporting the last pending observation.
+- Build the four policy cohorts through one fail-fast recipe, retaining explicit
+  mutually exclusive features and separate target directories.
+- Delegate release-prose heuristics and semantic fixtures to the exact Shared
+  Tooling contribution ([#191](https://github.com/dragginzgame/shared-tooling/pull/191));
+  retain local caller binding and advisory pre-mutation invocation.
+- Move complete release-change observation and generic Git regressions to Shared
+  Tooling; retain local package-impact policy and reject failed partial streams.
+- Propose zero-duration polling without redundant simulated-time requests in
+  Testkit ([#96](https://github.com/dragginzgame/ic-testkit/pull/96)); local dependency
+  adoption awaits owner publication.
+
+## [0.22.4] - 2026-10-14
+
+### Development
+
+- Adopt reviewed Shared Tooling 0.12.8 across all three snapshots, including its
+  focused development/handoff validation cadence and publication-guide closure.
+  Retire the local compile-only approval rule; complete release qualification
+  retains its owner-operated gate.
+- Reuse Testkit's canister installation lifecycle across the recovery and policy
+  fixtures, retaining fresh instance ownership, explicit funding and the existing
+  measurement boundaries.
+- Keep Cargo graph regressions with their Shared implementation; narrow the local
+  fixture to selected-worktree admission, adapter binding and failure propagation.
 
 - Prepare the complete root-lock dependency cache before hosted CI's offline
   release fixtures, including dependencies used only by unpublished probes.

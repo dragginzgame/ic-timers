@@ -110,6 +110,26 @@ fn identities_validate_components_and_order_deterministically() {
 }
 
 #[test]
+fn identity_clones_preserve_value_semantics_and_outlive_the_original() {
+    let original = identity("canic", "auth", "renewal");
+    let cloned = original.clone();
+    drop(original);
+    let independently_created = identity("canic", "auth", "renewal");
+    let _: &(dyn Send + Sync) = &cloned;
+
+    assert_eq!(cloned, independently_created);
+    assert_eq!(cloned.name(), "renewal");
+    assert_eq!(
+        std::collections::BTreeSet::from([cloned.clone(), independently_created.clone()]).len(),
+        1
+    );
+    assert_eq!(
+        std::collections::HashSet::from([cloned, independently_created]).len(),
+        1
+    );
+}
+
+#[test]
 fn policies_and_directive_snapshots_preserve_validated_values() {
     let cadence = TimerCadence::from_nanos(5_000).expect("fixture cadence should be valid");
     let policy = TimerPolicy::Watchdog { cadence };

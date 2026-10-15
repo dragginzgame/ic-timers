@@ -94,6 +94,9 @@ cat > bin/cargo <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 printf '%s\n' "$*" >> "${FIXTURE_CARGO_LOG:-fetch-events}"
+if [[ -n "${FIXTURE_COHORT_TARGET_LOG:-}" ]]; then
+    printf '%s\n' "${CARGO_TARGET_DIR:-unset}" >> "$FIXTURE_COHORT_TARGET_LOG"
+fi
 if [[ "${FIXTURE_FAIL_CARGO_CALL:-}" == "$*" ]]; then
     echo 'injected Cargo failure' >&2
     exit 101
@@ -196,6 +199,36 @@ for target in pocketic-watchdog pocketic-cohorts; do
     test ! -s early-cargo-events
     printf 'check\n' > expected-server-events
     cmp expected-server-events server-events
+    rm server-events
+done
+
+# The actual cohort recipe keeps feature subjects isolated and stops before
+# later builds or qualification after any failed producer.
+cohort_calls=()
+for cohort in baseline once after-completion watchdog; do
+    cohort_calls+=("+1.88.0 build -p ic-timers-size-probe --profile timer-probe --target wasm32-unknown-unknown --locked --no-default-features --features $cohort")
+done
+cohort_calls+=('+1.88.0 test -p ic-timers-pocketic --locked comparable_policy_cohorts_report_size_and_instruction_subjects -- --nocapture')
+for failed_call in '' "${cohort_calls[@]}"; do
+    : > cohort-events
+    : > cohort-targets
+    status=0
+    PATH="$fixture_root/bin:$PATH" FIXTURE_CARGO_LOG=cohort-events \
+        FIXTURE_COHORT_TARGET_LOG=cohort-targets FIXTURE_FAIL_CARGO_CALL="$failed_call" \
+        make --no-print-directory pocketic-cohorts MSRV=1.88.0 >cohort-output 2>&1 || status=$?
+    if [[ -z "$failed_call" ]]; then test "$status" -eq 0; else test "$status" -eq 2; fi
+    : > expected-cohort-events
+    : > expected-cohort-targets
+    for call in "${cohort_calls[@]}"; do
+        printf '%s\n' "$call" >> expected-cohort-events
+        case "$call" in
+            *' build '*) printf '%s/testing/target/cohort-%s\n' "$fixture_root" "${call##* }" ;;
+            *) printf 'unset\n' ;;
+        esac >> expected-cohort-targets
+        if [[ "$call" == "$failed_call" ]]; then break; fi
+    done
+    cmp expected-cohort-events cohort-events
+    cmp expected-cohort-targets cohort-targets
     rm server-events
 done
 

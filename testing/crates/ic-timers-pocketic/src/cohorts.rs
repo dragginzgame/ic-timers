@@ -1,10 +1,8 @@
-use super::harness::fresh_pocket_ic;
-use candid::{Encode, Principal};
+use super::harness::{fresh_pocket_ic, install_probe};
+use candid::Principal;
 use ic_testkit::pic::{CandidCallExt, PocketIc};
 use ic_timers_test_protocol::{CohortObservation, MemorySamplingMeasurement, OperationMeasurement};
 use std::{env, fs, path::PathBuf, time::Duration};
-
-const INIT_CYCLES: u128 = 2_000_000_000_000;
 
 #[test]
 fn comparable_policy_cohorts_report_size_and_instruction_subjects() {
@@ -19,16 +17,9 @@ fn comparable_policy_cohorts_report_size_and_instruction_subjects() {
 fn run_cohort(cohort: &str) {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
-    let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
     let wasm = cohort_wasm(cohort);
     let wasm_bytes = wasm.len();
-    pic.install_canister(
-        canister_id,
-        wasm,
-        Encode!().expect("encode cohort init"),
-        None,
-    );
+    let canister_id = install_probe(pic, wasm);
 
     let initial = observe(pic, canister_id);
     assert_eq!(initial.cohort, cohort);
@@ -96,6 +87,12 @@ fn run_cohort(cohort: &str) {
         matches!(cohort, "after-completion" | "watchdog")
     );
     assert_eq!(observe(pic, canister_id).next_deadline_ns, None);
+    assert!(!update_measurement(pic, canister_id, "cancel").changed);
+    pic.advance_time(Duration::from_secs(1));
+    drive_rounds(pic, 16);
+    let cancelled = observe(pic, canister_id);
+    assert_eq!(cancelled.callbacks, completed.callbacks);
+    assert_eq!(cancelled.next_deadline_ns, None);
 
     let memory_sampling = if cohort == "watchdog" {
         let measurement = memory_sampling_measurement(pic, canister_id);
@@ -140,14 +137,7 @@ fn run_cohort(cohort: &str) {
 fn run_watchdog_calibration(profile: &str, representative_work: bool) -> u128 {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
-    let canister_id = pic.create_canister();
-    pic.add_cycles(canister_id, INIT_CYCLES);
-    pic.install_canister(
-        canister_id,
-        cohort_wasm("watchdog"),
-        Encode!().expect("encode calibration init"),
-        None,
-    );
+    let canister_id = install_probe(pic, cohort_wasm("watchdog"));
     if representative_work {
         update_unit(pic, canister_id, "use_representative_watchdog_work");
     }

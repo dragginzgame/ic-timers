@@ -204,6 +204,15 @@ for payload in DRAGGINZGAME.md audits/README.md .shared-tooling/helpers/scripts/
     if grep -Fxq 'scripts/release/check-lockfiles.sh' "$TAG_SCRIPT_EVENTS"; then exit 1; fi
     cp -p "${workflow_root}/original" "$GITHUB_WORKSPACE/$payload"
 done
+TAG_FAIL_FETCH=true reject_workflow
+grep -Fxq fetch "$TAG_MAKE_EVENTS"
+if grep -Fxq 'scripts/release/check-lockfiles.sh' "$TAG_SCRIPT_EVENTS"; then exit 1; fi
+# An otherwise admitted event still needs its actual coordinated lock graph.
+cp -p "$GITHUB_WORKSPACE/Cargo.lock" "${workflow_root}/original-lock"
+printf 'version = 4\n' > "$GITHUB_WORKSPACE/Cargo.lock"
+reject_workflow
+grep -Fxq 'scripts/release/check-lockfiles.sh' "$TAG_SCRIPT_EVENTS"
+cp -p "${workflow_root}/original-lock" "$GITHUB_WORKSPACE/Cargo.lock"
 # Do not require parent history: CI checks out a shallow source. An independent
 # commit with the same tree is a deterministic unrelated-main counterexample.
 unrelated_main="$(printf 'unrelated main\n' | git -C "$GITHUB_WORKSPACE" commit-tree "HEAD^{tree}")"

@@ -1,170 +1,50 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
 repository_root="$(git rev-parse --show-toplevel)"
-classifier="${repository_root}/scripts/release/classify-release-impact.sh"
-temporary_root="$(mktemp -d)"
-# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/timers-impact-adapter.XXXXXX")"
 fixture_complete=false
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$repository_root/scripts/ci/fixture-lifecycle.sh"
 trap 'fixture_finish "$?" "$temporary_root" "Failed release-impact fixture retained"' EXIT
-
-git init -q "${temporary_root}"
-mkdir -p \
-    "${temporary_root}/crates/ic-timers/src" \
-    "${temporary_root}/docs"
-printf '%s\n' \
-    '[workspace]' \
-    'members = ["crates/ic-timers"]' \
-    '' \
-    '[workspace.package]' \
-    'version = "0.3.8"' \
-    > "${temporary_root}/Cargo.toml"
-printf '%s\n' \
-    '[package]' \
-    'name = "ic-timers"' \
-    'version.workspace = true' \
-    > "${temporary_root}/crates/ic-timers/Cargo.toml"
-printf '%s\n' 'pub fn fixture() {}' \
-    > "${temporary_root}/crates/ic-timers/src/lib.rs"
-git -C "${temporary_root}" add .
-git -C "${temporary_root}" \
-    -c user.name='ic-timers release test' \
-    -c user.email='release-test@example.invalid' \
-    commit -qm 'fixture'
-git -C "${temporary_root}" tag v0.3.8
-
-classify() {
-    (
-        cd "${temporary_root}"
-        bash "${classifier}" v0.3.8
-    )
-}
-
-impact="$(classify)"
-if [[ "${impact}" != "none" ]]; then
-    echo "error: unchanged release subject was not classified as none" >&2
-    exit 1
-fi
-
-printf '%s\n' 'Repository evidence.' > "${temporary_root}/docs/evidence.md"
-impact="$(classify)"
-if [[ "${impact}" != "repository" ]]; then
-    echo "error: documentation-only work was not classified as repository" >&2
-    exit 1
-fi
-
-printf '%s\n' 'pub fn added() {}' \
-    > "${temporary_root}/crates/ic-timers/src/added.rs"
-impact="$(classify)"
-if [[ "${impact}" != "crate" ]]; then
-    echo "error: untracked crate source was not classified as crate" >&2
-    exit 1
-fi
-rm -f -- "${temporary_root}/crates/ic-timers/src/added.rs"
-
-# Display-quoted paths remain crate changes, before and after staging. Force
-# Git's default non-ASCII quoting independently of the maintainer's configuration.
-git -C "${temporary_root}" config core.quotePath true
-for filename in 'space name.rs' $'tab\tname.rs' $'line\nname.rs' 'quote"name.rs' $'caf\303\251.rs'; do
-    path="crates/ic-timers/src/${filename}"
-    printf '%s\n' 'pub fn fixture() {}' > "${temporary_root}/${path}"
-    impact="$(classify)"
-    if [[ "${impact}" != crate ]]; then
-        echo 'error: untracked display-quoted crate path was not classified as crate' >&2
-        exit 1
-    fi
-    git -C "${temporary_root}" add -- "${path}"
-    impact="$(classify)"
-    if [[ "${impact}" != crate ]]; then
-        echo 'error: staged display-quoted crate path was not classified as crate' >&2
-        exit 1
-    fi
-    git -C "${temporary_root}" rm -q -f -- "${path}"
-done
-
-printf '%s\n' '# package metadata changed' \
-    >> "${temporary_root}/crates/ic-timers/Cargo.toml"
-impact="$(classify)"
-if [[ "${impact}" != "crate" ]]; then
-    echo "error: crate-manifest work was not classified as crate" >&2
-    exit 1
-fi
-
-git -C "${temporary_root}" restore crates/ic-timers/Cargo.toml
-printf '%s\n' '# workspace package metadata changed' \
-    >> "${temporary_root}/Cargo.toml"
-impact="$(classify)"
-if [[ "${impact}" != "crate" ]]; then
-    echo "error: workspace-manifest work was not classified as crate" >&2
-    exit 1
-fi
-
-# Default classification must work after a version advance without its tag.
-git -C "${temporary_root}" restore Cargo.toml
-perl -pi -e 's/^version = "0\.3\.8"$/version = "0.3.9"/' "${temporary_root}/Cargo.toml"
-impact="$(cd "${temporary_root}" && bash "${classifier}")"
-if [[ "${impact}" != crate ]]; then
-    echo 'error: untagged workspace version did not use reachable release history' >&2
-    exit 1
-fi
-if output="$(cd "${temporary_root}" && bash "${classifier}" v0.3.9 2>&1)"; then
-    echo 'error: explicit missing release-impact base was accepted' >&2
-    exit 1
-fi
-if [[ "${output}" != *'base does not resolve to a commit: v0.3.9'* ]]; then
-    echo "error: explicit base rejection lost its reason: ${output}" >&2
-    exit 1
-fi
-
-real_git="$(command -v git)"
-mkdir -p "${temporary_root}/bin"
-mkdir -p "${temporary_root}/scratch"
-cat > "${temporary_root}/bin/git" <<'EOF'
+mkdir -p "$temporary_root/consumer with spaces/scripts/release" "$temporary_root/consumer with spaces/scripts/ci" "$temporary_root/caller"
+cp "$repository_root/scripts/release/classify-release-impact.sh" "$temporary_root/consumer with spaces/scripts/release/"
+collector="$temporary_root/consumer with spaces/scripts/ci/collect-release-changes.sh"
+cat > "$collector" <<'STUB'
 #!/usr/bin/env bash
-set -euo pipefail
-if [[ "${1:-}" == "${FAIL_GIT_COMMAND}" ]]; then
-    if [[ "${FAIL_GIT_PARTIAL_OUTPUT:-0}" == 1 ]]; then
-        case "${1}" in
-            diff | ls-files) printf '%s\0' 'crates/ic-timers/src/lib.rs' ;;
-            describe) printf '%s\n' v0.3.8 ;;
-        esac
-    fi
-    echo "injected ${FAIL_GIT_COMMAND} failure" >&2
-    exit 1
-fi
-exec "${REAL_GIT}" "$@"
-EOF
-chmod +x "${temporary_root}/bin/git"
-for command in diff ls-files describe; do
-    set -- v0.3.8
-    if [[ "${command}" == describe ]]; then set --; fi
-    for partial_output in 0 1; do
-        if output="$(
-            cd "${temporary_root}"
-            PATH="${temporary_root}/bin:${PATH}" REAL_GIT="${real_git}" \
-                TMPDIR="${temporary_root}/scratch" FAIL_GIT_COMMAND="${command}" \
-                FAIL_GIT_PARTIAL_OUTPUT="${partial_output}" \
-                bash "${classifier}" "$@" 2>&1
-        )"; then
-            echo "error: impact classification accepted a failed git ${command}" >&2
-            exit 1
-        fi
-        if [[ "${output}" != *"injected ${command} failure"* ]]; then
-            echo "error: impact classification lost git ${command} failure: ${output}" >&2
-            exit 1
-        fi
-        debris="$(find "${temporary_root}/scratch" -type f -print)"
-        test -z "${debris}"
-    done
+printf '%s\0' "$PWD" "$@" > "$IMPACT_CALL"
+cat "$IMPACT_PATHS"
+exit "$IMPACT_STATUS"
+STUB
+export IMPACT_CALL="$temporary_root/call" IMPACT_PATHS="$temporary_root/paths" IMPACT_STATUS=0
+classifier="$temporary_root/consumer with spaces/scripts/release/classify-release-impact.sh"
+: > "$IMPACT_PATHS"
+output="$(cd "$temporary_root/caller" && bash "$classifier")"
+[[ "$output" == none ]] || exit 1
+printf '%s\0' "$temporary_root/caller" > "$temporary_root/expected-call"
+cmp "$temporary_root/expected-call" "$IMPACT_CALL"
+for path in 'docs/note.md' 'testing/probe/src/lib.rs' 'crates/ic-timers/src-other/lib.rs' \
+    Cargo.toml crates/ic-timers/Cargo.toml crates/ic-timers/build.rs $'crates/ic-timers/src/line\nname.rs'; do
+    printf '%s\0' "$path" > "$IMPACT_PATHS"
+    case "$path" in
+        docs/*|testing/*|crates/ic-timers/src-other/*) expected=repository ;;
+        *) expected=crate ;;
+    esac
+    output="$(cd "$temporary_root/caller" && bash "$classifier" v0.3.8)"
+    [[ "$output" == "$expected" ]] || exit 1
+    printf '%s\0' "$temporary_root/caller" v0.3.8 > "$temporary_root/expected-call"
+    cmp "$temporary_root/expected-call" "$IMPACT_CALL"
 done
-
-git -C "${temporary_root}" tag -d v0.3.8 >/dev/null
-if (cd "${temporary_root}" && bash "${classifier}") >/dev/null 2>&1; then
-    echo 'error: default classification accepted missing release history' >&2
-    exit 1
-fi
-
+# Both empty and plausible failed streams must refuse rather than emit policy.
+for partial in false true; do
+    : > "$IMPACT_PATHS"
+    if [[ "$partial" == true ]]; then printf '%s\0' crates/ic-timers/src/lib.rs > "$IMPACT_PATHS"; fi
+    status=0
+    IMPACT_STATUS=37 bash "$classifier" > "$temporary_root/output" || status=$?
+    [[ "$status" == 37 && ! -s "$temporary_root/output" ]] || exit 1
+done
+# A crate path cannot stop draining the owner before it reports final success.
+printf '%s\0' Cargo.toml docs/note.md > "$IMPACT_PATHS"
+[[ "$(bash "$classifier")" == crate ]] || exit 1
+bash "$repository_root/scripts/ci/test-release-changes.sh"
 fixture_complete=true
-echo "Release-impact classification checks passed"
+echo 'Release-impact local policy, owner binding and failure propagation checks passed'
