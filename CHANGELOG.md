@@ -6,12 +6,17 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Refresh the reviewed release-observation owner contribution, including Bash
+  3.2-safe empty argument arrays and comparison bound to the verified base commit.
+  Preserve all three snapshot roots and the existing tool/dependency selections.
+
 - Keep tag CI focused on actual annotated-tag/version, main reachability,
   adopted-snapshot integrity and locked-graph admission. Leave broad release
   regressions in PR/main and the owner release gate. Qualify the actual workflow
   from a shallow checkout, including rejected tags, corrupt snapshots, failed
   version reads and failed dependency preparation
   ([#55](https://github.com/dragginzgame/ic-timers/issues/55)).
+
 
 ## [0.22.6] - 2026-10-14
 

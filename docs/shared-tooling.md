@@ -1,5 +1,21 @@
 # Shared Tooling adoption
 
+## Qualified macOS release-observation repair
+
+All three canonical bundles select Shared contribution
+`7af7c54ecd549c039d9f41e5c8ad51f926f22b11` from
+[PR #191](https://github.com/dragginzgame/shared-tooling/pull/191), with the existing
+82/41/18 payload roots. The source carries current Shared 0.14.0 pending notes;
+this is a reviewed contribution pin, not a published release claim. Empty
+argument arrays are safe under Bash 3.2, and change collection remains bound to
+its verified base commit when a tag moves. Host/IC/Cargo selections are unchanged.
+
+Previews precede canonical apply. The helper bundle uses a disposable Git root
+and verified before-images for copyback. Current Bash and genuine Bash 3.2 owner
+fixtures pass. Timers retains its product gates, exact catalog exception, and
+Testkit server owner. Evidence remains at `/tmp/ic-timers-pr-repairs.bxk863zt/`;
+new hosted native results remain separate from these focused Linux checks.
+
 ## Prepared release-change ownership
 
 All three exports select reviewed contribution
