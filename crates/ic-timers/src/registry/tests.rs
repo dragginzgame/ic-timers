@@ -1,14 +1,61 @@
 use super::*;
 use crate::{TimerLastOutcome, TimerProcessCondition, TimerRegistrationStatus};
 use std::time::Duration;
+
+impl TimerRegistry {
+    pub(crate) fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub(crate) fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    pub(crate) fn register_once(
+        &mut self,
+        identity: TimerIdentity,
+        lifetime: DeclarationLifetime,
+    ) -> Result<RegistrationClaim, RegisterError> {
+        self.register_once_with_callback(identity, lifetime, ordinary_callback_fixture())
+    }
+
+    pub(crate) fn register_after_completion(
+        &mut self,
+        identity: TimerIdentity,
+        cadence: TimerCadence,
+        lifetime: DeclarationLifetime,
+    ) -> Result<RegistrationClaim, RegisterError> {
+        self.register_after_completion_with_callback(
+            identity,
+            cadence,
+            lifetime,
+            ordinary_callback_fixture(),
+        )
+    }
+
+    pub(crate) fn register_watchdog(
+        &mut self,
+        identity: TimerIdentity,
+        cadence: TimerCadence,
+        lifetime: DeclarationLifetime,
+    ) -> Result<RegistrationClaim, RegisterError> {
+        self.register_watchdog_with_callback(
+            identity,
+            cadence,
+            lifetime,
+            watchdog_callback_fixture(),
+        )
+    }
+}
+
 // Pure transition fixtures install real typed payloads but never execute work.
-pub(super) fn ordinary_callback_fixture() -> OrdinaryCallback {
+fn ordinary_callback_fixture() -> OrdinaryCallback {
     Rc::new(RefCell::new(|_| {
         panic!("pure registry fixture must not execute ordinary work")
     }))
 }
 
-pub(super) fn watchdog_callback_fixture() -> WatchdogCallback {
+fn watchdog_callback_fixture() -> WatchdogCallback {
     Rc::new(RefCell::new(|_| {
         panic!("pure registry fixture must not execute watchdog work")
     }))
@@ -499,8 +546,11 @@ fn measurement_routing_rejects_a_policy_role_mismatch() {
         .expect("retained declaration should remain")
         .observability()
         .performance();
-    assert_eq!(performance.scheduler_instructions().samples(), 0);
-    assert_eq!(performance.work_instructions().samples(), 0);
+    assert_eq!(
+        performance.scheduler_instructions().aggregate().samples(),
+        0
+    );
+    assert_eq!(performance.work_instructions().aggregate().samples(), 0);
     assert_eq!(performance.scheduler_memory_pages().samples(), 0);
     assert_eq!(performance.work_memory_pages().samples(), 0);
 }
@@ -1338,15 +1388,13 @@ fn erased_policy_mismatch_and_invariant_result_stop_truthfully() {
         .ensure_once(&invariant, 0, TimerSchedule::At(1))
         .expect("ensure should succeed"));
     assert!(registry.begin_ordinary(&token).is_some());
+    let raw = OrdinaryRunResult::new(
+        TimerCompletion::invariant_failure(3),
+        OrdinaryDirective::ContinueImmediately,
+    );
+    assert_eq!(raw.directive(), OrdinaryDirective::ContinueImmediately);
     let transition = registry
-        .complete_ordinary(
-            &token,
-            2,
-            OrdinaryRunResult::new(
-                TimerCompletion::invariant_failure(3),
-                OrdinaryDirective::ContinueImmediately,
-            ),
-        )
+        .complete_ordinary(&token, 2, raw)
         .expect("invariant completion should stop normally");
     assert_eq!(transition.failure(), None);
     assert_eq!(

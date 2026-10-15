@@ -3,11 +3,11 @@ set -euo pipefail
 
 repository_root="$(git rev-parse --show-toplevel)"
 finalizer="${repository_root}/scripts/release/finalize-changelog.sh"
-temporary_root="$(mktemp -d)"
-# Bash 3.2 can report zero on nounset; cleanup also requires completion.
-fixture_complete=false
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$repository_root/scripts/ci/fixture-lifecycle.sh"
+temporary_root="$(fixture_create "${TMPDIR:-/tmp}/timer-changelog-test.XXXXXX")"
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
 trap 'fixture_finish "$?" "$temporary_root" "Failed changelog fixture retained"' EXIT
 export IC_TIMERS_RELEASE_PREVIOUS=0.1.0
 

@@ -200,17 +200,12 @@ pub struct OrdinaryRunResult {
 }
 
 impl OrdinaryRunResult {
+    // Preserve raw internal proposals so the registry owns terminal arbitration.
+    // Public policy-specific results normalize invariant failures before erasure.
     pub(super) const fn new(completion: TimerCompletion, directive: OrdinaryDirective) -> Self {
         Self {
-            directive: if matches!(
-                completion.outcome(),
-                TimerCompletionOutcome::InvariantFailure
-            ) {
-                OrdinaryDirective::Stop
-            } else {
-                directive
-            },
             completion,
+            directive,
         }
     }
 

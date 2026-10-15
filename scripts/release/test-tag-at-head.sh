@@ -6,11 +6,11 @@ export PATH="${repository_root}/.tools/host/bin:${PATH}"
 export YQ="${repository_root}/.tools/host/bin/yq"
 checker="${repository_root}/scripts/release/check-tag-at-head.sh"
 cleaner="${repository_root}/scripts/ci/ensure-clean.sh"
-temporary_root="$(mktemp -d)"
-# Bash 3.2 can report zero on nounset; cleanup also requires completion.
-fixture_complete=false
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$repository_root/scripts/ci/fixture-lifecycle.sh"
+temporary_root="$(fixture_create "${TMPDIR:-/tmp}/timer-tag-at-head.XXXXXX")"
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
 trap 'fixture_finish "$?" "$temporary_root" "Failed tag-at-head fixture retained"' EXIT
 git init -q "${temporary_root}"
 cd "${temporary_root}"
@@ -134,5 +134,119 @@ if (cd "$temporary_root/unborn" && bash "$cleaner" >/dev/null 2>&1); then
     echo 'error: clean publication guard admitted a checkout without a commit' >&2
     exit 1
 fi
+# Qualify the actual tag workflow after the independent tag/publication cases.
+workflow_root="$temporary_root/workflow"
+mkdir "$workflow_root"
+export CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0
+# Only this disposable clone owns Git effects. All provisioning is substituted.
+git clone -q --depth 1 --no-local --no-hardlinks "$repository_root" "${workflow_root}/repository"
+mkdir "${workflow_root}/bin" "${workflow_root}/runner"
+export GITHUB_WORKSPACE="${workflow_root}/repository" RUNNER_TEMP="${workflow_root}/runner"
+export TAG_MAKE_EVENTS="${workflow_root}/make-events" TAG_SCRIPT_EVENTS="${workflow_root}/script-events" TAG_REAL_BASH="$BASH"
+TAG_VERSION="$(cd "$GITHUB_WORKSPACE" && bash scripts/release/workspace-version.sh)"
+export TAG_VERSION GITHUB_REF_NAME="v$TAG_VERSION" TAG_WORKFLOW_SCOPE=tag
+git -C "$GITHUB_WORKSPACE" config user.name 'Tag workflow fixture'
+git -C "$GITHUB_WORKSPACE" config user.email fixture@example.invalid
+git -C "$GITHUB_WORKSPACE" tag -fa "$GITHUB_REF_NAME" -m fixture > /dev/null
+git -C "$GITHUB_WORKSPACE" update-ref refs/remotes/origin/main HEAD
+# Execute the actual workflow body, including its real tag, snapshot and graph guards.
+yq -o json '.' "$repository_root/.github/workflows/ci.yml" |
+    jq -er '.jobs["tag-truth"].steps[] | select(.name == "Verify release tag") | .run' > "${workflow_root}/workflow.sh"
+printf '#!%s\n' "$BASH" > "${workflow_root}/bin/make"
+cat >> "${workflow_root}/bin/make" <<'STUB'
+set -euo pipefail
+printf '%s\n' "$*" >> "$TAG_MAKE_EVENTS"
+case "$*" in
+    install-tools|tools-check) ;;
+    fetch) [[ "${TAG_FAIL_FETCH:-false}" != true ]] || exit 37 ;;
+    ci) [[ "$TAG_WORKFLOW_SCOPE" == checks ]] || exit 97 ;;
+    '--no-print-directory version')
+        printf '%s\n' "$TAG_VERSION"
+        [[ "${TAG_FAIL_VERSION:-false}" != true ]] || exit 37 ;;
+    release-tag-check) exec "$TAG_REAL_BASH" "$GITHUB_WORKSPACE/scripts/release/check-tag-at-head.sh" ;;
+    *) echo 'tag workflow dispatched a forbidden target' >&2; exit 97 ;;
+esac
+STUB
+printf '#!%s\n' "$BASH" > "${workflow_root}/bin/bash"
+cat >> "${workflow_root}/bin/bash" <<'STUB'
+set -euo pipefail
+printf '%s\n' "$*" >> "$TAG_SCRIPT_EVENTS"
+exec "$TAG_REAL_BASH" "$@"
+STUB
+chmod +x "${workflow_root}/bin/make" "${workflow_root}/bin/bash"
+run_workflow() {
+    : > "$TAG_MAKE_EVENTS"
+    : > "$TAG_SCRIPT_EVENTS"
+    (cd "$GITHUB_WORKSPACE" && PATH="${workflow_root}/bin:$PATH" "$BASH" -e -o pipefail "${workflow_root}/workflow.sh") \
+        > "${workflow_root}/workflow.log" 2>&1
+}
+run_workflow
+printf 'install-tools\ntools-check\n--no-print-directory version\nrelease-tag-check\nfetch\n' > "${workflow_root}/expected-make-events"
+cmp "${workflow_root}/expected-make-events" "$TAG_MAKE_EVENTS"
+for expected in 'scripts/ci/verify-shared-tooling-snapshot.sh' \
+    'scripts/ci/verify-shared-tooling-snapshot.sh --manifest .shared-tooling-audits.snapshot' \
+    '.shared-tooling/helpers/scripts/ci/verify-shared-tooling-snapshot.sh --consumer .shared-tooling/helpers' \
+    'scripts/release/check-lockfiles.sh'; do
+    grep -Fxq "$expected" "$TAG_SCRIPT_EVENTS"
+done
+reject_workflow() {
+    local status=0
+    run_workflow || status=$?
+    [[ "$status" != 0 ]] || { echo 'tag workflow accepted contradicted admission' >&2; exit 1; }
+}
+GITHUB_REF_NAME=v0.0.0 reject_workflow
+TAG_FAIL_VERSION=true reject_workflow
+# Actual failed snapshot admission must stop before graph validation.
+for payload in DRAGGINZGAME.md audits/README.md .shared-tooling/helpers/scripts/ci/dependency-pins.jq; do
+    cp -p "$GITHUB_WORKSPACE/$payload" "${workflow_root}/original"
+    printf '\nchanged\n' >> "$GITHUB_WORKSPACE/$payload"
+    reject_workflow
+    if grep -Fxq 'scripts/release/check-lockfiles.sh' "$TAG_SCRIPT_EVENTS"; then exit 1; fi
+    cp -p "${workflow_root}/original" "$GITHUB_WORKSPACE/$payload"
+done
+TAG_FAIL_FETCH=true reject_workflow
+grep -Fxq fetch "$TAG_MAKE_EVENTS"
+if grep -Fxq 'scripts/release/check-lockfiles.sh' "$TAG_SCRIPT_EVENTS"; then exit 1; fi
+# An otherwise admitted event still needs its actual coordinated lock graph.
+cp -p "$GITHUB_WORKSPACE/Cargo.lock" "${workflow_root}/original-lock"
+printf 'version = 4\n' > "$GITHUB_WORKSPACE/Cargo.lock"
+reject_workflow
+grep -Fxq 'scripts/release/check-lockfiles.sh' "$TAG_SCRIPT_EVENTS"
+cp -p "${workflow_root}/original-lock" "$GITHUB_WORKSPACE/Cargo.lock"
+# Do not require parent history: CI checks out a shallow source. An independent
+# commit with the same tree is a deterministic unrelated-main counterexample.
+unrelated_main="$(printf 'unrelated main\n' | git -C "$GITHUB_WORKSPACE" commit-tree "HEAD^{tree}")"
+git -C "$GITHUB_WORKSPACE" update-ref refs/remotes/origin/main "$unrelated_main"
+reject_workflow
+git -C "$GITHUB_WORKSPACE" update-ref refs/remotes/origin/main HEAD
+git -C "$GITHUB_WORKSPACE" tag -d "$GITHUB_REF_NAME" > /dev/null
+git -C "$GITHUB_WORKSPACE" tag "$GITHUB_REF_NAME"
+reject_workflow
+# The new fixture is in the full owner, never dispatched by a tag-only job.
+awk '/^release-check:/ { selected=1; next } selected && /^[^[:space:]#]/ { exit } selected { print }' "$repository_root/Makefile" |
+    grep -Fq 'bash scripts/release/test-tag-at-head.sh'
+yq -o json '.' "$repository_root/.github/workflows/ci.yml" |
+    jq -e '.jobs["tag-truth"].steps | any(.uses == "./.github/actions/retain-timers-failure-evidence" and .if == "${{ failure() }}")
+        and all(.[]; ((.run // "") | test("make[^\\n]* release-check([ \\t\\n]|$)") | not))' > /dev/null
+# The normal CI lane must prepare all root-lock sources before offline graph
+# fixtures; its default-member build does not fetch unpublished probe dependencies.
+yq -o json '.' "$repository_root/.github/workflows/ci.yml" |
+    jq -er '.jobs.checks.steps[] | select(.name == "Run CI gate") | .run' \
+    > "${workflow_root}/normal-ci.sh"
+for failed_fetch in false true; do
+    : > "$TAG_MAKE_EVENTS"
+    status=0
+    (cd "$GITHUB_WORKSPACE" && TAG_WORKFLOW_SCOPE=checks TAG_FAIL_FETCH="$failed_fetch" \
+        PATH="${workflow_root}/bin:$PATH" "$BASH" -e -o pipefail "${workflow_root}/normal-ci.sh") \
+        > "${workflow_root}/normal-ci.log" 2>&1 || status=$?
+    if [[ "$failed_fetch" == true ]]; then
+        [[ "$status" == 37 ]] || exit 1
+        printf 'fetch\n' > "${workflow_root}/expected-ci-events"
+    else
+        [[ "$status" == 0 ]] || exit 1
+        printf 'fetch\nci\n' > "${workflow_root}/expected-ci-events"
+    fi
+    cmp "${workflow_root}/expected-ci-events" "$TAG_MAKE_EVENTS"
+done
 fixture_complete=true
 echo 'Exact annotated release-tag and clean publication checks passed'

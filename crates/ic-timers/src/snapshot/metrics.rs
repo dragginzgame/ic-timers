@@ -605,16 +605,19 @@ mod tests {
             MemoryPageSample::new(MemoryPageExtent::new(5, 5), MemoryPageExtent::new(6, 9)),
         );
 
-        assert_eq!(performance.scheduler_instructions().total(), 20);
-        assert_eq!(performance.work_instructions().samples(), 2);
-        assert_eq!(performance.work_instructions().total(), 40);
+        assert_eq!(performance.scheduler_instructions().aggregate().total(), 20);
+        assert_eq!(performance.work_instructions().aggregate().samples(), 2);
+        assert_eq!(performance.work_instructions().aggregate().total(), 40);
         assert_eq!(performance.work_instructions().latest(), Some(10));
-        assert_eq!(performance.work_instructions().maximum(), Some(30));
+        assert_eq!(
+            performance.work_instructions().aggregate().maximum(),
+            Some(30)
+        );
 
         let scheduler_memory = performance.scheduler_memory_pages();
         assert_eq!(
             scheduler_memory.samples(),
-            performance.scheduler_instructions().samples()
+            performance.scheduler_instructions().aggregate().samples()
         );
         assert_eq!(scheduler_memory.samples(), 1);
         let scheduler_latest = scheduler_memory
@@ -630,7 +633,7 @@ mod tests {
         let work_memory = performance.work_memory_pages();
         assert_eq!(
             work_memory.samples(),
-            performance.work_instructions().samples()
+            performance.work_instructions().aggregate().samples()
         );
         assert_eq!(work_memory.samples(), 2);
         let work_latest = work_memory.latest().expect("work sample should exist");
@@ -647,10 +650,10 @@ mod tests {
             performance.scheduler_instructions(),
             performance.work_instructions(),
         ] {
-            assert_eq!(summary.samples(), 0);
-            assert_eq!(summary.mean(), Ok(None));
+            assert_eq!(summary.aggregate().samples(), 0);
+            assert_eq!(summary.aggregate().mean(), Ok(None));
             assert_eq!(summary.latest(), None);
-            assert_eq!(summary.maximum(), None);
+            assert_eq!(summary.aggregate().maximum(), None);
         }
 
         performance.record_scheduler(0, MemoryPageSample::EMPTY);
@@ -660,11 +663,11 @@ mod tests {
             performance.scheduler_instructions(),
             performance.work_instructions(),
         ] {
-            assert_eq!(summary.samples(), 1);
-            assert_eq!(summary.total(), 0);
-            assert_eq!(summary.mean(), Ok(Some(0)));
+            assert_eq!(summary.aggregate().samples(), 1);
+            assert_eq!(summary.aggregate().total(), 0);
+            assert_eq!(summary.aggregate().mean(), Ok(Some(0)));
             assert_eq!(summary.latest(), Some(0));
-            assert_eq!(summary.maximum(), Some(0));
+            assert_eq!(summary.aggregate().maximum(), Some(0));
             assert!(!summary.aggregate().samples_overflowed());
             assert!(!summary.aggregate().total_overflowed());
         }
@@ -700,16 +703,22 @@ mod tests {
                         previous.work_instructions(),
                     )
                 };
-                assert_eq!(summary.samples(), samples);
-                assert_eq!(summary.total(), total);
-                assert_eq!(summary.mean(), Ok(Some(total / u128::from(samples))));
+                assert_eq!(summary.aggregate().samples(), samples);
+                assert_eq!(summary.aggregate().total(), total);
+                assert_eq!(
+                    summary.aggregate().mean(),
+                    Ok(Some(total / u128::from(samples)))
+                );
                 assert_eq!(summary.latest(), Some(instructions));
-                assert_eq!(summary.maximum(), Some(u64::MAX));
+                assert_eq!(summary.aggregate().maximum(), Some(u64::MAX));
                 assert!(!summary.aggregate().samples_overflowed());
                 assert!(!summary.aggregate().total_overflowed());
                 assert_eq!(other, MeasurementSummary::EMPTY);
-                assert_eq!(previous_summary.samples(), samples - 1);
-                assert_eq!(previous_summary.total(), total - u128::from(instructions));
+                assert_eq!(previous_summary.aggregate().samples(), samples - 1);
+                assert_eq!(
+                    previous_summary.aggregate().total(),
+                    total - u128::from(instructions)
+                );
                 assert!(!previous_summary.aggregate().total_overflowed());
             }
         }

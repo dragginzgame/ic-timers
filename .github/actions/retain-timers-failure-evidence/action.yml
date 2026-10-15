@@ -1,0 +1,30 @@
+name: Retain Timers failure evidence
+description: Collect the Timers archive and upload it with collection diagnostics.
+inputs:
+  name:
+    description: Artifact name selected by the caller.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Archive failure evidence
+      if: ${{ always() }}
+      shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+      run: |
+        if ! bash scripts/ci/collect-failure-evidence.sh > "$RUNNER_TEMP/ic-timers-collection.log" 2>&1; then
+          cat "$RUNNER_TEMP/ic-timers-collection.log" >&2
+          exit 1
+        fi
+        cat "$RUNNER_TEMP/ic-timers-collection.log"
+    - name: Upload failure evidence
+      # Collection failure must still leave diagnostics available for upload.
+      if: ${{ always() }}
+      # actions/upload-artifact v7.0.2
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+      with:
+        name: ${{ inputs.name }}
+        path: |
+          ${{ runner.temp }}/ic-timers-failure-evidence.tar.gz
+          ${{ runner.temp }}/ic-timers-collection.log
+        compression-level: 0
+        if-no-files-found: warn

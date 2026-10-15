@@ -3,12 +3,10 @@ set -euo pipefail
 
 root="$(git rev-parse --show-toplevel)"
 export PATH="$root/.tools/host/bin:$PATH"
-fixture="$(mktemp -d "${TMPDIR:-/tmp}/timer-testkit-server.XXXXXX")"
-fixture="$(cd -P "$fixture" && printf '%s/.' "$PWD")"
-fixture="${fixture%/.}"
-fixture_complete=false
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$root/scripts/ci/fixture-lifecycle.sh"
+fixture="$(fixture_create "${TMPDIR:-/tmp}/timer-testkit-server.XXXXXX")"
+fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Failed Testkit adapter fixture retained"' EXIT
 consumer="$fixture/consumer with spaces"
 mkdir -p "$consumer/scripts/dev" "$consumer/.tools/host/bin"

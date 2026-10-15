@@ -15,11 +15,11 @@ bump_script="${repository_root}/scripts/release/bump-version.sh"
 impact_checker="${repository_root}/scripts/release/check-bump-impact.sh"
 export GITHUB_ACTIONS=false GITHUB_STEP_SUMMARY=''
 
-temporary_root="$(mktemp -d)"
-# Bash 3.2 can report zero on nounset; cleanup also requires completion.
-fixture_complete=false
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$repository_root/scripts/ci/fixture-lifecycle.sh"
+temporary_root="$(fixture_create "${TMPDIR:-/tmp}/timer-release-gate.XXXXXX")"
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
 trap 'fixture_finish "$?" "$temporary_root" "Failed release-gate fixture retained"' EXIT
 
 if downgrade_output="$(bash "${bump_script}" 0.0.0 2>&1)"; then

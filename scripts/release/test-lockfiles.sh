@@ -5,13 +5,12 @@ repository_root="$(git rev-parse --show-toplevel)"
 export PATH="${repository_root}/.tools/host/bin:${PATH}"
 export YQ="${repository_root}/.tools/host/bin/yq"
 checker="${repository_root}/scripts/release/check-lockfiles.sh"
-temporary_root="$(mktemp -d "${TMPDIR:-/tmp}/timer-lockfile-test.XXXXXX")"
-# Bash 3.2 can report zero on nounset; cleanup also requires completion.
-fixture_complete=false
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$repository_root/scripts/ci/fixture-lifecycle.sh"
+temporary_root="$(fixture_create "${TMPDIR:-/tmp}/timer-lockfile-test.XXXXXX")"
+# Bash 3.2 can report zero on nounset; cleanup also requires completion.
+fixture_complete=false
 trap 'fixture_finish "$?" "$temporary_root" "Failed lockfile fixture retained"' EXIT
-temporary_root="$(cd "$temporary_root" && pwd -P)"
 
 # Generic Cargo graph cases belong to Shared's metadata owner suite. This
 # fixture qualifies the local adapter's helper selection, context and status.

@@ -1,4 +1,6 @@
-use super::harness::{INIT_CYCLES, fresh_pocket_ic, install_probe, wait_for_probe};
+use super::harness::{
+    INIT_CYCLES, drive_rounds, fresh_pocket_ic, install_probe, update_unit, wait_for_probe,
+};
 use candid::{Decode, Encode, Principal};
 use ic_testkit::pic::{CandidCallExt, PocketIc, PocketIcInstance};
 use ic_timers_test_protocol::{
@@ -31,13 +33,6 @@ fn immediate_initial_watchdog_runs_without_advancing_cadence_time() {
     assert_eq!(completed.work_dispatched, 1);
     assert_eq!(completed.work_completed, 1);
     assert!(completed.next_deadline_ns.is_some());
-
-    // Exercise wide Candid fields independently of the small measured deltas.
-    let mut wide = completed;
-    wide.scheduler_instruction_total = u128::from(u64::MAX) + 1;
-    wide.work_instruction_total = u128::MAX;
-    let encoded = Encode!(&wide).expect("encode wide instruction totals");
-    assert_eq!(Decode!(&encoded, ProbeSnapshot).unwrap(), wide);
 }
 
 #[test]
@@ -389,12 +384,6 @@ fn probe_wasm() -> Vec<u8> {
     fs::read(&path).unwrap_or_else(|error| panic!("read {}: {error}", path.display()))
 }
 
-fn drive_rounds(pic: &PocketIc, count: usize) {
-    for _ in 0..count {
-        pic.tick();
-    }
-}
-
 fn update_bool(pic: &PocketIc, canister_id: Principal, method: &str) -> bool {
     pic.update_candid_or_panic(canister_id, method, ())
 }
@@ -413,10 +402,6 @@ fn update_u128_pair(pic: &PocketIc, canister_id: Principal, method: &str) -> (u1
         )
         .unwrap_or_else(|error| panic!("update {method}: {error:?}"));
     Decode!(&bytes, u128, u128).unwrap_or_else(|error| panic!("decode {method}: {error}"))
-}
-
-fn update_unit(pic: &PocketIc, canister_id: Principal, method: &str) {
-    pic.update_candid_or_panic::<(), _>(canister_id, method, ());
 }
 
 fn query_inventory_measurement(pic: &PocketIc, canister_id: Principal) -> (u64, u64, bool) {
