@@ -2,6 +2,14 @@
 
 All notable changes to this project are recorded here.
 
+## [0.22.7]
+
+### Development
+
+- Refresh the reviewed release-observation owner contribution, including Bash
+  3.2-safe empty argument arrays and comparison bound to the verified base commit.
+  Preserve all three snapshot roots and the existing tool/dependency selections.
+
 ## [0.22.6] - 2026-10-14
 
 ### Changed
