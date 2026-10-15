@@ -802,9 +802,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-artifacts"
-version = "0.18.4"
+version = "0.18.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d9ca6143657b00488bb386faf1a5f5e3afdbc85cf202d317a5473fdcf7fc315"
+checksum = "1fe6385167bcc88af011b178f95ff6bfc6e515b051201b2a5059c2ba72624efd"
 dependencies = [
  "flate2",
  "leb128",
@@ -815,9 +815,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-fs"
-version = "0.18.4"
+version = "0.18.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02ecbf11c7f207bc41b654fd6fe46f749eff2ab965be2fe046629a8655cc21d9"
+checksum = "80a7a55d47f09e1d95b3a65555f3f57c7590e4fdcdc8a4fda43dd3e2040b7e08"
 dependencies = [
  "ic-host-artifacts",
  "rustix",
@@ -825,9 +825,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-process"
-version = "0.18.4"
+version = "0.18.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3b23fb2df923b7bdaea9f8d69c8fd292f2e25ec46a803a83d5125b2a657e660"
+checksum = "097d262adab817c6fd1ab6f9139bd71008fb9a7160a99f0ba1058a2c2172aae1"
 dependencies = [
  "ic-host-artifacts",
  "ic-host-fs",
@@ -874,7 +874,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers"
-version = "0.23.0"
+version = "0.23.1"
 dependencies = [
  "ic-cdk-timers",
  "ic-metrics",
@@ -884,7 +884,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers-pocketic"
-version = "0.23.0"
+version = "0.23.1"
 dependencies = [
  "candid",
  "ic-testkit",
@@ -893,7 +893,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers-runtime-probe"
-version = "0.23.0"
+version = "0.23.1"
 dependencies = [
  "candid",
  "ic-cdk",
@@ -903,7 +903,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers-size-probe"
-version = "0.23.0"
+version = "0.23.1"
 dependencies = [
  "candid",
  "ic-cdk",
@@ -913,7 +913,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers-test-protocol"
-version = "0.23.0"
+version = "0.23.1"
 dependencies = [
  "candid",
  "serde",
