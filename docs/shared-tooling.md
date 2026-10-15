@@ -1,5 +1,50 @@
 # Shared Tooling adoption
 
+## Independent controlled-scenario verification
+
+The three 84/41/18 canonical bundles select exact contribution
+`db17f58ecea95486f5704b6cd4e3aa7ec172b4b1` from
+[Shared PR #209](https://github.com/dragginzgame/shared-tooling/pull/209), stacked
+on #208 and retaining #206/#203. Existing roots and tool catalogs remain. Source
+VERSION is 0.14.0 with pending contribution notes; this does not adopt the
+broader pending Shared 0.15 hard cut.
+
+Shared's Python verifier independently checks the controlled driver's scenario
+status, preserved bytes/modes, rejected early download and late raw/combined logs.
+Callers explicitly select canonical relative archive prefixes. Timers retains
+source/job/run/host identity, its qualified catalogs and collector integration;
+one corrupt-status caller case proves delegation. Generic rejection permutations
+live beside the producer rather than being maintained only in Timers.
+
+Canonical previews precede applies; the nested helper bundle uses a disposable
+Git root and checked before-images for copyback. The three owner Python tests,
+two Timers download tests and current/genuine Bash 3.2 evidence fixtures pass.
+The local tool-preparation composite preserves logs and failure propagation in
+the actual action body with substitutes; no setup or hosted dispatch ran.
+Evidence is at `/tmp/ic-timers-probe-ci-cleanup.3474kcag/`. The exact contribution
+pin is review provenance, not an upstream publication claim.
+
+## Hosted qualification admission before effects
+
+The three 84/41/18 canonical bundles select exact contribution
+`568d869bb9e6baac0a2f21f068fdac1cc5140373` from
+[Shared PR #208](https://github.com/dragginzgame/shared-tooling/pull/208), building
+on reviewed #206/#203. Existing roots and tool catalogs remain. Source VERSION
+is 0.14.0 with pending contribution notes; the broader pending Shared 0.15 hard
+cut remains outside this adoption.
+
+Timers selects the stage, checkout, catalog, evidence parent and log root;
+Shared owns admission before creating and physically anchoring the parent.
+The local adapter forwards the caller arguments without duplicating validation
+or creating directories. Controlled statuses, scenario names and archive paths
+remain unchanged. Owner fixtures cover missing/relative/aliased parents and
+rejected stage, dispatch, checkout, catalog and log inputs before effects.
+
+Canonical previews precede apply; the helper bundle uses a disposable Git root
+and verified before-images for copyback. Focused source and caller qualification
+is retained at `/tmp/ic-timers-boundary-cleanup.nn0vf58q/`. No tool setup, real
+workflow dispatch or hosted upload qualification is part of this adoption.
+
 ## Manifest ordering in the selected release source
 
 The current 84/41/18 canonical bundles select

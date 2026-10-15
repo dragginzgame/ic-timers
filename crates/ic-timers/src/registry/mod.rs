@@ -642,57 +642,8 @@ impl TimerRegistry {
         }
     }
 
-    #[cfg(test)]
-    pub(crate) fn len(&self) -> usize {
-        self.entries.len()
-    }
-
-    #[cfg(test)]
-    pub(crate) fn is_empty(&self) -> bool {
-        self.entries.is_empty()
-    }
-
     pub(crate) const fn epoch(&self) -> TimerEpoch {
         self.epoch
-    }
-
-    #[cfg(test)]
-    pub(crate) fn register_once(
-        &mut self,
-        identity: TimerIdentity,
-        lifetime: DeclarationLifetime,
-    ) -> Result<RegistrationClaim, RegisterError> {
-        self.register_once_with_callback(identity, lifetime, tests::ordinary_callback_fixture())
-    }
-
-    #[cfg(test)]
-    pub(crate) fn register_after_completion(
-        &mut self,
-        identity: TimerIdentity,
-        cadence: TimerCadence,
-        lifetime: DeclarationLifetime,
-    ) -> Result<RegistrationClaim, RegisterError> {
-        self.register_after_completion_with_callback(
-            identity,
-            cadence,
-            lifetime,
-            tests::ordinary_callback_fixture(),
-        )
-    }
-
-    #[cfg(test)]
-    pub(crate) fn register_watchdog(
-        &mut self,
-        identity: TimerIdentity,
-        cadence: TimerCadence,
-        lifetime: DeclarationLifetime,
-    ) -> Result<RegistrationClaim, RegisterError> {
-        self.register_watchdog_with_callback(
-            identity,
-            cadence,
-            lifetime,
-            tests::watchdog_callback_fixture(),
-        )
     }
 
     pub(crate) fn register_once_with_callback(

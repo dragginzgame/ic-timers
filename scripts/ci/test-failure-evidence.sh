@@ -56,6 +56,70 @@ for collector_status in 0 37; do
     cmp "$fixture/action-expected.log" "$fixture/action-runner/ic-timers-collection.log"
     cmp "$fixture/action-expected.log" "$fixture/action-$collector_status.log"
 done
+# Run the consolidated tool preparation body with substitute Make commands.
+# Neither installers nor the real developer tool store are touched.
+"$root/.tools/host/bin/yq" -o json '.' "$root/.github/actions/prepare-timers-tools/action.yml" > "$fixture/prepare-action.json"
+"$root/.tools/host/bin/jq" -e '
+    .runs.using == "composite" and (.runs.steps | length) == 1 and
+    .runs.steps[0].shell == "/bin/bash --noprofile --norc -e -o pipefail {0}"
+' "$fixture/prepare-action.json" > /dev/null
+# shellcheck disable=SC2016 # $job is a jq binding, not a shell variable.
+"$root/.tools/host/bin/yq" -o json '.' "$root/.github/workflows/ci.yml" |
+    "$root/.tools/host/bin/jq" -e '
+        [.jobs | to_entries[] | .key as $job | .value.steps[] |
+            select(.uses == "./.github/actions/prepare-timers-tools") | $job] |
+        sort == ["checks", "macos", "msrv"]' > /dev/null
+"$root/.tools/host/bin/jq" -er '.runs.steps[0].run' "$fixture/prepare-action.json" > "$fixture/prepare-action.sh"
+mkdir -p "$fixture/prepare-bin" "$fixture/prepare runner" "$fixture/prepare checkout"
+cat > "$fixture/prepare-bin/make" <<'MAKE'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> "$PREPARE_CALLS"
+printf '%s stdout\n' "$*"
+printf '%s stderr\n' "$*" >&2
+case "$*" in
+    install-tools) exit "$PREPARE_INSTALL_STATUS" ;;
+    tools-check) exit "$PREPARE_CHECK_STATUS" ;;
+    *) exit 99 ;;
+esac
+MAKE
+chmod +x "$fixture/prepare-bin/make"
+for failure in success install check; do
+    install_status=0 check_status=0 expected=0
+    case "$failure" in
+        install) install_status=37 expected=37 ;;
+        check) check_status=41 expected=41 ;;
+    esac
+    rm -f "$fixture/prepare runner/tools-install.log" "$fixture/prepare runner/tools-check.log"
+    : > "$fixture/prepare-calls"
+    printf 'existing PATH entry\n' > "$fixture/prepare-path"
+    prepare_status=0
+    PATH="$fixture/prepare-bin:$PATH" PREPARE_CALLS="$fixture/prepare-calls" \
+        PREPARE_INSTALL_STATUS="$install_status" PREPARE_CHECK_STATUS="$check_status" \
+        RUNNER_TEMP="$fixture/prepare runner" GITHUB_WORKSPACE="$fixture/prepare checkout" \
+        GITHUB_PATH="$fixture/prepare-path" \
+        "$BASH" --noprofile --norc -e -o pipefail "$fixture/prepare-action.sh" \
+        > "$fixture/prepare-$failure.log" 2>&1 || prepare_status=$?
+    [[ "$prepare_status" == "$expected" ]] || exit 1
+    printf 'install-tools stdout\ninstall-tools stderr\n' > "$fixture/expected-install.log"
+    cmp "$fixture/expected-install.log" "$fixture/prepare runner/tools-install.log"
+    printf 'install-tools\n' > "$fixture/expected-calls"
+    printf 'existing PATH entry\n' > "$fixture/expected-path"
+    if [[ "$failure" == install ]]; then
+        [[ ! -e "$fixture/prepare runner/tools-check.log" ]] || exit 1
+    else
+        printf 'tools-check\n' >> "$fixture/expected-calls"
+        printf 'tools-check stdout\ntools-check stderr\n' > "$fixture/expected-check.log"
+        cmp "$fixture/expected-check.log" "$fixture/prepare runner/tools-check.log"
+    fi
+    if [[ "$failure" == success ]]; then
+        printf '%s\n' "$fixture/prepare checkout/.tools/host/bin" \
+            "$fixture/prepare checkout/.tools/ic/bin" "$fixture/prepare checkout/.tools/rust/common/bin" \
+            >> "$fixture/expected-path"
+    fi
+    cmp "$fixture/expected-calls" "$fixture/prepare-calls"
+    cmp "$fixture/expected-path" "$fixture/prepare-path"
+done
 export GITHUB_WORKSPACE="$fixture/repo" RUNNER_TEMP="$fixture/runner"
 export GITHUB_SHA=fixture-event-sha GITHUB_JOB=fixture-job
 export RUNNER_OS=fixture-os RUNNER_ARCH=fixture-arch GITHUB_RUN_ID=123 GITHUB_RUN_ATTEMPT=2
@@ -651,6 +715,23 @@ GITHUB_ACTIONS=true GITHUB_EVENT_NAME=push \
     bash "$GITHUB_WORKSPACE/scripts/ci/qualify-failure-evidence.sh" early \
     > "$fixture/nonmanual-qualification.log" 2>&1 || status=$?
 test "$status" -eq 2
+# The thin adapter must delegate refusal before even creating its parent.
+qualifier="$GITHUB_WORKSPACE/scripts/ci/qualify-failure-evidence.sh"
+for refusal in stage manual foreign runner; do
+    refused_parent="$fixture/refused $refusal runner"
+    qualification_env=(GITHUB_ACTIONS=true GITHUB_EVENT_NAME=workflow_dispatch)
+    [[ "$refusal" == runner ]] || qualification_env+=(RUNNER_TEMP="$refused_parent")
+    refusal_stage=early
+    case "$refusal" in
+        stage) refusal_stage=unsupported ;;
+        manual) qualification_env[0]=GITHUB_ACTIONS=false ;;
+        foreign) qualification_env+=(GITHUB_WORKSPACE="$fixture") ;;
+    esac
+    status=0
+    env -u RUNNER_TEMP "${qualification_env[@]}" "$BASH" "$qualifier" "$refusal_stage" \
+        > "$fixture/refused-$refusal.log" 2>&1 || status=$?
+    [[ "$status" != 0 && ! -e "$refused_parent" ]] || exit 1
+done
 for stage in early late; do
     status=0
     GITHUB_ACTIONS=true GITHUB_EVENT_NAME=workflow_dispatch \

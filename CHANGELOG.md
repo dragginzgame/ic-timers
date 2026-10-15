@@ -2,6 +2,29 @@
 
 All notable changes to this project are recorded here.
 
+## [0.23.2]
+
+### Changed
+
+- Remove duplicate normalization from private erased callback results. Keep
+  public result normalization and registry terminal arbitration; the adversarial
+  registry test now receives the contradictory directive it intends to reject.
+
+### Development
+
+- Fill the capacity probe from one inventory observation and retain only its
+  extra-name counter, rather than unused registration handles and repeated
+  full-inventory copies.
+- Delegate controlled hosted-scenario artifact verification to Shared Tooling,
+  retaining Timers' source/run identity, qualified pins and collector coverage.
+- Share the complete CI tool preparation sequence across Linux, MSRV and macOS,
+  preserving failed-command statuses, captured logs and PATH publication order.
+- Keep registry-only fixture methods and dummy callback factories in the test
+  module rather than the production implementation.
+- Delegate hosted qualification admission and evidence-parent creation to Shared
+  Tooling. Keep Timers' path selection and require rejection before filesystem
+  effects, including for invalid stages, nonmanual runs and foreign checkouts.
+
 ## [0.23.1] - 2026-10-15
 
 ### Development

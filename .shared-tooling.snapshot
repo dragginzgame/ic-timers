@@ -2,7 +2,7 @@
 # version	0.14.0
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	1444f1efddfc32b0c921f2e8dcd2b2428e61aa26
+revision	db17f58ecea95486f5704b6cd4e3aa7ec172b4b1
 # entrypoint	DRAGGINZGAME.md
 # entrypoint	rules/changelogs.md
 # entrypoint	rules/cargo-dependencies.md
@@ -93,7 +93,7 @@ file	d70f32239de9ea0d2d2a3a0eebd2fa862746807cd797f512f95b2e46fc5faa67	x	.githook
 file	0f86b831af02072f89b74477c73e378fd451f81116def1271a0c0a4552e278bb	x	scripts/dev/install-git-hooks.sh
 file	32582e5d76c9e6988f4431a96554ba298e52ddb8a424945c7ea4b98815ec0889	-	rules/agent-maintenance.md
 file	e7647e72465b1caf790d8312fc276dda0efc2a8f7dacf1c0ff519ee5b7f1640a	x	scripts/ci/run-validation-targets.sh
-file	8bb272bfdfddcd3e12ba277c4fdc26ae4edfee3ec9a55bed86d1348990af232e	-	docs/verification-helpers.md
+file	2bf15ff841c4ac183b054f53c4fb1043d2f8a9c8e206135290496813c62e8e21	-	docs/verification-helpers.md
 file	1063002468575e2f821cfec71524bde06a64634bf30455d64d2d9fed872969d6	-	docs/tag-maintenance.md
 file	018e3d75e32dc03ffc943916040347e0465782467fd785aae27572c86cb74264	-	scripts/distribution/governance-files.txt
 file	6eb261f79ff2780422a75e018b091bb119f552a1d155504acacefb7e2e290ba0	x	scripts/dev/gh-ci.sh
@@ -134,8 +134,8 @@ file	9bf799d14fc0aa7c63bd09ab0e966e891fe3abaf4bf20896f40a1562b3d03deb	x	scripts/
 file	a9ed416a02f737d420723642935de94ffdd53cf92f75bb06ab4b0bc1c68430dc	-	tasks/cargo-tool-versions.md
 file	fa96fe86ee2ccf61002fbce2b09603298550fd239d28131cbdcf6449a8247923	-	rules/change-reporting.md
 file	7c726e4eb21710526204de6263a4c217d7f85ca73e22af453699999f1cc338a2	-	scripts/ci/fixture-lifecycle.sh
-file	e1a3e52026e20df3afc111a1da08bd1d11d7ccc8c09fb416640f2fbe2569f6e8	-	scripts/ci/failure_evidence.py
-file	5d0aa6f672901e0ed62295d559a77e54eab6c59d3882f8a07a5899c4837a7e46	x	scripts/ci/qualify-hosted-failure.sh
+file	186f5f6a5d24087925cd4db9876ea0e8b95a1572c4ce91daf6d0d160abb51a95	-	scripts/ci/failure_evidence.py
+file	b04addd6f0e042d7d1ab85bd7f161807401b1fe6ff443f9fb1461d0bb5922bc8	x	scripts/ci/qualify-hosted-failure.sh
 file	e947eb1cd88985cde31b28a970301fdbca8e5e403856e895457f651405994384	-	scripts/ci/warn-release-prose.sh
 file	d110703ca082c2f1d2e0f786c8889d9e2755dd0c7cca513a823c53c20c86a24e	-	scripts/ci/test-release-prose-warning.sh
 file	e175c47969e75bfbbe7c90b731da68cc40d47f79cc37026a4e6b2260f369bb8f	-	scripts/ci/collect-release-changes.sh

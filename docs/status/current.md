@@ -8,7 +8,46 @@ This handoff links [release evidence](../releasing.md),
 [Shared adoption](../shared-tooling.md), [safety](../../SAFETY.md) and
 [the archive](archive-2026-10-10.md).
 
-## Prepared repository-only 0.23.1 reductions
+## Prepared 0.23.2 boundary and fixture cleanup
+
+Released base is `2d54724` (0.23.1). Private erased results preserve raw inputs;
+public policy-specific constructors still normalize invariant failures, and the
+registry still stops them before schedule resolution. The negative registry test
+now proves its contradictory directive reaches that boundary. Five test-only
+registry helpers and their dummy factories live entirely in the test module.
+
+All three 84/41/18 exports select Shared [PR #209](https://github.com/dragginzgame/shared-tooling/pull/209)
+`db17f58`, stacked on #208 and retaining the reviewed #206/#203 APIs. Shared admits hosted
+qualification before creating its evidence parent; Timers only selects paths
+and delegates. Broader pending Shared 0.15 adoption remains separate.
+
+The capacity probe reads inventory once and retains only a name counter for its
+inactive extras. Registration-handle drops leave retained declarations owned by
+the registry. Shared's independent verifier now owns controlled scenario statuses,
+bytes, modes and rejected-download/log checks. Timers retains source/run identity,
+qualified pins and collector integration. One local composite action owns the
+three identical CI tool preparation bodies, with failure/log/PATH ordering covered
+by substitute Make commands. No production timer behavior or public API changes.
+
+The 155 native library tests, strict library Clippy and Rust 1.88 Wasm compilation
+pass using locked/offline inputs. Owner admission/alias/refusal fixtures pass on
+Linux Bash 5 and genuine Bash 3.2. Timers evidence/completion fixtures pass on
+both shells; snapshot corruption and integrity checks pass. Canonical previews are
+retained at `/tmp/ic-timers-boundary-cleanup.nn0vf58q/`. No setup, hosted dispatch,
+live PocketIC, Cargo version mutation or release execution is included.
+
+The follow-up passes Shared's three Python tests, Timers' two downloaded-evidence
+tests, current/genuine Bash 3.2 evidence/action fixtures, snapshot corruption,
+tag/publication fixtures, Actionlint and strict Rust 1.99 runtime-probe Clippy.
+Rust 1.88 native/probe test-target and Wasm compile checks pass locked/offline.
+ShellCheck adds no diagnostics to the pre-existing SC2155 warning. Existing
+repeated-fill/64-entry PocketIC assertions remain for the owner's live gate;
+no live PocketIC or optimized Wasm measurement ran. Evidence and canonical
+previews are at `/tmp/ic-timers-probe-ci-cleanup.3474kcag/`. Incoming Cargo inputs,
+normal index content and refs are preserved; only the isolated Shared PR branch
+was committed/pushed.
+
+## Delivered repository-only 0.23.1 reductions
 
 Released base is `b498bb7` (0.23.0). Four CI failure archive/upload pairs now
 call one Timers-owned composite action. Its archive paths, artifact identity,
