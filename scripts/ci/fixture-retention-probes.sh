@@ -67,6 +67,9 @@ fixture_probe_exit() {
     fixture_probe_prefix "$source" "$directory/probe.sh" \
         "${FIXTURE_PROBE_ROOT_VARIABLE:-ROOT}" "${FIXTURE_PROBE_DIRECTORY_VARIABLE:-fixture}" \
         "$injection" || return
+    # A repeated name must prove this child reached its EXIT boundary. Keep
+    # earlier retained payloads, but never accept their receipt for a new run.
+    rm -f -- "$exit_path" || return
     env -u fixture -u TEST_ROOT -u FIXTURE -u FIXTURE_ROOT -u scratch \
         RETENTION_SOURCE_ROOT="$source_root" RETENTION_EXIT_PATH="$exit_path" \
         TMPDIR="$temporary_root" "$BASH" "$directory/probe.sh" "$@" \
@@ -86,7 +89,7 @@ fixture_probe_exit() {
 
 fixture_probe_exits() {
     local failure
-    for failure in nounset nounset-function command nonzero premature completed failed-completion; do
+    for failure in nounset nounset-function command nonzero premature completed failed-completion cleanup-failure; do
         fixture_probe_exit "$1" "$2" "$3" "$4" "$failure" "${@:5}" || return
     done
 }

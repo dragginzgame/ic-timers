@@ -2,6 +2,42 @@
 
 All notable changes to this project are recorded here.
 
+## [0.25.2]
+
+### Development
+
+- Keep CI ordering and failure propagation tests in one fixture; retain separate
+  repository-only admission and provider-boundary checks.
+- Exercise workspace-version read failures through actual version preparation
+  instead of repeating the shared reader's malformed-input matrix.
+- Adopt Shared's reader-owner tests and narrower Make helper export from
+  [Shared #241 — Keep exhaustive qualification at Shared owners](https://github.com/dragginzgame/shared-tooling/pull/241).
+  Retain parallel-dispatch support and include automatic cleanup-refusal probes.
+- Keep exhaustive logger qualification with Shared; retain Timers' actual Make
+  routing, failure status, raw evidence, summaries and nested-checkout checks.
+- Inline release-impact admission at the version-preparation boundary and remove
+  its single-caller script. Verify rejected classifications before any mutation.
+- Reuse Shared's best-effort fixture log replay while preserving saved failure
+  status and scratch retention in release-index and committed-release checks.
+- Move generic workflow-inventory regressions to Shared's dependency checker.
+  Keep a local caller smoke check and Timers' orchestration/provider boundaries
+  ([Shared #236](https://github.com/dragginzgame/shared-tooling/pull/236)).
+- Adopt Shared 0.15.8 and its per-target Make admission probe. Keep Timers'
+  actual targets, routing and no-effect checks while leaving exhaustive flag
+  permutations with Shared.
+- Send only the measured memory-calibration intervals from the size probe;
+  derive overhead once in the native report. Update the unpublished producer
+  and decoder together without changing the sampling boundaries.
+- Retire generic hook tree-observation and formatter-rollback cases already
+  qualified by Shared. Keep actual Timers Make, workspace, lockfile, diagnostics
+  and nested partial-staging integration checks.
+- Narrow measurement tests to role isolation and forwarding through IC Metrics;
+  retain empty/zero, wide samples and memory pairing without duplicating the
+  dependency's arithmetic qualification.
+- Remove the clean-source forwarding script. Make retains the existing-commit
+  guard and calls Shared's source checker directly; publication fixtures exercise
+  the real target, including failed Git observations and unborn checkouts.
+
 ## [0.25.1] - 2026-10-16
 
 ### Development

@@ -65,6 +65,10 @@ runs:
         fi
         temp_root="$EVIDENCE_TEMP_ROOT"
         repository_root="$EVIDENCE_REPOSITORY_ROOT"
+        [[ -n "$temp_root" && -n "$repository_root" ]] || {
+          echo 'temp-root and repository-root are required when collecting evidence' >&2
+          exit 2
+        }
         [[ "$temp_root" == /* ]] || temp_root="$PWD/$temp_root"
         [[ "$repository_root" == /* ]] || repository_root="$PWD/$repository_root"
         [[ -d "$temp_root" && -d "$repository_root" ]] || exit 1

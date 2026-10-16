@@ -13,10 +13,7 @@ fixture_complete=false
 trap 'fixture_finish "$?" "$temporary_root" "Failed version-preparation fixture retained"' EXIT
 git init -q "${temporary_root}"
 mkdir -p "${temporary_root}"/{scripts/release,scripts/ci,docs/status,docs/changelog,crates/ic-timers/src,testing/probe/src}
-for script in bump-version \
-    check-bump-impact; do
-    cp "${repository_root}/scripts/release/${script}.sh" "${temporary_root}/scripts/release/"
-done
+cp "${repository_root}/scripts/release/bump-version.sh" "${temporary_root}/scripts/release/"
 cp "${repository_root}/scripts/ci/next-release-version.sh" \
     "${repository_root}/scripts/ci/validate-release-inputs.pl" \
     "${repository_root}/scripts/ci/warn-release-prose.sh" \
@@ -36,11 +33,11 @@ cp "${repository_root}/scripts/ci/read-cargo-workspace-version.sh" \
 # Classification is an isolated fixture input; preparation must not run tests.
 cat > "${temporary_root}/scripts/release/classify-release-impact.sh" <<'EOF'
 #!/usr/bin/env bash
-if [[ "${FIXTURE_RELEASE_IMPACT:-crate}" == error ]]; then
+if [[ "${FIXTURE_RELEASE_IMPACT-crate}" == error ]]; then
     echo 'fixture classification failure' >&2
     exit 1
 fi
-echo "${FIXTURE_RELEASE_IMPACT:-crate}"
+echo "${FIXTURE_RELEASE_IMPACT-crate}"
 EOF
 cat > "${temporary_root}/Cargo.toml" <<'EOF'
 [workspace]
@@ -150,30 +147,23 @@ for invocation in no-arguments missing-version extra-argument extra-version misp
     fi
     assert_metadata_unchanged original-files
 done
-# Version ownership is table-scoped and rejects ambiguity before mutation.
-cp Cargo.toml original-manifest.toml
-for invalid in missing-table missing-version duplicate-table duplicate-version leading-zero; do
-    cp original-manifest.toml Cargo.toml
-    case "${invalid}" in
-        missing-table) perl -pi -e 's/\[workspace\.package\]/[workspace.metadata]/' Cargo.toml ;;
-        missing-version)
-            perl -ni -e '$package ||= /^\[workspace\.package\]/;
-                print unless $package && /^\s*version =/' Cargo.toml ;;
-        duplicate-table) printf '%s\n' '[workspace.package]' 'version = "0.1.0"' >> Cargo.toml ;;
-        duplicate-version) printf '%s\n' 'version = "0.1.0"' >> Cargo.toml ;;
-        leading-zero)
-            perl -pi -e '$package ||= /^\[workspace\.package\]/;
-                s/"0\.1\.0"/"00.1.0"/ if $package' Cargo.toml ;;
-    esac
-    cp Cargo.toml rejected-manifest.toml
-    if bash scripts/ci/read-cargo-workspace-version.sh --stable Cargo.toml >/dev/null 2>&1; then
-        echo "error: workspace version read accepted ${invalid}" >&2
-        exit 1
-    fi
-    cmp rejected-manifest.toml Cargo.toml
+# Shared owns reader permutations; keep rejection at the actual bump boundary.
+cp -p Cargo.toml valid-manifest.toml
+perl -pi -e 's/\[workspace\.package\]/[workspace.metadata]/' Cargo.toml
+capture_metadata rejected-version-files
+reader_status=0
+bash scripts/ci/read-cargo-workspace-version.sh --stable Cargo.toml > reader-rejection.log 2>&1 || reader_status=$?
+[[ "$reader_status" != 0 ]] || exit 1
+for operation in check prepare; do
+    arguments=(patch)
+    if [[ "$operation" == check ]]; then arguments=(--check patch); fi
+    status=0
+    bash scripts/release/bump-version.sh "${arguments[@]}" > version-rejection.log 2>&1 || status=$?
+    [[ "$status" == "$reader_status" ]] || exit 1
+    assert_metadata_unchanged rejected-version-files
 done
-cp original-manifest.toml Cargo.toml
-rm original-manifest.toml rejected-manifest.toml
+cp -p valid-manifest.toml Cargo.toml
+rm valid-manifest.toml
 
 # Tag-query errors must stop both preflight and the bump before any mutation.
 mkdir -p bin
@@ -252,19 +242,37 @@ assert_metadata_unchanged original-files
 rm Cargo.lock
 mv owned-lock Cargo.lock
 
-# Classification must reach the bump boundary, including failure and advisory.
-for impact in none unexpected error; do
-    if FIXTURE_RELEASE_IMPACT="${impact}" bash scripts/release/bump-version.sh --check patch >/dev/null 2>&1; then
-        echo "error: preflight accepted ${impact} release impact" >&2
-        exit 1
-    fi
-    assert_metadata_unchanged original-files
+# Qualify policy at its actual preparation boundary, before metadata mutation.
+for operation in check prepare; do
+    arguments=(patch)
+    if [[ "$operation" == check ]]; then arguments=(--check patch); fi
+    for impact in none unexpected '' error; do
+        case "$impact" in
+            none) expected=1; diagnostic='no changes exist since v0.1.0' ;;
+            unexpected) expected=2; diagnostic='unknown release-impact classification: unexpected' ;;
+            '') expected=2; diagnostic='unknown release-impact classification: <empty>' ;;
+            error) expected=1; diagnostic='fixture classification failure' ;;
+        esac
+        status=0
+        output="$(FIXTURE_RELEASE_IMPACT="$impact" bash scripts/release/bump-version.sh \
+            "${arguments[@]}" 2>&1)" || status=$?
+        if [[ "$status" != "$expected" || "$output" != *"$diagnostic"* ]]; then
+            printf 'error: %s mishandled release impact <%s> (exit %s): %s\n' \
+                "$operation" "$impact" "$status" "$output" >&2
+            exit 1
+        fi
+        assert_metadata_unchanged original-files
+    done
 done
 output="$(FIXTURE_RELEASE_IMPACT=repository bash scripts/release/bump-version.sh --check patch 2>&1)"
-if [[ "${output}" != *'continuing because the maintainer invoked an explicit version bump'* ]]; then
-    echo 'error: repository-only preflight omitted its advisory' >&2
-    exit 1
-fi
+for advisory in 'changes since v0.1.0 are repository-only' \
+    'continuing because the maintainer invoked an explicit version bump'; do
+    if [[ "$output" != *"$advisory"* ]]; then
+        echo 'error: repository-only preflight omitted its advisory' >&2
+        exit 1
+    fi
+done
+assert_metadata_unchanged original-files
 
 # Standard delivery ordering and Make execution admission belong to the
 # shared release runner and its adopted fixtures, not version preparation.

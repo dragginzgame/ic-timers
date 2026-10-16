@@ -98,7 +98,7 @@ Shared [#168](https://github.com/dragginzgame/shared-tooling/issues/168) owns th
 separate proposed automatic cross-caller selection check; this local repair
 does not implement that check or qualify Binaryen 133.
 
-Publication's [clean-source adapter](../../scripts/ci/ensure-clean.sh) retains its
+Publication's [clean-source adapter](https://github.com/dragginzgame/ic-timers/blob/32ea72e253fdf2adbeda76b320fdc70be885d1ed/scripts/ci/ensure-clean.sh) retains its
 existing-commit guard and delegates dirty/staged/untracked inspection to the
 adopted Shared `check-release-source.sh` with no allowed metadata exceptions.
 Its maintained fixture covers failed Git observations, unchanged index/ref

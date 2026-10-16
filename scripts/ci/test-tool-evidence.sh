@@ -224,6 +224,21 @@ for scenario in complete missing-archive missing-log missing-both archive-link l
         "$output" > "$prepared/actual-paths"
     cmp "$prepared/expected-paths" "$prepared/actual-paths"
 done
+# Optional action inputs serve prepared uploads only. Ordinary collection still
+# requires both roots and must refuse before sourcing helpers or creating output.
+for missing in temp repository both; do
+    collection_temp="$prepared" collection_repository="$prepared"
+    [[ "$missing" == repository ]] || collection_temp=''
+    [[ "$missing" == temp ]] || collection_repository=''
+    output="$prepared/missing-$missing.output"; : > "$output"
+    status=0
+    EVIDENCE_PREPARED_ARCHIVE='' EVIDENCE_COLLECTION_LOG='' \
+        EVIDENCE_TEMP_ROOT="$collection_temp" EVIDENCE_REPOSITORY_ROOT="$collection_repository" \
+        EVIDENCE_ACTION_ROOT="$prepared/absent" GITHUB_OUTPUT="$output" \
+        "$BASH" --noprofile --norc -e -o pipefail "$fixture/collector.sh" \
+        > "$prepared/missing-$missing.log" 2>&1 || status=$?
+    [[ "$status" == 2 && ! -s "$output" ]] || exit 1
+done
 # Always upload available prepared diagnostics before enforcing completeness;
 # native collection retains its existing cancellation boundary.
 # shellcheck disable=SC2016 # Compare literal GitHub expressions.

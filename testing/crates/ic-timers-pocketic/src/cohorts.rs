@@ -99,12 +99,6 @@ fn run_cohort(cohort: &str) {
             .update_candid(canister_id, "memory_sampling_overhead", ())
             .expect("probe update succeeds");
         assert!(measurement.sampled_bracket_instructions >= measurement.empty_bracket_instructions);
-        assert_eq!(
-            measurement.overhead_instructions,
-            measurement
-                .sampled_bracket_instructions
-                .saturating_sub(measurement.empty_bracket_instructions)
-        );
         Some(measurement)
     } else {
         None
@@ -114,7 +108,9 @@ fn run_cohort(cohort: &str) {
             (
                 measurement.empty_bracket_instructions,
                 measurement.sampled_bracket_instructions,
-                measurement.overhead_instructions,
+                measurement
+                    .sampled_bracket_instructions
+                    .saturating_sub(measurement.empty_bracket_instructions),
             )
         });
 

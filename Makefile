@@ -219,7 +219,10 @@ update-dev:
 	bash scripts/dev/update-dev.sh "$(MSRV)"
 
 ensure-clean:
-	@bash scripts/ci/ensure-clean.sh
+	@if ! git rev-parse --verify HEAD >/dev/null 2>&1; then \
+		echo "error: repository has no commit yet" >&2; exit 1; \
+	fi
+	@bash scripts/ci/check-release-source.sh
 
 patch:
 	bash scripts/release/bump-version.sh patch

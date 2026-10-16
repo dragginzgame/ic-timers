@@ -12,11 +12,12 @@ export PATH="${repository_root}/.tools/host/bin:${PATH}"
 export YQ="${repository_root}/.tools/host/bin/yq"
 makefile="${repository_root}/Makefile"
 bump_script="${repository_root}/scripts/release/bump-version.sh"
-impact_checker="${repository_root}/scripts/release/check-bump-impact.sh"
 export GITHUB_ACTIONS=false GITHUB_STEP_SUMMARY=''
 
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$repository_root/scripts/ci/fixture-lifecycle.sh"
+# shellcheck source=scripts/ci/make-adapter-probes.sh
+source "$repository_root/scripts/ci/make-adapter-probes.sh"
 temporary_root="$(fixture_create "${TMPDIR:-/tmp}/timer-release-gate.XXXXXX")"
 # Bash 3.2 can report zero on nounset; cleanup also requires completion.
 fixture_complete=false
@@ -37,32 +38,6 @@ if invalid_output="$(bash "${bump_script}" 00.4.0 2>&1)"; then
 fi
 if [[ "${invalid_output}" != Usage:* ]]; then
     echo "error: version bump did not reject invalid SemVer before release work" >&2
-    exit 1
-fi
-
-if ! bash "${impact_checker}" crate 0.6.0 >/dev/null 2>&1; then
-    echo "error: crate-impacting release subject was rejected" >&2
-    exit 1
-fi
-if ! repository_output="$(bash "${impact_checker}" repository 0.6.0 2>&1)"; then
-    echo "error: repository-only release subject was rejected" >&2
-    exit 1
-fi
-repository_advisory="continuing because the maintainer invoked an explicit version bump"
-if [[ "${repository_output}" != *"${repository_advisory}"* ]]; then
-    echo "error: repository-only release subject did not emit its advisory" >&2
-    exit 1
-fi
-if none_output="$(bash "${impact_checker}" none 0.6.0 2>&1)"; then
-    echo "error: empty release subject was accepted" >&2
-    exit 1
-fi
-if [[ "${none_output}" != *"no changes exist since v0.6.0"* ]]; then
-    echo "error: empty release subject did not explain its rejection" >&2
-    exit 1
-fi
-if bash "${impact_checker}" unexpected 0.6.0 >/dev/null 2>&1; then
-    echo "error: unknown release-impact classification was accepted" >&2
     exit 1
 fi
 
@@ -282,32 +257,15 @@ if make --no-print-directory release-patch release-minor > conflicting-goals-out
 fi
 test ! -e standard-entrypoint-events
 
-# Reject at parse time even when outer Make would ignore a failed recipe.
-# The selected admission must also ignore ambient runtime snapshot routing.
-for target in release-patch release-minor release-major release-resume; do
-    for mode in --ignore-errors --dry-run --touch --question; do
-        for replacement in preserved cleared replaced both; do
-            flags=(--no-print-directory)
-            case "$replacement" in
-                cleared) flags=(MAKEFLAGS=) ;;
-                replaced) flags=(MAKEFLAGS=--no-print-directory) ;;
-                both) flags=(MAKEFLAGS= MFLAGS=) ;;
-            esac
-            status=0
-            env SHARED_TOOLING_ROOT="$external_root" make --no-print-directory \
-                "$mode" "$target" "${flags[@]}" VERSION=0.1.1 "SHARED_TOOLING_ROOT=$external_root" \
-                > rejected-make-mode-output 2>&1 || status=$?
-            if [[ "$status" != 2 ]]; then
-                cat rejected-make-mode-output >&2
-                echo "error: $target admitted $mode with $replacement flags" >&2
-                exit 1
-            fi
-            test ! -e standard-entrypoint-events
-            test ! -e external-runner-events
-            test ! -e external-admission-events
-        done
-    done
-done
+# Shared owns flag aliases and replacements; our real release targets must
+# refuse each unsafe behavior before either selected or external runner effects.
+mkdir "$temporary_root/release-admission"
+SHARED_TOOLING_ROOT="$external_root" VERSION=0.1.1 \
+    make_probe_target_admission "$(command -v make)" "$fixture_root/Makefile" \
+        "$temporary_root/release-admission" "$fixture_root/standard-entrypoint-events" \
+        release-patch release-minor release-major release-resume || exit 1
+test ! -e external-runner-events
+test ! -e external-admission-events
 
 cat > overrides.mk <<'EOF'
 # Keep this orchestration fixture independent of prepared formatter tools.
@@ -375,136 +333,30 @@ new_failure_logs=("$failure_root"/*-0-fetch.log)
 grep -Fq 'failed fetch' "$failure_root/latest.log"
 cmp retained-fetch-log "${failure_logs[0]}"
 
-# The canonical logger's optional ripgrep branch must also work on stock hosts.
-mkdir -p stock-bin
-# Make can execute simple recipes directly, so printf/echo need external binaries.
-# type -P resolves executables even when Bash supplies a builtin of the same name.
-for tool in bash sh make git cp mktemp rm mkdir date tee sed grep awk tail dirname echo printf cat; do
-    ln -s "$(type -P "$tool")" "stock-bin/$tool"
-done
-if PATH="$fixture_root/stock-bin" "${fixture_make[@]}" release-verify \
-    FAIL_TARGET=fetch > stock-host-output 2>&1; then exit 1; fi
-grep -Fq 'failed fetch' "$failure_root/latest.log"
-grep -Fq 'Full failure log retained at:' stock-host-output
-
-# Qualify the actual consumer logger with both its optional search backends.
+# Shared qualifies diagnostic families, search backends and Make-mode rejection.
+# Keep one real Timers adapter failure: routing, status and selected evidence.
 cat >> overrides.mk <<'EOF'
-logging-pass:
-	@echo 'test error::tests::passing ... ok'
-	@echo 'test error::tests::ignored ... ignored'
 logging-fail:
-	@echo 'test error::tests::context ... ok'
-	@echo 'error[E0308]: typed-marker'
-	@echo 'error:no-space-marker'
-	@echo 'error:'
-	@echo 'test error::tests::actual ... FAILED'
+	@echo 'error: local-adapter-marker'
 	@exit 7
 logging-parent:
 	+bash child/scripts/ci/run-validation-targets.sh child-gate
-logging-mode-probe:
-	@touch unexpected-logger-dispatch
 EOF
-# Reject non-executing/failure-masking modes before dispatch.
-# GNU Make 3.81 on macOS ignores GNUMAKEFLAGS; 4.0 introduced it.
-mode_variables=(MAKEFLAGS)
-make_version="$(make --version)"
-case "$make_version" in 'GNU Make 3.'*) ;; *) mode_variables+=(GNUMAKEFLAGS) ;; esac
-for variable in "${mode_variables[@]}"; do
-    for flags in i n q t v --ignore-errors --dry-run --question --touch --version; do
-        mode_output="${variable}-${flags}.log"
-        if env "$variable=$flags" bash scripts/ci/run-validation-targets.sh logging-mode-probe \
-            > "${mode_output}" 2>&1; then
-            cat "${mode_output}" >&2
-            echo "error: logger accepted $variable=$flags" >&2
-            exit 1
-        fi
-        grep -Fq 'requires recipe execution and failure propagation' "${mode_output}"
-        test ! -e unexpected-logger-dispatch
-    done
+status=0
+GITHUB_STEP_SUMMARY="$fixture_root/adapter-summary.md" \
+    "${fixture_make[@]}" release-verify RELEASE_TARGETS=logging-fail \
+    > adapter-failure-output 2>&1 || status=$?
+# Make maps the leaf's exit 7 to 2; the adapter must propagate that failure.
+[[ "$status" == 2 ]] || exit 1
+for output in adapter-failure-output "$failure_root/latest-errors.log" adapter-summary.md; do
+    grep -Fxq '[ERR:logging-fail] error: local-adapter-marker' "$output"
 done
-for backend in prepared stock; do
-    logger_path="$PATH"
-    if [[ "$backend" == stock ]]; then logger_path="$fixture_root/stock-bin"; fi
-    PATH="$logger_path" bash scripts/ci/run-validation-targets.sh logging-pass \
-        > "$backend-passing-output" 2>&1
-    grep -Fxq 'test error::tests::passing ... ok' "$backend-passing-output"
-    grep -Fxq 'test error::tests::ignored ... ignored' "$backend-passing-output"
-    if grep -Fq '[ERR:' "$backend-passing-output"; then exit 1; fi
-    if PATH="$logger_path" "${fixture_make[@]}" release-verify \
-        RELEASE_TARGETS=logging-fail > "$backend-failing-output" 2>&1; then exit 1; fi
-    for log in "$backend-failing-output" "$failure_root/latest-errors.log"; do
-        grep -Fq '[logging-fail] test error::tests::context ... ok' "$log"
-        for diagnostic in 'error[E0308]: typed-marker' 'error:no-space-marker' \
-            'error:' 'test error::tests::actual ... FAILED'; do
-            grep -Fxq "[ERR:logging-fail] $diagnostic" "$log"
-        done
-        if grep -Fq '[ERR:logging-fail] test error::tests::context ... ok' "$log"; then exit 1; fi
-    done
-    grep -Fxq 'test error::tests::context ... ok' "$failure_root/latest.log"
-    grep -Fxq 'error:no-space-marker' "$failure_root/latest.log"
-    if grep -Fq '[ERR:' "$failure_root/latest.log"; then exit 1; fi
+for output in "$failure_root/latest.log" "$failure_root/latest-combined.log"; do
+    grep -Fxq 'error: local-adapter-marker' "$output"
+    if grep -Fq '[ERR:' "$output"; then exit 1; fi
 done
-
-# Diagnostics are separated beyond the retained context window so neighboring
-# compiler errors cannot accidentally preserve a missing fatal/LLVM/file family.
-# Exercise the real release adapter, its raw log and its GitHub summary together.
-cat > diagnostic-families <<'EOF'
-error: ordinary-error
-error[E0308]: compiler-error
-rustc-LLVM ERROR: llvm-error
-test result: FAILED. test-result
-test error::tests::actual ... FAILED
-fatal: early-fatal
-FAILED: command-failure
-Target failed: target-failure
-No such file or directory: missing-input
-❌ failed-check
-🚨 failed-check
-make[17]: *** nested-failure
-event[unit].*+?: product-failure
-EOF
-cat > diagnostic-context <<'EOF'
-test error::tests::passing ... ok
-test error::tests::ignored ... ignored
-ordinary event[unit].*+?: not-a-prefix
-eventuZZ: not-a-literal-match
-EOF
-cat >> overrides.mk <<'EOF'
-logging-diagnostic-families:
-	@cat diagnostic-context
-	@while IFS= read -r line; do printf '%s\n' "$$line"; \
-		i=0; while [ $$i -lt 9 ]; do echo ordinary-spacing; i=$$((i + 1)); done; \
-		done < diagnostic-families
-	@i=0; while [ $$i -lt 200 ]; do echo ordinary-tail; i=$$((i + 1)); done
-	@exit 7
-EOF
-command -v rg >/dev/null
-for backend in prepared stock; do
-    logger_path="$PATH"
-    [[ "$backend" != stock ]] || logger_path="$fixture_root/stock-bin"
-    status=0
-    PATH="$logger_path" VALIDATION_FAILURE_EVENT_PREFIX='event[unit].*+?:' \
-        GITHUB_STEP_SUMMARY="$fixture_root/$backend-diagnostic-summary.md" \
-        "${fixture_make[@]}" release-verify RELEASE_TARGETS=logging-diagnostic-families \
-        > "$backend-diagnostic-output" 2>&1 || status=$?
-    [[ "$status" == 2 ]] || exit 1
-    while IFS= read -r diagnostic; do
-        for output in "$backend-diagnostic-output" "$failure_root/latest-errors.log" \
-            "$backend-diagnostic-summary.md"; do
-            grep -Fxq "[ERR:logging-diagnostic-families] $diagnostic" "$output"
-        done
-        grep -Fxq "$diagnostic" "$failure_root/latest.log"
-        grep -Fxq "$diagnostic" "$failure_root/latest-combined.log"
-    done < diagnostic-families
-    while IFS= read -r context; do
-        for output in "$backend-diagnostic-output" "$failure_root/latest-errors.log" \
-            "$backend-diagnostic-summary.md"; do
-            grep -Fxq "[logging-diagnostic-families] $context" "$output"
-            if grep -Fxq "[ERR:logging-diagnostic-families] $context" "$output"; then exit 1; fi
-        done
-    done < diagnostic-context
-    if grep -Fq '[ERR:' "$failure_root/latest.log" "$failure_root/latest-combined.log"; then exit 1; fi
-done
+grep -Fq 'Error 7' "$failure_root/latest.log"
+grep -Fq 'Full failure log retained at:' adapter-failure-output
 
 # A child logger must select its own checkout while retaining release identity.
 mkdir -p child/scripts/ci

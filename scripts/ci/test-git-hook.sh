@@ -7,6 +7,8 @@ repository_root="$(git rev-parse --show-toplevel)"
 source "${repository_root}/ci/tool-versions.env"
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$repository_root/scripts/ci/fixture-lifecycle.sh"
+# shellcheck source=scripts/ci/make-adapter-probes.sh
+source "$repository_root/scripts/ci/make-adapter-probes.sh"
 temporary_root="$(fixture_create "${TMPDIR:-/tmp}/timer-hook-test.XXXXXX")"
 # Bash 3.2 can report zero on nounset; cleanup also requires completion.
 fixture_complete=false
@@ -100,86 +102,22 @@ for variable in "${mode_variables[@]}"; do
     done
 done
 
-# The actual consumer Makefile must refuse before its formatter prerequisites,
-# even if Make would ignore a recipe failure or skip execution.
-for target in fmt fmt-check; do
-    for mode in --ignore-errors --dry-run --touch --question; do
-        for replacement in preserved cleared replaced both; do
-            flags=(--no-print-directory)
-            case "$replacement" in
-                cleared) flags=(MAKEFLAGS=) ;;
-                replaced) flags=(MAKEFLAGS=--no-print-directory) ;;
-                both) flags=(MAKEFLAGS= MFLAGS=) ;;
-            esac
-            status=0
-            SHARED_TOOLING_ROOT="${temporary_root}/unselected-snapshot" \
-                make --no-print-directory "$mode" "$target" "${flags[@]}" \
-                "SHARED_TOOLING_ROOT=${temporary_root}/unselected-snapshot" \
-                > "${temporary_root}/make-${target}-${mode}-${replacement}.log" 2>&1 || status=$?
-            if [[ "$status" != 2 ]]; then
-                cat "${temporary_root}/make-${target}-${mode}-${replacement}.log" >&2
-                echo "error: consumer formatting admitted $mode with $replacement flags" >&2
-                exit 1
-            fi
-            assert_unchanged
-        done
-    done
-done
+# Shared owns the flag matrix; qualify our actual formatting targets and refusal
+# before formatter dispatch, even when ambient routing names another snapshot.
+mkdir "$temporary_root/format-admission"
+export TIMERS_FORMAT_ADMISSION_EVENTS="$temporary_root/format-admission/events"
+cat > "$temporary_root/format-admission.mk" <<'MAKE'
+include Makefile
+format-tools-check:
+	@printf 'format-tools-check\n' >> "$$TIMERS_FORMAT_ADMISSION_EVENTS"
+MAKE
+SHARED_TOOLING_ROOT="$temporary_root/unselected-snapshot" \
+    make_probe_target_admission "$(command -v make)" "$temporary_root/format-admission.mk" \
+        "$temporary_root/format-admission" "$TIMERS_FORMAT_ADMISSION_EVENTS" fmt fmt-check || exit 1
+assert_unchanged
 
-# Failed initial, post-snapshot and post-format tree reads must stop before
-# copying or staging, even when Git prints the expected tree before failing.
-mkdir "$temporary_root/tree-failure-bin"
-cat > "$temporary_root/tree-failure-bin/git" <<'GIT'
-#!/usr/bin/env bash
-set -euo pipefail
-printf '%s\n' "$*" >> "$HOOK_TREE_STATE/commands"
-if [[ "$*" == write-tree ]]; then
-    count=0
-    [[ ! -f "$HOOK_TREE_STATE/count" ]] || read -r count < "$HOOK_TREE_STATE/count"
-    count=$((count + 1))
-    printf '%s\n' "$count" > "$HOOK_TREE_STATE/count"
-    tree="$("$HOOK_TREE_GIT" "$@")" || exit $?
-    if [[ "$count" == "$HOOK_TREE_OBSERVATION" ]]; then
-        [[ "$HOOK_TREE_OUTPUT" != matching ]] || printf '%s\n' "$tree"
-        echo 'injected write-tree observation failure' >&2
-        exit 23
-    fi
-    printf '%s\n' "$tree"
-    exit 0
-fi
-exec "$HOOK_TREE_GIT" "$@"
-GIT
-chmod +x "$temporary_root/tree-failure-bin/git"
-real_git="$(type -P git)"
-for observation in 1 2 3; do
-    for output in empty matching; do
-        state="$temporary_root/tree-failure-$observation-$output"
-        mkdir "$state"
-        capture_before_hook
-        # write-tree may populate the TREE cache without changing staged data.
-        git ls-files --stage -z > "$state/index-before"
-        status=0
-        CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 \
-            PATH="$temporary_root/tree-failure-bin:$PATH" \
-            HOOK_TREE_GIT="$real_git" HOOK_TREE_STATE="$state" \
-            HOOK_TREE_OBSERVATION="$observation" HOOK_TREE_OUTPUT="$output" \
-            "$BASH" "$repository_root/.githooks/pre-commit" \
-            > "$state/output.log" 2>&1 || status=$?
-        [[ "$status" == 23 && "$(cat "$state/count")" == "$observation" ]] || exit 1
-        grep -Fq 'injected write-tree observation failure' "$state/output.log"
-        [[ "$(tail -n 1 "$state/commands")" == write-tree ]] || exit 1
-        git ls-files --stage -z > "$state/index-after"
-        cmp "$state/index-after" "$state/index-before"
-        assert_unchanged
-        if [[ "$observation" == 3 ]]; then
-            grep -Fxq 'Formatting... ok' "$state/output.log"
-        elif grep -Fq 'Formatting...' "$state/output.log"; then
-            echo 'error: formatting ran after an earlier tree observation failed' >&2
-            exit 1
-        fi
-    done
-done
-
+# Shared qualifies generic tree-read failures and snapshot formatter rollback.
+# This fixture owns the actual Timers Make integration and selected workspace.
 # The actual consumer fmt target formats and refreshes both root workspace members,
 # preserving unrelated edits and requiring no dependencies, builds or network.
 if ! CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 \
@@ -267,16 +205,5 @@ fi
 assert_unchanged
 git checkout-index -f -- testing/crates/hook-probe/src/lib.rs
 
-# A failed consumer formatter must not copy or stage even its earlier changes.
-printf 'pub fn fixture( ){}\n' > testing/crates/hook-probe/src/lib.rs
-git add testing/crates/hook-probe/src/lib.rs
-printf 'fmt:\n\t@printf "pub fn fixture() {}\\n" > testing/crates/hook-probe/src/lib.rs\n\t@exit 1\n' > Makefile
-git add Makefile
-capture_before_hook
-if bash "${repository_root}/.githooks/pre-commit" > "${temporary_root}/failed-formatter.log" 2>&1; then
-    echo 'error: commit hook accepted failed snapshot formatting' >&2
-    exit 1
-fi
-assert_unchanged
 fixture_complete=true
 echo 'Consumer hook auto-formatting, nested selection and failure-isolation checks passed'

@@ -157,6 +157,18 @@ work, not a reason to bump the library's minor version.
 
 ## Hosted preparation and disposable fixtures
 
+Shared Tooling's producer fixtures own exhaustive Make flag aliases, inherited
+and replaced flags, and common-tool preflight/install/check failure permutations.
+Consumers can use `make_probe_target_admission` from
+`scripts/ci/make-adapter-probes.sh` to exercise each actual target with the four
+unsafe behaviors (`-i`, `-n`, `-t`, `-q`), requiring status 2 and no recorded
+effects. Keep local target rosters, effect stubs, parallel descriptor checks,
+diagnostic selection and recovery-state custody at the consumer. The existing
+The full execution-mode matrix lives in the producer fixture; it is not exported.
+The common-tool action fixture executes the actual shared Make aggregates with
+only installer leaves substituted; it admits phase order, failure stopping,
+stdout/stderr retention and PATH publication. No tools are installed by it.
+
 The optional `.github/actions/prepare-common-tools` action runs `make install-tools`
 then `make tools-check`, retaining complete `tools-install.log` and `tools-check.log`
 under `RUNNER_TEMP`. It appends common host/IC/Cargo executable directories to
@@ -175,7 +187,10 @@ and fixture retention; this is a test skeleton, not a complete consumer export.
 
 `scripts/ci/fixture-retention-probes.sh` owns the common failure injections,
 status comparisons and retained-evidence checks. Consumers keep source rosters,
-working directories and domain-specific diagnostic assertions. Existing
+working directories and domain-specific diagnostic assertions.
+`fixture_probe_exits` includes cleanup refusal alongside command, early-exit,
+completion and incomplete-run cases; callers need not append `cleanup-failure`.
+Existing
 `FIXTURE_PROBE_ROOT_VARIABLE` / `FIXTURE_PROBE_DIRECTORY_VARIABLE` selections may
 be paired with `FIXTURE_PROBE_COMPLETION_VARIABLE` (default `fixture_complete`)
 and `FIXTURE_PROBE_TEMPORARY_ROOT` (default the probe root). Variable names are
@@ -184,4 +199,6 @@ roots are checked against their physical directory; a caller using RUNNER_TEMP
 selects that environment explicitly too. On success `fixture_probe_retained`
 contains the checked physical path for any caller-owned diagnostic comparison.
 Selected assertion probes preserve a function context for return-based guards.
+Repeated exit probes require a fresh receipt from each child; earlier retained
+directories remain available when a later child fails during initialization.
 No consumer fixture body is run by these prefix-only probes.

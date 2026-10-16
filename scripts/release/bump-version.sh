@@ -50,7 +50,22 @@ fi
 release_impact="$(
     bash scripts/release/classify-release-impact.sh
 )"
-bash scripts/release/check-bump-impact.sh "${release_impact}" "${previous_version}"
+case "${release_impact}" in
+    crate)
+        ;;
+    repository)
+        echo "warning: changes since v${previous_version} are repository-only" >&2
+        echo "warning: continuing because the maintainer invoked an explicit version bump" >&2
+        ;;
+    none)
+        echo "error: no changes exist since v${previous_version}" >&2
+        exit 1
+        ;;
+    *)
+        echo "error: unknown release-impact classification: ${release_impact:-<empty>}" >&2
+        exit 2
+        ;;
+esac
 
 release_date="${IC_TIMERS_RELEASE_DATE:-$(date -u +%F)}"
 bash scripts/ci/check-release-changelog.sh "$new_version" "$previous_version" "$release_date" CHANGELOG.md

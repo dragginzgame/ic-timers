@@ -103,8 +103,6 @@ fn memory_sampling_overhead() -> MemorySamplingMeasurement {
     MemorySamplingMeasurement {
         empty_bracket_instructions,
         sampled_bracket_instructions,
-        overhead_instructions: sampled_bracket_instructions
-            .saturating_sub(empty_bracket_instructions),
     }
 }
 

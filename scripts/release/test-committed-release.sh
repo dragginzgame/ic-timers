@@ -16,7 +16,7 @@ fixture_complete=false
 finish() {
     local status=$?
     if [[ "$fixture_complete" != true || "$status" != 0 ]]; then
-        if [[ -f "$fixture/output" ]]; then cat "$fixture/output" >&2 || :; fi
+        fixture_replay_logs "$fixture/output"
     fi
     fixture_finish "$status" "$fixture" 'Failed committed-release fixture retained'
 }

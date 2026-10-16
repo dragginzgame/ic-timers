@@ -5,7 +5,6 @@ repository_root="$(git rev-parse --show-toplevel)"
 export PATH="${repository_root}/.tools/host/bin:${PATH}"
 export YQ="${repository_root}/.tools/host/bin/yq"
 checker="${repository_root}/scripts/ci/check-release-tag.sh"
-cleaner="${repository_root}/scripts/ci/ensure-clean.sh"
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$repository_root/scripts/ci/fixture-lifecycle.sh"
 temporary_root="$(fixture_create "${TMPDIR:-/tmp}/timer-tag-at-head.XXXXXX")"
@@ -20,7 +19,8 @@ printf '%s\n' '[workspace.dependencies.fixture]' 'version = "0.2.0"' \
     '[workspace.package]' 'version = "0.1.0"' > Cargo.toml
 cp "$repository_root/Makefile" .
 bash "$repository_root/scripts/ci/prepare-make-fixture.sh" "$repository_root" "$temporary_root"
-cp "$repository_root/scripts/ci/read-cargo-workspace-version.sh" "$checker" scripts/ci/
+cp "$repository_root/scripts/ci/read-cargo-workspace-version.sh" \
+    "$repository_root/scripts/ci/check-release-source.sh" "$checker" scripts/ci/
 git add Cargo.toml Makefile make scripts
 git commit -qm fixture
 
@@ -104,14 +104,14 @@ cmp .git/refs-before .git/refs-after
 # here after removing the independent local commit/tag delivery owner.
 git add bin/git
 git commit -qm 'publication guard fixture'
-bash "$cleaner"
+make --no-print-directory ensure-clean
 git for-each-ref --format='%(refname) %(objectname)' > .git/clean-refs-before
 cp -p .git/index .git/clean-index-before
 for query in 'rev-parse --verify HEAD' 'rev-parse --show-prefix' \
     'status --porcelain=v1 -z --untracked-files=all'; do
     for observation in '' 'plausible but failed observation'; do
         if output="$(PATH="$temporary_root/bin:$PATH" FIXTURE_FAIL_TAG_QUERY="$query" \
-            FIXTURE_TAG_QUERY_OUTPUT="$observation" bash "$cleaner" 2>&1)"; then
+            FIXTURE_TAG_QUERY_OUTPUT="$observation" make --no-print-directory ensure-clean 2>&1)"; then
             echo "error: clean publication guard admitted failed query: $query" >&2
             exit 1
         fi
@@ -126,29 +126,32 @@ cmp .git/index .git/clean-index-before
 git for-each-ref --format='%(refname) %(objectname)' > .git/clean-refs-after
 cmp .git/clean-refs-before .git/clean-refs-after
 printf '\n# Unstaged publication change\n' >> Cargo.toml
-if bash "$cleaner" >/dev/null 2>&1; then
+if make --no-print-directory ensure-clean >/dev/null 2>&1; then
     echo 'error: clean publication guard admitted unstaged work' >&2
     exit 1
 fi
 git add Cargo.toml
-if bash "$cleaner" >/dev/null 2>&1; then
+if make --no-print-directory ensure-clean >/dev/null 2>&1; then
     echo 'error: clean publication guard admitted staged work' >&2
     exit 1
 fi
 git restore --staged --worktree Cargo.toml
 printf 'untracked' > 'untracked publication change'
-if bash "$cleaner" >/dev/null 2>&1; then
+if make --no-print-directory ensure-clean >/dev/null 2>&1; then
     echo 'error: clean publication guard admitted untracked work' >&2
     exit 1
 fi
 rm 'untracked publication change'
-bash "$cleaner"
+make --no-print-directory ensure-clean
 # A source-only checker can admit an empty unborn checkout; publication cannot.
 git init -q "$temporary_root/unborn"
-if (cd "$temporary_root/unborn" && bash "$cleaner" >/dev/null 2>&1); then
+cp "$repository_root/Makefile" "$temporary_root/unborn/"
+bash "$repository_root/scripts/ci/prepare-make-fixture.sh" "$repository_root" "$temporary_root/unborn"
+if output="$(cd "$temporary_root/unborn" && make --no-print-directory ensure-clean 2>&1)"; then
     echo 'error: clean publication guard admitted a checkout without a commit' >&2
     exit 1
 fi
+[[ "$output" == *'repository has no commit yet'* ]] || exit 1
 # Qualify the actual tag workflow after the independent tag/publication cases.
 workflow_root="$temporary_root/workflow"
 mkdir "$workflow_root"

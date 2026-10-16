@@ -3,16 +3,16 @@
 ## Current authority
 
 One [snapshot](../.shared-tooling.snapshot) records the exact reviewed source,
-entrypoint roots and all **133** payload hashes/modes. It selects [Shared PR #234](https://github.com/dragginzgame/shared-tooling/pull/234)
-`12eb03d28ba8814000639091a44392d08db21657`, stacked on
-[#230](https://github.com/dragginzgame/shared-tooling/pull/230),
-[#227](https://github.com/dragginzgame/shared-tooling/pull/227) and
-[#224](https://github.com/dragginzgame/shared-tooling/pull/224) and building on merged
-[#217](https://github.com/dragginzgame/shared-tooling/pull/217) and
-[#218](https://github.com/dragginzgame/shared-tooling/pull/218): committed Shared
-0.15 source plus changelog preflight, snapshot handover, Rust preparation and
-focused verifier qualification, common hosted preparation and Make-fixture setup. This is exact
-contribution provenance, not an upstream release or hosted acceptance claim.
+entrypoint roots and all **135** payload hashes/modes. It selects
+[Shared PR #241 — Keep exhaustive qualification at Shared owners](https://github.com/dragginzgame/shared-tooling/pull/241)
+at `2e6a3885a1fd8b6e74bfcc61b15148a547d44677`, based on released Shared 0.15.8
+(`9add0ecfdb8a6d2556f6d7da3d06bcbca8b3029f`). The source has a pending 0.16.0
+contract change; this adoption does not claim that version is released.
+Five existing payloads change, retaining all roots and tool selections. The
+exhaustive Make matrix stays producer-only; per-target admission and parallel
+helpers remain exported. Reader-owner structural cases and automatic cleanup-
+refusal probes are included. No scheduler is activated; this adoption is not
+native-host or hosted acceptance.
 The [baseline](../DRAGGINZGAME.md) and [local overlay](../AGENTS.md) govern scope.
 
 The complete [previous adoption record](evidence/shared-tooling-history.md) is
@@ -86,6 +86,20 @@ and checked scratch-root retention. Timers keeps its thirteen-source roster,
 absolute/relative/aliased scratch contexts and collector diagnostics. Selected
 mandatory assertion probes use the original owner guards, including return-based
 guards. This also changes no entrypoint selection.
+
+Timers' format and release fixtures use the per-target Make admission helper.
+Shared owns exhaustive flag aliases/replacement cases; Timers keeps actual target
+rosters, substituted effects, snapshot routing and unchanged worktree/index checks.
+
+Generic nested-workflow discovery and failed Git-inventory cases now run at
+Shared's dependency-checker owner. Timers retains a positive/negative caller smoke
+check, its own dependency exceptions and actual Make/provider integration checks.
+This adoption changes no entrypoint or tool selection.
+
+The Cargo reader owns missing/duplicate tables and invalid version syntax.
+Timers exercises reader rejection at its actual bump boundary, preserving status
+and metadata. The release-gate fixture owns the complete CI roster and failure
+order; repository checks keep their own admission and provider boundaries.
 
 ## Refreshing and qualification
 

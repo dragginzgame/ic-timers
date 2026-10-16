@@ -47,41 +47,17 @@ for directory in scripts/ci scripts/dev scripts/release; do
     rm -- "${broken}"
 done
 
-# Git inventory retains nested paths, spaces and producer failure status.
-mkdir -p '.github/workflows/nested' scan-bin scan-tmp
+# Shared owns workflow discovery and failed-inventory permutations. Keep one
+# real caller smoke check before the local orchestration and provider boundaries.
+mkdir -p .github/workflows scan-bin
 printf '%s\n' 'jobs:' '  test:' '    steps:' \
-    '      - uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1"' \
-    > '.github/workflows/nested/pinned workflow.yml'
+    '      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1' \
+    > .github/workflows/ci.yml
 bash scripts/ci/check-dependency-pins.sh --consumer "$temporary_root"
-printf '%s\n' 'jobs:' '  test:' '    steps:' '      - uses: actions/checkout@main' \
-    > '.github/workflows/unpinned.yaml'
+printf '%s\n' 'jobs: {test: {steps: [{uses: "actions/checkout@main"}]}}' \
+    > .github/workflows/ci.yml
 expect_failure 'action-ref' bash scripts/ci/check-dependency-pins.sh --consumer "$temporary_root"
-rm .github/workflows/unpinned.yaml
-IC_TIMERS_FIXTURE_GIT="$(command -v git)"
-export IC_TIMERS_FIXTURE_GIT
-cat > scan-bin/git <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-if [[ "$1" == ls-files ]]; then
-    if [[ "${FIXTURE_PARTIAL_OUTPUT:-0}" == 1 ]]; then
-        printf '%s\0' '.github/workflows/nested/pinned workflow.yml'
-    fi
-    echo 'injected workflow inventory failure' >&2
-    exit 2
-fi
-exec "${IC_TIMERS_FIXTURE_GIT}" "$@"
-EOF
-chmod +x scan-bin/git
-for partial_output in 0 1; do
-    expect_failure 'injected workflow inventory failure' env \
-        PATH="${temporary_root}/scan-bin:${PATH}" TMPDIR="${temporary_root}/scan-tmp" \
-        FIXTURE_PARTIAL_OUTPUT="${partial_output}" \
-        bash scripts/ci/check-dependency-pins.sh --consumer "$temporary_root"
-    # The complete inventory scratch directory is cleaned on failure.
-    debris="$(find scan-tmp -mindepth 1 -print)"
-    test -z "${debris}"
-done
-rm scan-bin/git
+rm .github/workflows/ci.yml
 
 cat > scripts/release/classify-release-impact.sh <<'EOF'
 #!/usr/bin/env bash
@@ -123,24 +99,7 @@ for target in "${targets[@]}"; do
 done
 rm -- checks-ran
 
-# Exercise the actual CI roster with substitute targets: compiler/lint failures
-# must stop before release fixtures, and successful CI retains every gate once.
-ci_targets=(actions-check shell-check provider-check fmt-check check clippy
-    release-check docs-check test wasm-check package)
-"${fixture_make[@]}" ci > /dev/null 2>&1
-printf '%s\n' "${ci_targets[@]}" > expected-checks
-cmp expected-checks checks-ran
-for failing in check clippy; do
-    : > expected-checks
-    for target in "${ci_targets[@]}"; do
-        printf '%s\n' "$target" >> expected-checks
-        [[ "$target" != "$failing" ]] || break
-    done
-    rm -- checks-ran
-    expect_failure "failed $failing" "${fixture_make[@]}" ci "FAIL_TARGET=$failing"
-    cmp expected-checks checks-ran
-done
-rm -- checks-ran
+# The release-gate fixture owns the complete CI roster and leaf failure order.
 expect_failure 'classification failed' env CLASSIFICATION=error "${fixture_make[@]}" repository-check
 expect_failure 'classification failed' env CLASSIFICATION=error "${fixture_make[@]}" release-impact
 expect_failure 'crate-impacting changes' env CLASSIFICATION=crate "${fixture_make[@]}" repository-check

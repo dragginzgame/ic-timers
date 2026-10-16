@@ -1,5 +1,5 @@
 # Consuming Shared Tooling Snapshots
-<!-- Shared companions: docs/rust-toolchains.md -->
+<!-- Shared companions: docs/rust-toolchains.md scripts/distribution/maintenance-files.txt -->
 
 CI and release behavior must not depend on a sibling checkout, a moving Git
 branch, or network availability. Consumers vendor a reviewed file set and
@@ -516,11 +516,21 @@ Consumers using the maintenance rule's exact-commit CI inspection command also
 refresh `scripts/dev/gh-ci.sh` from that reviewed revision. It remains a read-only
 interactive helper using the consumer checkout and authenticated GitHub CLI.
 When adopting the repeatable task commands, include the `tasks/` catalog,
-definitions, prompt and schedule guidance plus linked companions from the
-governance file list. Shared Tooling coordinates central runs; consumers retain
-their focused commands and product scope. Copying those files never installs a
-timer, activates an agent, grants sibling edit authority or requires Codex/systemd
-on every consumer host. Enable one local scheduler separately when requested.
+definitions, prompt and schedule guidance from the governance file list. Shared
+Tooling coordinates central runs; consumers retain their focused commands and
+product scope. The operational runner and systemd units are optional: their
+selection roots are listed in
+[`scripts/distribution/maintenance-files.txt`](../scripts/distribution/maintenance-files.txt).
+A host that needs copied operational files may add those roots explicitly with
+`--add-entrypoint`; their normal owner is the selected Shared Tooling checkout.
+Existing snapshots retain recorded roots on ordinary refresh. To stop carrying
+these files, pass the complete retained `--entrypoint` selection without the
+optional roots. Canonical retirement refuses modified payloads; preserve local
+work and resolve it before retrying. Never hand-edit a snapshot or delete its
+owned files to bypass that check. Catalog/guidance adoption does not select
+operational files, install a timer, activate an agent, grant sibling edit authority
+or require Codex/systemd on every consumer host. Enable one local scheduler
+separately when requested.
 The portable-suite prerequisite check is Shared Tooling's own test setup, not a
 required consumer gate. If vendoring the complete portable suite, include its
 new `scripts/ci/check-portable-prerequisites.sh`, `scripts/ci/test-portable-prerequisites.sh`
@@ -543,8 +553,9 @@ instructions and checks with the [release contract](releases.md), including
 artifact retention and the exact atomic branch/tag push. A passing snapshot
 check alone does not verify those behaviors. Explicit PR adopters instead qualify
 the exact branch push, review boundary, merged-source validation and tag-only push.
-The direct release runner's consumer fixture, `scripts/ci/test-release-runner.sh`,
-simulates Git effects. Real-Git tracking qualification is independently selected
+The owner regression fixture, `scripts/ci/test-release-runner.sh`, simulates Git
+effects. Consumers retain their actual integration checks and tool/snapshot
+admission rather than routinely rerunning Shared's implementation regressions. Real-Git tracking qualification is independently selected
 as `scripts/ci/test-release-tracking.sh`; the owner portable suite always runs it.
 Select fixtures according to their documented effects and local authority rather
 than editing vendored tests or invoking an unauthorized broader suite.
@@ -842,7 +853,9 @@ claim deployment or PocketIC client/server compatibility from `--version` alone.
 Snapshot integrity and consumer adoption remain separate from upstream fixtures.
 
 The Rust setup action is an independent entrypoint:
-`.github/actions/prepare-rust-toolchains/action.yml`. It has no helper dependencies.
+`.github/actions/prepare-rust-toolchains/action.yml`. Its declared companion is
+`scripts/dev/prepare-rust-toolchain.sh`; the canonical exporter includes that
+helper automatically when selecting or refreshing the action.
 Select `docs/rust-toolchains.md` too for its [caller contract](rust-toolchains.md).
 
 The evidence archiver can be adopted independently as

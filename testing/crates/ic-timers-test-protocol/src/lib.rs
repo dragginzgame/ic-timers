@@ -91,7 +91,6 @@ pub struct OperationMeasurement {
 pub struct MemorySamplingMeasurement {
     pub empty_bracket_instructions: u64,
     pub sampled_bracket_instructions: u64,
-    pub overhead_instructions: u64,
 }
 
 /// Policy-cohort observations with a borrowed producer or owned decoder label.

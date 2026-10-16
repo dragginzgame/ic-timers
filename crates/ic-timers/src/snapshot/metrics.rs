@@ -637,83 +637,23 @@ mod tests {
     }
 
     #[test]
-    fn instruction_summaries_distinguish_empty_from_completed_zero_for_each_role() {
+    fn instruction_summaries_keep_empty_zero_and_role_boundaries() {
         let mut performance = TimerPerformance::EMPTY;
-        for summary in [
-            performance.scheduler_instructions(),
-            performance.work_instructions(),
-        ] {
-            assert_eq!(summary.aggregate().samples(), 0);
-            assert_eq!(summary.aggregate().mean(), Ok(None));
-            assert_eq!(summary.latest(), None);
-            assert_eq!(summary.aggregate().maximum(), None);
-        }
+        let mut expected = MeasurementSummary::EMPTY;
+        assert_eq!(performance.scheduler_instructions(), expected);
+        assert_eq!(performance.work_instructions(), expected);
 
-        performance.record_scheduler(0, MemoryPageSample::EMPTY);
-        assert_eq!(performance.work_instructions(), MeasurementSummary::EMPTY);
-        performance.record_work(0, MemoryPageSample::EMPTY);
-        for summary in [
-            performance.scheduler_instructions(),
-            performance.work_instructions(),
-        ] {
-            assert_eq!(summary.aggregate().samples(), 1);
-            assert_eq!(summary.aggregate().total(), 0);
-            assert_eq!(summary.aggregate().mean(), Ok(Some(0)));
-            assert_eq!(summary.latest(), Some(0));
-            assert_eq!(summary.aggregate().maximum(), Some(0));
-            assert!(!summary.aggregate().samples_overflowed());
-            assert!(!summary.aggregate().total_overflowed());
-        }
-    }
+        // Metrics owns summary arithmetic; Timers owns forwarding and role isolation.
+        for instructions in [0, u64::MAX, 1, u64::MAX] {
+            let previous_work = performance.work_instructions();
+            expected.record(instructions);
+            performance.record_scheduler(instructions, MemoryPageSample::EMPTY);
+            assert_eq!(performance.scheduler_instructions(), expected);
+            assert_eq!(performance.work_instructions(), previous_work);
 
-    #[test]
-    fn wide_instruction_totals_preserve_exact_means_order_and_roles() {
-        let maximum = u128::from(u64::MAX);
-        for scheduler in [true, false] {
-            let mut performance = TimerPerformance::EMPTY;
-            for (instructions, samples, total) in [
-                (u64::MAX, 1, maximum),
-                (0, 2, maximum),
-                (1, 3, maximum + 1),
-                (u64::MAX, 4, maximum * 2 + 1),
-            ] {
-                let previous = performance;
-                if scheduler {
-                    performance.record_scheduler(instructions, MemoryPageSample::EMPTY);
-                } else {
-                    performance.record_work(instructions, MemoryPageSample::EMPTY);
-                }
-                let (summary, other, previous_summary) = if scheduler {
-                    (
-                        performance.scheduler_instructions(),
-                        performance.work_instructions(),
-                        previous.scheduler_instructions(),
-                    )
-                } else {
-                    (
-                        performance.work_instructions(),
-                        performance.scheduler_instructions(),
-                        previous.work_instructions(),
-                    )
-                };
-                assert_eq!(summary.aggregate().samples(), samples);
-                assert_eq!(summary.aggregate().total(), total);
-                assert_eq!(
-                    summary.aggregate().mean(),
-                    Ok(Some(total / u128::from(samples)))
-                );
-                assert_eq!(summary.latest(), Some(instructions));
-                assert_eq!(summary.aggregate().maximum(), Some(u64::MAX));
-                assert!(!summary.aggregate().samples_overflowed());
-                assert!(!summary.aggregate().total_overflowed());
-                assert_eq!(other, MeasurementSummary::EMPTY);
-                assert_eq!(previous_summary.aggregate().samples(), samples - 1);
-                assert_eq!(
-                    previous_summary.aggregate().total(),
-                    total - u128::from(instructions)
-                );
-                assert!(!previous_summary.aggregate().total_overflowed());
-            }
+            performance.record_work(instructions, MemoryPageSample::EMPTY);
+            assert_eq!(performance.work_instructions(), expected);
+            assert_eq!(performance.scheduler_instructions(), expected);
         }
     }
 

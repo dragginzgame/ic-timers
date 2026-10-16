@@ -4,10 +4,122 @@
 
 Last updated: 2026-10-16
 
-## Prepared 0.25.1 probe and evidence cleanup
+## Prepared 0.25.2 qualification ownership cleanup
+
+Starting source is released 0.25.1 at
+`32ea72e253fdf2adbeda76b320fdc70be885d1ed`. One undated 0.25.2 draft covers
+repository/test cleanup; Cargo versions, dependency selections and release
+execution remain user-owned. The selected workspace currently uses Testkit 0.48.
+
+The current snapshot selects
+[Shared PR #241 — Keep exhaustive qualification at Shared owners](https://github.com/dragginzgame/shared-tooling/pull/241)
+at `2e6a3885a1fd8b6e74bfcc61b15148a547d44677`, based on released Shared
+0.15.8 (`9add0ecfdb8a6d2556f6d7da3d06bcbca8b3029f`), with 135 payloads.
+The contribution's pending 0.16.0 notes do not identify a released version.
+The existing format/release fixtures use its per-target admission probe and retain actual
+target/effect/routing checks. Shared owns exhaustive flag permutations. Reviewed
+refresh changes also require fresh exit receipts, admit evidence roots explicitly,
+validate fixture paths before copying and preserve saved metadata identities.
+
+The size probe sends only the empty and sampled instruction intervals; the native
+cohort report derives overhead once. All four producer features and the decoder
+use that one unpublished wire record. Sampling boundaries and published API stay
+unchanged. This follow-up's before-images, export and focused logs belong to
+`/tmp/ic-timers-make-wire.ig_e12r0/`.
+
+The approved two-file contribution moves dependency-inventory cases to their
+Shared owner. Its exact commit is canonically adopted and the qualified local
+reduction is applied. Timers keeps a positive/negative caller smoke check and its
+orchestration/provider boundaries. Arrival images and canonical preview/apply
+belong to `/tmp/ic-timers-make-wire.ig_e12r0/adoption-turn/`. The preview changes
+only the owner fixture; all 135 payloads keep their existing entrypoints.
+The actual adopted pin, repository and completion fixtures pass on Bash 5 and
+genuine Bash 3.2. ShellCheck, snapshot integrity, changelog and doc checks pass.
+Normal Git index/refs and Cargo inputs match this adoption's arrival, including
+the incoming lockfile edit. Earlier Rust/PocketIC receipts retain their original
+graph scope; no release or additional Rust qualification ran for this adoption.
+
+Native probe/protocol checks pass on Rust 1.91, as do all four optimized Wasm
+cohorts; probe Clippy passes on Rust 1.99. The maintained PocketIC cohort subject
+passes through Testkit 0.48 and its admitted 16.1.0 server. Its sandboxed attempt
+failed to bind localhost before canister creation; the permitted loopback rerun
+passes. These are current probe observations, not a comparative Wasm saving.
+Affected hook/gate/completion and owner Make/inventory fixtures pass on Bash 5
+and genuine Bash 3.2. Snapshot corruption, evidence, metadata, version/index/tag,
+committed-release and hosted-preparation callers also pass focused local checks.
+Linux execution does not qualify native macOS or hosted upload/download.
+
+Generic Git-hook tree-observation failures and snapshot formatter rollback stay
+with Shared's existing `scripts/ci/test-git-hooks.sh` at the exact adopted source.
+Timers retains actual Make/compiler-tool integration, both root workspace members,
+lockfile preservation, diagnostics and nested-probe partial staging. Metrics owns
+summary arithmetic; local tests retain forwarding, role isolation, empty/zero and
+wide observations plus memory pairing. Those earlier reductions required no new
+upstream helper or test.
+
+Make now checks for an existing commit and directly calls Shared's source checker.
+The tag/publication fixture exercises that real target, including failed Git
+observations, dirty/staged/untracked inputs and an unborn checkout. The former
+forwarding script is removed; its historical receipt links to released source.
+
+Before-images and focused logs belong to `/tmp/ic-timers-owner-tests.fq6_sccc/`.
+This batch changes no published runtime behavior or public API.
+All five focused native measurement tests pass on Rust 1.91; library/test Clippy
+passes on 1.99. Actual Timers hook, tag/publication and completion fixtures pass
+on Bash 5 and genuine Bash 3.2, as does Shared's exact-source hook owner suite.
+Affected ShellCheck, Rust formatting, changelog preflight and local doc links pass.
+Normal Git index/refs and Cargo/toolchain bytes match arrival. No release ran.
+
+Generic logger qualification now stays with Shared's existing exact-source
+`test-validation-target-runner.sh`. Timers keeps one real Make-adapter failure,
+its saved status, selected raw/combined logs, summary, unique retained attempts
+and nested checkout/jobserver integration. Release-impact admission is inlined
+at its only production caller; preparation fixtures cover diagnostics, exact
+rejection statuses and unchanged metadata in both preflight and preparation.
+Release-index and committed-release cleanup reuse Shared's best-effort log replay
+while retaining their saved exit status and existing scratch-retention policy.
+
+This follow-up's arrival images and focused receipts belong to
+`/tmp/ic-timers-logger-impact.qxt8azql/`. It changes repository tooling only;
+the published runtime, dependency graph and Shared snapshot are unchanged.
+Affected release, completion and evidence-retention fixtures pass on Bash 5
+and genuine Bash 3.2, as do Shared's exact-source logger and log-replay suites.
+Affected ShellCheck, snapshot integrity and changelog preflight pass. Git index,
+refs and Cargo/toolchain bytes match arrival. No broad or release gate ran.
+
+The next follow-up removes duplicate CI ordering/failure checks from the
+repository fixture; the release-gate fixture remains their owner. Version
+preparation now exercises one actual reader rejection in both check/prepare
+modes, comparing the original failure status and preserving all metadata.
+
+The approved six-file Shared contribution is committed and open in #241 at the
+exact source above. It adds reader-owner structural cases and moves only the
+exhaustive Make-mode matrix into the producer fixture. IC Metrics uses the
+parallel-dispatch helper, which remains exported and passes its actual consumer
+fixture. The removed documented export selects a Shared 0.16.0 draft; Timers
+keeps 0.25.2 because its published library contract is unchanged.
+Owner and Timers/Metrics caller candidates pass on Bash 5 and genuine Bash 3.2;
+ShellCheck, doc links and local changelog checks pass. Earlier candidate source
+substitutions were confined to disposable copies and did not establish adoption.
+The committed source is now canonically adopted: preview changes five existing
+payloads and retains all 135. The 0.15.8 base adds automatic cleanup refusal;
+local callers already use the standard exit runner without extra injections.
+Before-images, the complete contribution diff and initial focused receipts are
+at `/tmp/ic-timers-ci-owners.rgd6ipto/`. This adoption's arrival images and
+preview/apply logs are under its `adoption-t1hx9nyi/` directory. The normal
+Timers staged entries, refs and Cargo/toolchain bytes match this adoption's
+arrival; ordinary Git observations refreshed index stat-cache metadata only.
+Only the authorized isolated Shared branch was committed and pushed. No merge
+or release was performed. The actually adopted metadata, preparation, release-
+gate, hook, completion, repository and snapshot fixtures pass on Bash 5 and
+genuine Bash 3.2, as does Shared's exact-source retention fixture. Affected
+ShellCheck, snapshot integrity, changelog preflight and local doc links pass.
+These focused Linux receipts do not qualify macOS or a complete release gate.
+
+## Released 0.25.1 probe and evidence cleanup receipts
 
 Starting source is 0.25.0 at `11e73bff33676e6d829baa502fb943ffa312b988`.
-One undated 0.25.1 draft covers this batch. Cargo package versions and the incoming
+One 0.25.1 draft covered that batch. Cargo package versions and the incoming
 root lockfile changes are preserved. The workspace selects Rust 1.91, Metrics
 0.11 and Testkit 0.47; no dependency update belongs to this batch.
 
