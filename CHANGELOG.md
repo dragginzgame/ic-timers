@@ -27,6 +27,8 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Use the retained runtime module for release-index dirty-source checks after
+  the platform module moved into a directory.
 - Replace the retired timer-provider pin exception with the executor 2.0.0
   compatibility exception required by dependency-policy CI.
 - Qualify seven IcyDB lifecycle/startup subjects with the owned dispatcher and

@@ -97,7 +97,7 @@ git show "HEAD:$source_path" > "$source_path"
 # HEAD-to-worktree is clean, while the index still contains an implementation edit.
 git diff --quiet HEAD -- "$source_path"
 staged_tree="$(git write-tree)"
-working_path=crates/ic-timers/src/platform.rs
+working_path=crates/ic-timers/src/runtime/mod.rs
 printf '\n// working implementation fixture\n' >> "$working_path"
 untracked_path=$'unexpected\nsource.rs'
 printf '%s\n' 'untracked implementation' > "$untracked_path"
