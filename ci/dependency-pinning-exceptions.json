@@ -2,9 +2,9 @@
   {
     "rule": "cargo-exact",
     "file": "Cargo.toml",
-    "subject": "ic-cdk-timers",
-    "value": "=1.0.0",
-    "reason": "Provider queue, cancellation and dispatch behavior is source-audited at this version; a change requires renewed recovery qualification.",
+    "subject": "ic-cdk-executor",
+    "value": "=2.0.0",
+    "reason": "The owned timer backend relies on this executor's async polling, call-context lifetime and trap cleanup semantics; a change requires renewed recovery qualification.",
     "evidence": "docs/releasing.md#dependency-pin-exceptions"
   },
   {

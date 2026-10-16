@@ -27,6 +27,8 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Replace the retired timer-provider pin exception with the executor 2.0.0
+  compatibility exception required by dependency-policy CI.
 - Qualify seven IcyDB lifecycle/startup subjects with the owned dispatcher and
   prepare isolated Canic/IcyDB adoption patches. Canic's supported probe builds
   remain blocked by fixture Candid-export type-resolution errors.
