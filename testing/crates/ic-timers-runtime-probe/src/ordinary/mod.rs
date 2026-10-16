@@ -36,6 +36,9 @@ struct CapturedState;
 
 impl Drop for CapturedState {
     fn drop(&mut self) {
+        if TRAP_CAPTURE_DROP.get() {
+            ic_cdk::trap("probe capture drop trap");
+        }
         CAPTURE_REGISTRY_ACCESSIBLE.with(|accessible| {
             accessible.set(accessible.get() && timer_inventory().is_ok());
         });
@@ -44,6 +47,7 @@ impl Drop for CapturedState {
 }
 
 thread_local! {
+    static TRAP_CAPTURE_DROP: Cell<bool> = const { Cell::new(false) };
     static REGISTRATION: RefCell<Option<Registration>> = const { RefCell::new(None) };
     static GATE_OPEN: Cell<bool> = const { Cell::new(false) };
     static GATE_WAITING: Cell<bool> = const { Cell::new(false) };
@@ -55,6 +59,13 @@ thread_local! {
     static WORK_CONTEXT: RefCell<Option<WorkContext>> = const { RefCell::new(None) };
     static CAPTURES_DROPPED: Cell<u64> = const { Cell::new(0) };
     static CAPTURE_REGISTRY_ACCESSIBLE: Cell<bool> = const { Cell::new(true) };
+}
+
+// Deliberately violates the consumer destructor contract to exercise an actual
+// dispatch response trap and its IC cleanup callback, without backend hooks.
+#[ic_cdk::update]
+fn trap_ordinary_capture_drop(enabled: bool) {
+    TRAP_CAPTURE_DROP.set(enabled);
 }
 
 fn identity() -> TimerIdentity {

@@ -4,6 +4,175 @@
 
 Last updated: 2026-10-16
 
+## Local 0.26 owned timer backend
+
+The [0.26 design](../design/0.26-owned-timer-backend.md) now has a local
+implementation candidate. The old provider is removed from manifests and the
+lock graph. Independently authored MIT code owns bounded one-shot scheduling,
+authenticated self-call dispatch and eager cancellation; executor 2.0.0 and
+ic0 1.2.0 remain selected. No upstream timer source was imported. This is not a
+strict clean-room claim: the earlier audit inspected upstream source.
+
+The backend admits 130 pending records and 128 outstanding dispatch contexts.
+It returns typed capacity/identity failures, retries resource deferral after one
+second, and keeps consumer work separate from the committed Watchdog scheduler.
+Only the FFI module permits unsafe IC exports/callback registration; callback
+contexts use bounded table indices rather than raw pointers. Cargo's links key
+rejects packages declaring that same key; older releases require graph checks.
+Composed canisters must remove other providers.
+The runtime's registration APIs, volatile reconstruction and durable consumer
+records remain intact. Jobs core needs no timer dependency or record migration.
+
+Evidence is retained under `target/qualification/0.26-backend/`. Before-images
+include the source commit, manifest/lock/toolchain and runtime/four-cohort Wasm.
+Rust 1.91 passes 160 native library tests, the optimized runtime/four-cohort
+Wasm builds and public Rustdoc with warnings denied. Rust 1.99 strict Clippy
+passes library, runtime probe and PocketIC targets. All 18 affected PocketIC
+subjects pass through Testkit's admitted 16.1.0 server, including malformed
+self-call admission, consumed-identity replay and ordinary work surviving a
+300-second dispatch timeout. The low-cycle test now proves the one-second
+post-top-up delay. Failed attempts are retained: the sandbox blocked localhost,
+the old low-cycle timing assertion failed, and the new malformed-payload fixture
+initially encoded integers instead of bytes. None is counted as passing evidence.
+
+Matched before/after cohorts use Rust 1.91 and the same timer-probe profile;
+the lock diff removes only the timer provider and changes the library edge to
+the already-selected executor. Wasm bytes change as follows:
+
+| Cohort | Before | After | Delta |
+| --- | ---: | ---: | ---: |
+| Baseline | 253953 | 241052 | -12901 |
+| Once | 308651 | 295578 | -13073 |
+| After-completion | 309489 | 296428 | -13061 |
+| Watchdog | 311078 | 297890 | -13188 |
+
+Start instructions fall by 1483/1561/1561 for Once/After-completion/Watchdog.
+Measured dispatch cycles fall by 2162/1974/5529. Cancellation instructions change
+by -4/+702/+677: eager removal and timer rearming trade cancellation cost for
+immediate queue reclamation. Some snapshot/inventory intervals also vary; the
+complete reports retain them. These are probe observations, not an application
+throughput guarantee. The final runtime churn subject stays at 19 Wasm pages
+through 32768 replacements and 64 immediate continuations; it does not establish
+a global memory cap or compare that whole modified probe against older artifacts.
+
+The live provider-boundary/repository fixtures, source-following ShellCheck,
+formatting, locked metadata and package-content checks pass. The runtime Wasm
+exports one global timer and the new internal dispatcher. Package contents include
+the MIT license and build script. Cargo remains 0.25.2; one undated 0.26.0 section
+covers this batch. Index, refs, releases and sibling checkouts remain user-owned.
+
+The cleanup follow-up is recorded under `target/qualification/0.26-cleanup/`,
+with arrival source copies and current manifest/lock/toolchain/Wasm hashes.
+The incoming workspace now selects Testkit 0.49 (including Host 0.22.1);
+the earlier matched comparison above remains bound to its retained 0.48 graph.
+The selected CLI was prepared through the repository setup target and admitted
+PocketIC 16.1.0. All 19 recovery subjects pass on Rust 1.91, including a real
+response-callback trap caused by a deliberately trapping capture destructor.
+Both ordinary policies preserve their pending registration through cleanup,
+retry after one second, retire after disabling the destructor trap, and permit
+independent later dispatch. This exceeds the supported nontrapping-destructor
+contract and proves only that specific failure sequence. The final probe builds;
+affected strict Clippy and formatting pass. The churn subject still reports
+19 pages throughout. No production runtime change belongs to this follow-up.
+
+The transport follow-up is recorded under `target/qualification/0.26-transport/`,
+with arrival sources and current input hashes. The unpublished probe maintains
+real self-call queue pressure without changing production code. The final test
+observes 100 CDK submission failures and 3000 replies while the timer remains
+pending with more than half its initial cycles. Draining pressure does not bypass
+the one-second retry delay; subsequent dispatch completes exactly once. With one
+pending timer and ample cycles, this exercises nonzero backend call_perform by
+source-level inference, without a production counter or injected return value.
+The initial burst-only experiment drained too early and failed its deferral
+assertion; that log is retained separately. The sustained-pressure subject and
+all other recovery subjects pass (20 total) on Rust 1.91 / Testkit 0.49 / admitted
+PocketIC 16.1.0. The optimized probe build, affected strict Clippy and formatting
+pass; churn still reports 19 pages throughout. Production code is unchanged.
+
+The deferred-control follow-up is recorded under
+`target/qualification/0.26-deferred-control/`, with arrival sources and current
+input hashes. Its focused PocketIC subject passes cancellation and replacement
+during real submission deferral, stale authenticated delivery of the removed
+backend identity, and rescheduling the retained cancelled registration. The
+original cancelled work remains stopped beyond the retry deadline; replacement
+work completes once. This uses the unchanged production runtime and probe Wasm.
+Affected strict Clippy and formatting pass. An initial test incorrectly attempted
+to register over the retained cancelled registration; its failure is retained,
+and the corrected test uses the existing schedule API. The prior 20-subject suite
+and this new focused subject are separate receipts, not a new combined suite run.
+
+Remaining qualification is explicit: the backend's 128-context table saturation
+is tested natively, independently of the IC queue pressure now covered on PocketIC.
+An attempted real context-saturation fixture could not reuse running
+registrations: unregister retains them until completion, so replacing batches
+correctly rejects duplicate identities. That fixture was removed; its source and
+failed compile/decoder/runtime attempts are retained only as experimental logs.
+Jobs candidate composition now passes in a disposable copy under
+`target/qualification/0.26-jobs/`. Arrival hashes cover the current dirty Jobs
+0.13.2 source at HEAD `c497c0f7d2ac5c812c5592bb54a04b4d7350f15a`.
+A scratch path patch selects this local Timers candidate, still versioned 0.25.2;
+it does not constitute published 0.26 adoption. Rust 1.91 passes 42 native consumer
+tests, builds Wasm, and passes all seven existing live recovery subjects through
+Testkit 0.49 / admitted PocketIC 16.1.0. The resolved graph contains one Timers
+package and no CDK timer provider; final Wasm has one global timer and the owned
+dispatcher. No consumer source change was required. Copied Jobs inputs still
+match the sibling checkout after qualification. Logs, graph, exports, scratch
+lock and source hashes retain the evidence; no sibling file was changed.
+
+Canic/IcyDB candidate checks are retained under
+`target/qualification/0.26-composition/`. Disposable copies include their incoming
+worktree edits: Canic 0.111.0 at HEAD
+`54be77f7fb4ffeb4754781b34f1e6b1a10938354` and IcyDB 0.276.0 at HEAD
+`996498ad4edb5569964b68e0c0e3f5bb9df7d1c6`. File hashes identify exact inputs;
+both real checkouts changed concurrently after capture, so these are snapshot
+receipts, not claims about their latest source. No sibling edits were made here.
+Both scratch graphs resolve one local candidate and no CDK timer provider.
+Rust 1.99 Wasm checks pass for Canic core/control-plane; IcyDB's generated
+lifecycle-participant development Wasm builds and exports one global timer plus
+the owned dispatcher. Canic's runtime probe refuses direct Cargo Wasm builds as
+designed; its required driver was not bypassed.
+
+Both downstream artifact validators reject a fixture carrying the new dispatcher
+under their existing rules. Exact update-endpoint exceptions in the disposable
+copies pass both focused validator tests. The design lists required dispatcher
+exceptions/fixtures, IcyDB ingress probes and Canic's obsolete one-CDK-provider
+graph assertion. Minimal validator experiment patches are retained alongside
+failure logs. No full consumer adoption or live composition is claimed here.
+
+Closeout work is retained under `target/qualification/0.26-closeout/`.
+Canic/IcyDB source-adoption patches include the planned 0.26 requirement,
+dispatcher exceptions, negative validator cases, ingress probes and the Canic
+zero-old-provider graph assertion. They apply cleanly to their retained bases;
+the current dirty sibling checkouts were not modified. Qualification used the
+local 0.25.2-versioned candidate, so downstream locks remain pending the actual
+0.26 version selection/publication.
+
+IcyDB's supported build pipeline passes seven focused live subjects: three
+lifecycle, three startup-timer, and one private-dispatch/upgrade SQL-fixture test.
+Its first attempt stopped at missing optimizer admission; the rerun supplies its
+existing Binaryen 133 through the supported digest-checking selector. Canic's
+graph guard and both consumers' positive/negative validator subjects pass.
+Canic's supported driver instead exposes fixture Candid-export resolution errors
+for PerfProbeMetric/PerfProbeObservation in runtime_probe and
+ApplicationCheckpointBinding/Phase/CheckpointView in managed_lifecycle_probe.
+Those independent failures block live Canic qualification and were not bypassed.
+
+Backend review found no production correctness defect. Admission-failure tests
+now cover both Watchdog arms and cleanup after successor installation. Cargo
+resolver evidence confirmed that unkeyed older packages can coexist despite the
+new ownership key; the earlier overly broad documentation claim is corrected.
+Final maintained evidence passes 160 native tests, all 21 PocketIC recovery
+subjects, strict library Clippy, formatting, provider boundaries and package
+contents. A 64-registration cancellation-churn experiment under 300 self-calls
+did not saturate the response table: its final 64 callbacks ran on drain, without
+retry. Its source and failure log are retained outside maintained tests. This
+does not close real 128-context saturation. No version, commit or release ran.
+
+Native macOS, complete Canic composition, coordinated downstream version adoption and the complete
+maintainer-operated release gate have not run. Do not call this candidate
+release-qualified or extend recovery claims beyond the recorded subjects.
+The previous preparation narrative below retains its original source scope.
+
 ## Prepared 0.25.2 qualification ownership cleanup
 
 Starting source is released 0.25.1 at

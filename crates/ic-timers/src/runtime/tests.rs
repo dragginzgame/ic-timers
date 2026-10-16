@@ -2833,7 +2833,13 @@ fn watchdog_failed_dispatch_clears_handles_without_confirming_work() {
         DeclarationLifetime::Retained,
         DeclarationLifetime::RemoveWhenStopped,
     ] {
-        for failure_stage in ["successor-binding", "work-binding", "confirmation"] {
+        for failure_stage in [
+            "successor-admission",
+            "work-admission",
+            "successor-binding",
+            "work-binding",
+            "confirmation",
+        ] {
             let _fixture = setup();
             let timer = identity("provider-watchdog-dispatch-fault");
             let calls = Rc::new(Cell::new(0));
@@ -2850,6 +2856,13 @@ fn watchdog_failed_dispatch_clears_handles_without_confirming_work() {
             .expect("registration should succeed");
 
             match failure_stage {
+                "successor-admission" => {
+                    platform::ADMISSION_FAULT.set(Some((0, platform::AdmissionError::Capacity)));
+                }
+                "work-admission" => {
+                    platform::ADMISSION_FAULT
+                        .set(Some((1, platform::AdmissionError::IdentityExhausted)));
+                }
                 "successor-binding" => inject_provider_install_fault(),
                 "work-binding" => inject_provider_install_fault_after(1),
                 "confirmation" => inject_provider_confirmation_fault(),
@@ -4833,6 +4846,46 @@ fn initial_provider_failures_retire_all_policies_and_lifetimes_before_capture_dr
                 assert_eq!(timer_count(), 0);
                 assert!(!run_next_due());
             }
+        }
+    }
+}
+
+#[test]
+fn backend_admission_failure_retires_initial_claim_before_capture_drop() {
+    for policy in 0..3 {
+        for error in [
+            platform::AdmissionError::Capacity,
+            platform::AdmissionError::IdentityExhausted,
+        ] {
+            let _fixture = setup();
+            let timer = identity("backend-admission-failure");
+            let dropped = Rc::new(Cell::new(false));
+            let captured = RemovalCapture {
+                timer: timer.clone(),
+                dropped: Rc::clone(&dropped),
+            };
+            platform::ADMISSION_FAULT.set(Some((0, error)));
+            let result = initial_registration_with_capture(
+                policy,
+                timer,
+                TimerStart::RemoveWhenStopped {
+                    initial: TimerSchedule::At(20),
+                },
+                captured,
+            );
+            assert!(matches!(
+                (error, result),
+                (
+                    platform::AdmissionError::Capacity,
+                    Err(TimerError::BackendCapacity)
+                ) | (
+                    platform::AdmissionError::IdentityExhausted,
+                    Err(TimerError::BackendIdentityExhausted)
+                )
+            ));
+            assert!(dropped.get());
+            assert_eq!(timer_inventory().unwrap().timers(), []);
+            assert_eq!(timer_count(), 0);
         }
     }
 }

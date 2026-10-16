@@ -28,16 +28,17 @@ The application is still responsible for:
 - keeping each Watchdog task small and bounded; and
 - ensuring every component uses the same version of IC Timers.
 
-IC Timers is built on `ic-cdk-timers` and shares the Internet Computer's
-platform limits. Its own timer and handle limits do not place a fixed limit on
-the underlying provider's memory use or guarantee that every scheduled task
-will be delivered.
+IC Timers owns its one-shot backend and shares the Internet Computer's platform
+limits. Pending-task and transport bounds do not cap total memory or guarantee
+that every scheduled task will be delivered.
 
 ![The application, IC Timers, and the platform provider each own a different part of timer safety](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-safety-responsibilities.svg)
 
-`ic-timers` is a higher-level wrapper around `ic-cdk-timers`. The CDK remains
-the platform timer provider; this crate owns only the coordination it can
-actually enforce and test.
+The pending 0.26 implementation owns timer dispatch and uses the CDK executor
+for async polling and call-context cleanup. Its unsafe boundary is confined to
+IC entrypoints and callback registration; callback environments are bounded
+indices, not raw pointers. See the [design](docs/design/0.26-owned-timer-backend.md)
+for required evidence and remaining qualification.
 
 ## Current guarantees
 
@@ -67,8 +68,8 @@ The current runtime provides:
   immediate scheduling through the same claim, generation, and handle owner;
 - private, non-copyable provider handles owned by canonical entries (one for
   ordinary timers, at most successor plus work for watchdogs), with terminal
-  cancellation clearing the actual handles and all direct `ic-cdk-timers` use
-  isolated in the private, non-re-exported `platform` module;
+  cancellation clearing pending tasks through the private, non-re-exported
+  `platform` module;
 - synchronous idempotent reconstruction of retained declarations from a
   caller-owned volatile claim slot and caller-supplied desired state, without
   persisted library authority;
@@ -225,20 +226,24 @@ the failed creation. See the [construction decision](docs/design/0.18-atomic-reg
   reconciliation, or cancellation operations only while its exact
   consumer-work attempt is running. Retaining it provides inert identity
   metadata, not a second long-lived registration capability.
-- The provider's 250 outstanding-dispatch limit is canister-wide. The
-  registry's 64-entry and 128-owned-handle bounds do not reserve provider
-  capacity; consumers must inventory remaining direct provider users and
-  tolerate provider deferral as an operational retry condition.
-- Registry and owned-handle bounds do not bound provider queue memory. In the
-  pinned provider, `clear_timer` removes the callback task but leaves its deadline
-  record in the provider heap until that deadline is processed. Replacing distant
-  deadlines or rapidly continuing a Watchdog can accumulate cancelled records,
-  extra cleanup work and a larger memory high-water extent. The native mock does
-  not model provider heap allocation. A maintained churn fixture records this
-  subject on real Wasm in 0.9.0. The maintainer reported ten PocketIC subjects
-  passing before the ordinary-await correction, but supplied no page measurements
-  in that report. This wrapper has no provider-heap compaction authority and
-  supplies no global memory cap. See the [pinned provider cancellation source](https://docs.rs/ic-cdk-timers/1.0.0/src/ic_cdk_timers/lib.rs.html#197).
+- The owned backend holds at most 130 pending task records: two per registry
+  entry plus two transition slots. An accepted task leaves that store before
+  consumer work runs. Cancellation immediately removes its pending record;
+  stale transport replies cannot recreate it. Capture destruction occurs outside
+  the queue borrow. Running tasks are not aborted by pending-handle cancellation.
+- At most 128 self-calls are outstanding. Each owns one executor method context
+  in a bounded table; response or cleanup consumes that slot exactly once.
+  IC rollback restores the slot before cleanup after a response trap. The IC's
+  callback-delivery contract is required for safe slot reuse.
+- Dispatch submission failure, low cycles and transport saturation defer the
+  next dispatch by one second. Transient rejection or unknown response requeues
+  only a still-pending task after one second. An accepted task cannot be replayed
+  from that transport identity. This does not establish exactly-once application
+  effects or remove the need for durable application reconciliation.
+- Armed records and outstanding transport slots are bounded separately. Future
+  captures, running work, executor allocations and canister memory are not
+  globally bounded by these limits. Older provider-heap churn receipts describe
+  the old implementation and do not qualify the replacement.
 - Recorded recovery evidence uses PocketIC 15.0.0 and `ic-cdk-timers` 1.0.0.
   The 0.13.2 host harness used `ic-testkit` 0.17.3 with pinned PocketIC 16.0.0;
   its complete release gate passed on native macOS 15 Intel and Apple Silicon.

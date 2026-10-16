@@ -11,6 +11,7 @@ const CADENCE_NS: u64 = 1_000_000_000;
 
 mod churn;
 mod ordinary;
+mod transport;
 
 thread_local! {
     static REGISTRATION: RefCell<Option<WatchdogRegistration>> = const { RefCell::new(None) };
@@ -280,7 +281,7 @@ fn ensure_from_returned_error() -> bool {
 
 #[ic_cdk::update]
 fn burn_to_below_timer_call_cost() -> (u128, u128) {
-    let method_len = "<ic-cdk internal> timer_executor".len() as u64;
+    let method_len = "<ic-timers internal> dispatch".len() as u64;
     let call_cost = ic_cdk::api::cost_call(method_len, 8);
     let liquid = ic_cdk::api::canister_liquid_cycle_balance();
     let target = call_cost.saturating_sub(1);
@@ -432,4 +433,16 @@ mod tests {
         assert!(!DESIRED_SCHEDULED.with(Cell::get));
         assert_eq!(take_work_decision(), WatchdogDecision::Continue);
     }
+}
+
+// Unpublished fixture: exercise the authenticated backend payload boundary.
+#[ic_cdk::update]
+async fn fixture_dispatch_payload(payload: Vec<u8>) -> bool {
+    ic_cdk::call::Call::unbounded_wait(
+        ic_cdk::api::canister_self(),
+        "<ic-timers internal> dispatch",
+    )
+    .take_raw_args(payload)
+    .await
+    .is_ok()
 }

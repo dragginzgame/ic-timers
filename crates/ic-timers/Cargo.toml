@@ -13,9 +13,10 @@ keywords.workspace = true
 categories.workspace = true
 readme = "../../README.md"
 publish = true
+links = "ic-timers-global-timer"
 
 [dependencies]
-ic-cdk-timers.workspace = true
+ic-cdk-executor.workspace = true
 ic-metrics.workspace = true
 ic0.workspace = true
 thiserror.workspace = true

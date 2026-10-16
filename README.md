@@ -64,8 +64,9 @@ checked integer/fractional means. First lifecycle reconciliation remains atomic;
 see the [earlier release notes](CHANGELOG.md#0210---2026-10-12) for that contract.
 
 IC Timers is written in Rust 2024 and supports Rust
-1.91.0 and newer. It uses `ic-cdk-timers` 1.0.0 as its private, underlying
-timer service.
+1.91.0 and newer. The pending 0.26 backend owns one-shot dispatch through IC
+system calls and the CDK executor. See the [backend design](docs/design/0.26-owned-timer-backend.md)
+for implementation and qualification boundaries.
 
 One IC Timers runtime can manage up to 64 named timers and 128 timer handles.
 It supports one-time work, work that repeats after returning normally, and
@@ -74,15 +75,14 @@ timer status, outcomes, and bounded resource measurements.
 
 ![Application needs matched to IC Timers scheduling and observation capabilities](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-application-needs.svg)
 
-## Why wrap `ic-cdk-timers`?
+## Why a shared timer runtime?
 
-`ic-cdk-timers` is the right low-level mechanism for scheduling a simple
-callback. The operational problem changes when a framework, a database, and
-application code all schedule work independently.
+A framework, a database, and application code can all schedule work independently.
+One runtime gives them shared scheduling authority and an inventory.
 
 ![Separate component timers compared with one shared IC Timers registry and status view](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-shared-registry.svg)
 
-We thought this wrapper was worthwhile because these are canister-wide
+The shared runtime addresses these canister-wide
 questions:
 
 - Which logical timers exist, and who owns each one?
@@ -94,7 +94,7 @@ questions:
 If every consumer builds a registry, recurrence loop, metrics table, and
 upgrade protocol, operators still lack one reliable inventory and the most
 failure-sensitive logic is duplicated. `ic-timers` puts that coordination
-above the CDK provider without creating another provider.
+above one private dispatch backend.
 
 ## Choose how a task should run
 
@@ -132,10 +132,11 @@ still pre-arms the cadence successor before every work attempt, and normal
 `ContinueImmediately` replaces that exact successor rather than adding one.
 
 The 64-registration and 128-owned-handle limits bound this runtime's inventory
-and live capabilities. They do not cap the provider's queue memory: the pinned
-provider keeps cancelled deadline records until those deadlines are processed.
-Frequent deadline replacement and immediate continuation can therefore grow
-memory and incur later cleanup work. See [the safety limits](SAFETY.md).
+and live capabilities. The backend holds at most 130 pending task records and
+removes cancelled records immediately. Outstanding self-calls are bounded separately at 128;
+these limits do not cap future captures, executor memory or total canister memory.
+Capture sizes and running async work still require application budgets. See
+[the safety limits](SAFETY.md).
 
 Ordinary recurrence is cheaper and is the correct default when work must
 finish normally before another invocation is allowed. Use `Watchdog` only
@@ -422,9 +423,13 @@ or consumer-work executor.
 > `ic-timers` Cargo package ID. Two resolved versions create two independent
 > library statics and therefore two registries.
 
-The registry's 128-handle ceiling does not reserve capacity in the provider's
-canister-wide limit of 250 outstanding dispatches. A composed canister must
-also inventory or migrate every remaining direct `ic-cdk-timers` user.
+The backend defers dispatch for one second when submission cannot proceed or
+its 128 outstanding calls are occupied. Transient rejects also retry after one
+second if the task is still pending. Top-up does not bypass an existing delay.
+Remove other global-timer providers from the complete canister graph; direct
+`ic-cdk-timers` coexistence is unsupported. Cargo's timer ownership key rejects
+multiple versions that declare that same key. Older releases lack the key, so
+dependency-graph and final-Wasm checks must still verify one timer owner.
 
 Canic, IcyDB, and application timers motivated this shared model. The
 [Canic adapter contract](docs/adoption/canic.md) and
@@ -432,9 +437,8 @@ Canic, IcyDB, and application timers motivated this shared model. The
 mapping and evidence without making patch-specific worktree state part of
 this README.
 
-For a canister with one simple callback and no need for shared inventory,
-metrics, lifecycle reconciliation, or a recovery policy, using
-`ic-cdk-timers` directly remains the simpler choice.
+The owned backend does not change application responsibility for durable state
+or for reconciling uncertain external effects.
 
 ## Guarantees and limits
 

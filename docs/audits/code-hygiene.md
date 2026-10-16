@@ -27,7 +27,7 @@ registration. This adoption adds no product audit or validation gate.
 Retain these local obligations:
 
 - The crate root exposes the intended facade. `platform` is the only direct
-  `ic-cdk-timers` boundary and remains private; provider handles and functions
+  IC dispatch/executor boundary and remains private; backend handles and functions
   do not become public control paths. Implementation imports use defining
   owners rather than accidental crate-root re-exports.
 - Snapshots are inert observations, validated configuration admits inputs,

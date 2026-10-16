@@ -1,4 +1,4 @@
-//! Private boundary to IC system facts and `ic-cdk-timers`.
+//! Private boundary to IC system facts and owned one-shot dispatch.
 //!
 //! Recurrence, identity, arbitration, inventory, and consumer work belong to
 //! the canonical runtime above this module.
@@ -9,33 +9,38 @@
 )]
 
 use crate::snapshot::MemoryPageExtent;
+#[cfg(test)]
 use std::{future::Future, time::Duration};
 
 #[cfg(not(test))]
-use ic_cdk_timers::{
-    TimerId as CdkTimerId, clear_timer as cdk_clear_timer, set_timer as cdk_set_timer,
-};
-
-/// Linear handle for one armed platform timer.
+mod backend;
 #[cfg(not(test))]
-#[must_use = "bind or clear the platform timer handle"]
-#[derive(Debug, Eq, PartialEq)]
-pub(crate) struct TimerHandle(CdkTimerId);
+mod ffi;
+mod queue;
+mod slots;
 
-/// Arm one asynchronous one-shot callback.
 #[cfg(not(test))]
-pub(crate) fn set_timer(delay: Duration, task: impl Future<Output = ()> + 'static) -> TimerHandle {
-    TimerHandle(cdk_set_timer(delay, task))
+pub(crate) use backend::{TimerHandle, clear_timer, try_set_timer};
+pub(crate) use queue::AdmissionError;
+
+#[cfg(test)]
+pub(crate) fn try_set_timer(
+    delay: Duration,
+    task: impl Future<Output = ()> + 'static,
+) -> Result<TimerHandle, AdmissionError> {
+    if let Some((remaining, error)) = ADMISSION_FAULT.take() {
+        if remaining == 0 {
+            return Err(error);
+        }
+        ADMISSION_FAULT.set(Some((remaining - 1, error)));
+    }
+    queue::deadline(time_ns(), delay)?;
+    Ok(set_timer(delay, task))
 }
 
-/// Clear one still-armed platform callback.
-#[cfg(not(test))]
-#[expect(
-    clippy::needless_pass_by_value,
-    reason = "Clearing consumes the linear handle."
-)]
-pub(crate) fn clear_timer(handle: TimerHandle) {
-    cdk_clear_timer(handle.0);
+#[cfg(test)]
+thread_local! {
+    pub(crate) static ADMISSION_FAULT: std::cell::Cell<Option<(usize, AdmissionError)>> = const { std::cell::Cell::new(None) };
 }
 
 /// Return current IC message time in nanoseconds.

@@ -1,9 +1,9 @@
 //! Observable and recovery-aware timer primitives for Internet Computer
 //! canisters.
 //!
-//! `ic-timers` is a higher-level wrapper around `ic-cdk-timers`, which remains
-//! the provider that arms and clears platform timers. This crate adds
-//! bounded coordination, scheduling, and observation above it.
+//! The private one-shot backend owns IC timer dispatch and cancellation. The
+//! selected CDK executor owns async polling and call-context cleanup; this crate
+//! owns bounded coordination, scheduling, and observation.
 //!
 //! The runtime executes `Once`, after-completion, and pre-armed synchronous
 //! watchdog callbacks through one volatile canister-local registry.
@@ -18,15 +18,21 @@
 //! [`timer_inventory`] returns the epoch together with the complete ordered
 //! timer set, including for an initialized empty registry.
 
-#![forbid(unsafe_code)]
+#![deny(unsafe_code)]
 #![forbid(private_interfaces)]
 #![deny(rustdoc::broken_intra_doc_links)]
+#[forbid(unsafe_code)]
 mod callback;
+#[forbid(unsafe_code)]
 mod control;
 mod platform;
+#[forbid(unsafe_code)]
 mod registry;
+#[forbid(unsafe_code)]
 mod runtime;
+#[forbid(unsafe_code)]
 mod schedule;
+#[forbid(unsafe_code)]
 mod snapshot;
 
 pub use callback::{

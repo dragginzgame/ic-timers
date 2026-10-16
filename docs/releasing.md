@@ -177,7 +177,7 @@ The exact reviewed [exceptions](../ci/dependency-pinning-exceptions.json) are:
 
 | Dependency | Selection | Qualification boundary |
 | --- | --- | --- |
-| `ic-cdk-timers` | `=1.0.0` | Provider dispatch, cancellation and recovery behavior |
+| `ic-cdk-executor` | `=2.0.0` | Async polling, call-context lifetime and trap cleanup |
 | `ic0` | `=1.2.0` | Production platform bindings and instruction counter 1 |
 | `ic-cdk` | `=0.20.3` | Probe callback execution and suspension semantics |
 

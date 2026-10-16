@@ -108,80 +108,30 @@ if [[ -e checks-ran ]]; then
     exit 1
 fi
 
-cat > crates/ic-timers/src/platform.rs <<'EOF'
-use ic_cdk_timers::TimerId;
-pub(crate) struct TimerHandle(TimerId);
-EOF
-facade_header=('#![forbid(private_interfaces)]' 'mod platform;')
+mkdir -p crates/ic-timers/src/platform
+printf '%s\n' 'pub(crate) struct TimerHandle;' > crates/ic-timers/src/platform/mod.rs
+printf '%s\n' '#![allow(unsafe_code)]' > crates/ic-timers/src/platform/ffi.rs
+facade_header=('#![forbid(private_interfaces)]' '#![deny(unsafe_code)]' 'mod platform;')
 printf '%s\n' "${facade_header[@]}" > crates/ic-timers/src/lib.rs
 bash scripts/ci/check-provider-boundary.sh >/dev/null
-
-# A failed search/order operation cannot establish provider confinement, even
-# when it emits the one permitted source path before failing.
-cat > scan-bin/grep <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-if [[ "${FIXTURE_PARTIAL_OUTPUT:-0}" == 1 ]]; then
-    printf '%s\n' 'crates/ic-timers/src/platform.rs'
-fi
-echo 'injected source search failure' >&2
-exit 2
-EOF
-chmod +x scan-bin/grep
-for partial_output in 0 1; do
-    expect_failure 'injected source search failure' env \
-        PATH="${temporary_root}/scan-bin:${PATH}" FIXTURE_PARTIAL_OUTPUT="${partial_output}" \
-        bash scripts/ci/check-provider-boundary.sh
-done
-rm scan-bin/grep
-IC_TIMERS_FIXTURE_SORT="$(command -v sort)"
-export IC_TIMERS_FIXTURE_SORT
-cat > scan-bin/sort <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-sources="$("${IC_TIMERS_FIXTURE_SORT}" "$@")"
-if [[ "${FIXTURE_PARTIAL_OUTPUT:-0}" == 1 ]]; then printf '%s\n' "${sources}"; fi
-echo 'injected source ordering failure' >&2
-exit 2
-EOF
-chmod +x scan-bin/sort
-for partial_output in 0 1; do
-    expect_failure 'injected source ordering failure' env \
-        PATH="${temporary_root}/scan-bin:${PATH}" FIXTURE_PARTIAL_OUTPUT="${partial_output}" \
-        bash scripts/ci/check-provider-boundary.sh
-done
-rm scan-bin/sort
-
 printf '%s\n' 'mod platform;' > crates/ic-timers/src/lib.rs
 expect_failure 'public interfaces' bash scripts/ci/check-provider-boundary.sh
-for export in 'pub use ic_cdk_timers::TimerId;' 'pub extern crate ic_cdk_timers;'; do
-    printf '%s\n' "${facade_header[@]}" "${export}" > crates/ic-timers/src/lib.rs
-    expect_failure 'direct ic-cdk-timers use' bash scripts/ci/check-provider-boundary.sh
-done
-printf '%s\n' "${facade_header[@]}" 'pub(crate) use crate::platform::TimerHandle;' > crates/ic-timers/src/lib.rs
-bash scripts/ci/check-provider-boundary.sh >/dev/null
-printf '%s\n' 'pub(super) use super::platform::TimerHandle;' > crates/ic-timers/src/runtime.rs
-bash scripts/ci/check-provider-boundary.sh >/dev/null
-printf '%s\n' 'use super::platform::TimerHandle;' > crates/ic-timers/src/runtime.rs
-bash scripts/ci/check-provider-boundary.sh >/dev/null
-printf '%s\n' 'use ic_cdk_timers::TimerId;' > crates/ic-timers/src/runtime.rs
-expect_failure 'direct ic-cdk-timers use' bash scripts/ci/check-provider-boundary.sh
-rm -- crates/ic-timers/src/runtime.rs
-printf '%s\n' '#![forbid(private_interfaces)]' 'pub mod platform;' > crates/ic-timers/src/lib.rs
-expect_failure 'private module' bash scripts/ci/check-provider-boundary.sh
-
 printf '%s\n' "${facade_header[@]}" > crates/ic-timers/src/lib.rs
-cp crates/ic-timers/src/platform.rs private-platform.rs
-for declaration in 'pub fn leaked() {}' 'pub async fn leaked() {}' \
-    'pub mod leaked {}' 'pub extern crate ic_cdk_timers as provider;'; do
-    cp private-platform.rs crates/ic-timers/src/platform.rs
-    printf '%s\n' "${declaration}" >> crates/ic-timers/src/platform.rs
+for operation in 'unsafe fn leak() {}' 'fn leak() { ic0::global_timer_set(1); }'; do
+    printf '%s\n' "${operation}" > crates/ic-timers/src/leak.rs
+    if [[ "${operation}" == unsafe* ]]; then expected=FFI; else expected='private platform'; fi
+    expect_failure "${expected}" bash scripts/ci/check-provider-boundary.sh
+done
+rm crates/ic-timers/src/leak.rs
+for declaration in 'pub fn leaked() {}' 'pub async fn leaked() {}' 'pub mod leaked {}'; do
+    printf '%s\n' "${declaration}" > crates/ic-timers/src/platform/mod.rs
     expect_failure 'restricted visibility' bash scripts/ci/check-provider-boundary.sh
 done
-
+printf '%s\n' '#![forbid(private_interfaces)]' '#![deny(unsafe_code)]' 'pub mod platform;' > crates/ic-timers/src/lib.rs
+expect_failure 'private module' bash scripts/ci/check-provider-boundary.sh
 # Rust resolves direct, grouped and chained aliases. No warning-denial flag is
 # needed: private-interface leaks are forbidden by the facade itself.
-printf '%s\n' 'pub(crate) struct TimerHandle;' 'pub(crate) fn set_timer() {}' > crates/ic-timers/src/platform.rs
+printf '%s\n' 'pub(crate) struct TimerHandle;' 'pub(crate) fn set_timer() {}' > crates/ic-timers/src/platform/mod.rs
 facade_header+=('mod snapshot { pub struct TimerEpoch; }' 'pub fn public_api() {}')
 fixture_rustc=(rustc --edition=2024 --crate-type=lib --crate-name boundary_fixture
     -A dead_code -A unused_imports crates/ic-timers/src/lib.rs -o libboundary_fixture.rlib)

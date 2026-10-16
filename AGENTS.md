@@ -78,9 +78,10 @@ This file is normative for automated contributors.
 
 - This is a pre-1.0 timer runtime. Describe only behavior backed by maintained
   native or PocketIC evidence, at the level of guarantee that evidence proves.
-- Keep the direct `ic-cdk-timers` dependency solely behind the private
-  `platform` module. Wrap it; never publicly re-export the provider crate,
-  provider module, provider handles, or provider functions.
+- The private `platform` module owns one-shot dispatch through IC system calls
+  and the selected CDK executor. Keep its handles and functions private. Unsafe
+  exports and callback registration belong only to `platform/ffi.rs`; safe runtime
+  modules forbid unsafe code. Keep one global-timer owner and no parallel provider.
 
 ## Pre-1.0 hard cuts
 

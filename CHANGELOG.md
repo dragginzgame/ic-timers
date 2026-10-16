@@ -2,6 +2,50 @@
 
 All notable changes to this project are recorded here.
 
+## [0.26.0]
+
+### Breaking
+
+- Replace the CDK timer provider with an independently implemented private
+  one-shot backend. Composed canisters must remove other global-timer providers
+  and resolve one IC Timers package identity. Cargo rejects duplicate packages
+  declaring the new ownership key; older releases still require graph checks.
+  Existing registration policies and durable application records are retained.
+- Defer dispatch by one second after insufficient cycles, submission failure or
+  transport saturation. A top-up does not bypass that delay. Transient responses
+  retry only a still-pending task, without replaying accepted work.
+
+### Changed
+
+- Remove cancelled deadline records immediately and bound pending tasks and
+  outstanding self-calls separately. Expose typed capacity and identity-exhaustion
+  errors; running async callbacks retain their cancellation semantics.
+- Keep MIT licensing for the independently authored backend, retain the CDK async
+  executor, and confine unsafe IC entrypoints/callback registration to one private
+  module. See the [0.26 design](docs/design/0.26-owned-timer-backend.md) for the
+  message-boundary contract and qualification requirements.
+
+### Development
+
+- Qualify seven IcyDB lifecycle/startup subjects with the owned dispatcher and
+  prepare isolated Canic/IcyDB adoption patches. Canic's supported probe builds
+  remain blocked by fixture Candid-export type-resolution errors.
+- Cover admission failure before both Watchdog arms, including cleanup after the
+  successor is already installed. Clarify the Cargo ownership key's limits for
+  older releases that do not declare it.
+- Check Canic core/control-plane and IcyDB lifecycle Wasm composition against the
+  candidate; identify downstream dispatcher admission, ingress-test and provider
+  graph assertions that must change during coordinated adoption.
+- Qualify the unchanged Jobs consumer against the candidate backend in an isolated
+  copy: 42 native tests and seven live recovery subjects pass, including upgrades
+  and uncertain-result reconciliation. Downstream version adoption remains separate.
+- Verify cancellation and registration replacement during submission deferral,
+  including stale authenticated delivery and rescheduling after cancellation.
+- Exercise real self-call queue pressure on PocketIC, retaining pending timer
+  work through submission deferral and completing it once after the retry delay.
+- Exercise real dispatch-response traps on PocketIC for both ordinary policies,
+  verifying cleanup preserves pending work for delayed retry and later dispatch.
+
 ## [0.25.2] - 2026-10-16
 
 ### Development

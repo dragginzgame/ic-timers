@@ -16,7 +16,7 @@ it still needs.
 A registration capability lets one owner control one named timer. The runtime
 coordinates callbacks and scheduling, while one shared registry holds timer
 names, states, counters, callbacks, and provider handles. Only the private
-platform boundary talks directly to `ic-cdk-timers`.
+platform boundary owns one-shot IC dispatch and integrates the selected executor.
 
 ![Ownership and control flow from durable application state through the IC Timers runtime to its private platform boundary](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-runtime-ownership.svg)
 
@@ -174,8 +174,11 @@ The remaining module hierarchy keeps six responsibilities separate:
    Owned provider roles follow entry policy and handle slot rather than a copied
    field. Installation and consumption reject policy/role mismatches before using
    a slot; detached handles retain complete tokens for restoration and cleanup.
-5. `platform` is the private direct boundary to `ic-cdk-timers` and required
+5. `platform` owns pending one-shot tasks, authenticated self-call dispatch and
    IC system facts. Its handle is linear and it owns no recurrence policy.
+   The bounded queue removes cancelled records immediately. The FFI module alone
+   registers callbacks and exports the global timer/internal dispatch entrypoints;
+   see the [backend design](design/0.26-owned-timer-backend.md).
    Page reads return the same inert extent representation used in snapshots,
    without a parallel platform value or a registry conversion.
 6. `runtime` owns the one canister-local registry static, erases consumer
@@ -392,8 +395,8 @@ Watchdog recovery, continued Canic timer progress, and no remaining direct
 blocker in the original 0.5.0 records was resolved within the frozen 0.8.0
 subject described in the [Toko Miner receipt](adoption/toko-miner.md).
 That receipt does not qualify later dependency combinations or deployments.
-The provider's 250 outstanding-dispatch limit is canister-wide; the registry's
-128-handle maximum bounds only handles owned by this crate. Canic must also
+The backend separately bounds 130 pending records and 128 outstanding dispatches;
+these are not a global bound on executor or application memory. Canic must also
 retain the validated hard cut that makes its application timer facade return
 typed capacity and identity errors.
 

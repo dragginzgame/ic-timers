@@ -83,9 +83,27 @@ pub enum TimerError {
     /// Canonical callback or provider-handle ownership was internally inconsistent.
     #[error("timer runtime ownership invariant failed")]
     OwnershipInvariant,
+    /// The bounded pending-callback store is full.
+    #[error("timer backend pending capacity exhausted")]
+    BackendCapacity,
+    /// The backend cannot allocate another non-reusable callback identity.
+    #[error("timer backend callback identities exhausted")]
+    BackendIdentityExhausted,
     /// A retained lifecycle claim no longer matches its canonical declaration.
     #[error("timer lifecycle reconciliation conflicts with the canonical declaration")]
     ReconciliationConflict,
+}
+
+impl From<platform::AdmissionError> for TimerError {
+    fn from(error: platform::AdmissionError) -> Self {
+        match error {
+            platform::AdmissionError::Capacity => Self::BackendCapacity,
+            platform::AdmissionError::IdentityExhausted => Self::BackendIdentityExhausted,
+            platform::AdmissionError::DeadlineOverflow => {
+                Self::Schedule(ScheduleError::DeadlineOverflow)
+            }
+        }
+    }
 }
 
 impl From<RegistryError> for TimerError {
@@ -1042,10 +1060,10 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
                 }
             }
             restore_provider_handles(handles)?;
-            let handle = platform::set_timer(
+            let handle = platform::try_set_timer(
                 Duration::from_nanos(*delay_ns),
                 dispatch_wakeup(token.clone()),
-            );
+            )?;
             bind_provider_handle(token, handle)?;
             if let Err(error) = confirm_effect(effect) {
                 let handle = with_registry_mut(|registry| {
@@ -1096,15 +1114,15 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
             }
             let successor_token = successor.clone();
             let successor_handle =
-                platform::set_timer(Duration::from_nanos(*successor_delay_ns), async move {
+                platform::try_set_timer(Duration::from_nanos(*successor_delay_ns), async move {
                     dispatch_watchdog_scheduler(&successor_token);
-                });
+                })?;
             bind_provider_handle(successor, successor_handle)?;
 
             let work_token = work.clone();
-            let work_handle = platform::set_timer(Duration::ZERO, async move {
+            let work_handle = platform::try_set_timer(Duration::ZERO, async move {
                 dispatch_watchdog_work(&work_token);
-            });
+            })?;
             if let Err(error) =
                 bind_provider_handle(work, work_handle).and_then(|()| confirm_effect(effect))
             {
@@ -1457,6 +1475,7 @@ fn with_registry_mut<T>(
 #[cfg(test)]
 fn reset_for_test(now_ns: u64, canister_version: u64) {
     platform::reset(now_ns, canister_version);
+    platform::ADMISSION_FAULT.set(None);
     WATCHDOG_COMPLETION_FAULT.with(|fault| fault.set(false));
     PROVIDER_INSTALL_FAULT_AFTER.with(|fault| fault.set(None));
     PROVIDER_CONFIRMATION_FAULT.with(|fault| fault.set(false));
