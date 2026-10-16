@@ -95,7 +95,9 @@ fn run_cohort(cohort: &str) {
     assert_eq!(cancelled.next_deadline_ns, None);
 
     let memory_sampling = if cohort == "watchdog" {
-        let measurement = memory_sampling_measurement(pic, canister_id);
+        let measurement: MemorySamplingMeasurement = pic
+            .update_candid(canister_id, "memory_sampling_overhead", ())
+            .expect("probe update succeeds");
         assert!(measurement.sampled_bracket_instructions >= measurement.empty_bracket_instructions);
         assert_eq!(
             measurement.overhead_instructions,
@@ -179,14 +181,6 @@ fn update_measurement(
     method: &str,
 ) -> OperationMeasurement {
     pic.update_candid(canister_id, method, ())
-        .expect("probe update succeeds")
-}
-
-fn memory_sampling_measurement(
-    pic: &PocketIc,
-    canister_id: Principal,
-) -> MemorySamplingMeasurement {
-    pic.update_candid(canister_id, "memory_sampling_overhead", ())
         .expect("probe update succeeds")
 }
 

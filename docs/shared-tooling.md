@@ -3,8 +3,10 @@
 ## Current authority
 
 One [snapshot](../.shared-tooling.snapshot) records the exact reviewed source,
-entrypoint roots and all **133** payload hashes/modes. It selects [Shared PR #227](https://github.com/dragginzgame/shared-tooling/pull/227)
-`314a1a97854be8523e54273284533de4dd5f6f58`, stacked on
+entrypoint roots and all **133** payload hashes/modes. It selects [Shared PR #234](https://github.com/dragginzgame/shared-tooling/pull/234)
+`12eb03d28ba8814000639091a44392d08db21657`, stacked on
+[#230](https://github.com/dragginzgame/shared-tooling/pull/230),
+[#227](https://github.com/dragginzgame/shared-tooling/pull/227) and
 [#224](https://github.com/dragginzgame/shared-tooling/pull/224) and building on merged
 [#217](https://github.com/dragginzgame/shared-tooling/pull/217) and
 [#218](https://github.com/dragginzgame/shared-tooling/pull/218): committed Shared
@@ -72,6 +74,18 @@ keeps compiler/cache/product policy, local tool extensions and fixture assertion
 The bootstrap copies only the canonical common Make skeleton; each caller still
 supplies its own Makefile, catalogs and stubs. Shared's existing Make-consumer
 fixture qualifies that layout without a second bootstrap-only suite.
+
+The existing shared evidence action also uploads caller-prepared archives and
+collection logs without selecting tools again. Timers keeps product collection,
+original status, identity and downloaded-content qualification; Shared owns safe
+prepared-file selection, the pinned upload and completeness enforcement. The
+private Timers upload action is removed. This changes no entrypoint selection.
+
+The existing fixture exit runner owns injected exits, completion-marker selection
+and checked scratch-root retention. Timers keeps its thirteen-source roster,
+absolute/relative/aliased scratch contexts and collector diagnostics. Selected
+mandatory assertion probes use the original owner guards, including return-based
+guards. This also changes no entrypoint selection.
 
 ## Refreshing and qualification
 

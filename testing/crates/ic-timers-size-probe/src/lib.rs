@@ -20,22 +20,14 @@ use ic_timers::{
     register_watchdog,
 };
 
-#[cfg(not(any(
-    feature = "baseline",
-    feature = "once",
-    feature = "after-completion",
-    feature = "watchdog"
-)))]
-compile_error!("select exactly one size-probe cohort feature");
-#[cfg(any(
-    all(feature = "baseline", feature = "once"),
-    all(feature = "baseline", feature = "after-completion"),
-    all(feature = "baseline", feature = "watchdog"),
-    all(feature = "once", feature = "after-completion"),
-    all(feature = "once", feature = "watchdog"),
-    all(feature = "after-completion", feature = "watchdog")
-))]
-compile_error!("size-probe cohort features are mutually exclusive");
+const _: () = assert!(
+    cfg!(feature = "baseline") as u8
+        + cfg!(feature = "once") as u8
+        + cfg!(feature = "after-completion") as u8
+        + cfg!(feature = "watchdog") as u8
+        == 1,
+    "select exactly one size-probe cohort feature",
+);
 
 #[cfg(not(feature = "baseline"))]
 const CADENCE_NS: u64 = 1_000_000_000;
@@ -70,17 +62,29 @@ fn init() {
 
 #[ic_cdk::update]
 fn start() -> OperationMeasurement {
-    measure(start_inner)
+    let (changed, instructions) = measure(start_inner);
+    OperationMeasurement {
+        changed,
+        instructions,
+    }
 }
 
 #[ic_cdk::update]
 fn ensure_again() -> OperationMeasurement {
-    measure(ensure_again_inner)
+    let (changed, instructions) = measure(ensure_again_inner);
+    OperationMeasurement {
+        changed,
+        instructions,
+    }
 }
 
 #[ic_cdk::update]
 fn cancel() -> OperationMeasurement {
-    measure(cancel_inner)
+    let (changed, instructions) = measure(cancel_inner);
+    OperationMeasurement {
+        changed,
+        instructions,
+    }
 }
 
 /// Isolate the raw instruction cost of the start/end page reads used by one
@@ -88,11 +92,11 @@ fn cancel() -> OperationMeasurement {
 /// runtime's callback instruction aggregate.
 #[ic_cdk::update]
 fn memory_sampling_overhead() -> MemorySamplingMeasurement {
-    let empty_bracket_instructions = measure_interval(|| {
+    let ((), empty_bracket_instructions) = measure(|| {
         std::hint::black_box((0_u64, 0_u64));
         std::hint::black_box((0_u64, 0_u64));
     });
-    let sampled_bracket_instructions = measure_interval(|| {
+    let ((), sampled_bracket_instructions) = measure(|| {
         std::hint::black_box(memory_page_extents());
         std::hint::black_box(memory_page_extents());
     });
@@ -115,16 +119,12 @@ fn use_representative_watchdog_work() {
 #[ic_cdk::query]
 fn observe() -> CohortObservation<&'static str> {
     let snapshot_before = ic_cdk::api::performance_counter(1);
-    let snapshot = match timer_snapshot(&cohort_identity()) {
-        Ok(snapshot) => snapshot,
-        Err(_) => ic_cdk::trap("size-probe snapshot failed"),
-    };
+    let snapshot = timer_snapshot(&cohort_identity())
+        .unwrap_or_else(|_| ic_cdk::trap("size-probe snapshot failed"));
     let snapshot_instructions = ic_cdk::api::performance_counter(1).saturating_sub(snapshot_before);
     let inventory_before = ic_cdk::api::performance_counter(1);
-    let inventory = match timer_inventory() {
-        Ok(inventory) => inventory,
-        Err(_) => ic_cdk::trap("size-probe inventory failed"),
-    };
+    let inventory =
+        timer_inventory().unwrap_or_else(|_| ic_cdk::trap("size-probe inventory failed"));
     let inventory_instructions =
         ic_cdk::api::performance_counter(1).saturating_sub(inventory_before);
     let registered = registration_present();
@@ -160,19 +160,11 @@ fn observe() -> CohortObservation<&'static str> {
     }
 }
 
-fn measure(operation: impl FnOnce() -> bool) -> OperationMeasurement {
+fn measure<T>(operation: impl FnOnce() -> T) -> (T, u64) {
     let before = ic_cdk::api::performance_counter(1);
-    let changed = operation();
-    OperationMeasurement {
-        changed,
-        instructions: ic_cdk::api::performance_counter(1).saturating_sub(before),
-    }
-}
-
-fn measure_interval(operation: impl FnOnce()) -> u64 {
-    let before = ic_cdk::api::performance_counter(1);
-    operation();
-    ic_cdk::api::performance_counter(1).saturating_sub(before)
+    let result = operation();
+    let instructions = ic_cdk::api::performance_counter(1).saturating_sub(before);
+    (result, instructions)
 }
 
 #[inline(always)]
@@ -196,7 +188,7 @@ fn start_inner() -> bool {
         if slot.is_some() {
             return false;
         }
-        let registration = match register_once(
+        let registration = register_once(
             cohort_identity(),
             TimerStart::Retained {
                 initial: Some(TimerSchedule::After(std::time::Duration::from_nanos(
@@ -207,10 +199,8 @@ fn start_inner() -> bool {
                 CALLBACKS.with(|calls| calls.set(calls.get().saturating_add(1)));
                 OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
             },
-        ) {
-            Ok(registration) => registration,
-            Err(_) => ic_cdk::trap("size-probe Once registration failed"),
-        };
+        )
+        .unwrap_or_else(|_| ic_cdk::trap("size-probe Once registration failed"));
         *slot = Some(registration);
         true
     })
@@ -222,7 +212,7 @@ fn start_inner() -> bool {
         if slot.is_some() {
             return false;
         }
-        let registration = match register_after_completion(
+        let registration = register_after_completion(
             cohort_identity(),
             cadence(),
             TimerStart::Retained {
@@ -237,10 +227,8 @@ fn start_inner() -> bool {
                     AfterCompletionDecision::RecurAfterCompletion,
                 )
             },
-        ) {
-            Ok(registration) => registration,
-            Err(_) => ic_cdk::trap("size-probe after-completion registration failed"),
-        };
+        )
+        .unwrap_or_else(|_| ic_cdk::trap("size-probe after-completion registration failed"));
         *slot = Some(registration);
         true
     })
@@ -252,7 +240,7 @@ fn start_inner() -> bool {
         if slot.is_some() {
             return false;
         }
-        let registration = match register_watchdog(
+        let registration = register_watchdog(
             cohort_identity(),
             cadence(),
             TimerStart::Retained {
@@ -264,10 +252,8 @@ fn start_inner() -> bool {
                 CALLBACKS.with(|calls| calls.set(calls.get().saturating_add(1)));
                 WatchdogRunResult::new(watchdog_completion(), WatchdogDecision::Continue)
             },
-        ) {
-            Ok(registration) => registration,
-            Err(_) => ic_cdk::trap("size-probe Watchdog registration failed"),
-        };
+        )
+        .unwrap_or_else(|_| ic_cdk::trap("size-probe Watchdog registration failed"));
         *slot = Some(registration);
         true
     })
@@ -360,17 +346,13 @@ fn registration_present() -> bool {
 
 #[cfg(any(feature = "after-completion", feature = "watchdog"))]
 fn cadence() -> TimerCadence {
-    match TimerCadence::from_nanos(CADENCE_NS) {
-        Ok(cadence) => cadence,
-        Err(_) => ic_cdk::trap("size-probe cadence is invalid"),
-    }
+    TimerCadence::from_nanos(CADENCE_NS)
+        .unwrap_or_else(|_| ic_cdk::trap("size-probe cadence is invalid"))
 }
 
 fn cohort_identity() -> TimerIdentity {
-    match TimerIdentity::try_new("ic-timers", "size-probe", cohort_name()) {
-        Ok(identity) => identity,
-        Err(_) => ic_cdk::trap("size-probe identity is invalid"),
-    }
+    TimerIdentity::try_new("ic-timers", "size-probe", cohort_name())
+        .unwrap_or_else(|_| ic_cdk::trap("size-probe identity is invalid"))
 }
 
 #[cfg(feature = "baseline")]

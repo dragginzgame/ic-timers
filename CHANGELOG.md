@@ -2,6 +2,33 @@
 
 All notable changes to this project are recorded here.
 
+## [0.25.1]
+
+### Development
+
+- Reuse Shared's fixture exit runner for completion and collector probes. Retain
+  the local source roster, scratch-path contexts and collector diagnostics;
+  remove duplicate exit injection, status and retained-directory checks.
+- Call the canonical exact-tag checker directly from Make. Remove the local
+  zero/two-argument adapter; retain fail-closed HEAD/version resolution and
+  frozen-commit release checks at their real callers.
+- Simplify probe fatal-result branches while retaining the same IC trap messages
+  and typed rejection paths. Qualify current probe costs and recovery separately.
+- Inline three single-use native probe transport wrappers at their call sites.
+  Keep explicit Candid result shapes and the existing Testkit call semantics.
+- Validate size-probe cohort selection with one compile-time count assertion;
+  retain all four valid selections and reject every other feature combination.
+- Align the release-gate fixture with the runtime-probe native regression already
+  included in `make test`, including failure propagation from that command.
+- Reuse Shared's evidence upload action for Timers' prepared archive and original
+  collection log. Keep local evidence selection and qualify upload of available
+  diagnostics when archive creation fails.
+- Replace three runtime-probe command flags with one next-work decision. The
+  latest request wins and normal execution consumes it once; traps retain it.
+- Use one private instruction-measurement bracket in the size probe, preserving
+  result wire records. Before/after PocketIC cohorts retain operation and callback
+  instruction costs; probe Wasm size changes are recorded in the current evidence.
+
 ## [0.25.0] - 2026-10-15
 
 ### Breaking

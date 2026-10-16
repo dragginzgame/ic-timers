@@ -57,11 +57,18 @@ jobs:
         run: |
           bash scripts/ci/test-repository-checks.sh
           make msrv testing-check
+      - name: Collect Timers failure evidence
+        id: collect-timers-evidence
+        if: ${{ failure() }}
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: bash scripts/ci/collect-failure-evidence.sh 2>&1 | tee "$RUNNER_TEMP/ic-timers-collection.log"
       - name: Retain failure evidence
         if: ${{ failure() }}
-        uses: ./.github/actions/retain-timers-failure-evidence
+        uses: ./.github/actions/retain-failure-evidence
         with:
           name: ic-timers-failure-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}-${{ github.run_attempt }}
+          prepared-archive: ${{ runner.temp }}/ic-timers-failure-evidence.tar.gz
+          collection-log: ${{ runner.temp }}/ic-timers-collection.log
 
   checks:
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
@@ -104,11 +111,18 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.failure_stage == 'late' }}
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: bash scripts/ci/qualify-failure-evidence.sh late
+      - name: Collect Timers failure evidence
+        id: collect-timers-evidence
+        if: ${{ failure() }}
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: bash scripts/ci/collect-failure-evidence.sh 2>&1 | tee "$RUNNER_TEMP/ic-timers-collection.log"
       - name: Retain failure evidence
         if: ${{ failure() }}
-        uses: ./.github/actions/retain-timers-failure-evidence
+        uses: ./.github/actions/retain-failure-evidence
         with:
           name: ic-timers-failure-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}-${{ github.run_attempt }}
+          prepared-archive: ${{ runner.temp }}/ic-timers-failure-evidence.tar.gz
+          collection-log: ${{ runner.temp }}/ic-timers-collection.log
 
   macos:
     if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
@@ -169,11 +183,18 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.failure_stage == 'late' }}
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: bash scripts/ci/qualify-failure-evidence.sh late
+      - name: Collect Timers failure evidence
+        id: collect-timers-evidence
+        if: ${{ failure() }}
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: bash scripts/ci/collect-failure-evidence.sh 2>&1 | tee "$RUNNER_TEMP/ic-timers-collection.log"
       - name: Retain failure evidence
         if: ${{ failure() }}
-        uses: ./.github/actions/retain-timers-failure-evidence
+        uses: ./.github/actions/retain-failure-evidence
         with:
           name: ic-timers-failure-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}-${{ github.run_attempt }}
+          prepared-archive: ${{ runner.temp }}/ic-timers-failure-evidence.tar.gz
+          collection-log: ${{ runner.temp }}/ic-timers-collection.log
 
   # Inspect bytes downloaded from the existing failure uploader. The original
   # jobs retain their failure; this separate manual-only job supplies acceptance
@@ -264,8 +285,15 @@ jobs:
           bash scripts/ci/verify-shared-tooling-snapshot.sh
           make fetch
           RELEASE_COMMIT='' bash scripts/ci/cargo-release-metadata.sh check-graph ic-timers
+      - name: Collect Timers failure evidence
+        id: collect-timers-evidence
+        if: ${{ failure() }}
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: bash scripts/ci/collect-failure-evidence.sh 2>&1 | tee "$RUNNER_TEMP/ic-timers-collection.log"
       - name: Retain failure evidence
         if: ${{ failure() }}
-        uses: ./.github/actions/retain-timers-failure-evidence
+        uses: ./.github/actions/retain-failure-evidence
         with:
           name: ic-timers-failure-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}-${{ github.run_attempt }}
+          prepared-archive: ${{ runner.temp }}/ic-timers-failure-evidence.tar.gz
+          collection-log: ${{ runner.temp }}/ic-timers-collection.log

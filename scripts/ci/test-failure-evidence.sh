@@ -16,31 +16,32 @@ fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Failed evidence fixture retained"' EXIT
 # shellcheck source=scripts/ci/fixture-retention-probes.sh
 source "$root/scripts/ci/fixture-retention-probes.sh"
-# Qualify the local action's actual collection body with controlled collectors.
-# Upload stays a hosted operation; its pinned call and failure admission are
-# checked here rather than invoking GitHub from a fixture.
-"$root/.tools/host/bin/yq" -o json '.' "$root/.github/actions/retain-timers-failure-evidence/action.yml" > "$fixture/action.json"
-# shellcheck disable=SC2016 # GitHub expressions are literal action metadata.
+# Timers owns the actual collector command and selected archive/log paths;
+# Shared qualifies prepared-file selection and the upload implementation.
+"$root/.tools/host/bin/yq" -o json '.' "$root/.github/workflows/ci.yml" > "$fixture/workflow.json"
+# shellcheck disable=SC2016 # GitHub expressions are literal caller metadata.
 "$root/.tools/host/bin/jq" -e '
-    .runs.using == "composite" and (.runs.steps | length) == 2 and
-    .runs.steps[0].if == "${{ always() }}" and
-    .runs.steps[0].shell == "/bin/bash --noprofile --norc -e -o pipefail {0}" and
-    .runs.steps[1].if == "${{ always() }}" and
-    .runs.steps[1].uses == "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a" and
-    .runs.steps[1].with == {
-        "name": "${{ inputs.name }}",
-        "path": "${{ runner.temp }}/ic-timers-failure-evidence.tar.gz\n${{ runner.temp }}/ic-timers-collection.log\n",
-        "compression-level": 0, "if-no-files-found": "warn"
-    }' "$fixture/action.json" > /dev/null
-# shellcheck disable=SC2016 # Compare literal caller expressions.
-"$root/.tools/host/bin/yq" -o json '.' "$root/.github/workflows/ci.yml" |
-    "$root/.tools/host/bin/jq" -e '
-        [.jobs[].steps[] | select(.uses == "./.github/actions/retain-timers-failure-evidence")] |
-        length == 4 and all(.[];
-            .if == "${{ failure() }}" and .with.name ==
-                "ic-timers-failure-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}-${{ github.run_attempt }}")' > /dev/null
-"$root/.tools/host/bin/jq" -e '.runs.steps' "$fixture/action.json" > "$fixture/action-steps.json"
-bash "$root/scripts/ci/extract-workflow-step.sh" "$fixture/action-steps.json" collect-evidence > "$fixture/action.sh"
+    [.jobs[].steps[] | select(.id == "collect-timers-evidence")] as $collect |
+    [$collect[] | .run] | unique | length == 1' "$fixture/workflow.json" > /dev/null
+# shellcheck disable=SC2016 # GitHub expressions are literal caller metadata.
+"$root/.tools/host/bin/jq" -e '
+    [.jobs[].steps[] | select(.id == "collect-timers-evidence")] as $collect |
+    [.jobs[].steps[] | select(.uses == "./.github/actions/retain-failure-evidence")] as $upload |
+    ($collect | length) == 4 and ($upload | length) == 4 and
+    all($collect[]; .if == "${{ failure() }}" and
+        .shell == "/bin/bash --noprofile --norc -e -o pipefail {0}") and
+    all($upload[]; .if == "${{ failure() }}" and .with == {
+        "name": "ic-timers-failure-${{ github.job }}-${{ runner.os }}-${{ runner.arch }}-${{ github.sha }}-${{ github.run_attempt }}",
+        "prepared-archive": "${{ runner.temp }}/ic-timers-failure-evidence.tar.gz",
+        "collection-log": "${{ runner.temp }}/ic-timers-collection.log"
+    }) and
+    all(.jobs | to_entries[] | select(.key == "checks" or .key == "macos" or .key == "msrv" or .key == "tag-truth");
+        [.value.steps | to_entries[] | select(.value.id == "collect-timers-evidence")] as $c |
+        [.value.steps | to_entries[] | select(.value.uses == "./.github/actions/retain-failure-evidence")] as $u |
+        $c[0].key + 1 == $u[0].key)
+' "$fixture/workflow.json" > /dev/null
+"$root/.tools/host/bin/jq" -e '.jobs.checks.steps' "$fixture/workflow.json" > "$fixture/action-steps.json"
+bash "$root/scripts/ci/extract-workflow-step.sh" "$fixture/action-steps.json" collect-timers-evidence > "$fixture/action.sh"
 mkdir -p "$fixture/action-repository/scripts/ci" "$fixture/action-runner"
 cat > "$fixture/action-repository/scripts/ci/collect-failure-evidence.sh" <<'COLLECTOR'
 printf 'collector stdout\n'
@@ -53,9 +54,7 @@ for collector_status in 0 37; do
     (cd "$fixture/action-repository" && ACTION_COLLECTOR_STATUS="$collector_status" \
         RUNNER_TEMP="$fixture/action-runner" "$BASH" -e -o pipefail "$fixture/action.sh") \
         > "$fixture/action-$collector_status.log" 2>&1 || action_status=$?
-    action_expected=0
-    [[ "$collector_status" == 0 ]] || action_expected=1
-    [[ "$action_status" == "$action_expected" ]] || exit 1
+    [[ "$action_status" == "$collector_status" ]] || exit 1
     cmp "$fixture/action-expected.log" "$fixture/action-runner/ic-timers-collection.log"
     cmp "$fixture/action-expected.log" "$fixture/action-$collector_status.log"
 done
@@ -74,34 +73,16 @@ mkdir -p "$GITHUB_WORKSPACE" "$RUNNER_TEMP"
 # Probe the actual collector EXIT boundary, truncating before Git inspection,
 # tool selection or archiving. Existing full collection cases below still prove
 # the successful archive path. Use the invoking Bash, including native Bash 3.2.
-mkdir -p "$fixture/collector-probe/scripts/ci" "$fixture/collector scratch"
-export RETENTION_EXIT_PATH="$fixture/collector-exit-path"
-export RETENTION_SOURCE_ROOT="$root"
+mkdir "$fixture/collector scratch"
 for failure in nounset command nonzero premature completed failed-completion; do
-    # shellcheck disable=SC2016 # Expanded only by the disposable collector copy.
-    case "$failure" in
-        nounset) injection='unset COLLECTOR_UNBOUND; printf "%s\n" "$COLLECTOR_UNBOUND"'; expected=1 ;;
-        command) injection='false'; expected=1 ;;
-        nonzero) injection='exit 23'; expected=23 ;;
-        premature) injection='exit 0'; expected=1 ;;
-        completed) injection='collection_complete=true; exit 0'; expected=0 ;;
-        failed-completion) injection='collection_complete=true; exit 23'; expected=23 ;;
-    esac
-    fixture_probe_prefix "$root/scripts/ci/collect-failure-evidence.sh" \
-        "$fixture/collector-probe/scripts/ci/collect-failure-evidence.sh" \
-        script_root metadata "$injection"
-    rm -f -- "$RETENTION_EXIT_PATH"
-    status=0
     RUNNER_TEMP="$fixture/collector scratch" \
-        "$BASH" "$fixture/collector-probe/scripts/ci/collect-failure-evidence.sh" \
-        > "$fixture/collector-exit-$failure.log" 2>&1 || status=$?
-    [[ "$status" == "$expected" ]] || exit 1
-    retained="$(cat "$RETENTION_EXIT_PATH")"
-    [[ -n "$retained" ]] || exit 1
-    if [[ "$expected" == 0 ]]; then [[ ! -e "$retained" ]] || exit 1
-    else
-        [[ -d "$retained" && "$(cat "$retained/exit-evidence")" == 'retained evidence' ]] || exit 1
-        grep -Fq "Failed evidence collection retained: $retained" "$fixture/collector-exit-$failure.log"
+        FIXTURE_PROBE_ROOT_VARIABLE=script_root FIXTURE_PROBE_DIRECTORY_VARIABLE=metadata \
+        FIXTURE_PROBE_COMPLETION_VARIABLE=collection_complete \
+        FIXTURE_PROBE_TEMPORARY_ROOT="$fixture/collector scratch" \
+        fixture_probe_exit "$root/scripts/ci/collect-failure-evidence.sh" \
+            "$fixture" "$root" collector "$failure" || exit 1
+    if [[ "$failure" != completed ]]; then
+        grep -Fq "Failed evidence collection retained: $fixture_probe_retained" "$fixture/collector-$failure.log"
     fi
 done
 # Read-only reuse of committed objects gives the fixture an actual checkout SHA.

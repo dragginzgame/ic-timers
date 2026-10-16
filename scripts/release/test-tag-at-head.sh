@@ -4,7 +4,7 @@ set -euo pipefail
 repository_root="$(git rev-parse --show-toplevel)"
 export PATH="${repository_root}/.tools/host/bin:${PATH}"
 export YQ="${repository_root}/.tools/host/bin/yq"
-checker="${repository_root}/scripts/release/check-tag-at-head.sh"
+checker="${repository_root}/scripts/ci/check-release-tag.sh"
 cleaner="${repository_root}/scripts/ci/ensure-clean.sh"
 # shellcheck source=scripts/ci/fixture-lifecycle.sh
 source "$repository_root/scripts/ci/fixture-lifecycle.sh"
@@ -18,13 +18,18 @@ git config user.name 'ic-timers release test'
 git config user.email 'release-test@example.invalid'
 printf '%s\n' '[workspace.dependencies.fixture]' 'version = "0.2.0"' \
     '[workspace.package]' 'version = "0.1.0"' > Cargo.toml
-git add Cargo.toml
+cp "$repository_root/Makefile" .
+bash "$repository_root/scripts/ci/prepare-make-fixture.sh" "$repository_root" "$temporary_root"
+cp "$repository_root/scripts/ci/read-cargo-workspace-version.sh" "$checker" scripts/ci/
+git add Cargo.toml Makefile make scripts
 git commit -qm fixture
 
 expect_rejection() {
     local expected="${1}" output
     shift
-    if output="$(bash "${checker}" "$@" 2>&1)"; then
+    if [[ $# == 0 ]]; then set -- make --no-print-directory release-tag-check
+    else set -- bash "$checker" "$@"; fi
+    if output="$("$@" 2>&1)"; then
         echo "error: tag guard accepted ${expected}: ${output}" >&2
         exit 1
     fi
@@ -36,7 +41,7 @@ git tag v0.1.0
 expect_rejection 'lightweight tag'
 git tag -d v0.1.0 >/dev/null
 git tag -a v0.1.0 -m fixture
-bash "${checker}"
+make --no-print-directory release-tag-check
 release_commit="$(git rev-parse HEAD)"
 git commit --allow-empty -qm 'advance head'
 expect_rejection 'tag at older commit in HEAD mode'
@@ -64,6 +69,16 @@ fi
 exec "$IC_TIMERS_TAG_REAL_GIT" "$@"
 STUB
 chmod +x bin/git
+# The implicit Make path must preserve failure even with plausible stdout.
+for observation in '' "$release_commit"; do
+    status=0
+    PATH="$temporary_root/bin:$PATH" FIXTURE_FAIL_TAG_QUERY='rev-parse HEAD' \
+        FIXTURE_TAG_QUERY_OUTPUT="$observation" \
+        make --no-print-directory release-tag-check > "$temporary_root/implicit-output" 2>&1 || status=$?
+    [[ "$status" != 0 ]] || exit 1
+    grep -Fq 'injected tag query failure' "$temporary_root/implicit-output"
+done
+rm "$temporary_root/implicit-output"
 git for-each-ref --format='%(refname) %(objectname)' > .git/refs-before
 for query in "rev-parse --verify ${release_commit}^{commit}" \
     'cat-file -t refs/tags/v0.1.0' 'rev-parse --verify refs/tags/v0.1.0^{commit}'; do
@@ -148,9 +163,11 @@ while IFS=$'\t' read -r record _digest _mode path; do
     cp -p "$repository_root/$path" "${workflow_root}/repository/$path"
 done < "$repository_root/.shared-tooling.snapshot"
 cp "$repository_root/.shared-tooling.snapshot" "${workflow_root}/repository/"
-cp "$repository_root/scripts/release/check-tag-at-head.sh" "${workflow_root}/repository/scripts/release/"
+cp "$repository_root/Makefile" "$repository_root/Cargo.toml" "$repository_root/Cargo.lock" "${workflow_root}/repository/"
 mkdir "${workflow_root}/bin" "${workflow_root}/runner"
 export GITHUB_WORKSPACE="${workflow_root}/repository" RUNNER_TEMP="${workflow_root}/runner"
+TAG_REAL_MAKE="$(command -v make)"
+export TAG_REAL_MAKE
 export TAG_MAKE_EVENTS="${workflow_root}/make-events" TAG_SCRIPT_EVENTS="${workflow_root}/script-events" TAG_REAL_BASH="$BASH"
 TAG_VERSION="$(cd "$GITHUB_WORKSPACE" && bash scripts/ci/read-cargo-workspace-version.sh --stable Cargo.toml)"
 export TAG_VERSION GITHUB_REF_NAME="v$TAG_VERSION" TAG_WORKFLOW_SCOPE=tag
@@ -175,7 +192,7 @@ case "$*" in
     '--no-print-directory version')
         printf '%s\n' "$TAG_VERSION"
         [[ "${TAG_FAIL_VERSION:-false}" != true ]] || exit 37 ;;
-    release-tag-check) exec "$TAG_REAL_BASH" "$GITHUB_WORKSPACE/scripts/release/check-tag-at-head.sh" ;;
+    release-tag-check) exec "$TAG_REAL_MAKE" --no-print-directory release-tag-check ;;
     *) echo 'tag workflow dispatched a forbidden target' >&2; exit 97 ;;
 esac
 STUB
@@ -236,7 +253,7 @@ reject_workflow
 awk '/^release-check:/ { selected=1; next } selected && /^[^[:space:]#]/ { exit } selected { print }' "$repository_root/Makefile" |
     grep -Fq 'bash scripts/release/test-tag-at-head.sh'
 yq -o json '.' "$repository_root/.github/workflows/ci.yml" |
-    jq -e '.jobs["tag-truth"].steps | any(.uses == "./.github/actions/retain-timers-failure-evidence" and .if == "${{ failure() }}")
+    jq -e '.jobs["tag-truth"].steps | any(.uses == "./.github/actions/retain-failure-evidence" and .if == "${{ failure() }}")
         and all(.[]; ((.run // "") | test("make[^\\n]* release-check([ \\t\\n]|$)") | not))' > /dev/null
 # The normal CI lane must prepare all root-lock sources before offline graph
 # fixtures; its default-member build does not fetch unpublished probe dependencies.

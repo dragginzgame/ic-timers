@@ -192,8 +192,12 @@ The validation runner retains raw and combined logs under
 `latest-combined.log` convenience copies. Later attempts retain earlier logs;
 retention failure reports its owned scratch path. Preserve these before retrying.
 
-The local failure action retains product/run/source identity and delegates tool
-selection plus safe partial archive collection to Shared. Invalid store admission
+The local collector retains product/run/source identity and delegates tool
+selection plus safe partial archive collection to Shared. CI captures its original
+status and combined output, then passes the prepared archive and collection log to
+Shared's evidence action. Available files are uploaded before missing inputs fail
+completeness; original collection failure remains a failed job. The shared action
+retains artifacts for fourteen days. Invalid store admission
 still retains safe local evidence and reports incomplete collection; it never
 traverses unadmitted external payloads. Testkit setup attempts and failed tool
 builds keep their owner receipts. Hosted upload/download and native source

@@ -132,7 +132,8 @@ for target in build test msrv; do
         build) calls=('build -p ic-timers --all-targets --all-features --locked') ;;
         test) calls=('test -p ic-timers --all-targets --all-features --locked'
             'test -p ic-timers --doc --all-features --locked'
-            'test -p ic-timers-test-protocol --lib --locked') ;;
+            'test -p ic-timers-test-protocol --lib --locked'
+            'test -p ic-timers-runtime-probe --lib --locked') ;;
         msrv) calls=('+1.88.0 check -p ic-timers --all-targets --all-features --locked'
             '+1.88.0 check -p ic-timers --all-features --locked --target wasm32-unknown-unknown'
             '+1.88.0 test -p ic-timers --doc --all-features --locked') ;;

@@ -320,7 +320,14 @@ fn insufficient_cycles_defer_due_work_until_top_up() {
     let pic = &owned.instance;
     let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(pic, canister_id, "start"));
-    let (_burned, call_cost) = update_u128_pair(pic, canister_id, "burn_to_below_timer_call_cost");
+    let (_burned, call_cost): (u128, u128) = update_candid_args(
+        pic,
+        canister_id,
+        Principal::anonymous(),
+        "burn_to_below_timer_call_cost",
+        (),
+    )
+    .expect("probe multi-result update succeeds");
     assert!(call_cost > 0);
 
     pic.advance_time(Duration::from_secs(1));
@@ -346,7 +353,14 @@ fn full_inventory_is_bounded_deterministic_and_measured() {
     assert_eq!(update_u64(pic, canister_id, "fill_inventory"), 64);
     assert_eq!(update_u64(pic, canister_id, "fill_inventory"), 64);
 
-    let (len, instructions, ordered) = query_inventory_measurement(pic, canister_id);
+    let (len, instructions, ordered): (u64, u64, bool) = query_candid_args(
+        pic,
+        canister_id,
+        Principal::anonymous(),
+        "inventory_measurement",
+        (),
+    )
+    .expect("probe inventory query succeeds");
     assert_eq!(len, 64);
     assert!(instructions > 0);
     assert!(ordered);
@@ -396,22 +410,6 @@ fn update_u64(pic: &PocketIc, canister_id: Principal, method: &str) -> u64 {
         .expect("probe update succeeds")
 }
 
-fn update_u128_pair(pic: &PocketIc, canister_id: Principal, method: &str) -> (u128, u128) {
-    update_candid_args(pic, canister_id, Principal::anonymous(), method, ())
-        .expect("probe multi-result update succeeds")
-}
-
-fn query_inventory_measurement(pic: &PocketIc, canister_id: Principal) -> (u64, u64, bool) {
-    query_candid_args(
-        pic,
-        canister_id,
-        Principal::anonymous(),
-        "inventory_measurement",
-        (),
-    )
-    .expect("probe inventory query succeeds")
-}
-
 fn snapshot(pic: &PocketIc, canister_id: Principal) -> ProbeSnapshot {
     pic.query_candid(canister_id, "snapshot", ())
         .expect("probe query succeeds")
@@ -438,6 +436,10 @@ fn exact_deadline_sleeps_and_registration_replacement_marks_counter_regrowth() {
     assert_eq!(sleeping.registration_id, initial.registration_id);
 
     let continuation = later + 10_000_000_000;
+    // Last request wins; superseded stop/immediate requests cannot leak into
+    // this callback or a later one.
+    update_unit(pic, canister_id, "stop_on_next_work");
+    update_unit(pic, canister_id, "continue_immediately_on_next_work");
     update_deadline(pic, canister_id, "schedule_at_on_next_work", continuation);
     update_deadline(pic, canister_id, "schedule_at", first_deadline);
     drive_rounds(pic, 16);

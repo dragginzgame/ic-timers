@@ -20,9 +20,7 @@ thread_local! {
     static SECONDARY_COMPLETED_WORK: Cell<u64> = const { Cell::new(0) };
     static TRAP_WINDOW: Cell<Option<(u64, u64)>> = const { Cell::new(None) };
     static EXHAUST_WINDOW: Cell<Option<(u64, u64)>> = const { Cell::new(None) };
-    static STOP_ON_NEXT_WORK: Cell<bool> = const { Cell::new(false) };
-    static CONTINUE_IMMEDIATELY_ON_NEXT_WORK: Cell<bool> = const { Cell::new(false) };
-    static DEADLINE_ON_NEXT_WORK: Cell<Option<u64>> = const { Cell::new(None) };
+    static NEXT_WORK_DECISION: Cell<WatchdogDecision> = const { Cell::new(WatchdogDecision::Continue) };
     static DESIRED_SCHEDULED: Cell<bool> = const { Cell::new(false) };
     static SECONDARY_DESIRED_SCHEDULED: Cell<bool> = const { Cell::new(false) };
     static POST_UPGRADE_RECONSTRUCTED: Cell<bool> = const { Cell::new(false) };
@@ -55,10 +53,8 @@ fn post_upgrade() {
         bool,
         u64,
         u64,
-    ) = match ic_cdk::storage::stable_restore() {
-        Ok(state) => state,
-        Err(_) => ic_cdk::trap("runtime probe stable restore failed"),
-    };
+    ) = ic_cdk::storage::stable_restore()
+        .unwrap_or_else(|_| ic_cdk::trap("runtime probe stable restore failed"));
     DESIRED_SCHEDULED.with(|desired| desired.set(desired_scheduled));
     SECONDARY_DESIRED_SCHEDULED.with(|desired| desired.set(secondary_desired));
     COMPLETED_WORK.with(|completed| completed.set(completed_work));
@@ -102,11 +98,9 @@ fn install_watchdog_with_initial_schedule(immediate: bool) -> bool {
             return false;
         }
         let identity = probe_identity();
-        let cadence = match TimerCadence::from_nanos(CADENCE_NS) {
-            Ok(cadence) => cadence,
-            Err(_) => ic_cdk::trap("probe cadence is invalid"),
-        };
-        let registration = match register_watchdog(
+        let cadence = TimerCadence::from_nanos(CADENCE_NS)
+            .unwrap_or_else(|_| ic_cdk::trap("probe cadence is invalid"));
+        let registration = register_watchdog(
             identity,
             cadence,
             TimerStart::Retained {
@@ -135,34 +129,30 @@ fn install_watchdog_with_initial_schedule(immediate: bool) -> bool {
                     exhaust_message_instructions();
                 }
                 COMPLETED_WORK.with(|completed| completed.set(completed.get().saturating_add(1)));
-                let decision = if STOP_ON_NEXT_WORK.with(|stop| stop.replace(false)) {
-                    DESIRED_SCHEDULED.with(|desired| desired.set(false));
-                    WatchdogDecision::Stop
-                } else if CONTINUE_IMMEDIATELY_ON_NEXT_WORK
-                    .with(|requested| requested.replace(false))
-                {
-                    WatchdogDecision::ContinueImmediately
-                } else if let Some(deadline_ns) =
-                    DEADLINE_ON_NEXT_WORK.with(|requested| requested.replace(None))
-                {
-                    WatchdogDecision::ScheduleAt(deadline_ns)
-                } else {
-                    WatchdogDecision::Continue
-                };
+                let decision = take_work_decision();
                 WatchdogRunResult::new(TimerCompletion::success(1), decision)
             },
-        ) {
-            Ok(registration) => registration,
-            Err(_) => ic_cdk::trap("watchdog registration failed"),
-        };
+        )
+        .unwrap_or_else(|_| ic_cdk::trap("watchdog registration failed"));
         *slot = Some(registration);
         true
     })
 }
 
+// The latest control request replaces the previous proposal. Consume it only
+// after the failure window, so a trapped callback leaves the proposal pending.
+fn take_work_decision() -> WatchdogDecision {
+    let decision =
+        NEXT_WORK_DECISION.with(|requested| requested.replace(WatchdogDecision::Continue));
+    if decision == WatchdogDecision::Stop {
+        DESIRED_SCHEDULED.with(|desired| desired.set(false));
+    }
+    decision
+}
+
 #[ic_cdk::update]
 fn continue_immediately_on_next_work() {
-    CONTINUE_IMMEDIATELY_ON_NEXT_WORK.with(|requested| requested.set(true));
+    NEXT_WORK_DECISION.with(|requested| requested.set(WatchdogDecision::ContinueImmediately));
 }
 
 #[ic_cdk::update]
@@ -182,7 +172,7 @@ fn schedule_at(deadline_ns: u64) {
 
 #[ic_cdk::update]
 fn schedule_at_on_next_work(deadline_ns: u64) {
-    DEADLINE_ON_NEXT_WORK.with(|requested| requested.set(Some(deadline_ns)));
+    NEXT_WORK_DECISION.with(|requested| requested.set(WatchdogDecision::ScheduleAt(deadline_ns)));
 }
 
 #[ic_cdk::update]
@@ -210,11 +200,9 @@ fn install_secondary_watchdog() -> bool {
         if slot.is_some() {
             return false;
         }
-        let cadence = match TimerCadence::from_nanos(CADENCE_NS) {
-            Ok(cadence) => cadence,
-            Err(_) => ic_cdk::trap("secondary cadence is invalid"),
-        };
-        let registration = match register_watchdog(
+        let cadence = TimerCadence::from_nanos(CADENCE_NS)
+            .unwrap_or_else(|_| ic_cdk::trap("secondary cadence is invalid"));
+        let registration = register_watchdog(
             secondary_identity(),
             cadence,
             TimerStart::Retained {
@@ -228,10 +216,8 @@ fn install_secondary_watchdog() -> bool {
                 });
                 WatchdogRunResult::new(TimerCompletion::success(1), WatchdogDecision::Continue)
             },
-        ) {
-            Ok(registration) => registration,
-            Err(_) => ic_cdk::trap("secondary watchdog registration failed"),
-        };
+        )
+        .unwrap_or_else(|_| ic_cdk::trap("secondary watchdog registration failed"));
         *slot = Some(registration);
         true
     })
@@ -263,7 +249,7 @@ fn failure_window() -> (u64, u64) {
 
 #[ic_cdk::update]
 fn stop_on_next_work() {
-    STOP_ON_NEXT_WORK.with(|stop| stop.set(true));
+    NEXT_WORK_DECISION.with(|requested| requested.set(WatchdogDecision::Stop));
 }
 
 #[ic_cdk::update]
@@ -312,10 +298,8 @@ fn fill_inventory() -> u64 {
     for _ in current..MAX_TIMER_REGISTRATIONS {
         let index = NEXT_EXTRA_NAME.with(Cell::get);
         let name = format!("extra-{index:02}");
-        let identity = match TimerIdentity::try_new("ic-timers", "runtime-probe", name) {
-            Ok(identity) => identity,
-            Err(_) => ic_cdk::trap("extra probe identity is invalid"),
-        };
+        let identity = TimerIdentity::try_new("ic-timers", "runtime-probe", name)
+            .unwrap_or_else(|_| ic_cdk::trap("extra probe identity is invalid"));
         // Retained declarations belong to the registry; these inert extras
         // need no caller-held control capabilities after registration.
         let _ = register_watchdog(
@@ -333,10 +317,7 @@ fn fill_inventory() -> u64 {
 #[ic_cdk::query]
 fn inventory_measurement() -> (u64, u64, bool) {
     let before = ic_cdk::api::performance_counter(1);
-    let inventory = match timer_inventory() {
-        Ok(inventory) => inventory,
-        Err(_) => ic_cdk::trap("inventory snapshot failed"),
-    };
+    let inventory = timer_inventory().unwrap_or_else(|_| ic_cdk::trap("inventory snapshot failed"));
     let instructions = ic_cdk::api::performance_counter(1).saturating_sub(before);
     let ordered = inventory
         .timers()
@@ -356,10 +337,8 @@ fn exhaust_message_instructions() -> ! {
 fn snapshot() -> ProbeSnapshot {
     let registered = REGISTRATION.with_borrow(Option::is_some);
     let completed_work = COMPLETED_WORK.with(Cell::get);
-    let snapshot = match timer_snapshot(&probe_identity()) {
-        Ok(snapshot) => snapshot,
-        Err(_) => ic_cdk::trap("snapshot lookup failed"),
-    };
+    let snapshot = timer_snapshot(&probe_identity())
+        .unwrap_or_else(|_| ic_cdk::trap("snapshot lookup failed"));
     let observed = ProbeSnapshot {
         registered,
         completed_work,
@@ -419,15 +398,38 @@ fn probe_memory_summary(summary: MemoryPageSummary) -> Option<ProbeMemorySummary
 }
 
 fn probe_identity() -> TimerIdentity {
-    match TimerIdentity::try_new("ic-timers", "runtime-probe", "watchdog") {
-        Ok(identity) => identity,
-        Err(_) => ic_cdk::trap("probe identity is invalid"),
-    }
+    TimerIdentity::try_new("ic-timers", "runtime-probe", "watchdog")
+        .unwrap_or_else(|_| ic_cdk::trap("probe identity is invalid"))
 }
 
 fn secondary_identity() -> TimerIdentity {
-    match TimerIdentity::try_new("ic-timers", "runtime-probe", "secondary") {
-        Ok(identity) => identity,
-        Err(_) => ic_cdk::trap("secondary identity is invalid"),
+    TimerIdentity::try_new("ic-timers", "runtime-probe", "secondary")
+        .unwrap_or_else(|_| ic_cdk::trap("secondary identity is invalid"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn latest_work_request_replaces_previous_proposals_and_is_consumed_once() {
+        DESIRED_SCHEDULED.with(|desired| desired.set(true));
+        stop_on_next_work();
+        continue_immediately_on_next_work();
+        schedule_at_on_next_work(42);
+        assert_eq!(take_work_decision(), WatchdogDecision::ScheduleAt(42));
+        assert!(DESIRED_SCHEDULED.with(Cell::get));
+        assert_eq!(take_work_decision(), WatchdogDecision::Continue);
+
+        schedule_at_on_next_work(99);
+        continue_immediately_on_next_work();
+        assert_eq!(take_work_decision(), WatchdogDecision::ContinueImmediately);
+        assert_eq!(take_work_decision(), WatchdogDecision::Continue);
+
+        continue_immediately_on_next_work();
+        stop_on_next_work();
+        assert_eq!(take_work_decision(), WatchdogDecision::Stop);
+        assert!(!DESIRED_SCHEDULED.with(Cell::get));
+        assert_eq!(take_work_decision(), WatchdogDecision::Continue);
     }
 }

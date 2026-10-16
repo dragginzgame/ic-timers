@@ -2,106 +2,115 @@
 
 # Current status
 
-Last updated: 2026-10-15
+Last updated: 2026-10-16
 
-## Prepared 0.25 compiler and contributor-owner cleanup
+## Prepared 0.25.1 probe and evidence cleanup
 
-Released base is 0.24.0 at `50b535a5936e885a727e6dade20f029d8a9113c2`.
-The maintainer requested Rust 1.91.0 as MSRV. Manifests, Make/probe commands,
-CI and current consumer instructions now agree. The supported build requirement
-change uses one undated 0.25.0 draft; Cargo package versions remain unchanged.
-Incoming Metrics 0.11, Testkit 0.46 and Host 0.19 Cargo selections are preserved.
+Starting source is 0.25.0 at `11e73bff33676e6d829baa502fb943ffa312b988`.
+One undated 0.25.1 draft covers this batch. Cargo package versions and the incoming
+root lockfile changes are preserved. The workspace selects Rust 1.91, Metrics
+0.11 and Testkit 0.47; no dependency update belongs to this batch.
 
-One canonical snapshot selects reviewed
-`314a1a97854be8523e54273284533de4dd5f6f58` from
-[Shared PR #227](https://github.com/dragginzgame/shared-tooling/pull/227), stacked
-on #224 and building on merged #217/#218. Its 133 payloads include common hosted
-preparation, Make-fixture setup and focused verifier/evidence fixtures; the
-earlier handover retired eighteen copies and two manifests.
-The [adoption guide](../shared-tooling.md) records ownership and qualification;
-its [full prior receipts](../evidence/shared-tooling-history.md) remain historical.
+One canonical snapshot selects `12eb03d28ba8814000639091a44392d08db21657`
+from [Shared PR #234](https://github.com/dragginzgame/shared-tooling/pull/234),
+stacked on #230/#227/#224. The 133 payloads keep the same entrypoints. Shared now
+accepts Timers' prepared archive and original collection log; the private upload
+action is removed. Product evidence selection and downloaded source/run checks
+remain local. Shared uploads available files before enforcing completeness.
+See [adoption boundaries](../shared-tooling.md) and [release evidence](../releasing.md#ci-failure-evidence).
 
-Shared's read-only changelog preflight replaces the local independent writer;
-coordinated metadata preparation remains the sole writer. Its generic fixture
-is upstream; Timers keeps actual bump/rollback and source/index assertions.
-Workflow bodies use stable IDs and Shared's unique complete-input extractor.
-Timers retains ordering, logging, tag and upload assertions. One corruption
-fixture tests the single export, restoring each mutated payload before the next.
-Timer runtime source and semantics are unchanged by these reductions.
+The runtime probe stores one existing Watchdog decision instead of three pending
+flags. The latest control request wins; normal execution consumes it once, after
+the failure window. Stop clears saved scheduling intent only when consumed.
+Native regression dispatch joins the existing `make test` target; the exact-
+deadline PocketIC subject also exercises superseded Stop/immediate requests.
 
-Testkit 0.46 multi-result helpers replace four local raw transport/codec flows;
-reply shapes and the raw provider-ingress rejection test remain. Collector EXIT
-probes reuse Shared's renderer, preserving all six failure/completion cases.
-Explicit local/hosted Rust setup shares one installer; `update-dev` prepares
-MSRV Clippy/rustfmt and Wasm too, before common tools. Checks remain offline.
+The size probe uses one private instruction bracket returning the result and
+instruction count. Wire records, sampling boundaries and optimization policy
+remain local. Published runtime code and API are unchanged.
 
-The release-prose advisory now calls its canonical checker directly. The local
-forwarder and forwarding-only fixture are removed; version preparation still
-proves argument binding, pre-mutation execution and non-blocking failure.
+Follow-up cleanup inlines three single-use native Candid wrappers. One compile-
+time cohort assertion replaces the missing-feature and pairwise conflict guards;
+all four single-feature selections compile natively and for Wasm, and all twelve
+invalid combinations fail the count assertion. Optimized cohort byte sizes are
+unchanged by this follow-up. The release-gate fixture now accounts for the probe
+native test command added in the preceding batch.
+The three affected PocketIC subjects (cycle depletion, inventory measurement and
+policy cohorts), Rust 1.91 probe compilation and Rust 1.99 probe Clippy pass.
 
-Version and graph callers now use canonical readers directly. Two forwarding
-scripts and the graph adapter-only fixture are removed; stable-version admission,
-worktree selection and original failures remain at actual preparation/tag callers.
-Generic snapshot/archive rejection cases have one Shared owner. Timers retains
-actual exported payload corruption, collector integration, identity and pin checks.
-The common hosted action and its execution assertions now belong to Shared;
-six Timers fixtures use its Make bootstrap while retaining local inputs and checks.
-Tracked Python bytecode is removed and interpreter cache directories are ignored.
+The Shared Testkit CLI adapter is prepared against the earlier `e5430e1` source
+at `/tmp/ic-timers-cli-cleanup.5_htzoxa/shared/`. Its reviewed diff, PR description
+and qualified Timers caller patch are alongside that directory. Generic CLI
+admission/offline/failure checks move upstream; exact local server directories,
+aggregate ordering and jobserver checks remain with Timers. Owner and disposable
+consumer fixtures pass on Bash 5 and genuine Bash 3.2. Contribution commit/PR
+and canonical adoption await the explicit approval required by AGENTS.md; the
+normal adapter and selected snapshot remain unchanged by this pending work.
 
-## Evidence and remaining acceptance
+The next follow-up removes the tag-selection adapter. Make resolves current
+HEAD/version with separately checked observations and passes frozen release
+identities directly to Shared's exact checker. Tag/publication/workflow,
+committed-release and release-gate fixtures pass on Bash 5 and genuine Bash 3.2.
+Probe fatal-result matches now use the same explicit IC traps through
+`unwrap_or_else`; native/Wasm compilation, probe Clippy and trap/upgrade,
+inventory and policy-cohort PocketIC subjects pass. This follow-up reduces
+Baseline/Once/Watchdog artifacts by 7 bytes each and After-completion by 49.
+After-completion start/snapshot intervals decrease by 70/72 instructions and its
+work envelope increases by 2; other cohort instruction subjects are unchanged.
+These are probe observations, with no published runtime or optimization-policy change.
+
+The approved five-file Shared exit-runner contribution is committed in #234 and
+canonically adopted at the exact source above. It centralizes completion-variable/
+scratch-root handling and preserves return-based assertion guards. Timers now
+uses that runner for its thirteen-source completion roster and collector exits,
+retaining local scratch contexts, diagnostics and actual evidence integration.
+Before-images, export preview/apply and focused qualification are retained at
+`/tmp/ic-timers-exit-tag-cleanup.bi2qkcb8/adoption-turn/`. This adoption does not
+include the separately pending Testkit CLI contribution above.
+The actual adopted completion/collector fixtures pass on Bash 5 and genuine
+Bash 3.2; affected ShellCheck, snapshot integrity and local doc links pass.
+The normal Git index/refs, Cargo inputs and toolchain selection are unchanged.
+
+## Evidence and limits
 
 Before-images, canonical preview/apply and focused logs are retained at
-`/tmp/ic-timers-owner-consolidation.eggohebc/`. Rust 1.91 library native/Wasm
-and probe compilation, 155 native tests and doctests pass. Shared's new owner
-fixtures and existing retirement checks pass on Bash 5/genuine Bash 3.2;
-full snapshot distribution, affected ShellCheck and owner doc links pass. The
-interrupted-publication retry fixture also passes on both shells.
-Timers' completion, corruption, failure evidence, version rollback, committed/tag,
-index, gate and repository fixtures pass; the six directly affected Bash 3.2
-subjects also pass. All four cohorts and the runtime probe compile to Wasm on 1.91. Strict library/
-probe Clippy passes on prepared Rust 1.99. Follow-up at `a18a288`: explicitly
-installing Rust 1.91 Clippy resolves the missing component; complete offline
-`testing-check` passes, including formatting and all four cohort lint selections.
-Moved-link results retain their original source scope in the evidence directory.
+`/tmp/ic-timers-probe-actions.p74abcf5/`. Rust 1.91 native control tests and
+optimized Wasm builds pass; Rust 1.99 probe Clippy passes. The four-cohort
+before/after PocketIC comparison uses the same incoming root lock, Rust 1.91,
+`timer-probe` profile and admitted PocketIC 16.1.0 server:
 
-This follow-up's before-images, canonical preview/apply and focused logs are at
-`/tmp/ic-timers-next-reductions.7p99r2wx/`. Rust 1.91 probe compilation/strict
-Clippy and protocol tests pass. Shared preparation and Timers setup/collector/
-completion fixtures pass on Bash 5 and genuine Bash 3.2; affected ShellCheck,
-actionlint and snapshot integrity pass. Installations were replaced with stubs.
-This changes harness/setup code, not published runtime behavior or canister Wasm.
+| Cohort | Before Wasm bytes | After | Delta |
+| --- | ---: | ---: | ---: |
+| Baseline | 254056 | 254159 | +103 |
+| Once | 309725 | 308870 | -855 |
+| After-completion | 309846 | 309718 | -128 |
+| Watchdog | 311284 | 311284 | 0 |
 
-The next reduction's evidence is at `/tmp/ic-timers-probe-reductions.461i34bo/`.
-Prose/version/completion fixtures pass on Bash 5 and genuine Bash 3.2. The
-`pending-testkit-047-driver.patch` applies cleanly and passes isolated native
-compilation/Clippy against the pending producer helper, preserving advancement
-and tick counts. Normal adoption awaits Testkit #98 publication; selected 0.46
-has no such API. The instruction-helper move was rejected: it broke native
-probe compilation and increased two optimized cohorts by 478 and 203 bytes.
-All five measured artifacts remain isolated; no dependency,
-probe sampling or optimization policy change is applied from that experiment.
+Start, duplicate scheduling, cancellation, snapshot, scheduler/work, memory-sampling
+and calibration instruction subjects are unchanged. Inventory changes by +1
+instruction for Baseline and -2 for Once; the other two are unchanged. These are
+probe artifacts and intervals, not an application-Wasm optimization claim.
 
-This verifier batch's before-images, preview/apply and focused logs are at
-`/tmp/ic-timers-verifier-reductions.4sv8ej5n/`. Shared verifier/distribution/
-retention and Timers snapshot/completion/collector/version/tag/index/committed
-fixtures pass on Bash 5 and genuine Bash 3.2. Both Python suites, affected lint,
-snapshot integrity and locked graph admission pass. No Rust or dependency change
-is part of this batch. Normal index, refs and incoming Cargo inputs are preserved.
+Shared host/tool-evidence and retention fixtures pass on Bash 5 and genuine Bash
+3.2, using substitutes. Timers' collector/completion fixtures pass on both shells;
+both downloaded-evidence Python suites, affected Clippy, ShellCheck, actionlint,
+repository adapters, snapshot integrity and documentation checks pass. Four focused
+PocketIC subjects pass: mixed decisions/exact deadlines, immediate continuation,
+Stop/resume and trap recovery. Full owner/native macOS, hosted upload/download and
+the complete release gate remain separate qualification. Normal Git index/refs and
+Cargo inputs stay user-owned; only the isolated Shared PR branch was committed.
 
-Common preparation and fixture logs are at
-`/tmp/ic-timers-common-fixtures.sq_01fs0/`. Shared action/Make-consumer/retention
-and affected Timers fixtures pass on Bash 5 and genuine Bash 3.2, with substitute
-installers. These repository-only reductions leave Rust source and Cargo inputs
-unchanged; they do not qualify hosted execution or native macOS.
+## Earlier receipts and remaining context
 
-The last recorded all-host acceptance remains [0.23.1](../evidence/release-history.md#completed-0231-native-acceptance),
-not this source/compiler/graph. Full owner/native macOS, hosted upload and live
-PocketIC qualification remain separate. No setup, hosted dispatch, full release
-gate or release execution ran. Git index/refs and sibling normal checkouts remain
-untouched; the isolated Shared contribution branch alone was committed/pushed.
+[Prior Shared adoption receipts](../evidence/shared-tooling-history.md) and
+[release history](../evidence/release-history.md) remain source-bound historical
+evidence. The last recorded all-host acceptance remains
+[0.23.1](../evidence/release-history.md#completed-0231-native-acceptance), not this
+source/compiler/graph. Snapshot [#63](https://github.com/dragginzgame/ic-timers/issues/63)
+still requires delivered/native-host acceptance.
 
-[Snapshot #63](https://github.com/dragginzgame/ic-timers/issues/63) has its local
-implementation prepared and upstream PR linked; delivered/native-host acceptance
-remains outstanding. Earlier release and license receipts retain their source
-scope in [release history](../evidence/release-history.md).
-Normal staging, commits, versions, tags, publication and cleanup stay user-owned.
+The earlier Testkit driver patch is retained at
+`/tmp/ic-timers-probe-reductions.461i34bo/pending-testkit-047-driver.patch`;
+0.47 is now selected, but that separate caller adoption is not part of this batch.
+The earlier instruction-helper move remains rejected: it broke native compilation
+and increased two cohorts. This batch keeps measurement code in the probe.

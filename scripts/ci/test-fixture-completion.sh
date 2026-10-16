@@ -32,9 +32,7 @@ fixtures=(
     scripts/release/test-tag-at-head.sh:temporary_root:repository_root
     scripts/release/test-version-preparation.sh:temporary_root:repository_root
 )
-mkdir -p "$fixture/probe/scripts/ci" "$fixture/probe/scripts/release" "$fixture/owned scratch"
-RETENTION_EXIT_PATH="$fixture/exit-path"
-export RETENTION_EXIT_PATH RETENTION_SOURCE_ROOT="$root"
+mkdir "$fixture/owned scratch"
 ln -s "$fixture/owned scratch" "$fixture/aliased scratch"
 relative_scratch="$(perl -MFile::Spec -e 'print File::Spec->abs2rel($ARGV[0], $ARGV[1])' "$fixture/owned scratch" "$root")"
 for scratch in "$fixture/owned scratch" "$relative_scratch" "$fixture/aliased scratch"; do
@@ -43,36 +41,13 @@ for scratch in "$fixture/owned scratch" "$relative_scratch" "$fixture/aliased sc
         subject="${entry%:*}"
         source_path="${subject%:*}"
         variable="${subject##*:}"
-        # Canonical completed bodies must opt in after their required assertions.
+        # Local rosters and full-body completion remain consumer assertions.
         grep -Fxq 'fixture_complete=true' "$root/$source_path"
-        for failure in nounset command nonzero premature completed failed-completion; do
-            # shellcheck disable=SC2016 # Expanded only by the disposable prefix copy.
-            case "$failure" in
-                nounset) injection='unset FIXTURE_UNBOUND; printf "%s\n" "$FIXTURE_UNBOUND"'; expected=1 ;;
-                command) injection='false'; expected=1 ;;
-                nonzero) injection='exit 23'; expected=23 ;;
-                premature) injection='exit 0'; expected=1 ;;
-                completed) injection='fixture_complete=true; exit 0'; expected=0 ;;
-                failed-completion) injection='fixture_complete=true; exit 23'; expected=23 ;;
-            esac
-            probe="$fixture/probe/$source_path"
-            fixture_probe_prefix "$root/$source_path" "$probe" "$root_variable" "$variable" "$injection"
-            rm -f -- "$RETENTION_EXIT_PATH"
-            status=0
-            (cd "$root" && CDPATH="$fixture" TMPDIR="$scratch" "$BASH" "$probe") \
-                > "$fixture/${source_path##*/}-$failure.log" 2>&1 || status=$?
-            if [[ "$status" != "$expected" ]]; then
-                printf '%s: %s returned %s, expected %s\n' "$source_path" "$failure" "$status" "$expected" >&2
-                exit 1
-            fi
-            retained="$(cat "$RETENTION_EXIT_PATH")"
-            [[ -n "$retained" ]] || exit 1
-            [[ "$retained" == "$fixture/owned scratch/"* ]] || exit 1
-            if [[ "$expected" == 0 ]]; then [[ ! -e "$retained" ]] || exit 1
-            else
-                [[ -d "$retained" && "$(cat "$retained/exit-evidence")" == 'retained evidence' ]] || exit 1
-            fi
-        done
+        (cd "$root" && CDPATH="$fixture" \
+            FIXTURE_PROBE_ROOT_VARIABLE="$root_variable" \
+            FIXTURE_PROBE_DIRECTORY_VARIABLE="$variable" \
+            FIXTURE_PROBE_TEMPORARY_ROOT="$scratch" \
+            fixture_probe_exits "$root/$source_path" "$fixture" "$root" "${source_path##*/}") || exit 1
     done
 done
 # A completion marker cannot detect an assertion that Bash 3.2 silently skips.
@@ -82,12 +57,12 @@ for assertion in retained-path status-match host-os host-architecture host-versi
     # shellcheck disable=SC2016 # Match literal source expressions in the copied assertions.
     case "$assertion" in
         retained-path)
-            assertion_source=scripts/ci/test-fixture-completion.sh
+            assertion_source=scripts/ci/fixture-retention-probes.sh
             assertion_prefix='[[ -n "$retained" ]]'
             ;;
         status-match)
-            assertion_source=scripts/ci/test-failure-evidence.sh
-            assertion_prefix='[[ "$status" == "$expected" ]]'
+            assertion_source=scripts/ci/fixture-retention-probes.sh
+            assertion_prefix='[[ "$status" == "$expected" &&'
             ;;
         host-os)
             assertion_source=.github/workflows/ci.yml

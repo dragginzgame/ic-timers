@@ -78,6 +78,7 @@ test:
 	+cargo test -p ic-timers --all-targets --all-features --locked
 	+cargo test -p ic-timers --doc --all-features --locked
 	+cargo test -p ic-timers-test-protocol --lib --locked
+	+cargo test -p ic-timers-runtime-probe --lib --locked
 
 wasm-check:
 	+cargo check -p ic-timers --all-features --locked --target wasm32-unknown-unknown
@@ -234,7 +235,9 @@ bump-x:
 	bash scripts/release/bump-version.sh "$(VERSION)"
 
 release-tag-check:
-	@bash scripts/release/check-tag-at-head.sh
+	@set -e; version="$$(bash scripts/ci/read-cargo-workspace-version.sh --stable Cargo.toml)"; \
+		commit="$$(git rev-parse HEAD)"; \
+		bash scripts/ci/check-release-tag.sh "$$commit" "$$version"
 
 publish: ensure-clean release-tag-check package
 	+cargo publish --locked --registry crates-io -p ic-timers
@@ -262,4 +265,4 @@ release-files:
 	@printf '%s\0' Cargo.toml Cargo.lock CHANGELOG.md
 release-tagged-check release-push-check:
 	@bash scripts/release/adapter.sh check-committed
-	@bash scripts/release/check-tag-at-head.sh "$(RELEASE_COMMIT)" "$(RELEASE_VERSION)"
+	@bash scripts/ci/check-release-tag.sh "$(RELEASE_COMMIT)" "$(RELEASE_VERSION)"
