@@ -240,7 +240,7 @@ fn canonical_registry_snapshot_projects_canic_surface_without_parallel_metrics()
         .confirm_effect_applied(initial_transition.effect())
         .expect("fixture provider effect should apply");
     let token = match initial_transition.into_effect() {
-        RegistryEffect::ArmWakeup { token, .. } => token,
+        RegistryEffect::ArmWakeup { token, .. } => token.token().clone(),
         effect => panic!("expected arm effect, got {effect:?}"),
     };
     assert!(registry.begin_ordinary(&token).is_some());
@@ -310,7 +310,7 @@ fn canic_projection_combines_completion_and_stale_classes_without_fabrication() 
         .confirm_effect_applied(first_transition.effect())
         .expect("fixture provider effect should apply");
     let first = match first_transition.into_effect() {
-        RegistryEffect::ArmWakeup { token, .. } => token,
+        RegistryEffect::ArmWakeup { token, .. } => token.token().clone(),
         effect => panic!("expected arm effect, got {effect:?}"),
     };
     assert!(registry.begin_ordinary(&first).is_some());
@@ -332,7 +332,7 @@ fn canic_projection_combines_completion_and_stale_classes_without_fabrication() 
         .record_callback_measurements(&first, u64::MAX, pages, pages)
         .expect("completed work measurements should be accepted");
     let second = match second_transition.into_effect() {
-        RegistryEffect::ArmWakeup { token, .. } => token,
+        RegistryEffect::ArmWakeup { token, .. } => token.token().clone(),
         effect => panic!("expected arm effect, got {effect:?}"),
     };
     assert!(registry.begin_ordinary(&second).is_some());
@@ -374,7 +374,7 @@ fn retryable_terminal_completion_projects_failed_canic_condition() {
         .confirm_effect_applied(transition.effect())
         .expect("fixture provider effect should apply");
     let token = match transition.into_effect() {
-        RegistryEffect::ArmWakeup { token, .. } => token,
+        RegistryEffect::ArmWakeup { token, .. } => token.token().clone(),
         effect => panic!("expected arm effect, got {effect:?}"),
     };
     assert!(registry.begin_ordinary(&token).is_some());

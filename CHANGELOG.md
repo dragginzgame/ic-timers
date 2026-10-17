@@ -2,6 +2,23 @@
 
 All notable changes to this project are recorded here.
 
+## [0.26.1]
+
+### Development
+
+- Share checked duration/deadline arithmetic between scheduling and backend
+  admission while preserving each boundary's error contract.
+- Keep hook tests focused on actual consumer formatting and refusal; consolidate
+  Make flag aliases and environment permutations at the Shared owner.
+- Construct timer effects with valid callback roles and one Watchdog dispatch
+  identity; retain live ownership/generation checks and partial-arm cleanup.
+- Keep generic archive-entry rejection coverage with Shared's owner suite;
+  retain local evidence identity, qualified-pin and collector integration checks.
+- Use Testkit's fixed-round progression directly in PocketIC probes and supply
+  explicit finite Candid reply limits required by Testkit 0.50.
+- Update the owned-backend handoff for the 0.26.0 release, distinguishing retained
+  candidate evidence from published-version downstream adoption and open qualification.
+
 ## [0.26.0] - 2026-10-16
 
 ### Breaking

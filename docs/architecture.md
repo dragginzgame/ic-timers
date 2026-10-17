@@ -95,6 +95,11 @@ The remaining module hierarchy keeps six responsibilities separate:
    Cancellation in the registry stops scheduled state without allocating a
    generation and queues a command for running work. Stopping with a reason
    discards the running command through state replacement.
+   The private `registry/effect` module constrains wakeups to ordinary work or
+   Watchdog schedulers. A Watchdog dispatch stores one successor identity and
+   derives its work token with the same claim and generation. Runtime application
+   and confirmation still admit live claim ownership, policy and generation;
+   structurally malformed token pairs need no second validation path.
    The registry builds provider effects and retains cancellation policy without a
    separate cancellation or completion action. Scheduling requests return only
    an optional initial or replacement arm kind; generation and deadline remain

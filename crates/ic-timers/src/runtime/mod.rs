@@ -1040,10 +1040,6 @@ fn finish_transition(
 }
 
 fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result<(), TimerError> {
-    if !effect.has_valid_shape() {
-        clear_provider_handles(handles);
-        return Err(TimerError::OwnershipInvariant);
-    }
     match effect {
         RegistryEffect::None => restore_provider_handles(handles),
         RegistryEffect::ArmWakeup {
@@ -1051,6 +1047,7 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
             delay_ns,
             arm,
         } => {
+            let token = token.token();
             if arm.replaces_existing() {
                 let replaced = take_detached_or_owned_handle(handles.take_wakeup(), |registry| {
                     registry.take_wakeup_handle(token.identity())
@@ -1099,10 +1096,11 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
             restore_provider_handles(handles)
         }
         RegistryEffect::DispatchWatchdog {
-            successor,
+            dispatch,
             successor_delay_ns,
-            work,
         } => {
+            let successor = dispatch.successor();
+            let work = dispatch.work();
             if let Some(wakeup) = handles.take_wakeup() {
                 clear_provider_handle(wakeup);
             }
@@ -1124,7 +1122,7 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
                 dispatch_watchdog_work(&work_token);
             })?;
             if let Err(error) =
-                bind_provider_handle(work, work_handle).and_then(|()| confirm_effect(effect))
+                bind_provider_handle(&work, work_handle).and_then(|()| confirm_effect(effect))
             {
                 clear_entry_provider_handles(successor.identity())?;
                 return Err(error);

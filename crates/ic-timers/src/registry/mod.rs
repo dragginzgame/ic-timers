@@ -4,6 +4,11 @@
 //! linear provider handles while the registry remains the sole logical state
 //! authority.
 
+mod effect;
+
+pub use effect::RegistryEffect;
+use effect::{WakeupToken, WatchdogDispatch};
+
 use crate::{
     callback::OrdinaryRunResult,
     control::{OrdinaryPending, TimerControl, TimerRegistration, WakeupArm},
@@ -80,10 +85,6 @@ impl CallbackToken {
     pub(crate) const fn role(&self) -> CallbackRole {
         self.role
     }
-
-    pub(crate) fn belongs_to_same_claim(&self, other: &Self) -> bool {
-        self.claim == other.claim
-    }
 }
 
 impl Clone for CallbackToken {
@@ -109,27 +110,6 @@ impl RegistrationClaim {
     }
 }
 
-/// Provider-neutral effect emitted by one pure transition.
-/// Absolute deadlines remain in control state; arms carry resolved provider delays.
-#[derive(Debug, Eq, PartialEq)]
-pub enum RegistryEffect {
-    None,
-    ArmWakeup {
-        token: CallbackToken,
-        delay_ns: u64,
-        arm: WakeupArm,
-    },
-    ClearCallbacks {
-        identity: TimerIdentity,
-        handles: CallbacksToClear,
-    },
-    DispatchWatchdog {
-        successor: CallbackToken,
-        successor_delay_ns: u64,
-        work: CallbackToken,
-    },
-}
-
 /// Non-empty subset of provider callbacks cleared by one effect.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum CallbacksToClear {
@@ -145,26 +125,6 @@ impl CallbacksToClear {
 
     pub(crate) const fn includes_work(self) -> bool {
         matches!(self, Self::Work | Self::WakeupAndWork)
-    }
-}
-
-impl RegistryEffect {
-    pub(crate) fn has_valid_shape(&self) -> bool {
-        match self {
-            Self::None | Self::ClearCallbacks { .. } => true,
-            Self::ArmWakeup { token, .. } => matches!(
-                token.role,
-                CallbackRole::OrdinaryWork | CallbackRole::WatchdogScheduler
-            ),
-            Self::DispatchWatchdog {
-                successor, work, ..
-            } => {
-                successor.role == CallbackRole::WatchdogScheduler
-                    && work.role == CallbackRole::WatchdogWork
-                    && successor.belongs_to_same_claim(work)
-                    && successor.callback_generation == work.callback_generation
-            }
-        }
     }
 }
 
@@ -418,7 +378,7 @@ impl WatchdogControl {
         self.generation = generation;
         self.state = WatchdogState::Scheduled { deadline_ns };
         RegistryTransition::normal(RegistryEffect::ArmWakeup {
-            token: token_for(claim, generation, CallbackRole::WatchdogScheduler),
+            token: WakeupToken::scheduler(claim, generation),
             delay_ns: deadline_ns.saturating_sub(now_ns),
             arm,
         })
@@ -896,7 +856,7 @@ impl TimerRegistry {
             return Ok(RegistryTransition::normal(RegistryEffect::None));
         };
         Ok(RegistryTransition::normal(RegistryEffect::ArmWakeup {
-            token: token_for(claim, control.generation(), CallbackRole::OrdinaryWork),
+            token: WakeupToken::ordinary(claim, control.generation()),
             delay_ns: requested.deadline_ns.saturating_sub(now_ns),
             arm,
         }))
@@ -1207,11 +1167,7 @@ impl TimerRegistry {
                             entry.scheduling_mode = selected.mode;
                             entry.latest_requested_delay_ns = selected.requested_delay_ns;
                             RegistryTransition::normal(RegistryEffect::ArmWakeup {
-                                token: token_for(
-                                    token.claim(),
-                                    control.generation(),
-                                    CallbackRole::OrdinaryWork,
-                                ),
+                                token: WakeupToken::ordinary(token.claim(), control.generation()),
                                 delay_ns: selected.deadline_ns.saturating_sub(now_ns),
                                 arm: WakeupArm::Initial,
                             })
@@ -1374,9 +1330,8 @@ impl TimerRegistry {
         };
         entry.scheduling_mode = TimerSchedulingMode::Watchdog;
         RegistryTransition::normal(RegistryEffect::DispatchWatchdog {
-            successor: token_for(token.claim(), generation, CallbackRole::WatchdogScheduler),
+            dispatch: WatchdogDispatch::new(token.claim(), generation),
             successor_delay_ns: cadence.as_nanos(),
-            work: token_for(token.claim(), generation, CallbackRole::WatchdogWork),
         })
     }
 
@@ -1769,14 +1724,12 @@ impl TimerRegistry {
         &mut self,
         effect: &RegistryEffect,
     ) -> Result<(), RegistryError> {
-        if !effect.has_valid_shape() {
-            return Err(RegistryError::StaleCallback);
-        }
         let (entry, callback_generation, delay_ns) = match effect {
             RegistryEffect::None | RegistryEffect::ClearCallbacks { .. } => return Ok(()),
             RegistryEffect::ArmWakeup {
                 token, delay_ns, ..
             } => {
+                let token = token.token();
                 let entry = self.entry_by_token_mut(token)?;
                 let valid_generation = match (&entry.kind, token.role) {
                     (EntryKind::Ordinary { control, .. }, CallbackRole::OrdinaryWork) => {
@@ -1801,10 +1754,10 @@ impl TimerRegistry {
                 (entry, token.callback_generation, *delay_ns)
             }
             RegistryEffect::DispatchWatchdog {
-                successor,
+                dispatch,
                 successor_delay_ns,
-                ..
             } => {
+                let successor = dispatch.successor();
                 let successor_callback_generation = successor.callback_generation;
                 let entry = self.entry_by_token_mut(successor)?;
                 let EntryKind::Watchdog { control, .. } = &entry.kind else {
@@ -1820,7 +1773,7 @@ impl TimerRegistry {
                 (entry, successor_callback_generation, *successor_delay_ns)
             }
         };
-        // Validate state and both dispatch tokens before deduplicating. Each
+        // Validate live ownership and generation before deduplicating. Each
         // dispatch advances the non-wrapping wakeup generation and binds it to
         // one work attempt, so one marker deduplicates both committed counters.
         if entry.confirmed_wakeup_generation == Some(callback_generation) {

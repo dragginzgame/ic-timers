@@ -2,12 +2,154 @@
 
 # Current status
 
-Last updated: 2026-10-16
+Last updated: 2026-10-17
 
-## Local 0.26 owned timer backend
+## Deadline and setup simplification
 
-The [0.26 design](../design/0.26-owned-timer-backend.md) now has a local
-implementation candidate. The old provider is removed from manifests and the
+Scheduling and platform queue admission now use the same checked duration and
+timestamp arithmetic. The backend still combines both overflow causes into its
+existing admission error; public scheduling retains its distinct errors. The
+library facade, dependency graph and package versions are unchanged. Backend
+boundary and two schedule subjects pass on Rust 1.91, as do strict library
+Clippy and the library's Wasm compilation.
+
+The local hook fixture keeps one actual hook-refusal counterexample plus its
+format-target admission, partial-staging and unchanged-index/worktree checks.
+Its exhaustive flag/environment matrix is prepared at the Shared owner in
+`/tmp/ic-timers-shared-hook-modes`. That fixture now checks both supported
+environment variables and short/long aliases, proving the formatter was never
+called and selected bytes stayed unchanged. The complete affected owner fixture,
+local hook fixture and source-following ShellCheck pass on this Linux host.
+This does not qualify native macOS or the complete release gate.
+
+The file-based Rust updater is prepared in
+`/tmp/ic-timers-rust-policy-adoption`. The candidate bootstraps the shared host
+parsers, delegates the development file to Shared's existing TOML reader, then
+retains the explicit MSRV override, common tools, checks and hook-install order.
+Its focused fixture passes parser/compiler/tool failures, alternate TOML syntax,
+file-selected components/profile/targets, invalid input before further effects
+and actual workflow callers. All tool effects in that fixture are stubs.
+
+The currently selected Shared helper lacks file-based mode. Do not install this
+caller ahead of canonical adoption of the supplying committed revision. The
+upstream hook patch, updater adoption patch, supplying source identities, logs
+and descriptions are retained under `target/qualification/setup-cleanup/`.
+The dirty Shared checkout is untouched, and no exported payload or snapshot was
+edited in the maintained checkout. Upstream commits, refresh delivery and any
+release remain user-owned. Earlier preparation patches retain their own bases.
+
+## Effect construction and evidence cleanup
+
+The private `registry/effect` module now constructs wakeups with ordinary-work
+or scheduler authority only. A Watchdog effect stores one successor token and
+derives its work token from that same claim and generation. The duplicate
+shape-validation paths and independently stored work token are removed. Live
+claim, policy, generation, binding and confirmation checks remain. Obsolete
+tests that forged malformed effect pairs are replaced by construction and stale
+effect coverage; partial-arm cleanup and admission-failure coverage remain.
+This changes no public API or persistence contract.
+
+Nine focused native subjects pass across dispatch construction/confirmation,
+stale claims, partial arms, Once coalescing and after-completion cadence.
+The optimized runtime probe builds on Rust 1.91; Watchdog trap/recovery and
+ordinary pre-await rollback PocketIC subjects pass on the admitted 16.1.0 server.
+Strict library Clippy, Rustdoc, formatting and provider boundaries pass.
+
+The consumer evidence verifier no longer recreates duplicate-member and symlink
+archive cases already owned by Shared's selected Python suite. Both the owner
+suite and maintained consumer suite pass. Source/run identity, qualified IC pins,
+collector integration and representative delegation rejection checks remain.
+
+The queue-pressure extraction is prepared in the isolated Testkit clone
+`/tmp/ic-timers-testkit-pressure`, based on committed 0.50.0. It exports no
+endpoints: consumers explicitly select their self-call reply method, initial
+chain count, stop operation and observations. Three native unit subjects,
+native/Wasm Clippy, Rust 1.91 Wasm compilation and Wasm Rustdoc pass. The isolated
+consumer passes both live queue-pressure and deferred cancellation/replacement
+subjects without changing timer assertions. The upstream and consumer patches,
+PR description, input hashes and scoped logs belong to
+`target/qualification/effect-cleanup/`. The real dirty Testkit checkout is
+untouched; its independent 0.51 preparation must be reconciled before delivery.
+The current probe keeps its one maintained engine until the supplier is
+published; the isolated adoption deletes that engine in the same change that
+adds the supplying dependency. No fallback or alternate runtime path is added.
+
+Earlier ownership-cleanup patches retain their captured bases; recheck them
+against these source changes before adoption. Commits, versions and publication
+remain user-owned. These focused receipts do not close full recovery/cohort,
+native macOS or release qualification.
+
+## Ownership simplification preparation
+
+The local PocketIC harness now calls Testkit's `advance_and_tick` directly;
+its duplicate fixed-round loop is removed. The existing Testkit 0.50 selection
+also requires explicit reply decoding limits. All typed probe calls now pass
+one finite probe-owned budget through the direct `ic-testkit-candid` dependency.
+Tick-before-observation readiness, simulated-time advances and round counts
+retain their existing boundaries.
+
+Focused Rust 1.91 PocketIC subjects pass queue pressure, ordinary async
+interleaving and full inventory observation with a freshly built runtime probe.
+Strict probe Clippy, locked compilation, formatting and dependency checks pass.
+Testkit 0.50's CLI was explicitly prepared offline through the existing setup
+owner, then admitted PocketIC 16.1.0. The initial sandbox blocked the shared
+store's installation lock; the permitted rerun succeeded. These subjects do not
+requalify complete recovery, policy cohorts or native macOS.
+
+Upstream candidates are prepared in isolated clones, leaving dirty siblings
+untouched: Metrics at `/tmp/ic-timers-metrics-extraction` and Shared at
+`/tmp/ic-timers-shared-adapter`. Reviewable patches, PR descriptions, adoption
+patches, base identities and qualification notes are retained under
+`target/qualification/ownership-cleanup/`. Metrics owns the passive page types;
+Timers keeps platform reads and callback role/boundary decisions. Its candidate
+passes four arithmetic tests, native/Wasm floor checks, Clippy and Rustdoc.
+The isolated Timers adoption removes the old declarations/exports and passes
+four measurement tests, one stale-callback regression, probe Wasm compilation,
+library Clippy and Rustdoc. This API hard cut selects a future 0.27 line;
+the current library API remains the released contract until its supplier exists.
+
+Shared's candidate owns locked CLI preparation and mode forwarding, with its
+installer declared as a distribution companion. Its fixture, ShellCheck and
+documentation checks pass. The consumer adoption keeps parallel Make ordering
+and failure tests locally; those and the affected release-gate fixture pass in
+the isolated checkout. No snapshot is patched or relabelled as adopted.
+
+Upstream commits/publication remain user-owned under this repository's explicit
+contribution exception. After the supplying Metrics release and reviewed Shared
+commit exist, apply the retained adoption patches, regenerate the consumer lock
+and perform canonical snapshot refresh. No unpublished dependency or duplicate
+compatibility implementation is added to the working checkout.
+
+## Released 0.26 and next work
+
+The maintainer reports 0.26.0 live. Local tag `v0.26.0` identifies release commit
+`9c84824`; its saved release plan is complete. The owned backend is released.
+The preparation receipts below retain their original source and dependency scope;
+they do not qualify every later worktree or downstream release.
+
+Next work is coordinated downstream adoption using the published 0.26 identity.
+The Canic/IcyDB patches and their exact bases remain in
+`target/qualification/0.26-closeout/`; refresh them against the chosen consumer
+source before applying, regenerate its lock, and verify one Timers identity with
+no old provider. Jobs' earlier unchanged-source qualification used a local path
+patch and still needs published-version adoption. Sibling mutations require an
+explicitly selected repository and authorization.
+
+Canic's recorded fixture Candid-export failures and real IC response-table
+saturation remain open qualification work. Native macOS evidence is separate.
+Do not infer closure of these gaps from publication alone.
+
+Post-release HEAD `de9de13` selects Testkit 0.50. Incoming uncommitted Cargo edits
+select Metrics 0.12 and update the lock graph; those edits are preserved. The
+current graph passes offline locked Rust 1.91 library all-target compilation and
+dependency-policy checks, without runtime or performance requalification.
+Earlier Testkit 0.48/0.49 receipts and
+matched performance comparisons remain bound to their captured inputs.
+
+## 0.26 preparation receipts
+
+The [0.26 design](../design/0.26-owned-timer-backend.md) was implemented and
+qualified as the candidate described below. The old provider is removed from manifests and the
 lock graph. Independently authored MIT code owns bounded one-shot scheduling,
 authenticated self-call dispatch and eager cancellation; executor 2.0.0 and
 ic0 1.2.0 remain selected. No upstream timer source was imported. This is not a

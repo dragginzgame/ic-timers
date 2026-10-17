@@ -1,6 +1,7 @@
-use super::harness::{drive_rounds, fresh_pocket_ic, install_probe, update_unit};
+use super::harness::REPLY_LIMITS;
+use super::harness::{fresh_pocket_ic, install_probe, update_unit};
 use candid::Principal;
-use ic_testkit::pic::{CandidCallExt, PocketIc};
+use ic_testkit::pic::{CandidCallExt, PocketIc, advance_and_tick};
 use ic_timers_test_protocol::{CohortObservation, MemorySamplingMeasurement, OperationMeasurement};
 use std::{env, fs, path::PathBuf, time::Duration};
 
@@ -46,7 +47,7 @@ fn run_cohort(cohort: &str) {
 
     let cycles_before_dispatch = pic.cycle_balance(canister_id);
     pic.advance_time(Duration::from_secs(1));
-    drive_rounds(pic, 16);
+    advance_and_tick(pic, Duration::ZERO, 16);
     let dispatch_cycles = cycles_before_dispatch.saturating_sub(pic.cycle_balance(canister_id));
     let completed = observe(pic, canister_id);
     match cohort {
@@ -89,14 +90,14 @@ fn run_cohort(cohort: &str) {
     assert_eq!(observe(pic, canister_id).next_deadline_ns, None);
     assert!(!update_measurement(pic, canister_id, "cancel").changed);
     pic.advance_time(Duration::from_secs(1));
-    drive_rounds(pic, 16);
+    advance_and_tick(pic, Duration::ZERO, 16);
     let cancelled = observe(pic, canister_id);
     assert_eq!(cancelled.callbacks, completed.callbacks);
     assert_eq!(cancelled.next_deadline_ns, None);
 
     let memory_sampling = if cohort == "watchdog" {
         let measurement: MemorySamplingMeasurement = pic
-            .update_candid(canister_id, "memory_sampling_overhead", ())
+            .update_candid(canister_id, "memory_sampling_overhead", (), REPLY_LIMITS)
             .expect("probe update succeeds");
         assert!(measurement.sampled_bracket_instructions >= measurement.empty_bracket_instructions);
         Some(measurement)
@@ -144,7 +145,7 @@ fn run_watchdog_calibration(profile: &str, representative_work: bool) -> u128 {
 
     let cycles_before_dispatch = pic.cycle_balance(canister_id);
     pic.advance_time(Duration::from_secs(1));
-    drive_rounds(pic, 16);
+    advance_and_tick(pic, Duration::ZERO, 16);
     let dispatch_cycles = cycles_before_dispatch.saturating_sub(pic.cycle_balance(canister_id));
     let completed = observe(pic, canister_id);
     assert_eq!(completed.scheduler_instruction_samples, 1);
@@ -176,11 +177,11 @@ fn update_measurement(
     canister_id: Principal,
     method: &str,
 ) -> OperationMeasurement {
-    pic.update_candid(canister_id, method, ())
+    pic.update_candid(canister_id, method, (), REPLY_LIMITS)
         .expect("probe update succeeds")
 }
 
 fn observe(pic: &PocketIc, canister_id: Principal) -> CohortObservation {
-    pic.query_candid(canister_id, "observe", ())
+    pic.query_candid(canister_id, "observe", (), REPLY_LIMITS)
         .expect("probe query succeeds")
 }

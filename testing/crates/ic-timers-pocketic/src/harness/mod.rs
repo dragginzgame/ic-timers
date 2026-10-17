@@ -5,10 +5,21 @@ use ic_testkit::pic::{
     CandidCallExt, CanisterInstallExt, InstallSpec, PocketIc, PocketIcBuilder, PocketIcInstance,
     PocketIcStartupConfig, tick_until,
 };
+use ic_testkit_candid::DecodeLimits;
 use std::{convert::Infallible, env, fmt::Debug, path::PathBuf, task::Poll, time::Duration};
 
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(60);
 pub const INIT_CYCLES: u128 = 2_000_000_000_000;
+
+// Probe replies are bounded snapshots/counters, not application payloads.
+// These ceilings bound decoding only; tick budgets and transport stay separate.
+pub const REPLY_LIMITS: DecodeLimits = DecodeLimits {
+    reply_bytes: 64 * 1024,
+    decoding_quota: 1_000_000,
+    skipping_quota: 10_000,
+    type_entries: 256,
+    header_bytes: 8 * 1024,
+};
 
 /// Preserve tick-before-observation boundaries while Testkit owns bounded progress.
 pub fn wait_for_probe<T: Debug>(
@@ -54,15 +65,8 @@ pub fn fresh_pocket_ic() -> PocketIcInstance<PocketIc> {
         .expect("construct a fresh owned PocketIC instance through ic-testkit")
 }
 
-/// Drain exactly the caller-selected number of rounds without readiness polling.
-pub fn drive_rounds(pic: &PocketIc, count: usize) {
-    for _ in 0..count {
-        pic.tick();
-    }
-}
-
 /// Invoke an anonymous update with no arguments or return values.
 pub fn update_unit(pic: &PocketIc, canister_id: Principal, method: &str) {
-    pic.update_candid::<(), _>(canister_id, method, ())
+    pic.update_candid::<(), _>(canister_id, method, (), REPLY_LIMITS)
         .expect("probe update succeeds");
 }

@@ -154,7 +154,7 @@ pub struct ResolvedSchedule {
     pub(crate) mode: TimerSchedulingMode,
 }
 
-const fn checked_deadline_after(now_ns: u64, delay_ns: u64) -> Result<u64, ScheduleError> {
+pub const fn checked_deadline_after(now_ns: u64, delay_ns: u64) -> Result<u64, ScheduleError> {
     match now_ns.checked_add(delay_ns) {
         Some(deadline_ns) => Ok(deadline_ns),
         None => Err(ScheduleError::DeadlineOverflow),

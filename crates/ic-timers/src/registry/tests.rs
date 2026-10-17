@@ -75,16 +75,16 @@ fn cadence(nanoseconds: u64) -> TimerCadence {
 
 fn arm(transition: RegistryTransition) -> (CallbackToken, WakeupArm) {
     match transition.into_effect() {
-        RegistryEffect::ArmWakeup { token, arm, .. } => (token, arm),
+        RegistryEffect::ArmWakeup { token, arm, .. } => (token.token().clone(), arm),
         effect => panic!("expected arm effect, got {effect:?}"),
     }
 }
 
 fn dispatch(transition: RegistryTransition) -> (CallbackToken, CallbackToken) {
     match transition.into_effect() {
-        RegistryEffect::DispatchWatchdog {
-            successor, work, ..
-        } => (successor, work),
+        RegistryEffect::DispatchWatchdog { dispatch, .. } => {
+            (dispatch.successor().clone(), dispatch.work())
+        }
         effect => panic!("expected watchdog dispatch, got {effect:?}"),
     }
 }
@@ -491,6 +491,7 @@ fn provider_installation_and_confirmation_reject_removed_or_reused_claims() {
         let RegistryEffect::ArmWakeup { token, .. } = transition.effect() else {
             panic!("fixture must produce an arm effect");
         };
+        let token = token.token();
         registry.unregister(&original).unwrap();
         if reuse_identity {
             let replacement = registry
@@ -690,93 +691,36 @@ fn running_watchdog_unregistration_clears_its_committed_successor() {
 }
 
 #[test]
-fn watchdog_dispatch_confirmation_rejects_cross_claim_work() {
+fn watchdog_dispatch_confirmation_rejects_stale_attempts() {
     let mut registry = registry();
-    let first_id = identity("dispatch-claim-first");
-    let second_id = identity("dispatch-claim-second");
-    let first = registry
-        .register_watchdog(first_id.clone(), cadence(5), DeclarationLifetime::Retained)
-        .expect("first claim should succeed");
-    let second = registry
-        .register_watchdog(second_id, cadence(5), DeclarationLifetime::Retained)
-        .expect("second claim should succeed");
-
-    let (first_scheduler, _) = arm(registry
-        .ensure_recurring(&first, 0)
-        .expect("first ensure should succeed"));
-    let (second_scheduler, _) = arm(registry
-        .ensure_recurring(&second, 0)
-        .expect("second ensure should succeed"));
-    let (first_successor, first_work) =
-        dispatch(registry.begin_watchdog_scheduler(&first_scheduler, 5));
-    let (_, second_work) = dispatch(registry.begin_watchdog_scheduler(&second_scheduler, 5));
-    let malformed_arm = RegistryEffect::ArmWakeup {
-        token: second_work.clone(),
-        delay_ns: 0,
-        arm: WakeupArm::Initial,
+    let timer = identity("dispatch-confirmation");
+    let claim = registry
+        .register_watchdog(timer.clone(), cadence(5), DeclarationLifetime::Retained)
+        .unwrap();
+    let (scheduler, _) = arm(registry.ensure_recurring(&claim, 0).unwrap());
+    let first = registry.begin_watchdog_scheduler(&scheduler, 5);
+    registry.confirm_effect_applied(first.effect()).unwrap();
+    registry.confirm_effect_applied(first.effect()).unwrap();
+    let RegistryEffect::DispatchWatchdog { dispatch, .. } = first.effect() else {
+        panic!("dispatch expected")
     };
+    let successor = dispatch.successor().clone();
+    let second = registry.begin_watchdog_scheduler(&successor, 10);
+    let before = registry.inventory();
     assert_eq!(
-        registry.confirm_effect_applied(&malformed_arm),
+        registry.confirm_effect_applied(first.effect()),
         Err(RegistryError::StaleCallback)
     );
-    let malformed_replacement = RegistryEffect::ArmWakeup {
-        token: first_successor.clone(),
-        delay_ns: 5,
-        arm: WakeupArm::Replacement,
-    };
-    assert_eq!(
-        registry.confirm_effect_applied(&malformed_replacement),
-        Err(RegistryError::StaleCallback)
-    );
-    let malformed = RegistryEffect::DispatchWatchdog {
-        successor: first_successor.clone(),
-        successor_delay_ns: 5,
-        work: second_work,
-    };
-
-    assert_eq!(
-        registry.confirm_effect_applied(&malformed),
-        Err(RegistryError::StaleCallback)
-    );
-    let counters = registry
-        .snapshot(&first_id)
-        .expect("first snapshot should remain")
+    assert_eq!(registry.inventory(), before);
+    registry.confirm_effect_applied(second.effect()).unwrap();
+    registry.confirm_effect_applied(second.effect()).unwrap();
+    let counts = registry
+        .snapshot(&timer)
+        .unwrap()
         .observability()
         .counters();
-    assert_eq!(counters.wakeups_armed(), 0);
-    assert_eq!(counters.work_dispatched(), 0);
-
-    let valid = RegistryEffect::DispatchWatchdog {
-        successor: first_successor.clone(),
-        successor_delay_ns: 5,
-        work: first_work.clone(),
-    };
-    registry
-        .confirm_effect_applied(&valid)
-        .expect("valid dispatch should confirm");
-    registry
-        .confirm_effect_applied(&valid)
-        .expect("duplicate confirmation should be inert");
-    let wrong_attempt = RegistryEffect::DispatchWatchdog {
-        successor: first_successor,
-        successor_delay_ns: 5,
-        work: CallbackToken {
-            callback_generation: first_work.callback_generation + 1,
-            ..first_work
-        },
-    };
-    assert_eq!(
-        registry.confirm_effect_applied(&wrong_attempt),
-        Err(RegistryError::StaleCallback),
-        "matching confirmed successor must not bypass work validation"
-    );
-    let counters = registry
-        .snapshot(&first_id)
-        .expect("confirmed snapshot should remain")
-        .observability()
-        .counters();
-    assert_eq!(counters.wakeups_armed(), 1);
-    assert_eq!(counters.work_dispatched(), 1);
+    assert_eq!(counts.wakeups_armed(), 2);
+    assert_eq!(counts.work_dispatched(), 2);
 }
 
 #[test]

@@ -842,6 +842,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "be80caab63d3384a0b46e58d92720095b49099cd9a0026514da0860eb5b0626b"
 
 [[package]]
+name = "ic-metrics"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c30a384477a9783da95cd991e576f6f6a76c5d3691299fffe294f95affae3fd7"
+
+[[package]]
 name = "ic-testkit"
 version = "0.50.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -852,7 +858,7 @@ dependencies = [
  "ic-host-artifacts",
  "ic-host-fs",
  "ic-host-process",
- "ic-metrics",
+ "ic-metrics 0.11.8",
  "ic-testkit-candid",
  "libc",
  "pocket-ic",
@@ -877,7 +883,7 @@ name = "ic-timers"
 version = "0.26.0"
 dependencies = [
  "ic-cdk-executor",
- "ic-metrics",
+ "ic-metrics 0.12.0",
  "ic0",
  "thiserror 2.0.18",
 ]
@@ -888,6 +894,7 @@ version = "0.26.0"
 dependencies = [
  "candid",
  "ic-testkit",
+ "ic-testkit-candid",
  "ic-timers-test-protocol",
 ]
 
@@ -1172,9 +1179,9 @@ checksum = "c83bff1d572d6b9aeef67ddfc8448e4a3737909cb28e81f97c791b9018703e52"
 
 [[package]]
 name = "libc"
-version = "0.2.190"
+version = "0.2.191"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ce5d3ddc6d3fa000eb1536d85e147bfe31aacaba692ed6a876f95cb7c855be78"
+checksum = "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a"
 
 [[package]]
 name = "linux-raw-sys"
@@ -1763,9 +1770,9 @@ dependencies = [
 
 [[package]]
 name = "schannel"
-version = "0.1.29"
+version = "0.1.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91c1b7e4904c873ef0710c1f407dde2e6287de2bebc1bbbf7d430bb7cbffd939"
+checksum = "9cb23c424d8ee841bb4d813677ca237e2a610067d594fec130f87d6093495ab5"
 dependencies = [
  "windows-sys 0.61.2",
 ]

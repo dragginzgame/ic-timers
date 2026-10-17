@@ -10,10 +10,10 @@ pub(crate) enum AdmissionError {
 }
 
 pub(crate) fn deadline(now: u64, delay: std::time::Duration) -> Result<u64, AdmissionError> {
-    u64::try_from(delay.as_nanos())
-        .ok()
-        .and_then(|delay| now.checked_add(delay))
-        .ok_or(AdmissionError::DeadlineOverflow)
+    // Backend admission deliberately combines duration and timestamp overflow.
+    crate::schedule::duration_ns(delay)
+        .and_then(|delay| crate::schedule::checked_deadline_after(now, delay))
+        .map_err(|_| AdmissionError::DeadlineOverflow)
 }
 
 struct Pending<T> {

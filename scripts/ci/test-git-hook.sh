@@ -82,25 +82,17 @@ assert_unchanged() {
     cmp "${temporary_root}/before-index" "${temporary_root}/after-index"
 }
 
-# A rejected mode must not format working files or refresh the real index.
+# One rejected mode proves the actual hook delegates before formatting or staging.
+# Shared owns flag aliases and environment-variable permutations.
 capture_before_hook
-# GNU Make 3.81 on macOS ignores GNUMAKEFLAGS; 4.0 introduced it.
-mode_variables=(MAKEFLAGS)
-make_version="$(make --version)"
-case "$make_version" in 'GNU Make 3.'*) ;; *) mode_variables+=(GNUMAKEFLAGS) ;; esac
-for variable in "${mode_variables[@]}"; do
-    for flags in i n q t v --ignore-errors --dry-run --question --touch --version; do
-        mode_output="${temporary_root}/${variable}-${flags}.log"
-        if env "$variable=$flags" bash "${repository_root}/.githooks/pre-commit" \
-            > "${mode_output}" 2>&1; then
-            cat "${mode_output}" >&2
-            echo "error: commit hook accepted $variable=$flags" >&2
-            exit 1
-        fi
-        grep -Fq 'requires recipe execution and failure propagation' "${mode_output}"
-        assert_unchanged
-    done
-done
+if MAKEFLAGS=n bash "${repository_root}/.githooks/pre-commit" \
+    > "${temporary_root}/hook-admission.log" 2>&1; then
+    cat "${temporary_root}/hook-admission.log" >&2
+    echo 'error: commit hook accepted MAKEFLAGS=n' >&2
+    exit 1
+fi
+grep -Fq 'requires recipe execution and failure propagation' "${temporary_root}/hook-admission.log"
+assert_unchanged
 
 # Shared owns the flag matrix; qualify our actual formatting targets and refusal
 # before formatter dispatch, even when ambient routing names another snapshot.

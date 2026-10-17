@@ -3,7 +3,6 @@ use crate::{
     AfterCompletionDecision, InactiveReason, MemoryPageSample, OnceDecision, TimerLastOutcome,
     TimerPolicy, TimerProcessCondition, TimerRegistrationStatus, TimerRuntimeStateSnapshot,
     TimerSchedulingMode, WatchdogDecision, WatchdogRuntimeStateSnapshot,
-    control::WakeupArm,
     platform::{
         advance_instructions, discard_next_due, grow_memory_pages, run_next_due, set_time,
         timer_count,
@@ -2936,171 +2935,46 @@ fn provider_confirmation_failure_clears_the_installed_handle() {
 }
 
 #[test]
-fn watchdog_dispatch_rejects_cross_claim_tokens_before_provider_arms() {
-    let _fixture = setup();
-    let first = register_watchdog(
-        identity("cross-claim-first"),
-        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
-        TimerStart::Retained { initial: None },
-        |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue),
-    )
-    .expect("first watchdog registration should succeed");
-    let second = register_watchdog(
-        identity("cross-claim-second"),
-        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
-        TimerStart::Retained { initial: None },
-        |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue),
-    )
-    .expect("second watchdog registration should succeed");
-    first
-        .ensure_scheduled()
-        .expect("first scheduler should arm");
-    second
-        .ensure_scheduled()
-        .expect("second scheduler should arm");
-
-    let first_handle = with_registry_mut(|registry| {
-        registry
-            .take_wakeup_handle(first.identity())
-            .ok_or(TimerError::OwnershipInvariant)
-    })
-    .expect("first scheduler handle should detach");
-    let second_handle = with_registry_mut(|registry| {
-        registry
-            .take_wakeup_handle(second.identity())
-            .ok_or(TimerError::OwnershipInvariant)
-    })
-    .expect("second scheduler handle should detach");
-    let (first_scheduler, first_provider_handle) = first_handle.into_parts();
-    let (second_scheduler, second_provider_handle) = second_handle.into_parts();
-    platform::clear_timer(first_provider_handle);
-    platform::clear_timer(second_provider_handle);
-    assert_eq!(timer_count(), 0);
-
-    let first_dispatch =
-        with_registry_mut(|registry| Ok(registry.begin_watchdog_scheduler(&first_scheduler, 15)))
-            .expect("first scheduler should dispatch");
-    let second_dispatch =
-        with_registry_mut(|registry| Ok(registry.begin_watchdog_scheduler(&second_scheduler, 15)))
-            .expect("second scheduler should dispatch");
-    let RegistryEffect::DispatchWatchdog {
-        successor: first_successor,
-        successor_delay_ns: first_delay,
-        ..
-    } = first_dispatch.into_effect()
-    else {
-        panic!("first scheduler should emit a watchdog dispatch");
-    };
-    let RegistryEffect::DispatchWatchdog {
-        work: second_work, ..
-    } = second_dispatch.into_effect()
-    else {
-        panic!("second scheduler should emit a watchdog dispatch");
-    };
-    let malformed_arm = RegistryEffect::ArmWakeup {
-        token: second_work.clone(),
-        delay_ns: 0,
-        arm: WakeupArm::Initial,
-    };
-    assert!(matches!(
-        apply_effect(&malformed_arm, ProviderHandles::default()),
-        Err(TimerError::OwnershipInvariant)
-    ));
-    assert_eq!(timer_count(), 0, "validation must precede provider arms");
-    let malformed_replacement = RegistryEffect::ArmWakeup {
-        token: first_successor.clone(),
-        delay_ns: first_delay,
-        arm: WakeupArm::Replacement,
-    };
-    assert!(matches!(
-        apply_effect(&malformed_replacement, ProviderHandles::default()),
-        Err(TimerError::RegistrationExpired)
-    ));
-    assert_eq!(timer_count(), 0, "validation must precede provider arms");
-    let malformed = RegistryEffect::DispatchWatchdog {
-        successor: first_successor,
-        successor_delay_ns: first_delay,
-        work: second_work,
-    };
-
-    assert!(matches!(
-        apply_effect(&malformed, ProviderHandles::default()),
-        Err(TimerError::OwnershipInvariant)
-    ));
-    assert_eq!(timer_count(), 0, "validation must precede provider arms");
-}
-
-#[test]
-fn watchdog_dispatch_rejects_mixed_generations_before_provider_arms() {
+fn stale_watchdog_dispatch_clears_partial_arms_without_confirming_work() {
     let _fixture = setup();
     let registration = register_watchdog(
-        identity("mixed-dispatch-generations"),
+        identity("stale-dispatch"),
         TimerCadence::from_nanos(5).unwrap(),
         TimerStart::Retained { initial: None },
-        |_context| panic!("malformed effects must not execute consumer work"),
+        |_| panic!("manual effects must not execute consumer work"),
     )
     .unwrap();
     registration.ensure_scheduled().unwrap();
     let handle = with_registry_mut(|registry| {
-        registry
+        Ok(registry
             .take_wakeup_handle(registration.identity())
-            .ok_or(TimerError::OwnershipInvariant)
+            .unwrap())
     })
     .unwrap();
     let (scheduler, handle) = handle.into_parts();
     platform::clear_timer(handle);
-    let dispatch =
-        with_registry_mut(|registry| Ok(registry.begin_watchdog_scheduler(&scheduler, 15)))
-            .unwrap();
-    let RegistryEffect::DispatchWatchdog {
-        successor: old_successor,
-        work: old_work,
-        ..
-    } = dispatch.into_effect()
-    else {
-        panic!("fixture must emit a dispatch");
+    let first = with_registry_mut(|registry| Ok(registry.begin_watchdog_scheduler(&scheduler, 15)))
+        .unwrap();
+    let RegistryEffect::DispatchWatchdog { dispatch, .. } = first.effect() else {
+        panic!("dispatch expected")
     };
-    let recovery =
-        with_registry_mut(|registry| Ok(registry.begin_watchdog_scheduler(&old_successor, 20)))
+    let successor = dispatch.successor().clone();
+    let second =
+        with_registry_mut(|registry| Ok(registry.begin_watchdog_scheduler(&successor, 20)))
             .unwrap();
-    let RegistryEffect::DispatchWatchdog {
-        successor,
-        successor_delay_ns,
-        work,
-    } = recovery.into_effect()
-    else {
-        panic!("fixture must emit a recovery dispatch");
-    };
-    assert_eq!(
-        old_successor.callback_generation(),
-        old_work.callback_generation()
-    );
-    assert_eq!(successor.callback_generation(), work.callback_generation());
-    assert_ne!(
-        old_successor.callback_generation(),
-        successor.callback_generation()
-    );
-    assert_eq!(timer_count(), 0);
     let before = timer_inventory().unwrap();
-    for malformed in [
-        RegistryEffect::DispatchWatchdog {
-            successor,
-            successor_delay_ns,
-            work: old_work,
-        },
-        RegistryEffect::DispatchWatchdog {
-            successor: old_successor,
-            successor_delay_ns,
-            work,
-        },
-    ] {
-        assert!(matches!(
-            apply_effect(&malformed, ProviderHandles::default()),
-            Err(TimerError::OwnershipInvariant)
-        ));
-        assert_eq!(timer_count(), 0, "validation must precede provider arms");
-        assert_eq!(timer_inventory().unwrap(), before);
-    }
+    assert!(apply_effect(first.effect(), ProviderHandles::default()).is_err());
+    assert_eq!(timer_count(), 0);
+    assert_eq!(timer_inventory().unwrap(), before);
+    apply_effect(second.effect(), ProviderHandles::default()).unwrap();
+    assert_eq!(timer_count(), 2);
+    let counts = timer_snapshot(registration.identity())
+        .unwrap()
+        .unwrap()
+        .observability()
+        .counters();
+    assert_eq!(counts.wakeups_armed(), 2);
+    assert_eq!(counts.work_dispatched(), 1);
 }
 
 #[test]
