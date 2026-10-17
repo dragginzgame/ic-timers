@@ -22,6 +22,8 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Complete the failure-evidence fixture's synthetic host catalog and copied
+  installer companions for strict offline catalog validation.
 - Adopt the reviewed Shared 0.19.0 snapshot and retire release-prose scanning and
   its fixtures. Structured release metadata and changelog checks remain required.
 - Delegate isolated probe builds and exact Wasm artifact discovery to IC Build;

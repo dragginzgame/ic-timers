@@ -4,6 +4,16 @@
 
 Last updated: 2026-10-17
 
+## CI evidence fixture repair
+
+The failure-evidence fixture now supplies every required synthetic ripgrep hash
+and copies the catalog parser and its IC companion into disposable checkouts.
+This repairs the exit 255 after Shared's strict catalog adoption without changing
+production catalogs or admission. The complete focused fixture, source-following
+ShellCheck and Bash syntax checks pass on Linux. The formatter's printed retained
+log path is expected test output. Receipts are in
+`target/qualification/evidence-fixture-fix/`; the full release gate was not rerun.
+
 ## Arm commits, probe artifacts and consumer reporting
 
 Effects consume only the capabilities detached by their transition owner.

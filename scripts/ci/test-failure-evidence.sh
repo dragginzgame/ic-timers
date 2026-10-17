@@ -295,7 +295,11 @@ cp -p "$GITHUB_WORKSPACE/.tools/host-set.active/bin/rg" "$fixture/ripgrep-15.2.0
 tar -czf "$GITHUB_WORKSPACE/.tools/host-set.active/ripgrep.tar.gz" \
     -C "$fixture" "ripgrep-15.2.0-$target/rg"
 digest="$(bash "$root/scripts/ci/verify-file-checksum.sh" --print sha256 "$GITHUB_WORKSPACE/.tools/host-set.active/ripgrep.tar.gz")"
-printf 'export SHARED_TOOLING_RIPGREP_SHA256_%s=%s\n' "$host" "$digest" >> "$host_pins"
+# The literal catalog contract validates every supported host, even though this
+# fixture downloads only its native archive. All rows identify synthetic bytes.
+for host in LINUX_AMD64 LINUX_ARM64 DARWIN_AMD64 DARWIN_ARM64; do
+    printf 'export SHARED_TOOLING_RIPGREP_SHA256_%s=%s\n' "$host" "$digest" >> "$host_pins"
+done
 cp "$root/ci/ic-tools-qualified.tsv" "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv"
 cp "$root/ci/ic-tools.tsv" "$GITHUB_WORKSPACE/ci/ic-tools.tsv"
 mkdir "$fixture/assets" "$fixture/payloads" "$fixture/installer-bin"
@@ -622,6 +626,7 @@ mkdir -p "$GITHUB_WORKSPACE/scripts/ci" "$GITHUB_WORKSPACE/scripts/dev" "$GITHUB
 for script in qualify-failure-evidence qualify-hosted-failure run-validation-targets check-make-execution verify-file-checksum; do
     cp "$root/scripts/ci/$script.sh" "$GITHUB_WORKSPACE/scripts/ci/"
 done
+cp "$root/scripts/ci/tool-catalog-records.pl" "$root/scripts/ci/ic-tool-pins.awk" "$GITHUB_WORKSPACE/scripts/ci/"
 cp "$root/scripts/dev/install-host-tools.sh" "$root/scripts/dev/tool-store.sh" "$GITHUB_WORKSPACE/scripts/dev/"
 cp "$root/ci/tool-versions.env" "$GITHUB_WORKSPACE/ci/"
 status=0
@@ -709,7 +714,7 @@ done
 cp "$root/ci/tool-versions.env" "$copied/ci/"
 cp "$root/ci/ic-tools-qualified.tsv" "$copied/ci/"
 cp "$root/ci/ic-tools.tsv" "$copied/ci/"
-cp "$root/scripts/ci/ic-tool-pins.awk" "$copied/scripts/ci/"
+cp "$root/scripts/ci/ic-tool-pins.awk" "$root/scripts/ci/tool-catalog-records.pl" "$copied/scripts/ci/"
 cp "$root/scripts/dev/install-host-tools.sh" "$root/scripts/dev/install-ic-tools.sh" \
     "$root/scripts/dev/tool-store.sh" "$copied/scripts/dev/"
 # The selected workspace alias must compare equal to the physical script root.
