@@ -97,7 +97,13 @@ fn run_cohort(cohort: &str) {
 
     let memory_sampling = if cohort == "watchdog" {
         let measurement: MemorySamplingMeasurement = pic
-            .update_candid(canister_id, "memory_sampling_overhead", (), REPLY_LIMITS)
+            .update_candid(
+                canister_id,
+                Principal::anonymous(),
+                "memory_sampling_overhead",
+                (),
+                REPLY_LIMITS,
+            )
             .expect("probe update succeeds");
         assert!(measurement.sampled_bracket_instructions >= measurement.empty_bracket_instructions);
         Some(measurement)
@@ -178,11 +184,23 @@ fn update_measurement(
     canister_id: Principal,
     method: &str,
 ) -> OperationMeasurement {
-    pic.update_candid(canister_id, method, (), REPLY_LIMITS)
-        .expect("probe update succeeds")
+    pic.update_candid(
+        canister_id,
+        Principal::anonymous(),
+        method,
+        (),
+        REPLY_LIMITS,
+    )
+    .expect("probe update succeeds")
 }
 
 fn observe(pic: &PocketIc, canister_id: Principal) -> CohortObservation {
-    pic.query_candid(canister_id, "observe", (), REPLY_LIMITS)
-        .expect("probe query succeeds")
+    pic.query_candid(
+        canister_id,
+        Principal::anonymous(),
+        "observe",
+        (),
+        REPLY_LIMITS,
+    )
+    .expect("probe query succeeds")
 }

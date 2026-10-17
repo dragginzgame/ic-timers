@@ -45,10 +45,13 @@ pub fn wait_for_probe<T: Debug>(
 
 /// Install one probe with the fixtures' explicit funding and empty init payload.
 pub fn install_probe(pic: &PocketIc, wasm: Vec<u8>) -> Principal {
-    pic.try_create_and_install(
-        InstallSpec::new(wasm, Encode!().expect("encode probe init"), INIT_CYCLES)
-            .label("ic-timers probe"),
-    )
+    pic.try_create_and_install(InstallSpec {
+        wasm,
+        init_bytes: Encode!().expect("encode probe init"),
+        cycles: INIT_CYCLES,
+        install_sender: None,
+        label: Some("ic-timers probe".to_owned()),
+    })
     .expect("install funded timer probe")
 }
 
@@ -67,6 +70,12 @@ pub fn fresh_pocket_ic() -> PocketIcInstance<PocketIc> {
 
 /// Invoke an anonymous update with no arguments or return values.
 pub fn update_unit(pic: &PocketIc, canister_id: Principal, method: &str) {
-    pic.update_candid::<(), _>(canister_id, method, (), REPLY_LIMITS)
-        .expect("probe update succeeds");
+    pic.update_candid::<(), _>(
+        canister_id,
+        Principal::anonymous(),
+        method,
+        (),
+        REPLY_LIMITS,
+    )
+    .expect("probe update succeeds");
 }

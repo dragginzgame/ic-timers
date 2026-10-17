@@ -4,6 +4,18 @@
 
 Last updated: 2026-10-17
 
+## Testkit 0.51 probe calls
+
+The selected graph now uses Testkit 0.51.0 and IC Build 0.13.0. All 26 probe
+Candid method calls supply their previous anonymous caller explicitly, retaining
+finite reply limits. Probe installation uses the current `InstallSpec` fields
+with unchanged funding, init payload, diagnostic label and default sender.
+`make testing-check` passes, including all four exclusive cohort configurations.
+All 21 runtime PocketIC subjects and the cohort subject pass on admitted 16.1.0;
+locked metadata passes. Receipts are in `target/qualification/testkit-051-adoption/`.
+No dependency selection or package version changed in this repair. Complete
+release and native macOS qualification remain separate.
+
 ## CI evidence fixture repair
 
 The failure-evidence fixture now supplies every required synthetic ripgrep hash
@@ -25,7 +37,7 @@ fault-injection cases are removed. Pure transition subjects retain a test-only
 application model using the same predicates. All 158 current native library
 subjects, strict library Clippy, provider boundaries and Rustdoc pass.
 
-The native probe driver now uses published IC Build 0.12.1 for locked Rust 1.91
+The native probe driver delegates to IC Build for locked Rust 1.91
 `timer-probe` builds, isolated feature compiler state and exact artifact discovery.
 It retains artifact records until child tests finish reading them. Each generated
 probe namespace requests best-effort seven-day/512 MiB retention; active records

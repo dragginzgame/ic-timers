@@ -22,6 +22,8 @@ All notable changes to this project are recorded here.
 
 ### Development
 
+- Adapt probe Candid calls and installation to Testkit 0.51, preserving anonymous
+  callers, explicit funding and finite reply-decoding limits.
 - Complete the failure-evidence fixture's synthetic host catalog and copied
   installer companions for strict offline catalog validation.
 - Adopt the reviewed Shared 0.19.0 snapshot and retire release-prose scanning and
