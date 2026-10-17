@@ -19,6 +19,8 @@ All notable changes to this project are recorded here.
 
 ### Fixed
 
+- Align the Testkit adapter fixture with host/Cargo-only aggregate setup and
+  checking after retiring the IC-tool selection.
 - Classify the complete library directory and packaged root README/lockfile as
   crate impact, including license changes previously labelled repository-only.
 

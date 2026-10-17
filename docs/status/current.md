@@ -67,6 +67,11 @@ payloads. Host/Cargo and Testkit offline checks pass. Shell/Python evidence
 fixtures pass with host-only compact qualification and full unselected legacy IC
 sets/failed diagnostics retained. Existing installed stores are untouched.
 
+The Testkit adapter fixture now follows Rust preflight, host/Cargo setup/check,
+then the CLI/server, removing its stale IC stub and expectations. Failure-stop,
+lock-preservation and parallel-Make jobserver assertions remain. The focused
+fixture, Bash syntax and source-following ShellCheck pass on Linux.
+
 The companion-aware bootstrap is prepared at its Shared owner in
 `/tmp/ic-timers-shared-fixture-bootstrap`, based on committed `3f87ddc`, with
 consumer adoption in `/tmp/ic-timers-fixture-bootstrap-adoption`. It shares the

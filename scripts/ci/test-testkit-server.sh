@@ -116,7 +116,6 @@ if [[ "$selected" == true ]]; then
 fi
 case "${0##*/}" in
     install-host-tools.sh) step=host ;;
-    install-ic-tools.sh) step=ic ;;
     install-rust-tools.sh) step=rust; [[ "$selected" != true ]] || step=cli ;;
 esac
 step="$step-$phase"
@@ -124,7 +123,7 @@ printf '%s\n' "$step" >> "$TESTKIT_AGGREGATE_LOG"
 [[ "${TESTKIT_AGGREGATE_FAIL:-}" != "$step" ]] || exit 23
 [[ "$selected" != true ]] || printf '%s\n' "$TESTKIT_ADAPTER_FIXTURE/owner"
 EOF
-for tool in host ic rust; do
+for tool in host rust; do
     cp "$fixture/common-installer" "$consumer/scripts/dev/install-$tool-tools.sh"
 done
 cat > "$fixture/owner" <<'EOF'
@@ -140,9 +139,9 @@ parallel=(-j4)
 if make --help | grep -q -- --jobserver-style; then parallel+=(--jobserver-style=pipe); fi
 for target in install-tools tools-check; do
     phase=setup; [[ "$target" != tools-check ]] || phase=check
-    steps=("host-$phase" "ic-$phase" "rust-$phase" "cli-$phase" "server-$phase")
+    steps=("host-$phase" "rust-$phase" "cli-$phase" "server-$phase")
     if [[ "$target" == install-tools ]]; then
-        steps=(ic-preflight rust-preflight "${steps[@]}")
+        steps=(rust-preflight "${steps[@]}")
     fi
     : > "$TESTKIT_AGGREGATE_LOG"
     make --no-print-directory "${parallel[@]}" -C "$consumer" "$target" \
