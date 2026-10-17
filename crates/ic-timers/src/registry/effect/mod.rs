@@ -4,16 +4,19 @@ use super::{CallbackRole, CallbackToken, CallbacksToClear, RegistrationClaim, to
 use crate::control::WakeupArm;
 
 /// A wakeup can only address ordinary work or a Watchdog scheduler.
-#[derive(Debug, Eq, PartialEq)]
-pub struct WakeupToken(CallbackToken);
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum WakeupToken {
+    Ordinary(CallbackToken),
+    Scheduler(CallbackToken),
+}
 
 impl WakeupToken {
     pub(super) fn ordinary(claim: &RegistrationClaim, generation: u64) -> Self {
-        Self(token_for(claim, generation, CallbackRole::OrdinaryWork))
+        Self::Ordinary(token_for(claim, generation, CallbackRole::OrdinaryWork))
     }
 
     pub(super) fn scheduler(claim: &RegistrationClaim, generation: u64) -> Self {
-        Self(token_for(
+        Self::Scheduler(token_for(
             claim,
             generation,
             CallbackRole::WatchdogScheduler,
@@ -21,7 +24,9 @@ impl WakeupToken {
     }
 
     pub(crate) const fn token(&self) -> &CallbackToken {
-        &self.0
+        match self {
+            Self::Ordinary(token) | Self::Scheduler(token) => token,
+        }
     }
 }
 

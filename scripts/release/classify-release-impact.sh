@@ -14,8 +14,8 @@ exec perl -e '
       while (my $path = <$paths>) {
         chomp $path;
         $impact = "repository" if $impact eq "none";
-        $impact = "crate" if $path eq "Cargo.toml" || $path eq "crates/ic-timers/Cargo.toml"
-            || $path eq "crates/ic-timers/build.rs" || index($path, "crates/ic-timers/src/") == 0;
+        $impact = "crate" if $path eq "Cargo.toml" || $path eq "Cargo.lock"
+            || $path eq "README.md" || index($path, "crates/ic-timers/") == 0;
       }
     }
     close $paths or exit(($? & 127) ? 128 + ($? & 127) : (($? >> 8) || 1));

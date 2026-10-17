@@ -35,7 +35,7 @@ cp "$root/scripts/ci/read-cargo-workspace-version.sh" \
     "$root/scripts/ci/StableVersion.pm" \
     "$fixture/current/scripts/ci/"
 mkdir -p "$fixture/current/ci"
-cp "$root/ci/tool-versions.env" "$fixture/current/ci/"
+cp "$root/ci/tool-versions.env" "$root/ci/release-delivery.txt" "$fixture/current/ci/"
 printf '%s\n' '[workspace.package]' 'version = "0.1.0"' > "$fixture/selected/Cargo.toml"
 printf '%s\n' 'ic-timers = "=0.0.7"' > "$fixture/selected/README.md"
 printf '%s\n' '## [0.1.0] - 2026-10-06' > "$fixture/selected/CHANGELOG.md"
@@ -100,6 +100,20 @@ chmod +x "$fixture/bin/git" "$fixture/bin/cargo"
 export PATH="$fixture/bin:$PATH" TMPDIR="$fixture/tmp"
 cd "$fixture/current"
 real_make="$(command -v make)"
+
+# Standalone metadata adapters share Make's direct-only admission before Git,
+# Cargo or setup can run, including phases that would otherwise mutate metadata.
+: > "$EVENTS"
+for phase in preflight check commit-check check-committed; do
+    for delivery in pr ''; do
+        if RELEASE_DELIVERY="$delivery" bash scripts/release/adapter.sh "$phase" > "$fixture/output" 2>&1; then
+            echo "error: standalone $phase admitted unsupported delivery: $delivery" >&2
+            exit 1
+        fi
+        grep -Fq 'release delivery refused:' "$fixture/output"
+        test ! -s "$EVENTS"
+    done
+done
 
 check() {
     "$real_make" --no-print-directory "$1" RELEASE_COMMIT="$SELECTED_COMMIT" \

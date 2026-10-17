@@ -29,8 +29,11 @@ migrations or fallback readers without an explicit compatibility exception.
 ## Repository updates versus crate releases
 
 Use `make release-impact` to classify changes since the current version tag.
-The classifier distinguishes crate, repository-only and empty subjects; it is
-not an API compatibility oracle. Repository-only work normally joins the next
+The classifier distinguishes crate, repository-only and empty subjects. Changes
+under `crates/ic-timers/`, or to root `Cargo.toml`, `Cargo.lock` or `README.md`,
+count as crate impact; this conservative package boundary includes license and
+other packaged files. It is not an API compatibility oracle. Repository-only
+work normally joins the next
 code-bearing release. An explicit maintainer patch/minor command may publish it
 with an advisory and the complete gate; an empty subject is rejected.
 
@@ -56,6 +59,11 @@ make publish
 `origin/main`. They validate, prepare metadata, stage admitted outputs, commit,
 create an annotated version tag and atomically push the branch and tag.
 Publication stays separate. PR release delivery is not adopted.
+
+The consumer-owned [delivery declaration](../ci/release-delivery.txt) admits only
+`direct`. Make and standalone metadata adapters share the read-only Shared
+checker. Environment or command-line requests for `pr` refuse before effects;
+they are not silently converted to direct delivery.
 
 Normal retry reconciles saved unfinished intent at its exact version before
 considering another increment. `make release-resume VERSION=x.y.z` explicitly
@@ -154,18 +162,19 @@ partial failure and native Bash behavior. Install tools explicitly through
 
 `make actions-check` verifies the host bundle and delegates structured YAML/Cargo
 pin and workspace-inheritance checks to the reviewed Shared helper. Every direct
-dependency belongs to the root catalog and is inherited by members. Host/IC/Cargo
+dependency belongs to the root catalog and is inherited by members. Host/Cargo
 setup and evidence use one shared store setting and checkout-local references;
 no global tool or stale-generation fallback is admitted. See
 [local setup](local-setup.md) and [adoption](shared-tooling.md) for exact owners.
 
-## Pinned IC tool setup
+## Common tools and Testkit setup
 
-Shared catalogs select default host/IC/Cargo tools. The explicit
-[qualified IC matrix](../ci/ic-tools-qualified.tsv) retains Binaryen 132 pending
-application optimizer qualification; refreshing a snapshot does not qualify a
-new optimizer. `make install-tools` explicitly prepares host, IC and Cargo tools,
-then Testkit. `make tools-check` verifies them offline in the same order.
+`make install-tools` prepares common host/Cargo tools, then Testkit.
+`make tools-check` verifies them offline in the same order. CI and Rust formatting
+hooks publish common host/Cargo paths. Timers selects no IC executable bundle:
+maintained probe builds use Cargo through IC Build and do not invoke Binaryen,
+WABT or Quill. The former qualified IC matrix is retired. This does not qualify
+an optimizer or weaken product PocketIC recovery/cohort gates.
 
 The [Testkit adapter](../scripts/dev/testkit-server.sh) selects the CLI from the
 single root lock. Shared's Cargo installer admits that exact executable; Testkit
@@ -206,7 +215,9 @@ selection plus safe partial archive collection to Shared. CI captures its origin
 status and combined output, then passes the prepared archive and collection log to
 Shared's evidence action. Available files are uploaded before missing inputs fail
 completeness; original collection failure remains a failed job. The shared action
-retains artifacts for fourteen days. Invalid store admission
+retains artifacts for fourteen days. Downloaded late qualification requires the
+selected host catalog, a fresh check and compact host selection. Unselected legacy
+IC sets remain full evidence; their presence is not IC-tool admission. Invalid store admission
 still retains safe local evidence and reports incomplete collection; it never
 traverses unadmitted external payloads. Testkit setup attempts and failed tool
 builds keep their owner receipts. Hosted upload/download and native source

@@ -4,6 +4,101 @@
 
 Last updated: 2026-10-17
 
+## Package impact, ordinary requests and typed wakeups
+
+The impact classifier now treats the complete library directory and packaged root
+manifest, lockfile and README as crate changes. Neighboring crates, probes and
+repository documentation remain outside that package boundary. The focused impact
+and version-preparation fixtures pass, including failed/incomplete observations.
+
+Ordinary scheduling uses one ensure/reconcile command after entrypoint policy
+admission. A new negative subject verifies that other-policy requests leave the
+complete inventory unchanged. Wakeup variants survive into dispatch; only ordinary
+deliveries construct abandonment guards, still before the first future poll.
+All 160 native library subjects, strict library Clippy, Rust 1.91 Wasm compilation,
+warning-denied Rustdoc, provider boundaries and 21 runtime PocketIC subjects pass.
+
+The incoming IC Build 0.14 selection exposed a removed raw-argument builder in the
+probe driver. Its caller now supplies typed locked `timer-probe` profile/features;
+actual Rust 1.91 harness checking and strict harness Clippy pass. All four optimized
+cohort builds and the live cohort subject pass through admitted PocketIC 16.1.0.
+These are current observations, not a historical performance improvement. Dependency and
+package versions/lockfile selections are unchanged from this task's arrival.
+Current receipts and source attribution belong to
+`target/qualification/request-dispatch-cleanup/`, compared with
+`/tmp/ic-timers-request-dispatch-arrival`. The compatible batch extends 0.27.1 notes;
+index, commits, pushes and releases remain user-owned. Complete hosted/native
+macOS and release acceptance remain separate from these focused Linux checks.
+
+## Completed-batch projection and GitHub reconciliation
+
+`WatchdogRunResult::completed_batch` is implemented locally for
+[#64 — Share completed-batch watchdog result construction used by Jobs](https://github.com/dragginzgame/ic-timers/issues/64).
+It maps caller-defined work and optional deadlines without changing runtime policy.
+Its nine-combination test, actual Rust 1.91 Wasm check, strict library Clippy and
+warning-denied Rustdoc pass. The compatible addition extends the existing 0.27.1
+notes; user-owned delivery and hosted acceptance remain outstanding.
+
+The delivered 0.27.0 matrix at `02cf814` passes Linux/MSRV and both macOS hosts.
+Its completed license, snapshot, prose-retirement and Testkit issues are reconciled.
+Obsolete PRs #54/#60/#61 are closed without merges or branch deletion. Prepared
+Shared contributions now use current committed 0.21.0 (`4b0615c`):
+[#274 — Script fixture closure](https://github.com/dragginzgame/shared-tooling/issues/274)
+and [#275 — Canonical uploader 7.0.2](https://github.com/dragginzgame/shared-tooling/issues/275).
+Focused owner checks pass. The isolated source and reviewable patches/bodies belong
+to `target/qualification/pr-issues/`; no supplier PR branch is published yet.
+[Timers #67 — Adopt the canonical Shared artifact uploader 7.0.2](https://github.com/dragginzgame/ic-timers/issues/67)
+keeps consumer adoption separate. The dirty sibling and current index are untouched.
+
+## Fresh creation, selected tools and fixture preparation
+
+Fresh lifecycle reconciliation now allocates and initializes through the same
+creation owner as direct registration. One registry borrow prepares its transition;
+provider effects finish before authority enters the owner slot. Creation failures
+retain exact-claim cleanup and release captures after registry access ends.
+All 158 native library subjects, strict Clippy, Rustdoc, 21 runtime PocketIC
+subjects and the policy cohort subject pass. These receipts establish current
+behavior, not a measured optimization or complete release acceptance.
+
+Timers no longer selects an unused IC executable bundle or CI PATH. Its qualified
+Binaryen catalog and local IC installer-fixture caller are retired; canonical
+export from committed Shared 0.20.0 removes that fixture entrypoint, leaving 134
+payloads. Host/Cargo and Testkit offline checks pass. Shell/Python evidence
+fixtures pass with host-only compact qualification and full unselected legacy IC
+sets/failed diagnostics retained. Existing installed stores are untouched.
+
+The companion-aware bootstrap is prepared at its Shared owner in
+`/tmp/ic-timers-shared-fixture-bootstrap`, based on committed `3f87ddc`, with
+consumer adoption in `/tmp/ic-timers-fixture-bootstrap-adoption`. It shares the
+exporter's nonexecuting declaration reader. Focused graph/admission, distribution,
+ShellCheck and both consumer producer fixtures pass on Linux. Patches and delivery
+instructions are in `target/qualification/creation-tools-cleanup/`. Supplier commit
+and canonical refresh remain outstanding; no uncommitted helper is installed in
+this snapshot. The actual Python fixture's missing parser copy is fixed now.
+
+The compatible batch extends undated 0.27.1 notes. Cargo versions, incoming Metrics
+edits, index and user-owned release execution are unchanged. Native macOS, hosted
+upload/download and complete release qualification remain separate.
+
+## Shared Tooling 0.20 adoption
+
+The reviewed adoption initially selected 135 payloads from committed Shared 0.20.0 source
+`3f87ddc1a0c1616775b2114c42a4adee7376c9b1`. Preview and refresh retained the
+existing entrypoints and added the release include's required delivery checker.
+Uncommitted supplier work is excluded. Common tools cover host/Cargo; Timers
+adds Testkit and no longer selects an unused IC executable bundle. One consumer-owned direct-only delivery file now governs both
+Make admission and standalone adapters, refusing unsupported requests before effects.
+
+Actual setup and offline checks pass. Focused common-tool, hook, snapshot
+corruption, release routing/refusal, committed/index/tag and failure-evidence
+fixtures pass on Linux, alongside formatting, ShellCheck and dependency-pin checks.
+The GitHub description matches the maintained scope. Receipts and before-images
+are recorded under `target/qualification/shared-020-adoption/` and
+`/tmp/ic-timers-shared-020-arrival`. Full release, hosted and native macOS
+qualification remain separate. This repository-only batch has undated 0.27.1 notes;
+Cargo stays 0.27.0. Incoming Metrics dependency edits are preserved, not adopted
+or qualified by this tooling task.
+
 ## Testkit 0.51 probe calls
 
 The selected graph now uses Testkit 0.51.0 and IC Build 0.13.0. All 26 probe
@@ -48,7 +143,7 @@ direct Cargo builds byte for byte for the same current source and profile; this
 qualifies artifact equivalence, not a historical performance improvement.
 A producer failure stops before later builds or tests. Strict native harness
 Clippy, locked metadata and dependency-pin checks pass; the published library
-has no IC Build dependency. Cargo package versions remain 0.26.1.
+has no IC Build dependency. Those receipts preceded the 0.27.0 release.
 
 Committed-release fixtures copy only their adapter rather than the full release
 script tree, and version preparation no longer copies the changelog finalizer
@@ -62,15 +157,15 @@ inputs. Complete release and native macOS qualification remain user-owned.
 
 Operator-health classification is removed from the published Timers API surface.
 Consumers use inert state, scheduling mode and outcomes for their own projection.
-The complete pending batch is therefore 0.27.0; Cargo stays 0.26.1. The isolated
+The reporting hard cut belongs to 0.27.0. The isolated
 Canic candidate at `/tmp/ic-timers-canic-projection` shares one ops projection
 between status and public metrics and preserves its wire enum. Two projector
 subjects pass against the real contract types. Core's Rust 1.99 check remains
 blocked by existing removed Memory exports, outside this projection change;
 neither Core integration nor downstream adoption is qualified.
 
-Canonical Shared adoption now selects committed 0.19.0 source
-`ac87fa23c8b4bdf94f4205658aa4a8851f6b2b8d`. The 134-payload snapshot retires the
+Earlier canonical Shared adoption selected committed 0.19.0 source
+`ac87fa23c8b4bdf94f4205658aa4a8851f6b2b8d`. That 134-payload snapshot retired the
 release-prose helper and fixture; local callers and advisory-specific tests are
 deleted. Structured changelog/metadata checks remain. Trial version, hook,
 release-ordering, tool-command, Rust-preparation and index fixtures pass. Pin

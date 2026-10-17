@@ -270,7 +270,7 @@ jobs:
           # The shared version reader needs the explicitly prepared parsers.
           make install-tools 2>&1 | tee "$RUNNER_TEMP/tools-install.log"
           make tools-check 2>&1 | tee "$RUNNER_TEMP/tools-check.log"
-          export PATH="$GITHUB_WORKSPACE/.tools/host/bin:$GITHUB_WORKSPACE/.tools/ic/bin:$GITHUB_WORKSPACE/.tools/rust/common/bin:$PATH"
+          export PATH="$GITHUB_WORKSPACE/.tools/host/bin:$GITHUB_WORKSPACE/.tools/rust/common/bin:$PATH"
           expected_tag="v$(make --no-print-directory version)"
           if [[ "$GITHUB_REF_NAME" != "$expected_tag" ]]; then
             echo "error: event tag $GITHUB_REF_NAME does not match $expected_tag" >&2

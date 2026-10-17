@@ -51,6 +51,8 @@ mkdir "${temporary_root}/workspace with spaces"
 ln -s 'workspace with spaces' "${temporary_root}/workspace-alias"
 cp "${makefile}" "${temporary_root}/workspace with spaces/Makefile"
 bash "$repository_root/scripts/ci/prepare-make-fixture.sh" "$repository_root" "$temporary_root/workspace with spaces"
+mkdir -p "$temporary_root/workspace with spaces/ci"
+cp "$repository_root/ci/release-delivery.txt" "$temporary_root/workspace with spaces/ci/"
 cd "${temporary_root}/workspace-alias"
 fixture_root="$(pwd -P)"
 git init -q
@@ -193,7 +195,7 @@ for mode in watchdog cohorts; do
 done
 
 # Exercise the actual shared entrypoints with an inert runner. Delivery remains
-# direct even when inherited environment or command-line Make variables ask for PR.
+# direct, while inherited or command-line requests for PR refuse before effects.
 mkdir -p external-snapshot/scripts/ci
 external_root="$fixture_root/external-snapshot"
 cat > external-snapshot/scripts/ci/run-release.sh <<'EOF'
@@ -223,15 +225,15 @@ for target in release-patch release-minor release-major release-resume; do
     for policy in environment command-line; do
         variables=(RELEASE_REMOTE=fixture-origin RELEASE_BRANCH=fixture-branch VERSION=0.1.1)
         if [[ "$policy" == command-line ]]; then
-            variables+=(RELEASE_DELIVERY=pr "SHARED_TOOLING_ROOT=$external_root")
+            variables+=(RELEASE_DELIVERY=direct "SHARED_TOOLING_ROOT=$external_root")
         fi
-        env RELEASE_DELIVERY=pr SHARED_TOOLING_ROOT="$external_root" \
+        env RELEASE_DELIVERY=direct SHARED_TOOLING_ROOT="$external_root" \
             make --no-print-directory "$target" "${variables[@]}" \
             > entrypoint-output 2>&1
         cmp expected-entrypoint-events standard-entrypoint-events
         test ! -e external-runner-events
         test ! -e external-admission-events
-        if env RELEASE_DELIVERY=pr SHARED_TOOLING_ROOT="$external_root" FIXTURE_ENTRYPOINT_STATUS=37 \
+        if env RELEASE_DELIVERY=direct SHARED_TOOLING_ROOT="$external_root" FIXTURE_ENTRYPOINT_STATUS=37 \
             make --no-print-directory "$target" "${variables[@]}" > entrypoint-output 2>&1; then
             echo "error: $target ignored its selected runner failure" >&2
             exit 1
@@ -239,9 +241,22 @@ for target in release-patch release-minor release-major release-resume; do
         cmp expected-entrypoint-events standard-entrypoint-events
         test ! -e external-runner-events
         test ! -e external-admission-events
+        rm standard-entrypoint-events
+        refused_variables=(RELEASE_REMOTE=fixture-origin RELEASE_BRANCH=fixture-branch VERSION=0.1.1)
+        if [[ "$policy" == command-line ]]; then
+            refused_variables+=(RELEASE_DELIVERY=pr "SHARED_TOOLING_ROOT=$external_root")
+        fi
+        if env RELEASE_DELIVERY=pr SHARED_TOOLING_ROOT="$external_root" \
+            make --no-print-directory "$target" "${refused_variables[@]}" > delivery-refusal-output 2>&1; then
+            echo "error: $target admitted unsupported PR delivery" >&2
+            exit 1
+        fi
+        grep -Fq 'consumer does not support PR delivery' delivery-refusal-output
+        test ! -e standard-entrypoint-events
+        test ! -e external-runner-events
+        test ! -e external-admission-events
     done
 done
-rm standard-entrypoint-events
 if make --no-print-directory release-patch release-minor > conflicting-goals-output 2>&1; then
     echo 'error: standard release entrypoints accepted conflicting goals' >&2
     exit 1

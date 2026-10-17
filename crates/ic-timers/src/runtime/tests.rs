@@ -292,7 +292,7 @@ fn stale_delivery_drop_cannot_retire_rearmed_or_reused_identity() {
         .unwrap();
     let (token, handle) = detached.into_parts();
     bind_provider_handle(&token, handle, None).unwrap();
-    let old_delivery = dispatch_wakeup(token.clone());
+    let old_delivery = dispatch_wakeup(WakeupToken::Ordinary(token.clone()));
     registration
         .reconcile_schedule(Some(TimerSchedule::At(30)))
         .unwrap();
@@ -308,7 +308,7 @@ fn stale_delivery_drop_cannot_retire_rearmed_or_reused_identity() {
         .reconcile_schedule(Some(TimerSchedule::At(40)))
         .unwrap();
     let before = timer_inventory().unwrap();
-    drop(dispatch_wakeup(token));
+    drop(dispatch_wakeup(WakeupToken::Ordinary(token)));
     assert_eq!(timer_inventory().unwrap(), before);
     assert!(replacement.has_armed_wakeup().unwrap());
     replacement.unregister().unwrap();
@@ -1760,7 +1760,7 @@ fn stale_reused_identity_callback_cannot_change_handles_or_measurements() {
     let before_performance = before.observability().performance();
     let stale_token = old_token.clone();
     let _stale_delivery = platform::set_timer(Duration::ZERO, async move {
-        dispatch_wakeup(stale_token).await;
+        dispatch_wakeup(WakeupToken::Ordinary(stale_token)).await;
     });
     assert!(run_next_due(), "stale callback delivery should be harmless");
     // Exercise the accounting boundary directly; stale dispatch would return

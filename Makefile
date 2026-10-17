@@ -10,10 +10,9 @@ VERSION ?=
 LOCAL_TOOL_INSTALL_TARGETS := install-testkit-server
 LOCAL_TOOL_CHECK_TARGETS := pocketic-check
 override SHARED_TOOLING_ROOT := $(CURDIR)
-# Retain the qualified optimizer selection separately from shared defaults.
-IC_TOOL_PINS := $(CURDIR)/ci/ic-tools-qualified.tsv
-# Standard delivery remains direct, including under ambient Make selections.
-override RELEASE_DELIVERY := direct
+# Keep one consumer-owned declaration for Make and standalone adapters.
+override RELEASE_DELIVERY_POLICY := $(CURDIR)/ci/release-delivery.txt
+RELEASE_DELIVERY ?= direct
 export RELEASE_DELIVERY
 include make/consumer.mk
 
@@ -43,10 +42,8 @@ help:
 	@echo "  actions-check       Check parsed Actions and dependency pin declarations"
 	@echo "  install-host-tools  Install pinned jq/yq/ripgrep/cloc host tools"
 	@echo "  host-tools-check    Verify the complete host bundle offline"
-	@echo "  install-ic-tools    Explicitly install the reviewed five-tool IC bundle"
 	@echo "  install-testkit-server  Prepare the locked Testkit CLI and its admitted server"
-	@echo "  ic-tools-check      Verify the installed IC bundle offline"
-	@echo "  install-tools / tools-check  Prepare or verify host, IC, Cargo tools, then Testkit"
+	@echo "  install-tools / tools-check  Prepare or verify host/Cargo tools, then Testkit"
 	@echo "  shared-tooling-check  Verify the reviewed root snapshot offline"
 	@echo "  install-hooks       Activate the reviewed repository-local formatting hook"
 	@echo "  cloc                Report root-workspace Rust LOC and test counts"
@@ -145,14 +142,14 @@ release-check:
 	bash scripts/ci/test-format-tools.sh
 	bash scripts/ci/test-prepare-common-tools.sh
 	bash scripts/ci/test-make-consumer.sh
-	bash scripts/ci/test-ic-tools.sh
 	bash scripts/ci/test-evidence-checksums.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/test-dependency-pins.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/test-cargo-metadata.sh
 	perl scripts/ci/test-local-lock-versions.pl
 	bash scripts/ci/test-release-runner.sh
 	bash scripts/ci/check-release-commands.sh "$(CURDIR)" \
-		ci/tool-versions.env make/consumer.mk make/tools.mk make/rust-format.mk make/release.mk \
+		ci/tool-versions.env ci/release-delivery.txt make/consumer.mk make/tools.mk make/rust-format.mk make/release.mk \
+		scripts/ci/check-release-delivery.sh \
 		make/execution.mk scripts/ci/check-make-execution.sh scripts/ci/run-formatting.sh
 	bash scripts/release/test-committed-release.sh
 	bash scripts/release/test-release-index.sh

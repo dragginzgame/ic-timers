@@ -761,9 +761,9 @@ dependencies = [
 
 [[package]]
 name = "ic-build"
-version = "0.13.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f3e88f4805bc349ae0aa50973d016b79599dbbe273ec5a062196f96d4c2baca"
+checksum = "957e87919fc46aed675896ee99cd01d0e18baca91c459b52ee2211d38d670f09"
 dependencies = [
  "cargo_metadata",
  "ic-host-artifacts",
@@ -893,6 +893,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c30a384477a9783da95cd991e576f6f6a76c5d3691299fffe294f95affae3fd7"
 
 [[package]]
+name = "ic-metrics"
+version = "0.13.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "078fddb70578cd0e42b600ad2ad8652a47bef26d2c82275e8631b6f9e9bbe18e"
+
+[[package]]
 name = "ic-testkit"
 version = "0.51.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -903,7 +909,7 @@ dependencies = [
  "ic-host-artifacts",
  "ic-host-fs",
  "ic-host-process",
- "ic-metrics",
+ "ic-metrics 0.12.0",
  "ic-testkit-candid",
  "libc",
  "pocket-ic",
@@ -927,7 +933,7 @@ name = "ic-timers"
 version = "0.27.0"
 dependencies = [
  "ic-cdk-executor",
- "ic-metrics",
+ "ic-metrics 0.13.2",
  "ic0",
  "thiserror 2.0.18",
 ]

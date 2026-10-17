@@ -31,11 +31,11 @@ validates requested time before allocating a claim, and returns scheduled
 authority only after provider binding commits its successful-arm facts. `DeclarationLifetime`
 remains a snapshot observation. See the [typed setup contract](design/0.20-typed-registration.md).
 
-First lifecycle reconciliation is atomic at the owner
-slot. The shared reconciliation owner creates authority locally, applies the
-requested initial state, and publishes it only on success. Failed creation uses
-the direct-registration cleanup owner to remove its exact declaration and
-handles before releasing captures. Existing registrations retain their callback
+First lifecycle reconciliation allocates and initializes its claim through the
+same creation owner as direct registration, under one registry borrow. It applies
+provider effects before publishing authority into the owner slot. There is no
+public inactive-registration/control detour. Failed creation uses the common
+cleanup owner to remove its exact declaration and handles before releasing captures. Existing registrations retain their callback
 and failure observations on later control errors; an unused replacement factory
 is dropped outside registry borrows before applying that control.
 
@@ -95,8 +95,13 @@ The remaining module hierarchy keeps six responsibilities separate:
    Cancellation in the registry stops scheduled state without allocating a
    generation and queues a command for running work. Stopping with a reason
    discards the running command through state replacement.
-   The private `registry/effect` module constrains wakeups to ordinary work or
-   Watchdog schedulers. A Watchdog dispatch stores one successor identity and
+   Ordinary Once and after-completion admission retain their policy checks before
+   selecting the shared ensure/reconcile command. The arbitration engine does not
+   repeat the caller's policy distinction.
+   The private `registry/effect` module carries ordinary-work or Watchdog-scheduler
+   wakeup variants through runtime dispatch. Only ordinary deliveries receive an
+   abandonment guard, constructed before the future's first poll. A Watchdog
+   dispatch stores one successor identity and
    derives its work token with the same claim and generation. Runtime application
    admits live claim ownership, policy and generation during handle installation;
    structurally malformed token pairs need no second validation path.

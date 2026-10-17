@@ -24,10 +24,10 @@ categories = ["asynchronous", "wasm"]
 
 [workspace.dependencies]
 candid = "0.10"
-ic-build = "0.13"
+ic-build = "0.14"
 ic-cdk = "=0.20.3"
 ic-cdk-executor = "=2.0.0"
-ic-metrics = "0.12"
+ic-metrics = "0.13"
 ic-testkit = "0.51"
 ic-testkit-candid = "0.51"
 ic-timers = { path = "crates/ic-timers" }

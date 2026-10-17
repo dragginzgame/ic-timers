@@ -1,6 +1,7 @@
 //! Consumer recipes; IC Build owns Cargo execution and exact Wasm artifacts.
 
 use ic_build::artifacts::{ArtifactCachePrunePolicy, WasmBuildSpec, build_wasm_canisters_cached};
+use ic_build::cargo::selection::{CargoFeatureSelection, CargoSelection};
 use std::{path::Path, process::Command, time::Duration};
 
 pub(crate) const COHORTS: [(&str, &str); 4] = [
@@ -40,10 +41,16 @@ pub(crate) fn run(mode: &str) -> Result<(), Box<dyn std::error::Error>> {
     };
     for (label, variable, package, feature) in recipes {
         let target = root.join("testing/target").join(format!("probe-{label}"));
-        let mut args = vec!["--profile", "timer-probe", "--locked"];
-        if let Some(feature) = feature {
-            args.extend(["--no-default-features", "--features", feature]);
-        }
+        let selection = CargoSelection {
+            profile: Some("timer-probe".to_owned()),
+            locked: true,
+            features: CargoFeatureSelection {
+                features: feature.map(str::to_owned).into_iter().collect(),
+                default_features: feature.is_none(),
+                ..CargoFeatureSelection::default()
+            },
+            ..CargoSelection::default()
+        };
         let spec = WasmBuildSpec::new(&root, &target, &[package])
             .with_isolated_builds()
             .with_prune_policy(
@@ -53,7 +60,7 @@ pub(crate) fn run(mode: &str) -> Result<(), Box<dyn std::error::Error>> {
             )
             .with_cargo_program("cargo")
             .with_rustc_identity_program("rustc")
-            .with_cargo_profile_args(args);
+            .with_cargo_selection(selection);
         let built = build_wasm_canisters_cached(&spec)?;
         let [artifact] = built.record().artifacts() else {
             return Err(format!("expected exactly one Wasm artifact for {label}").into());

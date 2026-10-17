@@ -277,6 +277,43 @@ fn duplicate_registration_and_capacity_fail_without_partial_state() {
 }
 
 #[test]
+fn ordinary_ensure_rejects_other_policies_without_mutating_observations() {
+    let mut registry = registry();
+    let once = registry
+        .register_once(identity("ensure-once"), DeclarationLifetime::Retained)
+        .unwrap();
+    let recurring = registry
+        .register_after_completion(
+            identity("ensure-recurring"),
+            cadence(5),
+            DeclarationLifetime::Retained,
+        )
+        .unwrap();
+    let watchdog = registry
+        .register_watchdog(
+            identity("ensure-watchdog"),
+            cadence(5),
+            DeclarationLifetime::Retained,
+        )
+        .unwrap();
+    let before = registry.inventory();
+    for (claim, actual) in [(&recurring, "after_completion"), (&watchdog, "watchdog")] {
+        assert_eq!(
+            registry
+                .ensure_once(claim, 0, TimerSchedule::At(10))
+                .map(|_| ()),
+            Err(RegistryError::PolicyMismatch { actual })
+        );
+        assert_eq!(registry.inventory(), before);
+    }
+    assert_eq!(
+        registry.ensure_recurring(&once, 0).map(|_| ()),
+        Err(RegistryError::PolicyMismatch { actual: "once" })
+    );
+    assert_eq!(registry.inventory(), before);
+}
+
+#[test]
 fn removal_invalidates_old_claim_before_identity_reuse() {
     let mut registry = registry();
     let timer = identity("reused");

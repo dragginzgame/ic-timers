@@ -22,11 +22,12 @@ output="$(cd "$temporary_root/caller" && bash "$classifier")"
 [[ "$output" == none ]] || exit 1
 printf '%s\0' "$temporary_root/caller" > "$temporary_root/expected-call"
 cmp "$temporary_root/expected-call" "$IMPACT_CALL"
-for path in 'docs/note.md' 'testing/probe/src/lib.rs' 'crates/ic-timers/src-other/lib.rs' \
-    Cargo.toml crates/ic-timers/Cargo.toml crates/ic-timers/build.rs $'crates/ic-timers/src/line\nname.rs'; do
+for path in 'docs/note.md' 'testing/probe/src/lib.rs' 'crates/ic-timers-other/src/lib.rs' LICENSE \
+    Cargo.toml Cargo.lock README.md crates/ic-timers/Cargo.toml crates/ic-timers/build.rs \
+    crates/ic-timers/LICENSE crates/ic-timers/src-other/lib.rs $'crates/ic-timers/src/line\nname.rs'; do
     printf '%s\0' "$path" > "$IMPACT_PATHS"
     case "$path" in
-        docs/*|testing/*|crates/ic-timers/src-other/*) expected=repository ;;
+        docs/*|testing/*|crates/ic-timers-other/*|LICENSE) expected=repository ;;
         *) expected=crate ;;
     esac
     output="$(cd "$temporary_root/caller" && bash "$classifier" v0.3.8)"

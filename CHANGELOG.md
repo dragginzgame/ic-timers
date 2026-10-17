@@ -2,6 +2,38 @@
 
 All notable changes to this project are recorded here.
 
+## [0.27.1]
+
+### Added
+
+- Add `WatchdogRunResult::completed_batch` for caller-defined work counts and
+  optional deadlines, keeping failure classification and scheduling policy local
+  ([#64 — Share completed-batch watchdog result construction used by Jobs](https://github.com/dragginzgame/ic-timers/issues/64)).
+
+### Changed
+
+- Initialize fresh lifecycle reconciliation through the direct-registration owner,
+  retaining atomic publication and capture cleanup without a second control pass.
+- Share ordinary ensure-command arbitration after policy admission, and retain
+  typed wakeup routing so abandonment guards belong only to ordinary deliveries.
+
+### Fixed
+
+- Classify the complete library directory and packaged root README/lockfile as
+  crate impact, including license changes previously labelled repository-only.
+
+### Development
+
+- Adapt the probe driver to selected IC Build 0.14's typed Cargo recipe API,
+  preserving the locked profile and exclusive cohort feature selections.
+- Adopt reviewed Shared Tooling 0.20.0 with common host/Cargo setup.
+- Retire the unused qualified IC-tool selection and CI PATH; require host-only
+  compact evidence while retaining unselected legacy sets and failed diagnostics.
+  Keep generic IC installer qualification at Shared rather than in Timers' gate.
+- Complete the downloaded-evidence fixture's catalog-parser companion copy.
+- Share one direct-only release declaration between Make and standalone adapters;
+  reject unsupported delivery selections before effects.
+
 ## [0.27.0] - 2026-10-17
 
 ### Breaking

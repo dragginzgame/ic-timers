@@ -64,12 +64,13 @@ if [[ ! -L "$root/.tools" && ! -L "$root/.tools/testkit-server" ]]; then
     done
 fi
 # Shared owns tool admission, safe partial retention and archive orchestration.
-# Timers owns identity/log roots and selects its qualified IC catalog explicitly.
+# Timers selects host-tool compaction. Unselected legacy IC sets remain full
+# evidence through the Shared selector, without IC admission or provisioning.
 mkdir "$metadata/tool-evidence"
 archive_started=$SECONDS
 collector_status=0
 bash "$script_root/scripts/ci/collect-tool-evidence.sh" "$archive" "$root" \
-    "$metadata/tool-evidence" compact "$root/ci/tool-versions.env" "$root/ci/ic-tools-qualified.tsv" \
+    "$metadata/tool-evidence" compact "$root/ci/tool-versions.env" "" \
     "${selections[@]}" > "$metadata/archive-path" || collector_status=$?
 case "$collector_status" in
     0|1) ;;

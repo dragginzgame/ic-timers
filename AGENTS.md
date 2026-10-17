@@ -12,10 +12,10 @@ This file is normative for automated contributors.
 - Common commands come from [make/consumer.mk](make/consumer.mk), with setup
   and storage governed by [local setup](docs/local-setup.md). The ordered local
   extensions prepare/check Testkit through the CLI selected by the root lockfile;
-  Testkit owns PocketIC server selection and admission.
-- Shared catalogs own default tool selections. The explicitly selected
-  [IC exception](ci/ic-tools-qualified.tsv) retains Binaryen 132 pending consumer
-  optimizer qualification. See [dependency exceptions](docs/releasing.md#dependency-pin-exceptions)
+  Testkit owns PocketIC server selection and admission. Timers selects no IC
+  executable bundle.
+- Shared catalogs own common host/Cargo tool selections. Product dependency
+  exceptions remain in [the release guide](docs/releasing.md#dependency-pin-exceptions)
   and the [local hygiene overlay](docs/audits/code-hygiene.md).
 - Shared [audits](audits/README.md) and [maintenance tasks](tasks/README.md)
   are procedures, not activation of schedules, commands or optional callers.
@@ -35,7 +35,8 @@ This file is normative for automated contributors.
   a release authorizes changelog preparation only. This is a maintainer-approved
   command-authority exception to the common baseline, preserving the established
   deployment workflow alongside the validation exception above.
-- Standard Make release commands select direct delivery explicitly. The shared
+- Standard Make release commands and standalone adapters admit only the direct
+  delivery declared in `ci/release-delivery.txt`. The shared
   PR helper is included with the reviewed release contract, but PR release
   delivery and merged-source adapters require separate maintainer adoption.
 - macOS host workflows are required by the shared baseline. The local

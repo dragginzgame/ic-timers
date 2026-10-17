@@ -40,9 +40,10 @@ class DownloadedEvidenceTests(unittest.TestCase):
                 "scripts/ci/qualify-failure-evidence.sh",
                 "scripts/ci/qualify-hosted-failure.sh",
                 "scripts/ci/verify-file-checksum.sh",
+                "scripts/ci/tool-catalog-records.pl",
                 "scripts/dev/install-host-tools.sh",
                 "scripts/dev/tool-store.sh",
-                "ci/tool-versions.env", "ci/ic-tools-qualified.tsv",
+                "ci/tool-versions.env",
             ):
                 target = workspace / name
                 target.parent.mkdir(parents=True, exist_ok=True)
@@ -67,20 +68,13 @@ class DownloadedEvidenceTests(unittest.TestCase):
                 (temporary / log).write_bytes(result.stdout + result.stderr)
                 self.assertEqual(result.returncode, expected, (result.stdout, result.stderr))
             tool_pins = {kind: (root / "ci" / name).read_bytes() for kind, name in
-                         (("host", "tool-versions.env"), ("ic", "ic-tools-qualified.tsv"))}
+                         (("host", "tool-versions.env"),)}
             verify_archive(runner / "ic-timers-failure-evidence.tar.gz", "early", identity, tool_pins)
 
     def test_qualification_and_rejections(self):
         identity = dict(checkout_sha="selected", event_sha="selected", job="macos",
                         host="macOS/X64", run="123", attempt="2")
-        ic_pins = "".join(
-            f"{tool}\t{version}\t{host}\t{'0' * 64}\n"
-            for host in ("linux-x86_64", "darwin-x86_64", "darwin-arm64")
-            for tool, version in (("quill", "0.5.4"), ("icp", "1.6.0"),
-                                  ("didc", "0.6.2"), ("ic-wasm", "0.11.1"),
-                                  ("wasm-opt", "132"))
-        ).encode()
-        tool_pins = {"host": b"selected host pins\n", "ic": ic_pins}
+        tool_pins = {"host": b"selected host pins\n"}
         for stage in ("early", "late"):
             scenario = f"ic-timers-fixtures/hosted-{stage}.ABC123"
             marker = (b"error: controlled early installer download failure\n" if stage == "early"
@@ -100,14 +94,11 @@ class DownloadedEvidenceTests(unittest.TestCase):
                 payload = "target/validation-failures/latest-combined.log"
                 files[payload] = (b"batch\n" + marker, 0o644)
                 files["target/validation-failures/latest.log"] = (marker, 0o644)
-                for kind in ("host", "ic"):
+                for kind in ("host",):
                     prefix = f"tool-evidence/{kind}/"
                     files[prefix + "caller-pins"] = (tool_pins[kind], 0o644)
                     files[prefix + "check.log"] = (b"fresh verification output\n", 0o644)
                     files[prefix + "selection.txt"] = (f"/native/checkout/.tools/{kind}-set.ABC123\n".encode(), 0o644)
-                files["tool-evidence/ic/pins.tsv"] = (tool_pins["ic"], 0o644)
-                files["tool-evidence/ic/host"] = (b"darwin-x86_64\n", 0o644)
-                files["tool-evidence/ic/files.sha256"] = (b"retained checksum receipt\n", 0o644)
             with fixture_directory() as temporary:
                 archive = temporary / "evidence.tar.gz"
 
@@ -121,15 +112,11 @@ class DownloadedEvidenceTests(unittest.TestCase):
                 write(files)
                 verify_archive(archive, stage, identity, tool_pins)
                 if stage == "late":
-                    # Exercise the actual CLI's checkout selection: the shared
-                    # default intentionally differs from our qualified exception.
+                    # The CLI must admit the caller-selected host catalog.
                     catalogs = temporary / "ci"
                     catalogs.mkdir()
                     (catalogs / "tool-versions.env").write_bytes(tool_pins["host"])
-                    qualified = catalogs / "ic-tools-qualified.tsv"
-                    qualified.write_bytes(ic_pins)
-                    default = ic_pins.replace(b"\t132\t", b"\t133\t")
-                    (catalogs / "ic-tools.tsv").write_bytes(default)
+                    selected_pins = catalogs / "tool-versions.env"
                     env = dict(os.environ, GITHUB_WORKSPACE=str(temporary),
                                GITHUB_SHA=identity["checkout_sha"], GITHUB_RUN_ID=identity["run"],
                                GITHUB_RUN_ATTEMPT=identity["attempt"])
@@ -137,15 +124,15 @@ class DownloadedEvidenceTests(unittest.TestCase):
                                str(archive), stage, identity["job"], identity["host"]]
                     result = subprocess.run(command, env=env, capture_output=True)
                     self.assertEqual(result.returncode, 0, (result.stdout, result.stderr))
-                    for wrong in (default, ic_pins.replace(b"0" * 64, b"1" * 64, 1)):
-                        qualified.write_bytes(wrong)
+                    for wrong in (b"different host pins\n",):
+                        selected_pins.write_bytes(wrong)
                         result = subprocess.run(command, env=env, capture_output=True)
                         self.assertNotEqual(result.returncode, 0)
                         self.assertIn(b"different caller pins", result.stderr)
-                    qualified.unlink()
+                    selected_pins.unlink()
                     result = subprocess.run(command, env=env, capture_output=True)
                     self.assertNotEqual(result.returncode, 0)
-                    self.assertIn(b"ic-tools-qualified.tsv", result.stderr)
+                    self.assertIn(b"tool-versions.env", result.stderr)
                 # Shared owns scenario-format rejection permutations. Keep the
                 # collector integration, identity, pin selection and a corrupt
                 # status case here to prove the caller actually delegates.
@@ -160,7 +147,7 @@ class DownloadedEvidenceTests(unittest.TestCase):
                 mutations = [(scenario + "/status.txt", (b"status=0\n", 0o644)),
                              ("../outside", (b"unsafe", 0o644))]
                 if stage == "late":
-                    mutations.append(("tool-evidence/ic/host", (b"darwin-arm64\n", 0o644)))
+                    mutations.append(("tool-evidence/host/selection.txt", (b"invalid\n", 0o644)))
                 for name, replacement in mutations:
                     write(dict(files, **{name: replacement}))
                     with self.assertRaises(ValueError):

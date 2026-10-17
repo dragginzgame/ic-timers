@@ -63,9 +63,9 @@ done
 # shellcheck disable=SC2016 # $job is a jq binding, not a shell variable.
 "$root/.tools/host/bin/yq" -o json '.' "$root/.github/workflows/ci.yml" |
     "$root/.tools/host/bin/jq" -e '
-        [.jobs | to_entries[] | .key as $job | .value.steps[] |
+        ([.jobs | to_entries[] | .key as $job | .value.steps[] |
             select(.uses == "./.github/actions/prepare-common-tools") | $job] |
-        sort == ["checks", "macos", "msrv"]' > /dev/null
+        sort) == ["checks", "macos", "msrv"]' > /dev/null
 export GITHUB_WORKSPACE="$fixture/repo" RUNNER_TEMP="$fixture/runner"
 export GITHUB_SHA=fixture-event-sha GITHUB_JOB=fixture-job
 export RUNNER_OS=fixture-os RUNNER_ARCH=fixture-arch GITHUB_RUN_ID=123 GITHUB_RUN_ATTEMPT=2
@@ -276,9 +276,9 @@ for tool in jq yq cloc; do
     fi
 done
 case "$(uname -s):$(uname -m)" in
-    Linux:x86_64|Linux:amd64) host=LINUX_AMD64; target=x86_64-unknown-linux-musl; ic_host=linux-x86_64; ic_target=x86_64-unknown-linux-gnu; ic_os=linux; ic_arch=x86_64 ;;
-    Darwin:x86_64|Darwin:amd64) host=DARWIN_AMD64; target=x86_64-apple-darwin; ic_host=darwin-x86_64; ic_target=x86_64-apple-darwin; ic_os=macos; ic_arch=x86_64 ;;
-    Darwin:arm64|Darwin:aarch64) host=DARWIN_ARM64; target=aarch64-apple-darwin; ic_host=darwin-arm64; ic_target=aarch64-apple-darwin; ic_os=macos; ic_arch=arm64 ;;
+    Linux:x86_64|Linux:amd64) target=x86_64-unknown-linux-musl ;;
+    Darwin:x86_64|Darwin:amd64) target=x86_64-apple-darwin ;;
+    Darwin:arm64|Darwin:aarch64) target=aarch64-apple-darwin ;;
     *) echo 'no complete native evidence fixture for this host' >&2; exit 1 ;;
 esac
 cat > "$GITHUB_WORKSPACE/.tools/host-set.active/bin/rg" <<'SCRIPT'
@@ -300,50 +300,12 @@ digest="$(bash "$root/scripts/ci/verify-file-checksum.sh" --print sha256 "$GITHU
 for host in LINUX_AMD64 LINUX_ARM64 DARWIN_AMD64 DARWIN_ARM64; do
     printf 'export SHARED_TOOLING_RIPGREP_SHA256_%s=%s\n' "$host" "$digest" >> "$host_pins"
 done
-cp "$root/ci/ic-tools-qualified.tsv" "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv"
-cp "$root/ci/ic-tools.tsv" "$GITHUB_WORKSPACE/ci/ic-tools.tsv"
-mkdir "$fixture/assets" "$fixture/payloads" "$fixture/installer-bin"
+mkdir "$fixture/assets" "$fixture/installer-bin"
 export TIMER_EVIDENCE_ASSETS="$fixture/assets"
 for tool in jq yq cloc; do
     cp -p "$GITHUB_WORKSPACE/.tools/host-set.active/bin/$tool" "$fixture/assets/$tool"
 done
 cp "$GITHUB_WORKSPACE/.tools/host-set.active/ripgrep.tar.gz" "$fixture/assets/ripgrep.tar.gz"
-: > "$fixture/ic-archive-digests"
-while IFS=$'\t' read -r tool version selected_host _; do
-    [[ "$tool" != \#* && "$selected_host" == "$ic_host" ]] || continue
-    report="$tool $version"
-    [[ "$tool" != wasm-opt ]] || report="wasm-opt version $version"
-    payload="$GITHUB_WORKSPACE/.tools/ic-set.active/bin/$tool"
-    printf '#!/bin/sh\nprintf "%%s\\n" "%s"\n' "$report" > "$payload"
-    chmod 0751 "$payload"
-    case "$tool" in
-        quill)
-            asset="quill-$ic_os-$ic_arch"
-            cp -p "$payload" "$fixture/assets/$asset" ;;
-        wasm-opt)
-            asset="binaryen-version_$version-$ic_arch-$ic_os.tar.gz"
-            member="binaryen-version_$version"
-            mkdir -p "$fixture/payloads/$member/bin" "$fixture/payloads/$member/lib"
-            cp -p "$payload" "$fixture/payloads/$member/bin/wasm-opt"
-            printf 'fixture native library\n' > "$fixture/payloads/$member/lib/libfixture.so"
-            tar -czf "$fixture/assets/$asset" -C "$fixture/payloads" "$member" ;;
-        *)
-            package="$tool"; [[ "$tool" != icp ]] || package=icp-cli
-            asset="$package-$ic_target.tar.xz"
-            member="$package-$ic_target"
-            mkdir "$fixture/payloads/$member"
-            cp -p "$payload" "$fixture/payloads/$member/$tool"
-            tar -cJf "$fixture/assets/$asset" -C "$fixture/payloads" "$member" ;;
-    esac
-    digest="$(bash "$root/scripts/ci/verify-file-checksum.sh" --print sha256 "$fixture/assets/$asset")"
-    printf '%s\t%s\n' "$tool" "$digest" >> "$fixture/ic-archive-digests"
-done < "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv"
-awk -F '\t' -v OFS='\t' -v host="$ic_host" '
-    NR==FNR { digests[$1]=$2; next }
-    $3==host { $4=digests[$1] }
-    { print }
-' "$fixture/ic-archive-digests" "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv" > "$fixture/authenticated-ic-pins"
-mv "$fixture/authenticated-ic-pins" "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv"
 cat > "$fixture/installer-bin/curl" <<'SCRIPT'
 #!/usr/bin/env bash
 set -euo pipefail
@@ -370,24 +332,11 @@ chmod +x "$fixture/installer-bin/curl"
 # and receipts. Only their download boundary is substituted with tiny archives.
 PATH="$fixture/installer-bin:$PATH" bash "$root/scripts/dev/install-host-tools.sh" \
     --consumer "$GITHUB_WORKSPACE" --versions "$host_pins" > "$fixture/host-store-install.log" 2>&1
-PATH="$fixture/installer-bin:$PATH" bash "$root/scripts/dev/install-ic-tools.sh" \
-    --consumer "$GITHUB_WORKSPACE" --pins "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv" > "$fixture/ic-store-install.log" 2>&1
 host_bundle="$(cd -P "$GITHUB_WORKSPACE/.tools/host" && printf '%s' "$PWD")"
-ic_bundle="$(cd -P "$GITHUB_WORKSPACE/.tools/ic" && printf '%s' "$PWD")"
 host_stored="${host_bundle#"$SHARED_TOOLING_STORE/"}"
-ic_stored="${ic_bundle#"$SHARED_TOOLING_STORE/"}"
 # This unreferenced store entry must never enter a checkout's failure artifact.
 mkdir "$SHARED_TOOLING_STORE/unrelated"
 printf 'unrelated store bytes\n' > "$SHARED_TOOLING_STORE/unrelated/not-selected"
-# Preserve installed provenance while the caller adds notes/reorders the same
-# admitted records. Compaction must retain both distinct inputs without downloads.
-awk '{ rows[NR]=$0 } END { print "# updated caller notes"; for (i=NR; i>0; i--) print rows[i] }' \
-    "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv" > "$fixture/reordered-caller-pins"
-mv "$fixture/reordered-caller-pins" "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv"
-if cmp -s "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv" "$ic_bundle/pins.tsv"; then
-    echo 'fixture needs distinct caller/installed pin provenance' >&2
-    exit 1
-fi
 bash "$root/scripts/ci/collect-failure-evidence.sh" > "$fixture/compact-collection.log" 2>&1
 archive_bytes="$(wc -c < "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz")"
 archive_bytes="${archive_bytes//[[:space:]]/}"
@@ -395,21 +344,19 @@ grep -Eq "^CI failure evidence measurements: archive_bytes=${archive_bytes} arch
     "$fixture/compact-collection.log"
 mkdir "$fixture/compact-extracted"
 tar -xzpf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" -C "$fixture/compact-extracted"
-for kind in host ic; do
-    selected="$(readlink "$GITHUB_WORKSPACE/.tools/$kind")"
-    test ! -e "$fixture/compact-extracted/.tools/$selected"
-    stored="$host_stored"; [[ "$kind" != ic ]] || stored="$ic_stored"
-    test ! -e "$fixture/compact-extracted/$stored"
-    cmp "$GITHUB_WORKSPACE/.tools/$kind-set.failed/tool" "$fixture/compact-extracted/.tools/$kind-set.failed/tool"
-    test -s "$fixture/compact-extracted/tool-evidence/$kind/check.log"
-    printf '%s\n' "$GITHUB_WORKSPACE/.tools/$selected" > "$fixture/expected-selection"
-    cmp "$fixture/expected-selection" "$fixture/compact-extracted/tool-evidence/$kind/selection.txt"
-done
+selected="$(readlink "$GITHUB_WORKSPACE/.tools/host")"
+test ! -e "$fixture/compact-extracted/.tools/$selected"
+test ! -e "$fixture/compact-extracted/$host_stored"
+cmp "$GITHUB_WORKSPACE/.tools/host-set.failed/tool" "$fixture/compact-extracted/.tools/host-set.failed/tool"
+test -s "$fixture/compact-extracted/tool-evidence/host/check.log"
+printf '%s\n' "$GITHUB_WORKSPACE/.tools/$selected" > "$fixture/expected-selection"
+cmp "$fixture/expected-selection" "$fixture/compact-extracted/tool-evidence/host/selection.txt"
 cmp "$host_pins" "$fixture/compact-extracted/tool-evidence/host/caller-pins"
-cmp "$GITHUB_WORKSPACE/ci/ic-tools-qualified.tsv" "$fixture/compact-extracted/tool-evidence/ic/caller-pins"
-for receipt in pins.tsv host files.sha256; do
-    cmp "$ic_bundle/$receipt" "$fixture/compact-extracted/tool-evidence/ic/$receipt"
+# Retired/unselected IC evidence is retained verbatim without admitting a bundle.
+for legacy in ic-set.active ic-set.failed; do
+    cmp "$GITHUB_WORKSPACE/.tools/$legacy/tool" "$fixture/compact-extracted/.tools/$legacy/tool"
 done
+test ! -e "$fixture/compact-extracted/tool-evidence/ic"
 cmp "$fixture/extracted/identity.txt" "$fixture/compact-extracted/identity.txt"
 cmp "$scratch/scenario.log" "$fixture/compact-extracted/ic-timers-fixtures/failed case/scenario.log"
 cmp "$GITHUB_WORKSPACE/.git/release-state/validation-failures/raw.log" "$fixture/compact-extracted/validation-failures/raw.log"
@@ -417,28 +364,21 @@ mv "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" "$fixture/compact-evidence.t
 
 # Prior installation success must not hide an actively corrupted selection.
 printf '\nchanged\n' >> "$host_bundle/bin/yq"
-printf '\nchanged\n' >> "$ic_bundle/bin/quill"
 bash "$root/scripts/ci/collect-failure-evidence.sh" > "$fixture/changed-collection.log" 2>&1
 mkdir "$fixture/changed-extracted"
 tar -xzpf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" -C "$fixture/changed-extracted"
 cmp "$host_bundle/bin/yq" "$fixture/changed-extracted/$host_stored/bin/yq"
-cmp "$ic_bundle/bin/quill" "$fixture/changed-extracted/$ic_stored/bin/quill"
-cmp "$ic_bundle/lib/libfixture.so" "$fixture/changed-extracted/$ic_stored/lib/libfixture.so"
-for path in .tools/host-set.active/bin/yq .tools/ic-set.active/bin/quill \
+for path in .tools/host-set.active/bin/yq .tools/ic-set.active/tool \
     .tools/host-set.failed/tool .tools/ic-set.failed/tool; do
     cmp "$GITHUB_WORKSPACE/$path" "$fixture/changed-extracted/$path"
 done
-for kind in host ic; do
-    selected="$(readlink "$GITHUB_WORKSPACE/.tools/$kind")"
-    test -L "$fixture/changed-extracted/.tools/$selected"
-    test "$(readlink "$fixture/changed-extracted/.tools/$selected")" = "$(readlink "$GITHUB_WORKSPACE/.tools/$selected")"
-done
+selected="$(readlink "$GITHUB_WORKSPACE/.tools/host")"
+test -L "$fixture/changed-extracted/.tools/$selected"
+test "$(readlink "$fixture/changed-extracted/.tools/$selected")" = "$(readlink "$GITHUB_WORKSPACE/.tools/$selected")"
 tar -tzf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" > "$fixture/shared-archive-paths"
 if grep -Fq 'unrelated/not-selected' "$fixture/shared-archive-paths"; then exit 1; fi
-for kind in host ic; do
-    test ! -e "$fixture/changed-extracted/tool-evidence/$kind/selection.txt"
-    grep -Fq 'Full bundle retained:' "$fixture/changed-extracted/tool-evidence/$kind/check.log"
-done
+test ! -e "$fixture/changed-extracted/tool-evidence/host/selection.txt"
+grep -Fq 'Full bundle retained:' "$fixture/changed-extracted/tool-evidence/host/check.log"
 mv "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" "$fixture/changed-evidence.tar.gz"
 
 # A failed selector must retain local evidence, ignore partial NUL selections
@@ -517,12 +457,11 @@ for layout in physical no-tools redirected; do
             @a && @b && ($a[2]&07777)==($b[2]&07777) or die "rejection archive lost executable mode\n";' \
             "$rust_slot/bin/cargo-sort" \
             "$extracted/.tools/rust/cargo-sort-2.1.4-bin-cargo-sort-release/installed/bin/cargo-sort"
-        for kind in host ic; do
-            selected="$(readlink "$GITHUB_WORKSPACE/.tools/$kind")"
-            test -L "$extracted/.tools/$kind"
-            test -L "$extracted/.tools/$selected"
-            test "$(readlink "$extracted/.tools/$selected")" = "$(readlink "$GITHUB_WORKSPACE/.tools/$selected")"
-        done
+        selected="$(readlink "$GITHUB_WORKSPACE/.tools/host")"
+        test -L "$extracted/.tools/host"
+        test -L "$extracted/.tools/$selected"
+        test "$(readlink "$extracted/.tools/$selected")" = "$(readlink "$GITHUB_WORKSPACE/.tools/$selected")"
+        cmp "$GITHUB_WORKSPACE/.tools/ic-set.active/tool" "$extracted/.tools/ic-set.active/tool"
     else
         test ! -e "$extracted/.tools"
         if [[ "$layout" == redirected ]]; then rm "$GITHUB_WORKSPACE/.tools"; fi
@@ -712,7 +651,6 @@ for script in collect-failure-evidence collect-tool-evidence qualify-failure-evi
     cp "$root/scripts/ci/$script.sh" "$copied/scripts/ci/"
 done
 cp "$root/ci/tool-versions.env" "$copied/ci/"
-cp "$root/ci/ic-tools-qualified.tsv" "$copied/ci/"
 cp "$root/ci/ic-tools.tsv" "$copied/ci/"
 cp "$root/scripts/ci/ic-tool-pins.awk" "$root/scripts/ci/tool-catalog-records.pl" "$copied/scripts/ci/"
 cp "$root/scripts/dev/install-host-tools.sh" "$root/scripts/dev/install-ic-tools.sh" \

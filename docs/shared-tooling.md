@@ -4,17 +4,22 @@
 
 One [snapshot](../.shared-tooling.snapshot) records the exact reviewed source,
 entrypoint roots and all **134** payload hashes/modes. It selects committed
-Shared 0.19.0 source `ac87fa23c8b4bdf94f4205658aa4a8851f6b2b8d` through canonical
-preview and refresh. The release-prose helper and its fixture are retired from
-the root selection and payloads. The Rust policy reader adds its required MSRV
-reader companion. Existing host/IC pin catalogs, the qualified Binaryen exception
-and product recovery gates retain their selections.
+Shared 0.20.0 source `3f87ddc1a0c1616775b2114c42a4adee7376c9b1` through canonical
+preview and refresh. Existing roots are retained; the release include adds its
+required delivery checker. The unused IC installer fixture entrypoint is retired
+through the canonical exporter. Uncommitted supplier work is not part of this adoption.
 
-The refresh also adopts the owner's literal-catalog contract, source-path LOC
-counting, explicit hook-install destination and maintained release checks. Local
-Make already selects its hook destination. Focused fixtures exercise actual
-consumer version preparation, hook formatting and release ordering; they are
-not native macOS, hosted or complete release acceptance.
+Common setup and PATH publication cover host/Cargo tools. Timers adds only
+Testkit preparation/checking through its ordered Make extensions. No maintained
+command selects an IC executable bundle or publishes its PATH. Product Wasm
+builds use Cargo through IC Build; recovery and cohort gates remain required.
+
+The consumer-owned [delivery declaration](../ci/release-delivery.txt) admits only
+direct release delivery. Common Make admission and the standalone adapter use
+the same read-only checker; unsupported PR selections refuse before effects.
+Focused consumer fixtures qualify release routing, refusal, hook formatting,
+tool setup and failure-evidence integration. They do not establish native macOS,
+hosted or complete release acceptance.
 The [baseline](../DRAGGINZGAME.md) and [local overlay](../AGENTS.md) govern scope.
 
 The complete [previous adoption record](evidence/shared-tooling-history.md) is
@@ -32,11 +37,11 @@ identity, probe subjects and IC recovery/cohort qualification. The local
 [release guide](releasing.md) and [hygiene overlay](audits/code-hygiene.md) identify
 those callers and their authority.
 
-Shared catalogs remain unchanged. Timers' explicitly selected
-[IC exception](../ci/ic-tools-qualified.tsv) retains qualified Binaryen 132;
-refreshing governance does not qualify another optimizer. Testkit owns its server
-and compatibility admission through the CLI selected by the root lockfile. No
-extra tool-store manager, fallback installer or implicit setup is introduced.
+Shared catalogs remain unchanged. Timers' unused qualified IC catalog is retired;
+old IC sets and failed setup diagnostics remain eligible for evidence retention
+without selecting or admitting them. Testkit owns its server and compatibility
+admission through the CLI selected by the root lockfile. No extra tool-store
+manager, fallback installer or implicit setup is introduced.
 
 ## Consolidated ownership
 

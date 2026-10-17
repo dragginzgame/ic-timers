@@ -6,7 +6,7 @@ use crate::{
     registry::{
         CallbackRole, CallbackToken, OrdinaryCallback, ProviderHandle, ProviderHandles,
         RegisterError, RegistrationClaim, RegistryEffect, RegistryError, RegistryTransition,
-        TimerRegistry, WatchdogCallback,
+        TimerRegistry, WakeupToken, WatchdogCallback,
     },
     schedule::{OrdinaryDirective, ScheduleError, TimerCadence, TimerSchedule},
     snapshot::{
@@ -664,27 +664,49 @@ fn register_initial(
     ) -> Result<RegistrationClaim, RegisterError>,
 ) -> Result<RegistrationClaim, TimerError> {
     let (lifetime, initial) = start.into_parts();
-    let (claim, requested) = with_registry_mut(|registry| {
-        let requested = match initial {
-            Some(schedule) => {
-                // Reject invalid deadlines before allocating claim authority.
-                let now_ns = platform::time_ns();
-                Some((schedule.resolve(now_ns)?, now_ns))
-            }
-            None => None,
-        };
-        Ok((register(registry, lifetime)?, requested))
+    register_initialized(
+        |registry| {
+            let now_ns = platform::time_ns();
+            let requested = initial
+                .map(|schedule| schedule.resolve(now_ns))
+                .transpose()?;
+            Ok((register(registry, lifetime)?, (requested, now_ns)))
+        },
+        |registry, claim, (requested, now_ns)| {
+            requested
+                .map(|schedule| {
+                    registry
+                        .transition_claim(claim, |registry| {
+                            registry.reconcile_initial(claim, now_ns, schedule)
+                        })
+                        .map_err(TimerError::from)
+                })
+                .transpose()
+        },
+    )
+}
+
+/// Allocate and initialize under one borrow; publish authority only after effects.
+/// Fresh initialization failures share direct registration's retirement owner.
+fn register_initialized<Prepared>(
+    register: impl FnOnce(&mut TimerRegistry) -> Result<(RegistrationClaim, Prepared), TimerError>,
+    initialize: impl FnOnce(
+        &mut TimerRegistry,
+        &RegistrationClaim,
+        Prepared,
+    ) -> Result<Option<(RegistryTransition, ProviderHandles)>, TimerError>,
+) -> Result<RegistrationClaim, TimerError> {
+    let (claim, initialized) = with_registry_mut(|registry| {
+        let (claim, prepared) = register(registry)?;
+        let initialized = initialize(registry, &claim, prepared);
+        Ok((claim, initialized))
     })?;
-    if let Some((schedule, now_ns)) = requested
-        && let Err(error) = apply_claim_transition(&claim, None, |registry| {
-            registry.reconcile_initial(&claim, now_ns, schedule)
+    let applied = initialized.and_then(|transition| {
+        transition.map_or(Ok(()), |(transition, handles)| {
+            finish_transition(transition, handles)
         })
-    {
-        // Unlike later control, failed creation must retire retained
-        // declarations too. Provider cleanup can already have removed a
-        // transient entry; treat only that exact claim's expiry as done.
-        return Err(cleanup_creation_error(&claim, error));
-    }
+    });
+    applied.map_err(|error| cleanup_creation_error(&claim, error))?;
     Ok(claim)
 }
 
@@ -732,11 +754,30 @@ where
         identity,
         TimerPolicy::Once,
         || {
-            register_once(
-                identity.clone(),
-                TimerStart::Retained { initial: None },
-                callback,
-            )
+            let callback =
+                erase_ordinary_callback(callback, OnceContext::new, OrdinaryRunResult::from);
+            let claim = register_initialized(
+                |registry| {
+                    Ok((
+                        registry.register_once_with_callback(
+                            identity.clone(),
+                            DeclarationLifetime::Retained,
+                            Rc::clone(&callback),
+                        )?,
+                        (),
+                    ))
+                },
+                |registry, claim, ()| {
+                    registry
+                        .transition_claim(claim, |registry| {
+                            registry.reconcile_ordinary(claim, platform::time_ns(), desired)
+                        })
+                        .map(Some)
+                        .map_err(TimerError::from)
+                },
+            );
+            drop(callback);
+            Ok(OnceRegistration { claim: claim? })
         },
         |registration| registration.reconcile_schedule(desired),
     )
@@ -782,12 +823,37 @@ where
         identity,
         TimerPolicy::AfterCompletion { cadence },
         || {
-            register_after_completion(
-                identity.clone(),
-                cadence,
-                TimerStart::Retained { initial: None },
+            let callback = erase_ordinary_callback(
                 callback,
-            )
+                AfterCompletionContext::new,
+                OrdinaryRunResult::from,
+            );
+            let claim = register_initialized(
+                |registry| {
+                    Ok((
+                        registry.register_after_completion_with_callback(
+                            identity.clone(),
+                            cadence,
+                            DeclarationLifetime::Retained,
+                            Rc::clone(&callback),
+                        )?,
+                        (),
+                    ))
+                },
+                |registry, claim, ()| {
+                    registry
+                        .transition_claim(claim, |registry| match desired {
+                            TimerReconcileState::Inactive => registry.cancel(claim),
+                            TimerReconcileState::Scheduled => {
+                                registry.ensure_recurring(claim, platform::time_ns())
+                            }
+                        })
+                        .map(Some)
+                        .map_err(TimerError::from)
+                },
+            );
+            drop(callback);
+            Ok(AfterCompletionRegistration { claim: claim? })
         },
         |registration| match desired {
             TimerReconcileState::Inactive => registration.cancel(),
@@ -823,12 +889,45 @@ where
         identity,
         TimerPolicy::Watchdog { cadence },
         || {
-            register_watchdog(
-                identity.clone(),
-                cadence,
-                TimerStart::Retained { initial: None },
-                callback,
-            )
+            let mut callback = callback;
+            let callback: WatchdogCallback = Rc::new(RefCell::new(move |token| {
+                callback(WatchdogContext::new(token))
+            }));
+            let claim = register_initialized(
+                |registry| {
+                    Ok((
+                        registry.register_watchdog_with_callback(
+                            identity.clone(),
+                            cadence,
+                            DeclarationLifetime::Retained,
+                            Rc::clone(&callback),
+                        )?,
+                        (),
+                    ))
+                },
+                |registry, claim, ()| {
+                    registry
+                        .transition_claim(claim, |registry| match desired {
+                            WatchdogReconcileState::Inactive => registry.cancel(claim),
+                            WatchdogReconcileState::Scheduled => {
+                                registry.ensure_recurring(claim, platform::time_ns())
+                            }
+                            WatchdogReconcileState::ScheduledImmediately => {
+                                registry.ensure_watchdog_immediately(claim, platform::time_ns())
+                            }
+                            WatchdogReconcileState::ScheduledAt(deadline_ns) => registry
+                                .reconcile_watchdog_schedule(
+                                    claim,
+                                    platform::time_ns(),
+                                    Some(TimerSchedule::At(deadline_ns)),
+                                ),
+                        })
+                        .map(Some)
+                        .map_err(TimerError::from)
+                },
+            );
+            drop(callback);
+            Ok(WatchdogRegistration { claim: claim? })
         },
         |registration| match desired {
             WatchdogReconcileState::Inactive => registration.cancel(),
@@ -854,11 +953,7 @@ where
     Registration: RegistrationClaimOwner,
 {
     let Some(current) = registration.as_ref() else {
-        let created = register()?;
-        if let Err(error) = reconcile(&created) {
-            return Err(cleanup_creation_error(created.registration_claim(), error));
-        }
-        *registration = Some(created);
+        *registration = Some(register()?);
         return Ok(());
     };
     let claim = current.registration_claim();
@@ -1023,7 +1118,6 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
             delay_ns,
             arm,
         } => {
-            let token = token.token();
             if arm.replaces_existing()
                 && let Some(replaced) = handles.take_wakeup()
             {
@@ -1034,7 +1128,7 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
                 Duration::from_nanos(*delay_ns),
                 dispatch_wakeup(token.clone()),
             )?;
-            bind_provider_handle(token, handle, Some(*delay_ns))
+            bind_provider_handle(token.token(), handle, Some(*delay_ns))
         }
         RegistryEffect::ClearCallbacks { handles: selected } => {
             if selected.includes_wakeup()
@@ -1153,23 +1247,32 @@ fn clear_entry_provider_handles(identity: &TimerIdentity) -> Result<(), TimerErr
     clippy::future_not_send,
     reason = "IC callbacks and canister-local state are single-threaded."
 )]
-fn dispatch_wakeup(token: CallbackToken) -> impl Future<Output = ()> {
+fn dispatch_wakeup(token: WakeupToken) -> impl Future<Output = ()> {
     // Construct outside the async body: a provider rejection can discard the
     // future before its first poll, after rolling registry acceptance back.
-    let mut delivery = OrdinaryDelivery {
-        token,
-        completed: false,
+    let delivery = match token {
+        WakeupToken::Ordinary(token) => WakeupDelivery::Ordinary(OrdinaryDelivery {
+            token,
+            completed: false,
+        }),
+        WakeupToken::Scheduler(token) => WakeupDelivery::Scheduler(token),
     };
     async move {
-        match delivery.token.role() {
-            CallbackRole::OrdinaryWork => dispatch_ordinary(&delivery.token).await,
-            CallbackRole::WatchdogScheduler => dispatch_watchdog_scheduler(&delivery.token),
-            CallbackRole::WatchdogWork => {}
+        match delivery {
+            WakeupDelivery::Ordinary(mut delivery) => {
+                dispatch_ordinary(&delivery.token).await;
+                delivery.completed = true;
+                // Capture the whole guard until normal completion.
+                drop(delivery);
+            }
+            WakeupDelivery::Scheduler(token) => dispatch_watchdog_scheduler(&token),
         }
-        delivery.completed = true;
-        // Keep the whole guard captured until normal completion.
-        drop(delivery);
     }
+}
+
+enum WakeupDelivery {
+    Ordinary(OrdinaryDelivery),
+    Scheduler(CallbackToken),
 }
 
 struct OrdinaryDelivery {
@@ -1179,7 +1282,7 @@ struct OrdinaryDelivery {
 
 impl Drop for OrdinaryDelivery {
     fn drop(&mut self) {
-        if self.completed || self.token.role() != CallbackRole::OrdinaryWork {
+        if self.completed {
             return;
         }
         let removed = RUNTIME.with(|runtime| {

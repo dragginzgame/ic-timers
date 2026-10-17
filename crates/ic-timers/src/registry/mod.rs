@@ -6,8 +6,8 @@
 
 mod effect;
 
-pub use effect::RegistryEffect;
-use effect::{WakeupToken, WatchdogDispatch};
+use effect::WatchdogDispatch;
+pub use effect::{RegistryEffect, WakeupToken};
 
 use crate::{
     callback::OrdinaryRunResult,
@@ -256,8 +256,7 @@ impl ProviderHandles {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum OrdinaryRequest {
-    EnsureOnce,
-    EnsureRecurring,
+    Ensure,
     Reconcile,
 }
 
@@ -760,12 +759,14 @@ impl TimerRegistry {
         now_ns: u64,
         schedule: TimerSchedule,
     ) -> Result<RegistryTransition, RegistryError> {
-        self.request_ordinary(
-            claim,
-            now_ns,
-            schedule.resolve(now_ns)?,
-            OrdinaryRequest::EnsureOnce,
-        )
+        let requested = schedule.resolve(now_ns)?;
+        let entry = self.entry(claim)?;
+        if !matches!(entry.kind, EntryKind::Ordinary { cadence: None, .. }) {
+            return Err(RegistryError::PolicyMismatch {
+                actual: entry.kind.policy().label(),
+            });
+        }
+        self.request_ordinary(claim, now_ns, requested, OrdinaryRequest::Ensure)
     }
 
     /// Reconcile an ordinary declaration to one exact desired schedule.
@@ -828,7 +829,7 @@ impl TimerRegistry {
                         requested_delay_ns: Some(cadence.as_nanos()),
                         mode: TimerSchedulingMode::AfterCompletion,
                     },
-                    OrdinaryRequest::EnsureRecurring,
+                    OrdinaryRequest::Ensure,
                 )
             }
             EntryKind::Watchdog { .. } => {
@@ -873,27 +874,14 @@ impl TimerRegistry {
     ) -> Result<RegistryTransition, RegistryError> {
         let entry = self.entry_mut(claim)?;
         let actual = entry.kind.policy().label();
-        let EntryKind::Ordinary {
-            cadence, control, ..
-        } = &mut entry.kind
-        else {
+        let EntryKind::Ordinary { control, .. } = &mut entry.kind else {
             return Err(RegistryError::PolicyMismatch { actual });
         };
-        let policy_matches = match request {
-            OrdinaryRequest::EnsureOnce => cadence.is_none(),
-            OrdinaryRequest::EnsureRecurring => cadence.is_some(),
-            OrdinaryRequest::Reconcile => true,
-        };
-        if !policy_matches {
-            return Err(RegistryError::PolicyMismatch { actual });
-        }
         entry.observability.counters_mut().record_schedule_request();
         entry.latest_requested_delay_ns = requested.requested_delay_ns;
 
         let arm = match request {
-            OrdinaryRequest::EnsureOnce | OrdinaryRequest::EnsureRecurring => {
-                control.schedule(requested.deadline_ns)
-            }
+            OrdinaryRequest::Ensure => control.schedule(requested.deadline_ns),
             OrdinaryRequest::Reconcile => control.reconcile(requested.deadline_ns),
         };
 
@@ -1914,11 +1902,9 @@ const fn select_pending_ordinary(
         (_, OrdinaryRequest::Reconcile) => OrdinaryPending::Reconcile(requested),
         (
             Some(OrdinaryPending::Reconcile(current) | OrdinaryPending::Schedule(current)),
-            OrdinaryRequest::EnsureOnce | OrdinaryRequest::EnsureRecurring,
+            OrdinaryRequest::Ensure,
         ) if current.deadline_ns <= requested.deadline_ns => OrdinaryPending::Schedule(current),
-        (_, OrdinaryRequest::EnsureOnce | OrdinaryRequest::EnsureRecurring) => {
-            OrdinaryPending::Schedule(requested)
-        }
+        (_, OrdinaryRequest::Ensure) => OrdinaryPending::Schedule(requested),
     }
 }
 

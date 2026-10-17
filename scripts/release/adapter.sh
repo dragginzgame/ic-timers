@@ -2,6 +2,8 @@
 set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 metadata_checker="$script_dir/../../scripts/ci/cargo-release-metadata.sh"
+bash "$script_dir/../ci/check-release-delivery.sh" \
+    "$script_dir/../../ci/release-delivery.txt" "${RELEASE_DELIVERY-direct}"
 
 case "${1:-}" in
     preflight)

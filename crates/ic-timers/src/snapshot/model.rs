@@ -441,6 +441,26 @@ pub struct WatchdogRunResult {
 }
 
 impl WatchdogRunResult {
+    /// Report a completed batch and its next consumer-selected deadline.
+    ///
+    /// Zero work reports no work; nonzero work reports success. Work units are
+    /// defined by the caller and need not mean confirmed external effects.
+    /// `None` stops the watchdog; a deadline schedules its next attempt.
+    /// Use [`Self::new`] to report failures or retain the cadence successor.
+    #[must_use]
+    pub const fn completed_batch(work_count: u64, next_due_ns: Option<u64>) -> Self {
+        let completion = if work_count == 0 {
+            TimerCompletion::no_work()
+        } else {
+            TimerCompletion::success(work_count)
+        };
+        let decision = match next_due_ns {
+            Some(at_ns) => WatchdogDecision::ScheduleAt(at_ns),
+            None => WatchdogDecision::Stop,
+        };
+        Self::new(completion, decision)
+    }
+
     /// Construct a result, forcing invariant failures to stop.
     #[must_use]
     pub const fn new(completion: TimerCompletion, decision: WatchdogDecision) -> Self {
@@ -599,6 +619,28 @@ impl TimerEpoch {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn completed_batch_keeps_work_classification_and_deadline_independent() {
+        for work_count in [0, 1, u64::MAX] {
+            for next_due_ns in [None, Some(0), Some(u64::MAX)] {
+                let result = WatchdogRunResult::completed_batch(work_count, next_due_ns);
+                assert_eq!(result.completion().work_count(), work_count);
+                assert_eq!(
+                    result.completion().outcome(),
+                    if work_count == 0 {
+                        TimerCompletionOutcome::NoWork
+                    } else {
+                        TimerCompletionOutcome::Success
+                    }
+                );
+                assert_eq!(
+                    result.decision(),
+                    next_due_ns.map_or(WatchdogDecision::Stop, WatchdogDecision::ScheduleAt)
+                );
+            }
+        }
+    }
 
     #[test]
     fn latest_outcome_keeps_work_count_and_independent_history_coherent() {
