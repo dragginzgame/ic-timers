@@ -163,12 +163,13 @@ fn run_watchdog_calibration(profile: &str, representative_work: bool) -> u128 {
 }
 
 fn cohort_wasm(cohort: &str) -> Vec<u8> {
-    let root = env::var_os("IC_TIMERS_COHORT_ROOT")
+    let (_, variable) = crate::build::COHORTS
+        .iter()
+        .find(|(label, _)| *label == cohort)
+        .expect("known policy cohort");
+    let path = env::var_os(variable)
         .map(PathBuf::from)
-        .expect("IC_TIMERS_COHORT_ROOT must name the cohort target root");
-    let path = root
-        .join(format!("cohort-{cohort}"))
-        .join("wasm32-unknown-unknown/timer-probe/ic_timers_size_probe.wasm");
+        .unwrap_or_else(|| panic!("{variable} must name the resolved cohort Wasm artifact"));
     fs::read(&path).unwrap_or_else(|error| panic!("read {}: {error}", path.display()))
 }
 

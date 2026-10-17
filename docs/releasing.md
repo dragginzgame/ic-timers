@@ -38,8 +38,7 @@ Maintain one numbered, undated pending section at the top of
 [CHANGELOG.md](../CHANGELOG.md). The matching bump dates it automatically.
 Missing files, versionless headings, misplaced pending sections and conflicting
 version selections fail before mutation. Empty notes are advisory; exact
-previous-release history can seed an empty candidate. Release prose checks are
-advisory before mutation. README versions and layout do not gate delivery;
+previous-release history can seed an empty candidate. README versions and layout do not gate delivery;
 periodic documentation maintenance owns staleness checks.
 
 ## Standard release runner
@@ -100,6 +99,16 @@ The maintainer-operated `make release-verify` retains this fail-fast order:
 7. `pocketic-watchdog`: the maintained real-canister runtime/recovery subjects.
 8. `pocketic-cohorts`: baseline/Once/AfterCompletion/Watchdog Wasm and instruction
    measurements using the exact artifacts installed into PocketIC.
+
+Both PocketIC targets run the native harness build driver on the selected
+`MSRV` toolchain. Its recipes delegate Wasm execution and artifact discovery to
+`ic-build::artifacts`, with isolated compiler state for each cohort, the root
+lockfile and the `timer-probe` profile. The driver retains each exact artifact
+record until the child tests finish; tests receive resolved Wasm paths rather
+than reconstructing Cargo's output layout. Each generated probe cache requests
+best-effort seven-day/512 MiB retention; active records remain protected, so
+these are retention targets rather than hard disk bounds. Testkit's offline server admission
+still precedes the driver. A build failure stops before any PocketIC test runs.
 
 The native protocol tests belong to `make test`. Native runtime tests use a
 substitute platform and cannot establish IC rollback, trap recovery or upgrade

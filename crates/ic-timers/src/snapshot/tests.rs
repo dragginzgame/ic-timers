@@ -151,82 +151,8 @@ fn policies_and_directive_snapshots_preserve_validated_values() {
     );
 }
 
-#[derive(Debug, Eq, PartialEq)]
-struct CanicProjection<'a> {
-    registration_id: TimerRegistrationId,
-    name: &'a str,
-    subsystem: &'a str,
-    timer_mode: &'static str,
-    configured_cadence_ns: Option<u64>,
-    latest_delay_ms: Option<u64>,
-    scheduling_mode: &'static str,
-    registration: &'static str,
-    condition: &'static str,
-    enabled: bool,
-    generation: Option<u64>,
-    next_due_at_ns: Option<u64>,
-    last_outcome: Option<&'static str>,
-    last_work_count: u64,
-    last_failure_at_ns: Option<u64>,
-    consecutive_expected_failures: u64,
-    schedules_since_runtime_start: u64,
-    executions_since_runtime_start: u64,
-    completed_since_runtime_start: u64,
-    successes_since_runtime_start: u64,
-    expected_failures_since_runtime_start: u64,
-    invariant_failures_since_runtime_start: u64,
-    stale_callbacks_since_runtime_start: u64,
-    total_instructions: u128,
-}
-
-fn project_to_canic(snapshot: &TimerSnapshot) -> CanicProjection<'_> {
-    let observations = snapshot.observability();
-    let counters = observations.counters();
-    let outcomes = observations.outcomes();
-    CanicProjection {
-        registration_id: snapshot.registration_id(),
-        name: snapshot.identity().name(),
-        subsystem: snapshot.identity().subsystem(),
-        timer_mode: match snapshot.policy() {
-            TimerPolicy::Once => "once",
-            TimerPolicy::AfterCompletion { .. } | TimerPolicy::Watchdog { .. } => "interval",
-        },
-        configured_cadence_ns: snapshot.policy().cadence().map(TimerCadence::as_nanos),
-        latest_delay_ms: snapshot
-            .latest_armed_delay_ns()
-            .map(|nanoseconds| nanoseconds / 1_000_000),
-        scheduling_mode: snapshot.scheduling_mode().label(),
-        registration: snapshot.registration_status().label(),
-        condition: snapshot.process_condition().label(),
-        enabled: snapshot.process_condition() != TimerProcessCondition::Disabled,
-        generation: snapshot.generation(),
-        next_due_at_ns: snapshot.next_deadline_ns(),
-        last_outcome: match outcomes.last_outcome() {
-            Some(TimerLastOutcome::Completed(outcome)) => Some(outcome.label()),
-            Some(TimerLastOutcome::Unacknowledged) | None => None,
-        },
-        last_work_count: outcomes.last_work_count().unwrap_or_default(),
-        last_failure_at_ns: outcomes.last_failure_at_ns(),
-        consecutive_expected_failures: outcomes.consecutive_expected_failures(),
-        schedules_since_runtime_start: counters.wakeups_armed(),
-        executions_since_runtime_start: counters.work_started(),
-        completed_since_runtime_start: counters.work_completed(),
-        successes_since_runtime_start: counters.succeeded().saturating_add(counters.no_work()),
-        expected_failures_since_runtime_start: counters.retryable_failure(),
-        invariant_failures_since_runtime_start: counters.invariant_failure(),
-        stale_callbacks_since_runtime_start: counters
-            .stale_wakeups()
-            .saturating_add(counters.stale_work()),
-        total_instructions: observations
-            .performance()
-            .work_instructions()
-            .aggregate()
-            .total(),
-    }
-}
-
 #[test]
-fn canonical_registry_snapshot_projects_canic_surface_without_parallel_metrics() {
+fn canonical_registry_snapshot_keeps_state_and_measurements_coherent() {
     let mut registry = TimerRegistry::new(TimerEpoch::new(4, 100));
     let timer = identity("canic", "auth", "renewal");
     let cadence = TimerCadence::from_nanos(1_000_000_000).expect("fixture cadence should be valid");
@@ -266,38 +192,52 @@ fn canonical_registry_snapshot_projects_canic_surface_without_parallel_metrics()
 
     let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
     assert_eq!(
-        project_to_canic(&snapshot),
-        CanicProjection {
-            registration_id: TimerRegistrationId::new(TimerEpoch::new(4, 100), 1),
-            name: "renewal",
-            subsystem: "auth",
-            timer_mode: "interval",
-            configured_cadence_ns: Some(1_000_000_000),
-            latest_delay_ms: Some(2_000),
-            scheduling_mode: "retry",
-            registration: "scheduled",
-            condition: "retrying",
-            enabled: true,
-            generation: Some(2),
-            next_due_at_ns: Some(2_000_000_200),
-            last_outcome: Some("retryable_failure"),
-            last_work_count: 2,
-            last_failure_at_ns: Some(200),
-            consecutive_expected_failures: 1,
-            schedules_since_runtime_start: 2,
-            executions_since_runtime_start: 1,
-            completed_since_runtime_start: 1,
-            successes_since_runtime_start: 0,
-            expected_failures_since_runtime_start: 1,
-            invariant_failures_since_runtime_start: 0,
-            stale_callbacks_since_runtime_start: 0,
-            total_instructions: 0,
-        }
+        snapshot.registration_id(),
+        TimerRegistrationId::new(TimerEpoch::new(4, 100), 1)
+    );
+    assert_eq!(snapshot.identity(), &timer);
+    assert_eq!(snapshot.policy(), TimerPolicy::AfterCompletion { cadence });
+    assert_eq!(snapshot.latest_armed_delay_ns(), Some(2_000_000_000));
+    assert_eq!(snapshot.scheduling_mode(), TimerSchedulingMode::Retry);
+    assert_eq!(
+        snapshot.registration_status(),
+        TimerRegistrationStatus::Scheduled
+    );
+    assert_eq!(snapshot.generation(), Some(2));
+    assert_eq!(snapshot.next_deadline_ns(), Some(2_000_000_200));
+    let observations = snapshot.observability();
+    let counters = observations.counters();
+    let outcomes = observations.outcomes();
+    assert_eq!(
+        outcomes.last_outcome(),
+        Some(TimerLastOutcome::Completed(
+            TimerCompletionOutcome::RetryableFailure
+        ))
+    );
+    assert_eq!(outcomes.last_work_count(), Some(2));
+    assert_eq!(outcomes.last_failure_at_ns(), Some(200));
+    assert_eq!(outcomes.consecutive_expected_failures(), 1);
+    assert_eq!(counters.wakeups_armed(), 2);
+    assert_eq!(counters.work_started(), 1);
+    assert_eq!(counters.work_completed(), 1);
+    assert_eq!(counters.succeeded(), 0);
+    assert_eq!(counters.no_work(), 0);
+    assert_eq!(counters.retryable_failure(), 1);
+    assert_eq!(counters.invariant_failure(), 0);
+    assert_eq!(counters.stale_wakeups(), 0);
+    assert_eq!(counters.stale_work(), 0);
+    assert_eq!(
+        observations
+            .performance()
+            .work_instructions()
+            .aggregate()
+            .total(),
+        0
     );
 }
 
 #[test]
-fn canic_projection_combines_completion_and_stale_classes_without_fabrication() {
+fn completed_and_stale_observations_retain_wide_measurements() {
     let mut registry = TimerRegistry::new(TimerEpoch::new(6, 0));
     let timer = identity("canic", "projection", "classes");
     let claim = registry
@@ -349,19 +289,29 @@ fn canic_projection_combines_completion_and_stale_classes_without_fabrication() 
     assert!(registry.begin_ordinary(&first).is_none());
 
     let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
-    let projection = project_to_canic(&snapshot);
-    assert_eq!(projection.schedules_since_runtime_start, 2);
-    assert_eq!(projection.executions_since_runtime_start, 2);
-    assert_eq!(projection.completed_since_runtime_start, 2);
-    assert_eq!(projection.successes_since_runtime_start, 2);
-    assert_eq!(projection.stale_callbacks_since_runtime_start, 1);
-    assert_eq!(projection.latest_delay_ms, Some(0));
-    assert_eq!(projection.generation, None);
-    assert_eq!(projection.total_instructions, u128::from(u64::MAX) + 1);
+    let observations = snapshot.observability();
+    let counters = observations.counters();
+    assert_eq!(counters.wakeups_armed(), 2);
+    assert_eq!(counters.work_started(), 2);
+    assert_eq!(counters.work_completed(), 2);
+    assert_eq!(counters.succeeded(), 1);
+    assert_eq!(counters.no_work(), 1);
+    assert_eq!(counters.stale_wakeups(), 1);
+    assert_eq!(counters.stale_work(), 0);
+    assert_eq!(snapshot.latest_armed_delay_ns(), Some(0));
+    assert_eq!(snapshot.generation(), None);
+    assert_eq!(
+        observations
+            .performance()
+            .work_instructions()
+            .aggregate()
+            .total(),
+        u128::from(u64::MAX) + 1
+    );
 }
 
 #[test]
-fn retryable_terminal_completion_projects_failed_canic_condition() {
+fn retryable_terminal_completion_preserves_reported_failure() {
     let mut registry = TimerRegistry::new(TimerEpoch::new(5, 100));
     let timer = identity("canic", "cycles", "topup");
     let claim = registry
@@ -390,9 +340,19 @@ fn retryable_terminal_completion_projects_failed_canic_condition() {
         .expect("terminal retryable completion should succeed");
 
     let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
-    assert_eq!(snapshot.process_condition(), TimerProcessCondition::Failed);
-    assert_eq!(project_to_canic(&snapshot).condition, "failed");
-    assert_eq!(project_to_canic(&snapshot).generation, None);
+    assert_eq!(
+        snapshot.state(),
+        TimerRuntimeStateSnapshot::Inactive {
+            reason: InactiveReason::Stopped
+        }
+    );
+    assert_eq!(
+        snapshot.observability().outcomes().last_outcome(),
+        Some(TimerLastOutcome::Completed(
+            TimerCompletionOutcome::RetryableFailure
+        ))
+    );
+    assert_eq!(snapshot.generation(), None);
 }
 
 #[test]

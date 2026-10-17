@@ -49,9 +49,9 @@ pub use metrics::{
 pub use model::{
     DeclarationLifetime, InactiveReason, OrdinaryRuntimeStateSnapshot, TimerCompletion,
     TimerCompletionOutcome, TimerControlFailure, TimerDirectiveSnapshot, TimerEpoch,
-    TimerLastOutcome, TimerOutcomeSnapshot, TimerPolicy, TimerProcessCondition,
-    TimerRegistrationStatus, TimerRuntimeStateSnapshot, TimerSchedulingMode, WatchdogAttemptStatus,
-    WatchdogDecision, WatchdogRunResult, WatchdogRuntimeStateSnapshot,
+    TimerLastOutcome, TimerOutcomeSnapshot, TimerPolicy, TimerRegistrationStatus,
+    TimerRuntimeStateSnapshot, TimerSchedulingMode, WatchdogAttemptStatus, WatchdogDecision,
+    WatchdogRunResult, WatchdogRuntimeStateSnapshot,
 };
 
 /// Atomic provider-neutral snapshot of one complete canister-local inventory.
@@ -224,42 +224,6 @@ impl TimerSnapshot {
     #[must_use]
     pub fn registration_status(&self) -> TimerRegistrationStatus {
         self.state.into()
-    }
-
-    /// Return an operator-facing condition derived from coherent state.
-    #[must_use]
-    pub const fn process_condition(&self) -> TimerProcessCondition {
-        match self.state {
-            TimerRuntimeStateSnapshot::Inactive {
-                reason: InactiveReason::Cancelled,
-            } => TimerProcessCondition::Disabled,
-            TimerRuntimeStateSnapshot::Inactive {
-                reason:
-                    InactiveReason::Abandoned
-                    | InactiveReason::InvariantFailure
-                    | InactiveReason::ControlFailure(_),
-            } => TimerProcessCondition::Failed,
-            TimerRuntimeStateSnapshot::Inactive {
-                reason: InactiveReason::Stopped,
-            } if matches!(
-                self.observability.outcomes().last_outcome(),
-                Some(TimerLastOutcome::Completed(
-                    TimerCompletionOutcome::RetryableFailure
-                ))
-            ) =>
-            {
-                TimerProcessCondition::Failed
-            }
-            TimerRuntimeStateSnapshot::Inactive { .. } => TimerProcessCondition::Idle,
-            TimerRuntimeStateSnapshot::Ordinary(_) | TimerRuntimeStateSnapshot::Watchdog(_)
-                if matches!(self.scheduling_mode, TimerSchedulingMode::Retry) =>
-            {
-                TimerProcessCondition::Retrying
-            }
-            TimerRuntimeStateSnapshot::Ordinary(_) | TimerRuntimeStateSnapshot::Watchdog(_) => {
-                TimerProcessCondition::Active
-            }
-        }
     }
 
     /// Return the latest authoritative callback generation.

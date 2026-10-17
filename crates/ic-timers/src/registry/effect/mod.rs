@@ -1,7 +1,7 @@
 //! Constructible effect shapes; live claim and generation admission stays in the registry.
 
 use super::{CallbackRole, CallbackToken, CallbacksToClear, RegistrationClaim, token_for};
-use crate::{control::WakeupArm, snapshot::TimerIdentity};
+use crate::control::WakeupArm;
 
 /// A wakeup can only address ordinary work or a Watchdog scheduler.
 #[derive(Debug, Eq, PartialEq)]
@@ -62,7 +62,6 @@ pub enum RegistryEffect {
         arm: WakeupArm,
     },
     ClearCallbacks {
-        identity: TimerIdentity,
         handles: CallbacksToClear,
     },
     DispatchWatchdog {
@@ -74,6 +73,7 @@ pub enum RegistryEffect {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::snapshot::TimerIdentity;
 
     #[test]
     fn dispatch_derives_both_roles_from_one_claim_and_generation() {

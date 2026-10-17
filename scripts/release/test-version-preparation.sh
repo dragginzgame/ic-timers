@@ -16,7 +16,6 @@ mkdir -p "${temporary_root}"/{scripts/release,scripts/ci,docs/status,docs/change
 cp "${repository_root}/scripts/release/bump-version.sh" "${temporary_root}/scripts/release/"
 cp "${repository_root}/scripts/ci/next-release-version.sh" \
     "${repository_root}/scripts/ci/validate-release-inputs.pl" \
-    "${repository_root}/scripts/ci/warn-release-prose.sh" \
     "${repository_root}/scripts/ci/check-make-execution.sh" \
     "${repository_root}/scripts/ci/run-formatting.sh" \
     "${repository_root}/scripts/ci/finalize-release-changelog.awk" \
@@ -28,7 +27,6 @@ cp "${repository_root}/scripts/ci/read-cargo-workspace-version.sh" \
     "${repository_root}/scripts/ci/compare-stable-versions.pl" \
     "${repository_root}/scripts/ci/StableVersion.pm" \
     "${repository_root}/scripts/ci/rewrite-local-lock-versions.pl" \
-    "${repository_root}/scripts/ci/finalize-release-changelog.awk" \
     "${temporary_root}/scripts/ci/"
 # Classification is an isolated fixture input; preparation must not run tests.
 cat > "${temporary_root}/scripts/release/classify-release-impact.sh" <<'EOF'
@@ -329,21 +327,8 @@ done
 mv existing-changelog.md CHANGELOG.md
 assert_metadata_unchanged original-files
 
-# A failed prose advisory still runs before mutation and cannot block the bump.
-mv scripts/ci/warn-release-prose.sh scripts/ci/original-warn-release-prose.sh
-cat > scripts/ci/warn-release-prose.sh <<'EOF'
-#!/usr/bin/env bash
-[[ "$#" == 2 && "$1" == 0.1.1 && "$2" == docs/status/current.md ]] || exit 2
-bash scripts/ci/read-cargo-workspace-version.sh --stable Cargo.toml > advisory-version
-exit 1
-EOF
-output="$(bash scripts/release/bump-version.sh patch 2>&1)"
-if [[ "${output}" != *'advisory release-prose check could not run; continuing'* ]]; then
-    echo 'error: version preparation did not report its failed advisory' >&2
-    exit 1
-fi
-grep -Fqx 0.1.0 advisory-version
-mv scripts/ci/original-warn-release-prose.sh scripts/ci/warn-release-prose.sh
+# Prepare the admitted candidate after all rejection cases preserved metadata.
+bash scripts/release/bump-version.sh patch > "$temporary_root/preparation.log" 2>&1
 test ! -f unexpected-gate
 grep -Fqx '  version = "0.1.1" # Workspace truth; preserve spacing and this comment.' Cargo.toml
 test "$(bash scripts/ci/read-cargo-workspace-version.sh --stable Cargo.toml)" = 0.1.1

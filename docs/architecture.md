@@ -28,7 +28,7 @@ Direct registration uses one inert `TimerStart` configuration. Retained starts
 carry an optional initial schedule; remove-on-stop starts carry a required one.
 The existing initial-registration owner decodes that configuration once,
 validates requested time before allocating a claim, and returns scheduled
-authority only after provider binding and confirmation. `DeclarationLifetime`
+authority only after provider binding commits its successful-arm facts. `DeclarationLifetime`
 remains a snapshot observation. See the [typed setup contract](design/0.20-typed-registration.md).
 
 First lifecycle reconciliation is atomic at the owner
@@ -98,7 +98,7 @@ The remaining module hierarchy keeps six responsibilities separate:
    The private `registry/effect` module constrains wakeups to ordinary work or
    Watchdog schedulers. A Watchdog dispatch stores one successor identity and
    derives its work token with the same claim and generation. Runtime application
-   and confirmation still admit live claim ownership, policy and generation;
+   admits live claim ownership, policy and generation during handle installation;
    structurally malformed token pairs need no second validation path.
    The registry builds provider effects and retains cancellation policy without a
    separate cancellation or completion action. Scheduling requests return only
@@ -210,8 +210,10 @@ The remaining module hierarchy keeps six responsibilities separate:
    One consuming binding operation installs a raw provider handle or clears it
    on rejection after releasing the registry borrow. Arm and restoration callers
    receive only the typed error; Watchdog dispatch separately clears its installed
-   successor if later work binding fails. Work binding and dispatch confirmation
-   share a cleanup exit, with confirmation strictly after successful installation.
+   successor if later work binding fails. Final handle installation and successful
+   arm accounting share one registry borrow and one role/generation/state check.
+   A staged Watchdog successor and restored handles do not commit arm counters;
+   successful work installation commits both Watchdog dispatch counters.
    Effect application consumes one complete registry effect; its shape is
    validated before cleanup or platform calls. Its matched branches perform
    binding directly without passing the effect through another variant match or
@@ -231,8 +233,8 @@ The remaining module hierarchy keeps six responsibilities separate:
    pass. Scheduler delivery consumes its handle and detaches remaining capabilities
    through one lookup before the Watchdog transition can remove a declaration.
    Duplicate or stale acceptance returns no callback and keeps its existing stale
-   accounting. Installation and effect confirmation retain their own required
-   role, generation and state checks.
+   accounting. Installation owns the required role, generation and state checks;
+   pure transition tests model successful application through those same predicates.
    Delegated control and both work-completion paths share one entry-local
    running-work predicate for the exact claim, work role, generation and running
    state. Completion checks it before any mutation; provider binding and completed
@@ -296,6 +298,9 @@ The runtime provides:
   and
 - portable snapshot DTOs so Canic, IcyDB, and standalone canisters can
   expose the same operator view.
+
+Operator-health labels belong to consumers. Snapshots expose runtime state,
+scheduling mode and callback outcomes for a single consumer-owned projection.
 
 Metrics are collected once at the registry boundary. Consumers may adapt
 the atomic inventory to their own status endpoint or metrics encoder without

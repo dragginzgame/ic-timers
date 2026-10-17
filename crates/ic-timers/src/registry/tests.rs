@@ -1,5 +1,5 @@
 use super::*;
-use crate::{TimerLastOutcome, TimerProcessCondition, TimerRegistrationStatus};
+use crate::{TimerLastOutcome, TimerRegistrationStatus};
 use std::time::Duration;
 
 impl TimerRegistry {
@@ -384,9 +384,41 @@ fn provider_roles_keep_paired_handles_distinct_and_reject_policy_mismatches() {
     assert_ne!(successor, work);
     let tokens = [ordinary_token, successor, work];
     for token in &tokens {
+        let delay_ns = match token.role() {
+            CallbackRole::OrdinaryWork => Some(10),
+            CallbackRole::WatchdogScheduler => None,
+            CallbackRole::WatchdogWork => Some(5),
+        };
         registry
-            .install_provider_handle(token, crate::platform::set_timer(Duration::ZERO, async {}))
+            .install_provider_handle(
+                token,
+                crate::platform::set_timer(Duration::ZERO, async {}),
+                delay_ns,
+            )
             .unwrap();
+        if token.role() == CallbackRole::WatchdogScheduler {
+            let staged = registry.snapshot(token.identity()).unwrap();
+            assert_eq!(staged.latest_armed_delay_ns(), None);
+            assert_eq!(staged.observability().counters().wakeups_armed(), 0);
+            assert_eq!(staged.observability().counters().work_dispatched(), 0);
+        }
+    }
+    for (token, delay_ns, work) in [(&tokens[0], 10, 0), (&tokens[2], 5, 1)] {
+        let committed = registry.snapshot(token.identity()).unwrap();
+        assert_eq!(committed.latest_armed_delay_ns(), Some(delay_ns));
+        assert_eq!(committed.observability().counters().wakeups_armed(), 1);
+        assert_eq!(committed.observability().counters().work_dispatched(), work);
+        let before = registry.inventory();
+        let (error, handle) = registry
+            .install_provider_handle(
+                token,
+                crate::platform::set_timer(Duration::ZERO, async {}),
+                Some(99),
+            )
+            .unwrap_err();
+        assert_eq!(error, RegistryError::ProviderHandleAlreadyOwned);
+        crate::platform::clear_timer(handle);
+        assert_eq!(registry.inventory(), before);
     }
 
     for token in &tokens {
@@ -402,6 +434,17 @@ fn provider_roles_keep_paired_handles_distinct_and_reject_policy_mismatches() {
                 token.role,
             ),
         ] {
+            let before = registry.inventory();
+            let (error, handle) = registry
+                .install_provider_handle(
+                    &stale,
+                    crate::platform::set_timer(Duration::ZERO, async {}),
+                    Some(99),
+                )
+                .unwrap_err();
+            assert_eq!(error, RegistryError::StaleCallback);
+            crate::platform::clear_timer(handle);
+            assert_eq!(registry.inventory(), before);
             registry
                 .entries
                 .get_mut(stale.identity())
@@ -424,6 +467,7 @@ fn provider_roles_keep_paired_handles_distinct_and_reject_policy_mismatches() {
                 .install_provider_handle(
                     &malformed,
                     crate::platform::set_timer(Duration::ZERO, async {}),
+                    None,
                 )
                 .unwrap_err();
             let expected = if matches!(role, CallbackRole::OrdinaryWork)
@@ -454,13 +498,16 @@ fn provider_roles_keep_paired_handles_distinct_and_reject_policy_mismatches() {
             CallbackRole::OrdinaryWork | CallbackRole::WatchdogScheduler => {
                 registry.take_wakeup_handle(token.identity())
             }
-            CallbackRole::WatchdogWork => registry.take_work_handle(token.identity()),
+            CallbackRole::WatchdogWork => registry
+                .entry_mut(token.claim())
+                .unwrap()
+                .take_work_handle(token.identity()),
         }
         .expect("malformed consumption must leave every owned handle intact");
         let (detached_token, handle) = detached.into_parts();
         assert_eq!(&detached_token, token);
         registry
-            .install_provider_handle(&detached_token, handle)
+            .install_provider_handle(&detached_token, handle, None)
             .unwrap();
     }
     for claim in [&ordinary, &watchdog] {
@@ -504,7 +551,9 @@ fn provider_installation_and_confirmation_reject_removed_or_reused_claims() {
         let before = registry.inventory();
 
         let handle = crate::platform::set_timer(Duration::ZERO, async {});
-        let (error, rejected) = registry.install_provider_handle(token, handle).unwrap_err();
+        let (error, rejected) = registry
+            .install_provider_handle(token, handle, Some(10))
+            .unwrap_err();
         assert_eq!(error, RegistryError::StaleCallback);
         assert_eq!(crate::platform::timer_count(), provider_count_before + 1);
         crate::platform::clear_timer(rejected);
@@ -574,7 +623,6 @@ fn explicit_unregistration_consumes_scheduled_and_running_claims() {
     assert_eq!(
         transition.effect(),
         &RegistryEffect::ClearCallbacks {
-            identity: scheduled_id.clone(),
             handles: CallbacksToClear::Wakeup,
         }
     );
@@ -683,7 +731,6 @@ fn running_watchdog_unregistration_clears_its_committed_successor() {
     assert_eq!(
         completed.effect(),
         &RegistryEffect::ClearCallbacks {
-            identity: timer.clone(),
             handles: CallbacksToClear::Wakeup,
         }
     );
@@ -1199,8 +1246,8 @@ fn ordinary_directive_matrix_preserves_mode_and_checked_deadline() {
     assert_eq!(
         registry
             .snapshot(&timer)
-            .map(|value| value.process_condition()),
-        Some(TimerProcessCondition::Retrying)
+            .map(|value| value.scheduling_mode()),
+        Some(crate::TimerSchedulingMode::Retry)
     );
     assert!(registry.begin_ordinary(&third).is_some());
 
@@ -1867,7 +1914,6 @@ fn watchdog_terminal_cancellation_makes_queued_callbacks_stale() {
     assert_eq!(
         cancelled.effect(),
         &RegistryEffect::ClearCallbacks {
-            identity: timer.clone(),
             handles: CallbacksToClear::WakeupAndWork,
         }
     );
@@ -2185,7 +2231,6 @@ fn ordinary_cancellation_at_maximum_generation_preserves_lifetime_and_rejects_de
             assert_eq!(
                 cancelled.effect(),
                 &RegistryEffect::ClearCallbacks {
-                    identity: timer.clone(),
                     handles: CallbacksToClear::Wakeup,
                 }
             );
@@ -2261,7 +2306,6 @@ fn watchdog_cancellation_at_maximum_generation_clears_the_selected_callbacks() {
             assert_eq!(
                 cancelled.effect(),
                 &RegistryEffect::ClearCallbacks {
-                    identity: timer.clone(),
                     handles: if dispatched {
                         CallbacksToClear::WakeupAndWork
                     } else {
@@ -2777,26 +2821,21 @@ fn watchdog_exact_pending_order_preserves_terminal_and_immediate_precedence() {
             assert_eq!(counters.cancelled(), u64::from(scenario == 0));
             assert_eq!(counters.invariant_failure(), u64::from(scenario >= 6));
             if matches!(scenario, 0 | 6..=7) {
-                let (reason, condition) = if scenario == 0 {
-                    (InactiveReason::Cancelled, TimerProcessCondition::Disabled)
+                let reason = if scenario == 0 {
+                    InactiveReason::Cancelled
                 } else {
-                    (
-                        InactiveReason::InvariantFailure,
-                        TimerProcessCondition::Failed,
-                    )
+                    InactiveReason::InvariantFailure
                 };
                 assert_eq!(
                     snapshot.state(),
                     TimerRuntimeStateSnapshot::Inactive { reason }
                 );
-                assert_eq!(snapshot.process_condition(), condition);
             }
         }
         if matches!(scenario, 0 | 1 | 6..=8) {
             assert_eq!(
                 transition.effect(),
                 &RegistryEffect::ClearCallbacks {
-                    identity: timer.clone(),
                     handles: CallbacksToClear::Wakeup,
                 }
             );

@@ -25,7 +25,8 @@ mkdir -p "$fixture/current/scripts" "$fixture/current/scripts/ci" \
     "$fixture/selected" "$fixture/bin" "$fixture/tmp"
 cp "$root/Makefile" "$fixture/current/"
 bash "$root/scripts/ci/prepare-make-fixture.sh" "$root" "$fixture/current"
-cp -R "$root/scripts/release" "$fixture/current/scripts/"
+mkdir -p "$fixture/current/scripts/release"
+cp "$root/scripts/release/adapter.sh" "$fixture/current/scripts/release/"
 cp "$root/scripts/ci/read-cargo-workspace-version.sh" \
     "$root/scripts/ci/check-release-tag.sh" \
     "$root/scripts/ci/cargo-release-metadata.sh" \

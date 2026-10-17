@@ -53,7 +53,7 @@ pub use snapshot::{
     TimerCompletion, TimerCompletionOutcome, TimerControlFailure, TimerCounters,
     TimerDirectiveSnapshot, TimerEpoch, TimerIdentity, TimerIdentityError, TimerIdentityField,
     TimerInventorySnapshot, TimerLastOutcome, TimerObservabilitySnapshot, TimerOutcomeSnapshot,
-    TimerPerformance, TimerPolicy, TimerProcessCondition, TimerRegistrationId,
-    TimerRegistrationStatus, TimerRuntimeStateSnapshot, TimerSchedulingMode, TimerSnapshot,
-    WatchdogAttemptStatus, WatchdogDecision, WatchdogRunResult, WatchdogRuntimeStateSnapshot,
+    TimerPerformance, TimerPolicy, TimerRegistrationId, TimerRegistrationStatus,
+    TimerRuntimeStateSnapshot, TimerSchedulingMode, TimerSnapshot, WatchdogAttemptStatus,
+    WatchdogDecision, WatchdogRunResult, WatchdogRuntimeStateSnapshot,
 };

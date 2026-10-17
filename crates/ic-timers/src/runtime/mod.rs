@@ -570,13 +570,9 @@ where
     Fut: Future<Output = OnceRunResult> + 'static,
 {
     let callback = erase_ordinary_callback(callback, OnceContext::new, OrdinaryRunResult::from);
-    let claim = register_initial(
-        start,
-        |registry, lifetime| {
-            registry.register_once_with_callback(identity, lifetime, Rc::clone(&callback))
-        },
-        TimerRegistry::reconcile_ordinary,
-    );
+    let claim = register_initial(start, |registry, lifetime| {
+        registry.register_once_with_callback(identity, lifetime, Rc::clone(&callback))
+    });
     // Release factory captures only after initial registry/provider cleanup.
     drop(callback);
     Ok(OnceRegistration { claim: claim? })
@@ -614,18 +610,14 @@ where
         AfterCompletionContext::new,
         OrdinaryRunResult::from,
     );
-    let claim = register_initial(
-        start,
-        |registry, lifetime| {
-            registry.register_after_completion_with_callback(
-                identity,
-                cadence,
-                lifetime,
-                Rc::clone(&callback),
-            )
-        },
-        TimerRegistry::reconcile_ordinary,
-    );
+    let claim = register_initial(start, |registry, lifetime| {
+        registry.register_after_completion_with_callback(
+            identity,
+            cadence,
+            lifetime,
+            Rc::clone(&callback),
+        )
+    });
     // Release factory captures only after initial registry/provider cleanup.
     drop(callback);
     Ok(AfterCompletionRegistration { claim: claim? })
@@ -654,18 +646,9 @@ where
     let callback: WatchdogCallback = Rc::new(RefCell::new(move |token| {
         callback(WatchdogContext::new(token))
     }));
-    let claim = register_initial(
-        start,
-        |registry, lifetime| {
-            registry.register_watchdog_with_callback(
-                identity,
-                cadence,
-                lifetime,
-                Rc::clone(&callback),
-            )
-        },
-        TimerRegistry::reconcile_watchdog_schedule,
-    );
+    let claim = register_initial(start, |registry, lifetime| {
+        registry.register_watchdog_with_callback(identity, cadence, lifetime, Rc::clone(&callback))
+    });
     // Release factory captures only after initial registry/provider cleanup.
     drop(callback);
     Ok(WatchdogRegistration { claim: claim? })
@@ -679,12 +662,6 @@ fn register_initial(
         &mut TimerRegistry,
         DeclarationLifetime,
     ) -> Result<RegistrationClaim, RegisterError>,
-    reconcile: fn(
-        &mut TimerRegistry,
-        &RegistrationClaim,
-        u64,
-        Option<TimerSchedule>,
-    ) -> Result<RegistryTransition, RegistryError>,
 ) -> Result<RegistrationClaim, TimerError> {
     let (lifetime, initial) = start.into_parts();
     let (claim, requested) = with_registry_mut(|registry| {
@@ -692,8 +669,7 @@ fn register_initial(
             Some(schedule) => {
                 // Reject invalid deadlines before allocating claim authority.
                 let now_ns = platform::time_ns();
-                schedule.resolve(now_ns)?;
-                Some((schedule, now_ns))
+                Some((schedule.resolve(now_ns)?, now_ns))
             }
             None => None,
         };
@@ -701,7 +677,7 @@ fn register_initial(
     })?;
     if let Some((schedule, now_ns)) = requested
         && let Err(error) = apply_claim_transition(&claim, None, |registry| {
-            reconcile(registry, &claim, now_ns, Some(schedule))
+            registry.reconcile_initial(&claim, now_ns, schedule)
         })
     {
         // Unlike later control, failed creation must retire retained
@@ -1048,50 +1024,28 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
             arm,
         } => {
             let token = token.token();
-            if arm.replaces_existing() {
-                let replaced = take_detached_or_owned_handle(handles.take_wakeup(), |registry| {
-                    registry.take_wakeup_handle(token.identity())
-                })?;
-                if let Some(replaced) = replaced {
-                    clear_provider_handle(replaced);
-                }
+            if arm.replaces_existing()
+                && let Some(replaced) = handles.take_wakeup()
+            {
+                clear_provider_handle(replaced);
             }
             restore_provider_handles(handles)?;
             let handle = platform::try_set_timer(
                 Duration::from_nanos(*delay_ns),
                 dispatch_wakeup(token.clone()),
             )?;
-            bind_provider_handle(token, handle)?;
-            if let Err(error) = confirm_effect(effect) {
-                let handle = with_registry_mut(|registry| {
-                    registry
-                        .take_wakeup_handle(token.identity())
-                        .ok_or(TimerError::OwnershipInvariant)
-                })?;
-                clear_provider_handle(handle);
-                return Err(error);
-            }
-            Ok(())
+            bind_provider_handle(token, handle, Some(*delay_ns))
         }
-        RegistryEffect::ClearCallbacks {
-            identity,
-            handles: selected,
-        } => {
-            if selected.includes_wakeup() {
-                let wakeup = take_detached_or_owned_handle(handles.take_wakeup(), |registry| {
-                    registry.take_wakeup_handle(identity)
-                })?;
-                if let Some(wakeup) = wakeup {
-                    clear_provider_handle(wakeup);
-                }
+        RegistryEffect::ClearCallbacks { handles: selected } => {
+            if selected.includes_wakeup()
+                && let Some(wakeup) = handles.take_wakeup()
+            {
+                clear_provider_handle(wakeup);
             }
-            if selected.includes_work() {
-                let work = take_detached_or_owned_handle(handles.take_work(), |registry| {
-                    registry.take_work_handle(identity)
-                })?;
-                if let Some(work) = work {
-                    clear_provider_handle(work);
-                }
+            if selected.includes_work()
+                && let Some(work) = handles.take_work()
+            {
+                clear_provider_handle(work);
             }
             restore_provider_handles(handles)
         }
@@ -1104,10 +1058,7 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
             if let Some(wakeup) = handles.take_wakeup() {
                 clear_provider_handle(wakeup);
             }
-            let replaced_work = take_detached_or_owned_handle(handles.take_work(), |registry| {
-                registry.take_work_handle(successor.identity())
-            })?;
-            if let Some(replaced_work) = replaced_work {
+            if let Some(replaced_work) = handles.take_work() {
                 clear_provider_handle(replaced_work);
             }
             let successor_token = successor.clone();
@@ -1115,14 +1066,13 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
                 platform::try_set_timer(Duration::from_nanos(*successor_delay_ns), async move {
                     dispatch_watchdog_scheduler(&successor_token);
                 })?;
-            bind_provider_handle(successor, successor_handle)?;
+            bind_provider_handle(successor, successor_handle, None)?;
 
             let work_token = work.clone();
             let work_handle = platform::try_set_timer(Duration::ZERO, async move {
                 dispatch_watchdog_work(&work_token);
             })?;
-            if let Err(error) =
-                bind_provider_handle(&work, work_handle).and_then(|()| confirm_effect(effect))
+            if let Err(error) = bind_provider_handle(&work, work_handle, Some(*successor_delay_ns))
             {
                 clear_entry_provider_handles(successor.identity())?;
                 return Err(error);
@@ -1132,18 +1082,12 @@ fn apply_effect(effect: &RegistryEffect, mut handles: ProviderHandles) -> Result
     }
 }
 
-fn take_detached_or_owned_handle(
-    detached: Option<ProviderHandle>,
-    take_owned: impl FnOnce(&mut TimerRegistry) -> Option<ProviderHandle>,
-) -> Result<Option<ProviderHandle>, TimerError> {
-    detached.map_or_else(
-        || with_registry_mut(|registry| Ok(take_owned(registry))),
-        |handle| Ok(Some(handle)),
-    )
-}
-
 /// Consume a provider handle by installing it or clearing it on rejection.
-fn bind_provider_handle(token: &CallbackToken, handle: TimerHandle) -> Result<(), TimerError> {
+fn bind_provider_handle(
+    token: &CallbackToken,
+    handle: TimerHandle,
+    armed_delay_ns: Option<u64>,
+) -> Result<(), TimerError> {
     RUNTIME
         .with(|runtime| {
             #[cfg(test)]
@@ -1156,7 +1100,7 @@ fn bind_provider_handle(token: &CallbackToken, handle: TimerHandle) -> Result<()
             let Some(registry) = runtime.as_mut() else {
                 return Err((TimerError::NotInitialized, handle));
             };
-            match registry.install_provider_handle(token, handle) {
+            match registry.install_provider_handle(token, handle, armed_delay_ns) {
                 Ok(()) => Ok(()),
                 Err((error, handle)) => Err((TimerError::from(error), handle)),
             }
@@ -1166,18 +1110,6 @@ fn bind_provider_handle(token: &CallbackToken, handle: TimerHandle) -> Result<()
             platform::clear_timer(handle);
             error
         })
-}
-
-fn confirm_effect(effect: &RegistryEffect) -> Result<(), TimerError> {
-    #[cfg(test)]
-    if take_provider_confirmation_fault() {
-        return Err(TimerError::OwnershipInvariant);
-    }
-    with_registry_mut(|registry| {
-        registry
-            .confirm_effect_applied(effect)
-            .map_err(TimerError::from)
-    })
 }
 
 fn restore_provider_handles(mut handles: ProviderHandles) -> Result<(), TimerError> {
@@ -1194,7 +1126,7 @@ fn restore_provider_handles(mut handles: ProviderHandles) -> Result<(), TimerErr
 
 fn restore_provider_handle(handle: ProviderHandle) -> Result<(), TimerError> {
     let (token, handle) = handle.into_parts();
-    bind_provider_handle(&token, handle)
+    bind_provider_handle(&token, handle, None)
 }
 
 fn clear_provider_handle(handle: ProviderHandle) {
@@ -1476,7 +1408,6 @@ fn reset_for_test(now_ns: u64, canister_version: u64) {
     platform::ADMISSION_FAULT.set(None);
     WATCHDOG_COMPLETION_FAULT.with(|fault| fault.set(false));
     PROVIDER_INSTALL_FAULT_AFTER.with(|fault| fault.set(None));
-    PROVIDER_CONFIRMATION_FAULT.with(|fault| fault.set(false));
     RUNTIME.with(|runtime| {
         *runtime.borrow_mut() = None;
     });
@@ -1486,7 +1417,6 @@ fn reset_for_test(now_ns: u64, canister_version: u64) {
 thread_local! {
     static WATCHDOG_COMPLETION_FAULT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
     static PROVIDER_INSTALL_FAULT_AFTER: std::cell::Cell<Option<u64>> = const { std::cell::Cell::new(None) };
-    static PROVIDER_CONFIRMATION_FAULT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
 #[cfg(test)]
@@ -1522,16 +1452,6 @@ fn take_provider_install_fault() -> bool {
         }
         None => false,
     })
-}
-
-#[cfg(test)]
-fn inject_provider_confirmation_fault() {
-    PROVIDER_CONFIRMATION_FAULT.with(|fault| fault.set(true));
-}
-
-#[cfg(test)]
-fn take_provider_confirmation_fault() -> bool {
-    PROVIDER_CONFIRMATION_FAULT.with(|fault| fault.replace(false))
 }
 
 #[cfg(test)]

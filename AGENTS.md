@@ -152,9 +152,6 @@ This file is normative for automated contributors.
   stages the root lockfile. Contributors maintain the correctly numbered top
   section; the matching bump dates it automatically. Do not require a manually
   prepared test binary or a separate evidence command.
-- A pre-bump check may warn about free-form release prose that is likely to
-  become stale, but it must remain advisory and run before version mutation.
-  Never make interpreted prose a post-mutation release blocker.
 - Run full hosted Rust and MSRV validation on pull requests and `main`. A tag
   push may use a smaller package/tag job only when it also verifies the exact
   version tag and that the tagged commit is reachable from `main`; do not

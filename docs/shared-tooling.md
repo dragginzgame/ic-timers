@@ -3,16 +3,18 @@
 ## Current authority
 
 One [snapshot](../.shared-tooling.snapshot) records the exact reviewed source,
-entrypoint roots and all **135** payload hashes/modes. It selects
-[Shared PR #241 — Keep exhaustive qualification at Shared owners](https://github.com/dragginzgame/shared-tooling/pull/241)
-at `2e6a3885a1fd8b6e74bfcc61b15148a547d44677`, based on released Shared 0.15.8
-(`9add0ecfdb8a6d2556f6d7da3d06bcbca8b3029f`). The source has a pending 0.16.0
-contract change; this adoption does not claim that version is released.
-Five existing payloads change, retaining all roots and tool selections. The
-exhaustive Make matrix stays producer-only; per-target admission and parallel
-helpers remain exported. Reader-owner structural cases and automatic cleanup-
-refusal probes are included. No scheduler is activated; this adoption is not
-native-host or hosted acceptance.
+entrypoint roots and all **134** payload hashes/modes. It selects committed
+Shared 0.19.0 source `ac87fa23c8b4bdf94f4205658aa4a8851f6b2b8d` through canonical
+preview and refresh. The release-prose helper and its fixture are retired from
+the root selection and payloads. The Rust policy reader adds its required MSRV
+reader companion. Existing host/IC pin catalogs, the qualified Binaryen exception
+and product recovery gates retain their selections.
+
+The refresh also adopts the owner's literal-catalog contract, source-path LOC
+counting, explicit hook-install destination and maintained release checks. Local
+Make already selects its hook destination. Focused fixtures exercise actual
+consumer version preparation, hook formatting and release ordering; they are
+not native macOS, hosted or complete release acceptance.
 The [baseline](../DRAGGINZGAME.md) and [local overlay](../AGENTS.md) govern scope.
 
 The complete [previous adoption record](evidence/shared-tooling-history.md) is

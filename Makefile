@@ -111,26 +111,14 @@ pocketic-check:
 	+@bash scripts/dev/testkit-server.sh check
 
 pocketic-watchdog: pocketic-check
-	+CARGO_TARGET_DIR="$(CURDIR)/testing/target" \
-		cargo +$(MSRV) build -p ic-timers-runtime-probe \
-		--profile timer-probe --target wasm32-unknown-unknown --locked
 	+@set -e; server="$$(bash scripts/dev/testkit-server.sh check)"; \
 		POCKET_IC_BIN="$$server" \
-		IC_TIMERS_PROBE_WASM="$(CURDIR)/testing/target/wasm32-unknown-unknown/timer-probe/ic_timers_runtime_probe.wasm" \
-		cargo +$(MSRV) test -p ic-timers-pocketic --locked tests::
+		RUSTUP_TOOLCHAIN="$(MSRV)" cargo run -p ic-timers-pocketic --locked -- watchdog
 
 pocketic-cohorts: pocketic-check
-	+@set -e; for cohort in baseline once after-completion watchdog; do \
-		CARGO_TARGET_DIR="$(CURDIR)/testing/target/cohort-$$cohort" \
-			cargo +$(MSRV) build -p ic-timers-size-probe \
-			--profile timer-probe --target wasm32-unknown-unknown --locked \
-			--no-default-features --features "$$cohort"; \
-	done
 	+@set -e; server="$$(bash scripts/dev/testkit-server.sh check)"; \
 		POCKET_IC_BIN="$$server" \
-		IC_TIMERS_COHORT_ROOT="$(CURDIR)/testing/target" \
-		cargo +$(MSRV) test -p ic-timers-pocketic --locked \
-			comparable_policy_cohorts_report_size_and_instruction_subjects -- --nocapture
+		RUSTUP_TOOLCHAIN="$(MSRV)" cargo run -p ic-timers-pocketic --locked -- cohorts
 
 # Keep the established gate entry point; the shared owner also checks Cargo
 # declarations and the tracked root lockfile for all maintained members.
@@ -172,7 +160,6 @@ release-check:
 	bash scripts/ci/test-workflow-step.sh
 	bash scripts/release/test-release-impact.sh
 	RELEASE_COMMIT='' bash scripts/ci/cargo-release-metadata.sh check-graph ic-timers
-	bash scripts/ci/test-release-prose-warning.sh
 	bash scripts/release/test-release-gate.sh
 	bash scripts/release/test-version-preparation.sh
 	bash scripts/release/test-tag-at-head.sh

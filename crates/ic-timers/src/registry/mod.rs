@@ -372,7 +372,7 @@ impl WatchdogControl {
         arm: WakeupArm,
     ) -> RegistryTransition {
         let Some(generation) = self.generation.checked_add(1) else {
-            let cleanup = clear_wakeup_if(claim.identity(), arm.replaces_existing());
+            let cleanup = clear_wakeup_if(arm.replaces_existing());
             return self.terminate(cleanup, TimerControlFailure::GenerationExhausted);
         };
         self.generation = generation;
@@ -430,6 +430,60 @@ impl Entry {
             wakeup: None,
             work: None,
             observability: TimerObservabilitySnapshot::EMPTY,
+        }
+    }
+
+    /// Validate the role, live generation and state once for binding or restoration.
+    const fn provider_handle_slot(
+        &mut self,
+        token: &CallbackToken,
+        final_arm: bool,
+    ) -> Result<&mut Option<OwnedProviderHandle>, RegistryError> {
+        match (&self.kind, token.role) {
+            (EntryKind::Ordinary { control, .. }, CallbackRole::OrdinaryWork)
+                if matches!(
+                    control.registration,
+                    TimerRegistration::Scheduled { .. }
+                        if control.generation() == token.callback_generation
+                ) =>
+            {
+                Ok(&mut self.wakeup)
+            }
+            (EntryKind::Watchdog { control, .. }, CallbackRole::WatchdogScheduler)
+                if matches!(
+                    control.state,
+                    WatchdogState::Scheduled { .. } | WatchdogState::AwaitingWork { .. }
+                        if control.generation == token.callback_generation
+                            && (!final_arm || matches!(control.state, WatchdogState::Scheduled { .. }))
+                ) =>
+            {
+                Ok(&mut self.wakeup)
+            }
+            (EntryKind::Watchdog { control, .. }, CallbackRole::WatchdogWork)
+                if matches!(
+                    control.state,
+                    WatchdogState::AwaitingWork {
+                        attempt_status: WatchdogAttemptStatus::Dispatched,
+                        ..
+                    } if control.generation == token.callback_generation
+                ) =>
+            {
+                Ok(&mut self.work)
+            }
+            _ => Err(RegistryError::StaleCallback),
+        }
+    }
+
+    fn record_arm(&mut self, token: &CallbackToken, delay_ns: u64) {
+        if self.confirmed_wakeup_generation == Some(token.callback_generation) {
+            return;
+        }
+        self.confirmed_wakeup_generation = Some(token.callback_generation);
+        self.latest_armed_delay_ns = Some(delay_ns);
+        let counters = self.observability.counters_mut();
+        counters.record_wakeup_armed();
+        if token.role == CallbackRole::WatchdogWork {
+            counters.record_work_dispatched();
         }
     }
 
@@ -683,6 +737,23 @@ impl TimerRegistry {
         Ok((transition, handles))
     }
 
+    /// Apply an initial schedule already checked before claim allocation.
+    pub(crate) fn reconcile_initial(
+        &mut self,
+        claim: &RegistrationClaim,
+        now_ns: u64,
+        requested: ResolvedSchedule,
+    ) -> Result<RegistryTransition, RegistryError> {
+        match self.entry(claim)?.kind {
+            EntryKind::Ordinary { .. } => {
+                self.request_ordinary(claim, now_ns, requested, OrdinaryRequest::Reconcile)
+            }
+            EntryKind::Watchdog { .. } => {
+                self.ensure_watchdog(claim, now_ns, WatchdogScheduleRequest::Reconcile(requested))
+            }
+        }
+    }
+
     pub(crate) fn ensure_once(
         &mut self,
         claim: &RegistrationClaim,
@@ -830,10 +901,7 @@ impl TimerRegistry {
             Ok(arm) => arm,
             Err(error) => {
                 let clear_wakeup = control.terminate(InactiveReason::ControlFailure(error));
-                let transition = RegistryTransition::terminal(
-                    clear_wakeup_if(claim.identity(), clear_wakeup),
-                    error,
-                );
+                let transition = RegistryTransition::terminal(clear_wakeup_if(clear_wakeup), error);
                 let remove = entry.remove_on_failure(&transition);
                 return Ok(remove_after(
                     &mut self.entries,
@@ -965,7 +1033,6 @@ impl TimerRegistry {
                             control.terminate(InactiveReason::Cancelled);
                             entry.observability.counters_mut().record_cancellation();
                             RegistryEffect::ClearCallbacks {
-                                identity: identity.clone(),
                                 handles: CallbacksToClear::Wakeup,
                             }
                         }
@@ -1005,10 +1072,7 @@ impl TimerRegistry {
                             reason: InactiveReason::Cancelled,
                         };
                         entry.observability.counters_mut().record_cancellation();
-                        RegistryEffect::ClearCallbacks {
-                            identity: identity.clone(),
-                            handles,
-                        }
+                        RegistryEffect::ClearCallbacks { handles }
                     });
                     let stopped = matches!(control.state, WatchdogState::Inactive { .. });
                     (effect, stopped)
@@ -1140,10 +1204,7 @@ impl TimerRegistry {
                 (transition, remove_on_stop)
             } else {
                 let prepared = match effective_directive.resolve(now_ns, cadence) {
-                    Ok(resolved) => {
-                        let directive_snapshot =
-                            TimerDirectiveSnapshot::try_from(effective_directive)
-                                .map_err(RegistryError::Schedule)?;
+                    Ok((resolved, directive_snapshot)) => {
                         let selected = select_completion_schedule(pending_command, resolved);
                         selected
                             .map_or(Ok(()), |selected| {
@@ -1312,7 +1373,6 @@ impl TimerRegistry {
             Err(failure) => {
                 let transition = control.terminate(
                     RegistryEffect::ClearCallbacks {
-                        identity: token.identity().clone(),
                         handles: CallbacksToClear::Work,
                     },
                     failure,
@@ -1474,7 +1534,6 @@ impl TimerRegistry {
                     };
                     control.state = WatchdogState::Inactive { reason };
                     RegistryTransition::normal(RegistryEffect::ClearCallbacks {
-                        identity: identity.clone(),
                         handles: CallbacksToClear::Wakeup,
                     })
                 }
@@ -1616,46 +1675,21 @@ impl TimerRegistry {
         }
     }
 
+    /// Bind a handle and, for the final arm, commit its successful-arm facts.
+    /// A missing delay restores ownership or stages a Watchdog successor only.
     pub(crate) fn install_provider_handle(
         &mut self,
         token: &CallbackToken,
         handle: TimerHandle,
+        armed_delay_ns: Option<u64>,
     ) -> Result<(), (RegistryError, TimerHandle)> {
         let entry = match self.entry_by_token_mut(token) {
             Ok(entry) => entry,
             Err(error) => return Err((error, handle)),
         };
-        let slot = match (&entry.kind, token.role) {
-            (EntryKind::Ordinary { control, .. }, CallbackRole::OrdinaryWork)
-                if matches!(
-                    control.registration,
-                    TimerRegistration::Scheduled { .. }
-                        if control.generation() == token.callback_generation
-                ) =>
-            {
-                &mut entry.wakeup
-            }
-            (EntryKind::Watchdog { control, .. }, CallbackRole::WatchdogScheduler)
-                if matches!(
-                    control.state,
-                    WatchdogState::Scheduled { .. } | WatchdogState::AwaitingWork { .. }
-                        if control.generation == token.callback_generation
-                ) =>
-            {
-                &mut entry.wakeup
-            }
-            (EntryKind::Watchdog { control, .. }, CallbackRole::WatchdogWork)
-                if matches!(
-                    control.state,
-                    WatchdogState::AwaitingWork {
-                        attempt_status: WatchdogAttemptStatus::Dispatched,
-                        ..
-                    } if control.generation == token.callback_generation
-                ) =>
-            {
-                &mut entry.work
-            }
-            _ => return Err((RegistryError::StaleCallback, handle)),
+        let slot = match entry.provider_handle_slot(token, armed_delay_ns.is_some()) {
+            Ok(slot) => slot,
+            Err(error) => return Err((error, handle)),
         };
         if slot.is_some() {
             return Err((RegistryError::ProviderHandleAlreadyOwned, handle));
@@ -1664,20 +1698,19 @@ impl TimerRegistry {
             callback_generation: token.callback_generation,
             handle,
         });
+        if let Some(delay_ns) = armed_delay_ns {
+            entry.record_arm(token, delay_ns);
+        }
         Ok(())
     }
 
+    #[cfg(test)]
     pub(crate) fn take_wakeup_handle(
         &mut self,
         identity: &TimerIdentity,
     ) -> Option<ProviderHandle> {
         let entry = self.entries.get_mut(identity)?;
         entry.take_wakeup_handle(identity)
-    }
-
-    pub(crate) fn take_work_handle(&mut self, identity: &TimerIdentity) -> Option<ProviderHandle> {
-        let entry = self.entries.get_mut(identity)?;
-        entry.take_work_handle(identity)
     }
 
     pub(crate) fn take_provider_handles(&mut self, identity: &TimerIdentity) -> ProviderHandles {
@@ -1715,77 +1748,25 @@ impl TimerRegistry {
         Ok(entry.take_provider_handles(token.identity()))
     }
 
-    /// Confirm that the platform successfully applied one emitted arm effect.
-    ///
-    /// The runtime calls this synchronously after binding the returned provider
-    /// handles. Pure tests use it to distinguish requested effects from actual
-    /// provider operations.
+    /// Model successful platform application in provider-neutral transition tests.
+    #[cfg(test)]
     pub(crate) fn confirm_effect_applied(
         &mut self,
         effect: &RegistryEffect,
     ) -> Result<(), RegistryError> {
-        let (entry, callback_generation, delay_ns) = match effect {
+        let (token, delay_ns) = match effect {
             RegistryEffect::None | RegistryEffect::ClearCallbacks { .. } => return Ok(()),
             RegistryEffect::ArmWakeup {
                 token, delay_ns, ..
-            } => {
-                let token = token.token();
-                let entry = self.entry_by_token_mut(token)?;
-                let valid_generation = match (&entry.kind, token.role) {
-                    (EntryKind::Ordinary { control, .. }, CallbackRole::OrdinaryWork) => {
-                        matches!(
-                            control.registration,
-                            TimerRegistration::Scheduled { .. }
-                                if control.generation() == token.callback_generation
-                        )
-                    }
-                    (EntryKind::Watchdog { control, .. }, CallbackRole::WatchdogScheduler) => {
-                        matches!(
-                            control.state,
-                            WatchdogState::Scheduled { .. }
-                                if control.generation == token.callback_generation
-                        )
-                    }
-                    (EntryKind::Ordinary { .. } | EntryKind::Watchdog { .. }, _) => false,
-                };
-                if !valid_generation {
-                    return Err(RegistryError::StaleCallback);
-                }
-                (entry, token.callback_generation, *delay_ns)
-            }
+            } => (token.token().clone(), *delay_ns),
             RegistryEffect::DispatchWatchdog {
                 dispatch,
                 successor_delay_ns,
-            } => {
-                let successor = dispatch.successor();
-                let successor_callback_generation = successor.callback_generation;
-                let entry = self.entry_by_token_mut(successor)?;
-                let EntryKind::Watchdog { control, .. } = &entry.kind else {
-                    return Err(RegistryError::StaleCallback);
-                };
-                if !matches!(
-                    control.state,
-                    WatchdogState::AwaitingWork { .. }
-                        if control.generation == successor_callback_generation
-                ) {
-                    return Err(RegistryError::StaleCallback);
-                }
-                (entry, successor_callback_generation, *successor_delay_ns)
-            }
+            } => (dispatch.work(), *successor_delay_ns),
         };
-        // Validate live ownership and generation before deduplicating. Each
-        // dispatch advances the non-wrapping wakeup generation and binds it to
-        // one work attempt, so one marker deduplicates both committed counters.
-        if entry.confirmed_wakeup_generation == Some(callback_generation) {
-            return Ok(());
-        }
-        entry.confirmed_wakeup_generation = Some(callback_generation);
-        entry.latest_armed_delay_ns = Some(delay_ns);
-        let counters = entry.observability.counters_mut();
-        counters.record_wakeup_armed();
-        if matches!(effect, RegistryEffect::DispatchWatchdog { .. }) {
-            counters.record_work_dispatched();
-        }
+        let entry = self.entry_by_token_mut(&token)?;
+        entry.provider_handle_slot(&token, true)?;
+        entry.record_arm(&token, delay_ns);
         Ok(())
     }
 
@@ -1865,10 +1846,9 @@ fn detach_provider_handle(
     }
 }
 
-fn clear_wakeup_if(identity: &TimerIdentity, clear_wakeup: bool) -> RegistryEffect {
+const fn clear_wakeup_if(clear_wakeup: bool) -> RegistryEffect {
     if clear_wakeup {
         RegistryEffect::ClearCallbacks {
-            identity: identity.clone(),
             handles: CallbacksToClear::Wakeup,
         }
     } else {

@@ -1,8 +1,8 @@
 use super::*;
 use crate::{
     AfterCompletionDecision, InactiveReason, MemoryPageSample, OnceDecision, TimerLastOutcome,
-    TimerPolicy, TimerProcessCondition, TimerRegistrationStatus, TimerRuntimeStateSnapshot,
-    TimerSchedulingMode, WatchdogDecision, WatchdogRuntimeStateSnapshot,
+    TimerPolicy, TimerRegistrationStatus, TimerRuntimeStateSnapshot, TimerSchedulingMode,
+    WatchdogDecision, WatchdogRuntimeStateSnapshot,
     platform::{
         advance_instructions, discard_next_due, grow_memory_pages, run_next_due, set_time,
         timer_count,
@@ -159,7 +159,6 @@ fn dropped_ordinary_deliveries_retire_confirmed_scheduled_and_running_work() {
                             reason: InactiveReason::Abandoned,
                         }
                     );
-                    assert_eq!(snapshot.process_condition(), TimerProcessCondition::Failed);
                     assert_eq!(snapshot.next_deadline_ns(), None);
                     assert!(!has_armed_wakeup_claim(&claim).unwrap());
                     let observations = snapshot.observability();
@@ -292,7 +291,7 @@ fn stale_delivery_drop_cannot_retire_rearmed_or_reused_identity() {
         .unwrap()
         .unwrap();
     let (token, handle) = detached.into_parts();
-    bind_provider_handle(&token, handle).unwrap();
+    bind_provider_handle(&token, handle, None).unwrap();
     let old_delivery = dispatch_wakeup(token.clone());
     registration
         .reconcile_schedule(Some(TimerSchedule::At(30)))
@@ -383,37 +382,29 @@ fn abandoned_transient_releases_capacity_and_drops_captures_outside_registry_bor
 #[test]
 fn unconfirmed_ordinary_delivery_drop_preserves_binding_failure_accounting() {
     for after_completion in [false, true] {
-        for confirmation_failure in [false, true] {
-            let _fixture = setup();
-            let timer = identity("unconfirmed-delivery-drop");
-            let claim = suspended_ordinary_registration(
-                after_completion,
-                timer.clone(),
-                DeclarationLifetime::Retained,
-                SuspendedWork::default(),
-                Rc::new(RefCell::new(None)),
-                Rc::new(()),
-            );
-            if confirmation_failure {
-                inject_provider_confirmation_fault();
-            } else {
-                inject_provider_install_fault();
+        let _fixture = setup();
+        let timer = identity("unconfirmed-delivery-drop");
+        let claim = suspended_ordinary_registration(
+            after_completion,
+            timer.clone(),
+            DeclarationLifetime::Retained,
+            SuspendedWork::default(),
+            Rc::new(RefCell::new(None)),
+            Rc::new(()),
+        );
+        inject_provider_install_fault();
+        assert!(reconcile_ordinary_claim(&claim, None, Some(TimerSchedule::At(10))).is_err());
+        let snapshot = timer_snapshot(&timer).unwrap().unwrap();
+        assert_eq!(
+            snapshot.state(),
+            TimerRuntimeStateSnapshot::Inactive {
+                reason: InactiveReason::ControlFailure(TimerControlFailure::ProviderBindingFailed),
             }
-            assert!(reconcile_ordinary_claim(&claim, None, Some(TimerSchedule::At(10))).is_err());
-            let snapshot = timer_snapshot(&timer).unwrap().unwrap();
-            assert_eq!(
-                snapshot.state(),
-                TimerRuntimeStateSnapshot::Inactive {
-                    reason: InactiveReason::ControlFailure(
-                        TimerControlFailure::ProviderBindingFailed
-                    ),
-                }
-            );
-            assert_eq!(snapshot.observability().counters().unacknowledged(), 0);
-            assert_eq!(snapshot.observability().outcomes().last_outcome(), None);
-            assert_eq!(timer_count(), 0);
-            unregister_claim(&claim).unwrap();
-        }
+        );
+        assert_eq!(snapshot.observability().counters().unacknowledged(), 0);
+        assert_eq!(snapshot.observability().outcomes().last_outcome(), None);
+        assert_eq!(timer_count(), 0);
+        unregister_claim(&claim).unwrap();
     }
 }
 
@@ -1435,7 +1426,6 @@ fn ordinary_callback_borrow_failure_stops_without_invoking_or_measuring_work() {
                     reason: InactiveReason::InvariantFailure,
                 }
             );
-            assert_eq!(snapshot.process_condition(), TimerProcessCondition::Failed);
             let counters = snapshot.observability().counters();
             assert_eq!(counters.work_started(), 1);
             assert_eq!(counters.work_completed(), 1);
@@ -2207,7 +2197,6 @@ fn watchdog_invariant_failure_overrides_nested_cancellation_and_clears_handles()
                     reason: InactiveReason::InvariantFailure,
                 }
             );
-            assert_eq!(snapshot.process_condition(), TimerProcessCondition::Failed);
             let counters = snapshot.observability().counters();
             assert_eq!(counters.work_completed(), 1);
             assert_eq!(counters.invariant_failure(), 1);
@@ -2539,7 +2528,7 @@ fn rejected_provider_binding_clears_handles_for_unavailable_or_expired_authority
 
     let rejected = RUNTIME.with(|runtime| {
         let _borrow = runtime.borrow();
-        bind_provider_handle(&token, handle)
+        bind_provider_handle(&token, handle, None)
     });
     assert!(matches!(rejected, Err(TimerError::RuntimeBusy)));
     assert_eq!(timer_count(), 0);
@@ -2549,7 +2538,7 @@ fn rejected_provider_binding_clears_handles_for_unavailable_or_expired_authority
         .expect("declaration should be removable after the borrow is released");
     let handle = platform::set_timer(Duration::ZERO, async {});
     assert!(matches!(
-        bind_provider_handle(&token, handle),
+        bind_provider_handle(&token, handle, None),
         Err(TimerError::RegistrationExpired)
     ));
     assert_eq!(timer_count(), 0);
@@ -2557,7 +2546,7 @@ fn rejected_provider_binding_clears_handles_for_unavailable_or_expired_authority
     RUNTIME.with(|runtime| *runtime.borrow_mut() = None);
     let handle = platform::set_timer(Duration::ZERO, async {});
     assert!(matches!(
-        bind_provider_handle(&token, handle),
+        bind_provider_handle(&token, handle, None),
         Err(TimerError::NotInitialized)
     ));
     assert_eq!(timer_count(), 0);
@@ -2605,35 +2594,6 @@ fn provider_restoration_drains_all_detached_handles_after_first_failure() {
     let restored_work = restored.take_work();
     assert!(restored_wakeup.is_none());
     clear_provider_handle(restored_work.expect("work handle must have been restored"));
-    assert_eq!(timer_count(), 0);
-}
-
-#[test]
-fn detached_provider_selection_does_not_reborrow_the_registry() {
-    let _fixture = setup();
-    let timer = identity("detached-selection");
-    let registration = register_once(
-        timer.clone(),
-        TimerStart::Retained { initial: None },
-        |_context| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
-    )
-    .expect("registration should succeed");
-    registration
-        .ensure_scheduled(TimerSchedule::At(15))
-        .expect("provider wake-up should arm");
-    let detached = with_registry_mut(|registry| Ok(registry.take_wakeup_handle(&timer)))
-        .expect("registry should be available")
-        .expect("provider handle should detach");
-
-    let selected = RUNTIME.with(|runtime| {
-        let _borrow = runtime.borrow_mut();
-        take_detached_or_owned_handle(Some(detached), |_| None)
-    });
-    let selected = selected
-        .expect("a detached handle should avoid another registry borrow")
-        .expect("the detached handle should be retained");
-
-    clear_provider_handle(selected);
     assert_eq!(timer_count(), 0);
 }
 
@@ -2837,7 +2797,6 @@ fn watchdog_failed_dispatch_clears_handles_without_confirming_work() {
             "work-admission",
             "successor-binding",
             "work-binding",
-            "confirmation",
         ] {
             let _fixture = setup();
             let timer = identity("provider-watchdog-dispatch-fault");
@@ -2864,7 +2823,6 @@ fn watchdog_failed_dispatch_clears_handles_without_confirming_work() {
                 }
                 "successor-binding" => inject_provider_install_fault(),
                 "work-binding" => inject_provider_install_fault_after(1),
-                "confirmation" => inject_provider_confirmation_fault(),
                 _ => unreachable!("closed failure stages"),
             }
             set_time(15);
@@ -2912,26 +2870,6 @@ fn watchdog_failed_dispatch_clears_handles_without_confirming_work() {
             }
         }
     }
-}
-
-#[test]
-fn provider_confirmation_failure_clears_the_installed_handle() {
-    let _fixture = setup();
-    let timer = identity("provider-confirmation-fault");
-    let registration = register_once(
-        timer.clone(),
-        TimerStart::Retained { initial: None },
-        |_context| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
-    )
-    .expect("registration should succeed");
-
-    inject_provider_confirmation_fault();
-    assert!(matches!(
-        registration.ensure_scheduled(TimerSchedule::At(15)),
-        Err(TimerError::OwnershipInvariant)
-    ));
-    assert_eq!(timer_count(), 0);
-    assert_retained_provider_binding_failure(&timer, 1, 0);
 }
 
 #[test]
@@ -4394,7 +4332,7 @@ impl ReconciliationSlot {
 #[test]
 fn failed_first_reconciliation_retires_all_policies_before_retry() {
     for policy in 0..3 {
-        for rejection in 0..3 {
+        for rejection in 0..2 {
             let _fixture = setup();
             let timer = identity("first-reconciliation");
             let dropped = Rc::new(Cell::new(false));
@@ -4408,8 +4346,6 @@ fn failed_first_reconciliation_retires_all_policies_before_retry() {
                 TimerCadence::from_nanos(if rejection == 0 { u64::MAX } else { 5 }).unwrap();
             if rejection == 1 {
                 inject_provider_install_fault();
-            } else if rejection == 2 {
-                inject_provider_confirmation_fault();
             }
             let result = slot.reconcile(
                 &timer,
@@ -4423,7 +4359,7 @@ fn failed_first_reconciliation_retires_all_policies_before_retry() {
                 (
                     0,
                     Err(TimerError::Schedule(ScheduleError::DeadlineOverflow))
-                ) | (1 | 2, Err(TimerError::OwnershipInvariant))
+                ) | (1, Err(TimerError::OwnershipInvariant))
             ));
             assert!(slot.claim().is_none());
             assert!(dropped.get());
@@ -4519,56 +4455,48 @@ fn later_reconciliation_deadline_error_preserves_existing_inactive_authority() {
 #[test]
 fn later_reconciliation_provider_error_retains_original_callback_for_retry() {
     for policy in 0..3 {
-        for confirmation in [false, true] {
-            let _fixture = setup();
-            let timer = identity("later-reconciliation-provider");
-            let cadence = TimerCadence::from_nanos(5).unwrap();
-            let dropped = Rc::new(Cell::new(false));
-            let captured = RemovalCapture {
-                timer: timer.clone(),
-                dropped: Rc::clone(&dropped),
-            };
-            let original_calls = Rc::new(Cell::new(0));
-            let ignored_calls = Rc::new(Cell::new(0));
-            let mut slot = ReconciliationSlot::new(policy);
-            slot.reconcile(
-                &timer,
-                cadence,
-                false,
-                Some(captured),
-                Rc::clone(&original_calls),
-            )
-            .unwrap();
-            let original_id = timer_snapshot(&timer).unwrap().unwrap().registration_id();
-            if confirmation {
-                inject_provider_confirmation_fault();
-            } else {
-                inject_provider_install_fault();
+        let _fixture = setup();
+        let timer = identity("later-reconciliation-provider");
+        let cadence = TimerCadence::from_nanos(5).unwrap();
+        let dropped = Rc::new(Cell::new(false));
+        let captured = RemovalCapture {
+            timer: timer.clone(),
+            dropped: Rc::clone(&dropped),
+        };
+        let original_calls = Rc::new(Cell::new(0));
+        let ignored_calls = Rc::new(Cell::new(0));
+        let mut slot = ReconciliationSlot::new(policy);
+        slot.reconcile(
+            &timer,
+            cadence,
+            false,
+            Some(captured),
+            Rc::clone(&original_calls),
+        )
+        .unwrap();
+        let original_id = timer_snapshot(&timer).unwrap().unwrap().registration_id();
+        inject_provider_install_fault();
+        let result = slot.reconcile(&timer, cadence, true, None, Rc::clone(&ignored_calls));
+        assert!(matches!(result, Err(TimerError::OwnershipInvariant)));
+        assert!(slot.claim().is_some());
+        assert!(!dropped.get());
+        let failed = timer_snapshot(&timer).unwrap().unwrap();
+        assert_eq!(failed.registration_id(), original_id);
+        assert_eq!(
+            failed.state(),
+            TimerRuntimeStateSnapshot::Inactive {
+                reason: InactiveReason::ControlFailure(TimerControlFailure::ProviderBindingFailed),
             }
-            let result = slot.reconcile(&timer, cadence, true, None, Rc::clone(&ignored_calls));
-            assert!(matches!(result, Err(TimerError::OwnershipInvariant)));
-            assert!(slot.claim().is_some());
-            assert!(!dropped.get());
-            let failed = timer_snapshot(&timer).unwrap().unwrap();
-            assert_eq!(failed.registration_id(), original_id);
-            assert_eq!(
-                failed.state(),
-                TimerRuntimeStateSnapshot::Inactive {
-                    reason: InactiveReason::ControlFailure(
-                        TimerControlFailure::ProviderBindingFailed
-                    ),
-                }
-            );
-            assert_eq!(timer_count(), 0);
-            slot.reconcile(&timer, cadence, true, None, Rc::clone(&ignored_calls))
-                .unwrap();
-            set_time(15);
-            while run_next_due() {}
-            assert_eq!(original_calls.get(), 1);
-            assert_eq!(ignored_calls.get(), 0);
-            unregister_claim(slot.claim().unwrap()).unwrap();
-            assert!(dropped.get());
-        }
+        );
+        assert_eq!(timer_count(), 0);
+        slot.reconcile(&timer, cadence, true, None, Rc::clone(&ignored_calls))
+            .unwrap();
+        set_time(15);
+        while run_next_due() {}
+        assert_eq!(original_calls.get(), 1);
+        assert_eq!(ignored_calls.get(), 0);
+        unregister_claim(slot.claim().unwrap()).unwrap();
+        assert!(dropped.get());
     }
 }
 
@@ -4695,31 +4623,25 @@ fn initial_provider_failures_retire_all_policies_and_lifetimes_before_capture_dr
             DeclarationLifetime::Retained,
             DeclarationLifetime::RemoveWhenStopped,
         ] {
-            for confirmation in [false, true] {
-                let _fixture = setup();
-                let timer = identity("initial-provider-failure");
-                let dropped = Rc::new(Cell::new(false));
-                let captured = RemovalCapture {
-                    timer: timer.clone(),
-                    dropped: Rc::clone(&dropped),
-                };
-                if confirmation {
-                    inject_provider_confirmation_fault();
-                } else {
-                    inject_provider_install_fault();
-                }
-                let result = initial_registration_with_capture(
-                    policy,
-                    timer,
-                    scheduled_start(lifetime, TimerSchedule::At(20)),
-                    captured,
-                );
-                assert!(matches!(result, Err(TimerError::OwnershipInvariant)));
-                assert!(dropped.get());
-                assert_eq!(timer_inventory().unwrap().timers(), []);
-                assert_eq!(timer_count(), 0);
-                assert!(!run_next_due());
-            }
+            let _fixture = setup();
+            let timer = identity("initial-provider-failure");
+            let dropped = Rc::new(Cell::new(false));
+            let captured = RemovalCapture {
+                timer: timer.clone(),
+                dropped: Rc::clone(&dropped),
+            };
+            inject_provider_install_fault();
+            let result = initial_registration_with_capture(
+                policy,
+                timer,
+                scheduled_start(lifetime, TimerSchedule::At(20)),
+                captured,
+            );
+            assert!(matches!(result, Err(TimerError::OwnershipInvariant)));
+            assert!(dropped.get());
+            assert_eq!(timer_inventory().unwrap().timers(), []);
+            assert_eq!(timer_count(), 0);
+            assert!(!run_next_due());
         }
     }
 }

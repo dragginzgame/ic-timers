@@ -8,6 +8,7 @@ license.workspace = true
 
 [dependencies]
 candid.workspace = true
+ic-build.workspace = true
 ic-testkit.workspace = true
 ic-testkit-candid.workspace = true
 ic-timers-test-protocol.workspace = true

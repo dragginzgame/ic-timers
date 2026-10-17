@@ -4,6 +4,101 @@
 
 Last updated: 2026-10-17
 
+## Arm commits, probe artifacts and consumer reporting
+
+Effects consume only the capabilities detached by their transition owner.
+Final handle installation now commits successful-arm facts in the same registry
+borrow, using one role/generation/state predicate. Watchdog still installs its
+successor before allocating work; that staged handle and restored handles do not
+commit counters. The separate production confirmation step and its obsolete
+fault-injection cases are removed. Pure transition subjects retain a test-only
+application model using the same predicates. All 158 current native library
+subjects, strict library Clippy, provider boundaries and Rustdoc pass.
+
+The native probe driver now uses published IC Build 0.12.1 for locked Rust 1.91
+`timer-probe` builds, isolated feature compiler state and exact artifact discovery.
+It retains artifact records until child tests finish reading them. Each generated
+probe namespace requests best-effort seven-day/512 MiB retention; active records
+remain protected. Make retains Testkit's offline server admission and passes its
+selected toolchain to the driver. All 21 runtime PocketIC subjects and the cohort
+measurement subject pass on admitted 16.1.0. All four cohort Wasm artifacts match
+direct Cargo builds byte for byte for the same current source and profile; this
+qualifies artifact equivalence, not a historical performance improvement.
+A producer failure stops before later builds or tests. Strict native harness
+Clippy, locked metadata and dependency-pin checks pass; the published library
+has no IC Build dependency. Cargo package versions remain 0.26.1.
+
+Committed-release fixtures copy only their adapter rather than the full release
+script tree, and version preparation no longer copies the changelog finalizer
+twice. Both focused fixtures and the adjusted Make admission/delegation fixture
+pass, along with source-following ShellCheck and formatting checks.
+Scoped source, artifact hashes and receipts belong to
+`target/qualification/arm-build-cleanup/`, compared with the captured arrival
+worktree at `/tmp/ic-timers-arm-build-arrival`. The first development build
+correctly rejected a concurrent source change; final live receipts use frozen
+inputs. Complete release and native macOS qualification remain user-owned.
+
+Operator-health classification is removed from the published Timers API surface.
+Consumers use inert state, scheduling mode and outcomes for their own projection.
+The complete pending batch is therefore 0.27.0; Cargo stays 0.26.1. The isolated
+Canic candidate at `/tmp/ic-timers-canic-projection` shares one ops projection
+between status and public metrics and preserves its wire enum. Two projector
+subjects pass against the real contract types. Core's Rust 1.99 check remains
+blocked by existing removed Memory exports, outside this projection change;
+neither Core integration nor downstream adoption is qualified.
+
+Canonical Shared adoption now selects committed 0.19.0 source
+`ac87fa23c8b4bdf94f4205658aa4a8851f6b2b8d`. The 134-payload snapshot retires the
+release-prose helper and fixture; local callers and advisory-specific tests are
+deleted. Structured changelog/metadata checks remain. Trial version, hook,
+release-ordering, tool-command, Rust-preparation and index fixtures pass. Pin
+catalogs and the IC exception are unchanged. Native macOS and complete release
+qualification remain separate.
+
+The refreshed catalog identity rejected old Cargo-tool receipts. Explicit setup
+through the canonical installer prepared the unchanged pinned tools in the
+shared store. The GitHub description matches the library's maintained scope.
+
+Arrival source, canonical preview/apply, scoped logs and the Canic preparation
+belong to `target/qualification/handles-projection-cleanup/`. The dirty Canic
+checkout is untouched. Commits, dependency/version delivery and release remain
+user-owned; earlier preparation artifacts keep their own bases.
+
+## Schedule preparation and reusable fixture candidates
+
+Initial registration now passes its checked schedule into the registry instead
+of resolving the same request twice. Ordinary completion prepares its effective
+directive snapshot and schedule together after pending-command arbitration.
+Public conversion boundaries remain validated, and failed initial creation still
+retires its captures outside the registry borrow. That compatible slice originally
+selected 0.26.2; the later reporting-policy hard cut above selects 0.27.0.
+
+All 160 native library subjects, strict library Clippy, Rust 1.91 Wasm compilation,
+Rustdoc and provider boundaries pass. Both live initial-rejection subjects pass
+through the admitted PocketIC 16.1.0 server. These focused receipts do not qualify
+the complete recovery/cohort gate or native macOS.
+
+The generic async gate is prepared in `/tmp/ic-timers-testkit-async-gate`, with
+consumer adoption in `/tmp/ic-timers-gate-adoption`. The consumer owns endpoints,
+authentication, waiting/error observations and deliberate traps; Testkit owns
+release state and real self-call polling with explicit reply decoding limits.
+The source tokenizer is prepared in `/tmp/ic-timers-shared-rust-source`, based on
+the existing untracked upstream helper. The same isolated consumer uses it for
+the local provider policy and retains compiler visibility checks. No mutable
+sibling dependency or uncommitted snapshot payload is installed here.
+
+The gate candidate passes three native subjects, native/test and Wasm Clippy,
+Rust 1.91 Wasm compilation and Rustdoc. Its native/optimized-Wasm consumer passes
+strict Clippy and all three live bounded gate, interleaving and continuation-trap
+subjects. Shared's nine lexical assertions, distribution companion fixture,
+ShellCheck and the actual consumer provider fixture pass on this Linux host.
+
+Patches, source identities, input hashes, descriptions and focused receipts are
+retained under `target/qualification/schedule-gate-cleanup/`. Supplier delivery
+and canonical snapshot adoption remain user-owned; the dirty sibling checkouts
+are untouched. Earlier preparation patches retain their captured bases and need
+reconciliation before delivery.
+
 ## Deadline and setup simplification
 
 Scheduling and platform queue admission now use the same checked duration and

@@ -69,9 +69,6 @@ esac
 
 release_date="${IC_TIMERS_RELEASE_DATE:-$(date -u +%F)}"
 bash scripts/ci/check-release-changelog.sh "$new_version" "$previous_version" "$release_date" CHANGELOG.md
-if ! bash scripts/ci/warn-release-prose.sh "${new_version}" docs/status/current.md; then
-    echo "warning: advisory release-prose check could not run; continuing" >&2
-fi
 
 if [[ "${check_only}" == true ]]; then
     echo "Release preflight passed: ${previous_version} -> ${new_version}"

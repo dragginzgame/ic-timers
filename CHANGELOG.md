@@ -2,6 +2,33 @@
 
 All notable changes to this project are recorded here.
 
+## [0.27.0]
+
+### Breaking
+
+- Remove `TimerProcessCondition` and `TimerSnapshot::process_condition()`.
+  Consumers own operator-health labels and derive them from snapshot state,
+  scheduling mode and outcomes. Update status and metrics adapters together with
+  the dependency selection.
+
+### Changed
+
+- Reuse checked initial schedules and prepare completion schedules together with
+  their snapshots, preserving request validation and pending-command arbitration.
+- Apply timer effects using the handles detached by their transition owner;
+  remove fallback registry lookups while retaining binding cleanup and rollback.
+- Commit final provider-handle admission and successful-arm accounting together;
+  preserve staged Watchdog recovery and remove the separate confirmation step.
+
+### Development
+
+- Adopt the reviewed Shared 0.19.0 snapshot and retire release-prose scanning and
+  its fixtures. Structured release metadata and changelog checks remain required.
+- Delegate isolated probe builds and exact Wasm artifact discovery to IC Build;
+  retain artifact ownership until PocketIC subjects finish reading their inputs.
+- Copy only the required release adapter into committed-release fixtures and
+  remove duplicate changelog-helper copying from version-preparation fixtures.
+
 ## [0.26.1] - 2026-10-17
 
 ### Development

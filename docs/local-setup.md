@@ -92,8 +92,9 @@ Make's jobserver descriptors for parallel execution; this does not grant
 installation authority to an inspection command or change the setup order.
 
 The installed `cloc` executable and local workspace `make cloc` are common setup.
-Fleet reports such as `make cloc-tooling` normally run in Shared Tooling; consumers
-need not vendor those reporters or run their regression suites. See the
+Fleet reports such as `make cloc-tooling` run from Shared Tooling's own Makefile;
+the consumer include exports local workspace LOC. Consumers need not vendor fleet
+reporters or run their regression suites. See the
 [optional fleet selection](consuming-snapshots.md#local-ic-tool-adoption).
 
 ## Catalog selection
@@ -239,7 +240,10 @@ an attempt already in flight can finish after the retry window. Permanent HTTP
 errors and checksum/admission failures are not retried. Exhaustion returns curl's
 final failure status and preserves the failed candidate and previous selection.
 Cleanup remains explicit. The `--versions` option
-selects a reviewed shell file, which is executable code like a Makefile.
+selects reviewed literal assignment data. Host/Rust installers, freshness checks
+and cache identities use the same parser. Shell commands, substitutions, duplicate
+keys and nonliteral values refuse before installation or cache output. Replace
+computed catalogs with complete literal selections before adopting this cut.
 
 Setup and offline checks admit the literal `.tools/host` link target. Malformed
 managed names, including trailing newlines, are refused before tool execution

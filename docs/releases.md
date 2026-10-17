@@ -591,7 +591,8 @@ deleting duplicate scenarios or extracting test support:
 | Allowed release files, metadata changes, independent locks/package sets | Consumer adapter fixture | Use actual selections and verify unrelated staged/unstaged input refusal. |
 | Receipt identity, selected older `RELEASE_COMMIT`, tag/evidence binding | Consumer adapter fixture | Preserve negative identity and payload tests across recovery. |
 | Failed preparation restoration and product-specific side effects | Consumer adapter fixture | Prove its own transaction and retained evidence. |
-| Publication eligibility and registry behavior | Consumer publication fixture | Keep separate from the branch/tag release proof. |
+| Shared publication-helper source, tag, destination and registry admission | Shared publication fixture, including real local Git | Keep actual adapter refusal before upload; do not duplicate the generic eligibility matrix. |
+| Consumer publication selection and upload recovery | Consumer publication fixture | Prove exact package/registry arguments, upload status and refusal to repeat an already-present version; keep separate from branch/tag release proof. |
 
 For IC Backup and IC Blob Storage, map local assertions to these obligations
 before removing runner-only scenarios. Their receipt and package/lock checks
@@ -691,6 +692,10 @@ Undated numbered sections at or below that version remain history. One pending
 numbered section must agree with the target; competing candidates or a target
 already dated differently are conflicts. The selected numbered candidate must
 be the first release heading; `Draft` and misplaced candidates are rejected.
+The pending spelling is `## [X.Y.Z]`, without ` - Unreleased`. Unsupported
+suffixes are refused with the source line and expected selected heading before
+any candidate output is emitted; conflicting dates and duplicate or misplaced
+candidates remain separate diagnostic causes.
 With no candidate, the first release heading must identify the saved previous
 version; the helper then inserts the selected heading without inventing content.
 

@@ -321,35 +321,6 @@ impl From<TimerRuntimeStateSnapshot> for TimerRegistrationStatus {
     }
 }
 
-/// Operator-facing condition derived from coherent state and scheduling mode.
-#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub enum TimerProcessCondition {
-    /// Explicit cancellation disabled the current declaration.
-    Disabled,
-    /// Declared but without pending work.
-    Idle,
-    /// Scheduled or running normally.
-    Active,
-    /// Waiting for an expected retry.
-    Retrying,
-    /// Stopped by a reported failure or invalid control state.
-    Failed,
-}
-
-impl TimerProcessCondition {
-    /// Return a stable adapter-friendly label.
-    #[must_use]
-    pub const fn label(self) -> &'static str {
-        match self {
-            Self::Disabled => "disabled",
-            Self::Idle => "idle",
-            Self::Active => "active",
-            Self::Retrying => "retrying",
-            Self::Failed => "failed",
-        }
-    }
-}
-
 /// Outcome of one callback that returned to the runtime.
 #[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub enum TimerCompletionOutcome {

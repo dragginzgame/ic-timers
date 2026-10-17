@@ -157,7 +157,7 @@ scheduling it; recovery-critical work needs Watchdog.
 
 When the provider or CDK drops a confirmed ordinary delivery without normal
 completion, its guard retires the exact generation. A retained declaration becomes
-inactive with `InactiveReason::Abandoned`, Failed condition and an Unacknowledged
+inactive with `InactiveReason::Abandoned` and an Unacknowledged
 observation. Its owner can explicitly rearm it. Transient declarations and pending
 unregistrations are removed; other pending schedules are discarded. No completion,
 work count or performance sample is fabricated. A future that remains alive and
@@ -293,6 +293,11 @@ when durable demand supplies a deadline. See the
 become mutation authority. The inventory carries the runtime epoch even when
 its ordered timer slice is empty. `timer_inventory` is the 0.6 replacement for
 the removed bare-vector `timer_snapshots` function.
+
+Operator-health labels are consumer policy. Derive them once from the snapshot's
+runtime state, scheduling mode and outcomes, then share that projection between
+status responses and metrics. The library exposes these facts without assigning
+an application health label.
 
 | Observation | Meaning |
 | --- | --- |
