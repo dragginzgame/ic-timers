@@ -562,12 +562,8 @@ mv "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" "$fixture/retained-evidence.
 # CI identity, a substitute download and a failing scratch Make recipe. This
 # proves local retained bytes/status; it does not dispatch or qualify uploads.
 mkdir -p "$GITHUB_WORKSPACE/scripts/ci" "$GITHUB_WORKSPACE/scripts/dev" "$GITHUB_WORKSPACE/ci"
-for script in qualify-failure-evidence qualify-hosted-failure run-validation-targets check-make-execution verify-file-checksum; do
-    cp "$root/scripts/ci/$script.sh" "$GITHUB_WORKSPACE/scripts/ci/"
-done
-cp "$root/scripts/ci/tool-catalog-records.pl" "$root/scripts/ci/ic-tool-pins.awk" "$GITHUB_WORKSPACE/scripts/ci/"
-cp "$root/scripts/dev/install-host-tools.sh" "$root/scripts/dev/tool-store.sh" "$GITHUB_WORKSPACE/scripts/dev/"
-cp "$root/ci/tool-versions.env" "$GITHUB_WORKSPACE/ci/"
+bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$GITHUB_WORKSPACE" \
+    scripts/ci/qualify-failure-evidence.sh
 status=0
 GITHUB_ACTIONS=true GITHUB_EVENT_NAME=workflow_dispatch \
     bash "$GITHUB_WORKSPACE/scripts/ci/qualify-failure-evidence.sh" unknown \
@@ -645,16 +641,9 @@ git init -q "$copied"
 mkdir -p "$copied/.git/objects/info"
 printf '%s\n' "$objects" > "$copied/.git/objects/info/alternates"
 git -C "$copied" update-ref HEAD "$(git -C "$root" rev-parse HEAD)"
-for script in collect-failure-evidence collect-tool-evidence qualify-failure-evidence qualify-hosted-failure archive-evidence \
-    select-tool-evidence run-validation-targets check-make-execution verify-file-checksum \
-    verify-evidence-checksums; do
-    cp "$root/scripts/ci/$script.sh" "$copied/scripts/ci/"
-done
-cp "$root/ci/tool-versions.env" "$copied/ci/"
-cp "$root/ci/ic-tools.tsv" "$copied/ci/"
-cp "$root/scripts/ci/ic-tool-pins.awk" "$root/scripts/ci/tool-catalog-records.pl" "$copied/scripts/ci/"
-cp "$root/scripts/dev/install-host-tools.sh" "$root/scripts/dev/install-ic-tools.sh" \
-    "$root/scripts/dev/tool-store.sh" "$copied/scripts/dev/"
+bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$copied" \
+    scripts/ci/collect-failure-evidence.sh scripts/ci/qualify-failure-evidence.sh \
+    scripts/ci/verify-evidence-checksums.sh
 # The selected workspace alias must compare equal to the physical script root.
 ln -s "$copied" "$fixture/selected-checkout"
 export GITHUB_WORKSPACE="$fixture/selected-checkout" CDPATH="$copied"

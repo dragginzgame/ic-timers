@@ -2,11 +2,11 @@
 """Check downloaded manual-qualification archives without extracting them."""
 
 import os
-import re
 import sys
 import tarfile
 
-from failure_evidence import (regular_evidence_archive, verify_hosted_scenario)
+from failure_evidence import (regular_evidence_archive, verify_compact_tools,
+                              verify_hosted_scenario)
 
 
 def verify_archive(path, stage, identity, tool_pins):
@@ -21,20 +21,8 @@ def verify_archive(path, stage, identity, tool_pins):
             # Late qualification follows successful complete native setup.
             # Require compact selection and caller pins in the downloaded bytes;
             # ordinary failures can still retain actively failed sets in full.
-            # Timers selects only the host bundle. IC installer/receipt schemas
-            # remain upstream; old unselected IC evidence may still be retained.
-            prefix = "tool-evidence/host/"
-            if read(prefix + "caller-pins") != tool_pins["host"]:
-                raise ValueError("compact evidence uses different caller pins")
-            if not read(prefix + "check.log"):
-                raise ValueError("compact host evidence lost its fresh check log")
-            selection = re.fullmatch(rb".+/\.tools/(host-set\.[A-Za-z0-9]+)\n",
-                                     read(prefix + "selection.txt"), re.DOTALL)
-            if selection is None:
-                raise ValueError("compact host evidence lost its selection identity")
-            active = ".tools/" + selection[1].decode()
-            if any(name == active or name.startswith(active + "/") for name in members):
-                raise ValueError("verified host payload was not compacted")
+            verify_compact_tools(members, read, tool_pins, identity["host"])
+
 
 
 if __name__ == "__main__":

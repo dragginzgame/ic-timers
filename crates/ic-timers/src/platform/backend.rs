@@ -2,7 +2,7 @@
 #![forbid(unsafe_code)]
 
 use super::queue::{AdmissionError, Queue};
-use ic_cdk_executor::MethodHandle;
+use ic_platform::executor::MethodHandle;
 use std::{
     cell::{Cell, RefCell},
     future::Future,
@@ -38,7 +38,7 @@ pub(crate) fn try_set_timer(
     delay: Duration,
     task: impl Future<Output = ()> + 'static,
 ) -> Result<TimerHandle, AdmissionError> {
-    let deadline = super::queue::deadline(ic0::time(), delay)?;
+    let deadline = super::queue::deadline(ic_platform::ic0::time(), delay)?;
     let result = QUEUE.with_borrow_mut(|queue| queue.insert(deadline, Box::pin(task) as Task));
     let id = result.map_err(|(error, task)| {
         drop(task);
@@ -65,7 +65,7 @@ pub(super) fn remove(id: u64) -> Option<Task> {
 pub(super) fn rearm() {
     let next = QUEUE.with_borrow(Queue::next);
     let timestamp = next.map_or(0, |(deadline, _)| deadline.max(BLOCKED_UNTIL.get()).max(1));
-    ic0::global_timer_set(timestamp);
+    ic_platform::ic0::global_timer_set(timestamp);
 }
 
 pub(super) fn due(now: u64) -> Option<u64> {
@@ -85,7 +85,7 @@ pub(super) fn defer(now: u64) {
 pub(super) fn reserve(id: u64) -> Option<usize> {
     let flight = Flight {
         task: id,
-        method: ic_cdk_executor::extend_current_method_context(),
+        method: ic_platform::executor::extend_current_method_context(),
     };
     // A rejected context is destroyed after releasing the table borrow.
     FLIGHTS
@@ -96,7 +96,7 @@ pub(super) fn reserve(id: u64) -> Option<usize> {
 pub(super) fn take_flight(slot: usize) -> Flight {
     FLIGHTS
         .with_borrow_mut(|flights| flights.take(slot))
-        .unwrap_or_else(|| ic0::trap(b"ic-timers: invalid transport callback"))
+        .unwrap_or_else(|| ic_platform::ic0::trap(b"ic-timers: invalid transport callback"))
 }
 
 pub(super) fn submitted(id: u64) {
@@ -104,6 +104,6 @@ pub(super) fn submitted(id: u64) {
 }
 
 pub(super) fn retry(id: u64) {
-    let deadline = ic0::time().saturating_add(RETRY_NS);
+    let deadline = ic_platform::ic0::time().saturating_add(RETRY_NS);
     QUEUE.with_borrow_mut(|queue| queue.retry(id, deadline));
 }

@@ -1,9 +1,9 @@
 //! Fresh, caller-owned testkit servers and IC instances from the verified binary.
 
-use candid::{Encode, Principal};
+use ic_platform::{Principal, candid::contract::encode_args};
 use ic_testkit::pic::{
-    CandidCallExt, CanisterInstallExt, InstallSpec, PocketIc, PocketIcBuilder, PocketIcInstance,
-    PocketIcStartupConfig, tick_until,
+    CanisterInstallExt, InstallSpec, PocketIc, PocketIcBuilder, PocketIcInstance,
+    PocketIcStartupConfig, tick_until, update_candid_args,
 };
 use ic_testkit_candid::DecodeLimits;
 use std::{convert::Infallible, env, fmt::Debug, path::PathBuf, task::Poll, time::Duration};
@@ -47,7 +47,7 @@ pub fn wait_for_probe<T: Debug>(
 pub fn install_probe(pic: &PocketIc, wasm: Vec<u8>) -> Principal {
     pic.try_create_and_install(InstallSpec {
         wasm,
-        init_bytes: Encode!().expect("encode probe init"),
+        init_bytes: encode_args(()).expect("encode probe init"),
         cycles: INIT_CYCLES,
         install_sender: None,
         label: Some("ic-timers probe".to_owned()),
@@ -63,14 +63,21 @@ pub fn fresh_pocket_ic() -> PocketIcInstance<PocketIc> {
         .filter(|path| !path.is_empty())
         .map(PathBuf::from)
         .expect("run the Testkit pocketic-check gate and supply its admitted POCKET_IC_BIN");
-    PocketIcStartupConfig::spawn(binary, STARTUP_TIMEOUT)
-        .build_instance(PocketIcBuilder::new().with_application_subnet())
-        .expect("construct a fresh owned PocketIC instance through ic-testkit")
+    PocketIcStartupConfig::Spawn {
+        server_binary: binary,
+        timeout: STARTUP_TIMEOUT,
+        server_hard_ttl: None,
+        server_idle_ttl: None,
+        server_output_files: None,
+    }
+    .build_instance(PocketIcBuilder::new().with_application_subnet())
+    .expect("construct a fresh owned PocketIC instance through ic-testkit")
 }
 
 /// Invoke an anonymous update with no arguments or return values.
 pub fn update_unit(pic: &PocketIc, canister_id: Principal, method: &str) {
-    pic.update_candid::<(), _>(
+    update_candid_args::<(), _>(
+        pic,
         canister_id,
         Principal::anonymous(),
         method,

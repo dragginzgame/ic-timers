@@ -10,8 +10,10 @@ use std::cell::{Cell, RefCell};
 const CADENCE_NS: u64 = 1_000_000_000;
 
 mod churn;
+mod mixed;
 mod ordinary;
 mod transport;
+mod watchdog;
 
 thread_local! {
     static REGISTRATION: RefCell<Option<WatchdogRegistration>> = const { RefCell::new(None) };
@@ -95,20 +97,10 @@ fn install_watchdog() -> bool {
 
 fn install_watchdog_with_initial_schedule(immediate: bool) -> bool {
     REGISTRATION.with_borrow_mut(|slot| {
-        if slot.is_some() {
-            return false;
-        }
-        let identity = probe_identity();
-        let cadence = TimerCadence::from_nanos(CADENCE_NS)
-            .unwrap_or_else(|_| ic_cdk::trap("probe cadence is invalid"));
-        let registration = register_watchdog(
-            identity,
-            cadence,
-            TimerStart::Retained {
-                initial: Some(TimerSchedule::After(std::time::Duration::from_nanos(
-                    if immediate { 0 } else { CADENCE_NS },
-                ))),
-            },
+        watchdog::install(
+            slot,
+            probe_identity(),
+            if immediate { 0 } else { CADENCE_NS },
             |context| {
                 let now_ns = ic_cdk::api::time();
                 let should_trap = TRAP_WINDOW
@@ -134,9 +126,6 @@ fn install_watchdog_with_initial_schedule(immediate: bool) -> bool {
                 WatchdogRunResult::new(TimerCompletion::success(1), decision)
             },
         )
-        .unwrap_or_else(|_| ic_cdk::trap("watchdog registration failed"));
-        *slot = Some(registration);
-        true
     })
 }
 
@@ -198,29 +187,12 @@ fn start_secondary() -> bool {
 
 fn install_secondary_watchdog() -> bool {
     SECONDARY_REGISTRATION.with_borrow_mut(|slot| {
-        if slot.is_some() {
-            return false;
-        }
-        let cadence = TimerCadence::from_nanos(CADENCE_NS)
-            .unwrap_or_else(|_| ic_cdk::trap("secondary cadence is invalid"));
-        let registration = register_watchdog(
-            secondary_identity(),
-            cadence,
-            TimerStart::Retained {
-                initial: Some(TimerSchedule::After(std::time::Duration::from_nanos(
-                    CADENCE_NS,
-                ))),
-            },
-            |_context| {
-                SECONDARY_COMPLETED_WORK.with(|completed| {
-                    completed.set(completed.get().saturating_add(1));
-                });
-                WatchdogRunResult::new(TimerCompletion::success(1), WatchdogDecision::Continue)
-            },
-        )
-        .unwrap_or_else(|_| ic_cdk::trap("secondary watchdog registration failed"));
-        *slot = Some(registration);
-        true
+        watchdog::install(slot, secondary_identity(), CADENCE_NS, |_context| {
+            SECONDARY_COMPLETED_WORK.with(|completed| {
+                completed.set(completed.get().saturating_add(1));
+            });
+            WatchdogRunResult::new(TimerCompletion::success(1), WatchdogDecision::Continue)
+        })
     })
 }
 

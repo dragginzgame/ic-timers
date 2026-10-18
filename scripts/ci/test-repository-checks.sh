@@ -11,12 +11,8 @@ trap 'fixture_finish "$?" "$temporary_root" "Failed repository-check fixture ret
 
 git init -q "${temporary_root}"
 mkdir -p "${temporary_root}"/{.githooks,scripts/{ci,dev,release},crates/ic-timers/src}
-cp "${repository_root}/Makefile" "${temporary_root}/Makefile"
-bash "$repository_root/scripts/ci/prepare-make-fixture.sh" "$repository_root" "$temporary_root"
-cp "${repository_root}/scripts/ci/check-provider-boundary.sh" "${temporary_root}/scripts/ci/"
-cp "${repository_root}/scripts/ci/check-dependency-pins.sh" \
-    "${repository_root}/scripts/ci/dependency-pins.jq" \
-    "${temporary_root}/scripts/ci/"
+bash "$repository_root/scripts/ci/prepare-script-fixture.sh" "$repository_root" "$temporary_root" \
+    Makefile make/consumer.mk scripts/ci/check-provider-boundary.sh scripts/ci/check-dependency-pins.sh
 export PATH="${repository_root}/.tools/host/bin:${PATH}"
 export YQ="${repository_root}/.tools/host/bin/yq"
 cd "${temporary_root}"
@@ -117,7 +113,8 @@ bash scripts/ci/check-provider-boundary.sh >/dev/null
 printf '%s\n' 'mod platform;' > crates/ic-timers/src/lib.rs
 expect_failure 'public interfaces' bash scripts/ci/check-provider-boundary.sh
 printf '%s\n' "${facade_header[@]}" > crates/ic-timers/src/lib.rs
-for operation in 'unsafe fn leak() {}' 'fn leak() { ic0::global_timer_set(1); }'; do
+for operation in 'unsafe fn leak() {}' 'fn leak() { ic_platform::ic0::global_timer_set(1); }' \
+    'fn leak() { ic_platform::executor::spawn_protected(async {}); }'; do
     printf '%s\n' "${operation}" > crates/ic-timers/src/leak.rs
     if [[ "${operation}" == unsafe* ]]; then expected=FFI; else expected='private platform'; fi
     expect_failure "${expected}" bash scripts/ci/check-provider-boundary.sh

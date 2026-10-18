@@ -7,9 +7,11 @@ publish = false
 license.workspace = true
 
 [dependencies]
-candid.workspace = true
 ic-build.workspace = true
+ic-host-process.workspace = true
+ic-platform = { workspace = true, features = ["candid"] }
 ic-testkit.workspace = true
+# Testkit 0.53 requires this limits identity; ic-platform#2 tracks retirement.
 ic-testkit-candid.workspace = true
 ic-timers-test-protocol.workspace = true
 

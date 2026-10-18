@@ -27,13 +27,10 @@ printf '%s\n' "${source_objects}" > .git/objects/info/alternates
 git update-ref HEAD "${source_commit}"
 git read-tree HEAD
 git checkout-index --all
-cp "${repository_root}/Makefile" Makefile
-bash "$repository_root/scripts/ci/prepare-make-fixture.sh" "$repository_root" "$temporary_root/repo"
-mkdir -p ci
-cp "${repository_root}/ci/tool-versions.env" ci/
-# The current fmt prerequisite must also exist in the fixture's exact index.
-cp -p "${repository_root}/scripts/ci/check-format-tools.sh" \
-    scripts/ci/
+# Overlay the current Make integration and its declared dependencies. The
+# current fmt prerequisite must also exist in the fixture's exact index below.
+bash "$repository_root/scripts/ci/prepare-script-fixture.sh" "$repository_root" "$temporary_root/repo" \
+    Makefile make/consumer.mk ci/tool-versions.env scripts/ci/check-format-tools.sh
 # The fixture overlays both members into the one root-owned workspace.
 mkdir -p crates/hook-fixture/src testing/crates/hook-probe/src
 cat > Cargo.toml <<'EOF'

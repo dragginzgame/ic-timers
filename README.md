@@ -57,15 +57,11 @@ but it does not promise that a task will happen exactly once.
 
 | Field | Value |
 | --- | --- |
-| Released API line | `0.22` |
-
-The 0.22 line uses Metrics 0.9 instruction summaries with `u128` totals and
-checked integer/fractional means. First lifecycle reconciliation remains atomic;
-see the [earlier release notes](CHANGELOG.md#0210---2026-10-12) for that contract.
+| Released API line | `0.27` |
 
 IC Timers is written in Rust 2024 and supports Rust
-1.91.0 and newer. The pending 0.26 backend owns one-shot dispatch through IC
-system calls and the CDK executor. See the [backend design](docs/design/0.26-owned-timer-backend.md)
+1.91.0 and newer. The private backend owns one-shot dispatch through IC
+system calls and the shared CDK executor through `ic-platform`. See the [backend design](docs/design/0.26-owned-timer-backend.md)
 for implementation and qualification boundaries.
 
 One IC Timers runtime can manage up to 64 named timers and 128 timer handles.
@@ -183,14 +179,14 @@ exact reconciliation can discard an invalid callback delay before that check.
 
 ## Minimal `Once` example
 
-The examples below use the released 0.22 API.
+The examples below use the released 0.27 API.
 
 Select one exact published package version when this crate participates in a
 shared framework/application registry:
 
 ```toml
 [dependencies]
-ic-timers = "=0.22.1"
+ic-timers = "=0.27.1"
 ```
 
 Every framework and application crate linked into the same canister must use
@@ -318,8 +314,9 @@ the runtime reset boundary. Observability values contain only registration-local
 measurements.
 
 Event counters and memory sample counts conservatively treat `u64::MAX` as
-saturated. Instruction measurements use Metrics 0.10 ordered `MeasurementSummary`
-values with `u128` totals and integer means, and `u64` samples and counts. Totals
+saturated. Instruction measurements use the selected Metrics ordered
+`MeasurementSummary` values with `u128` totals and integer means, and `u64`
+samples and counts. Totals
 above `u64::MAX` remain exact. An exactly reached cap remains exact, while actual
 count/total overflow
 is recorded by `aggregate().samples_overflowed()` and `aggregate().total_overflowed()`.
@@ -339,11 +336,12 @@ actual count overflow even when scale is zero. An exact count bounds the scaled
 result within `u128`; there is no separate projection-error case.
 
 Use `ic_timers::MeasurementSummary` or the same Metrics package when exchanging
-these values with other libraries: the prepared Timers 0.23 cut uses Metrics 0.10.
-Older Metrics lines have distinct Rust types. Preserve
-wide totals in reports/codecs, or use checked conversions when a narrower
-consumer field is required. The [adoption owner](docs/design/callback-delivery-ownership.md#prepared-metrics-010-adoption)
-records the selected graph and qualification limits.
+these values with other libraries. The [root dependency catalog](Cargo.toml) and
+lockfile select that package identity; different Metrics lines have distinct Rust
+types. Preserve wide totals in reports/codecs, or use checked conversions when
+a narrower consumer field is required. The
+[ownership boundary](docs/architecture.md#capability-ownership) identifies the
+measurement and runtime owners.
 
 Each instruction measurement covers the accepted `ic-timers` execution
 interval: it begins immediately before callback acceptance and ends after

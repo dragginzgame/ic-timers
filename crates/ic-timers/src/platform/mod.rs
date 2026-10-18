@@ -46,20 +46,20 @@ thread_local! {
 /// Return current IC message time in nanoseconds.
 #[cfg(not(test))]
 pub(crate) fn time_ns() -> u64 {
-    ic0::time()
+    ic_platform::ic0::time()
 }
 
 /// Return the current canister version.
 #[cfg(not(test))]
 pub(crate) fn canister_version() -> u64 {
-    ic0::canister_version()
+    ic_platform::ic0::canister_version()
 }
 
 /// Return call-context instruction consumption on the IC.
 #[cfg(not(test))]
 pub(crate) fn instruction_counter() -> u64 {
     // Native tests own their fake; production retains the IC binding contract.
-    ic0::performance_counter(1)
+    ic_platform::ic0::performance_counter(1)
 }
 
 /// Return current Wasm and stable memory extents in 64 KiB pages without
@@ -71,13 +71,13 @@ pub(crate) fn memory_pages() -> MemoryPageExtent {
     #[cfg(not(target_arch = "wasm32"))]
     let wasm = 0;
 
-    MemoryPageExtent::new(wasm, ic0::stable64_size())
+    MemoryPageExtent::new(wasm, ic_platform::ic0::stable64_size())
 }
 
 /// Abort the current message when an internal callback invariant is violated.
 #[cfg(not(test))]
 pub(crate) fn trap(message: &str) -> ! {
-    ic0::trap(message.as_bytes())
+    ic_platform::ic0::trap(message.as_bytes())
 }
 
 #[cfg(test)]

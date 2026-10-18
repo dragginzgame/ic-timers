@@ -50,7 +50,7 @@ fi
 mkdir "${temporary_root}/workspace with spaces"
 ln -s 'workspace with spaces' "${temporary_root}/workspace-alias"
 cp "${makefile}" "${temporary_root}/workspace with spaces/Makefile"
-bash "$repository_root/scripts/ci/prepare-make-fixture.sh" "$repository_root" "$temporary_root/workspace with spaces"
+bash "$repository_root/scripts/ci/prepare-script-fixture.sh" "$repository_root" "$temporary_root/workspace with spaces" make/consumer.mk
 mkdir -p "$temporary_root/workspace with spaces/ci"
 cp "$repository_root/ci/release-delivery.txt" "$temporary_root/workspace with spaces/ci/"
 cd "${temporary_root}/workspace-alias"

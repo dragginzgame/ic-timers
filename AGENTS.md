@@ -65,7 +65,7 @@ This file is normative for automated contributors.
   Retain the previously approved probe locations under `testing/crates/`;
   those directories no longer introduce a workspace or dependency catalog.
   The unpublished `ic-timers-test-protocol` package owns probe wire records only;
-  it has no timer-runtime or platform dependency. Probe canisters and the native
+  it selects only Platform's Candid contract, with no timer-runtime, executor or platform-system API. Probe canisters and the native
   decoder share those records without exporting them from the published library.
 - Keep `ic-timers` as the default member and select it explicitly in library
   validation, docs, MSRV and Wasm commands. Probes remain unpublished, inherit

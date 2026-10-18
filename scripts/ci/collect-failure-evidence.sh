@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Shared companions: scripts/ci/collect-tool-evidence.sh ci/tool-versions.env
 set -euo pipefail
 
 # CI owns the checkout and scratch directory. Archive only the maintained

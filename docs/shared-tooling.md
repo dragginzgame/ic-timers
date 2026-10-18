@@ -2,122 +2,110 @@
 
 ## Current authority
 
-One [snapshot](../.shared-tooling.snapshot) records the exact reviewed source,
-entrypoint roots and all **134** payload hashes/modes. It selects committed
-Shared 0.20.0 source `3f87ddc1a0c1616775b2114c42a4adee7376c9b1` through canonical
-preview and refresh. Existing roots are retained; the release include adds its
-required delivery checker. The unused IC installer fixture entrypoint is retired
-through the canonical exporter. Uncommitted supplier work is not part of this adoption.
+One [snapshot](../.shared-tooling.snapshot) records **136** canonical payloads
+from committed Shared 0.24.0,
+`cab12cd3dfa4fdb34846b25397f0d72881bb9ae0`. Canonical preview and refresh use
+that clean committed source, excluding the sibling's pending 0.24.1 edits.
+The canonical uploader remains exact 7.0.2 source
+`cf430e030ddbb5b0abf93d22962f4752f3646cd9`.
 
-Common setup and PATH publication cover host/Cargo tools. Timers adds only
-Testkit preparation/checking through its ordered Make extensions. No maintained
-command selects an IC executable bundle or publishes its PATH. Product Wasm
-builds use Cargo through IC Build; recovery and cohort gates remain required.
+Existing roots remain except the retired Make-only fixture copier and the generic
+preparation fixture. The latter now requires Shared's own CI workflow; keeping
+that supplier test here would cross Timers' workflow boundary. Its canonical
+owner retains the test. Timers' CI workflow is unchanged. The snapshot adds the
+required host-platform observer; no exported payload is patched locally.
 
-The consumer-owned [delivery declaration](../ci/release-delivery.txt) admits only
-direct release delivery. Common Make admission and the standalone adapter use
-the same read-only checker; unsupported PR selections refuse before effects.
-Focused consumer fixtures qualify release routing, refusal, hook formatting,
-tool setup and failure-evidence integration. They do not establish native macOS,
-hosted or complete release acceptance.
-The [baseline](../DRAGGINZGAME.md) and [local overlay](../AGENTS.md) govern scope.
+The [baseline](../DRAGGINZGAME.md), [local overlay](../AGENTS.md) and
+[0.24 adoption checklist](consuming-snapshots.md#dependency-role-adoption-in-0240)
+govern this adoption. Earlier selections and qualification receipts remain
+historical in the [handoff archive](status/archive-2026-10-18.md) and
+[adoption evidence](evidence/shared-tooling-history.md).
 
-The complete [previous adoption record](evidence/shared-tooling-history.md) is
-historical. Its earlier bundles, compiler selections, pending states and evidence
-remain bound to their original sources. Current work belongs to the compact
-[handoff](status/current.md), not a second release queue here.
+## Dependency roles and formatting
+
+The [root manifest](../Cargo.toml) separates `Production packages` from
+`Tests and tooling packages`, and `Production dependencies` from
+`Tests and tooling only`. These describe use here, not registry publication.
+There is still one catalog and lockfile; member dependency tables determine
+actual use through `workspace = true`.
+
+The published `ic-timers` library uses Metrics, Thiserror and Platform
+(executor and raw IC system bindings). Candid, the full CDK, Build, Host Process, Testkit,
+its Candid adapter and the probe protocol serve only qualification packages here.
+The catalog's
+local `ic-timers` entry is the probes' dependency on the production library.
+
+The local Make adapter selects `cargo sort --workspace --grouped` for formatting
+and adds `--check` for independent checks. Hooks use the same `make fmt` policy
+inside their exact index export. All current, commit-preparation and
+committed-source release checks select `--manifest-order-grouped`. Those release
+checks are read-only, operate on their selected source, and never globally
+reorder the two dependency groups. No Rust source formatting or manifest write
+was run against the normal checkout during this adoption; write behavior was
+qualified in a disposable fixture.
 
 ## Consumer boundaries
 
-Shared owns canonical governance/audit procedures, common tools/store admission,
-formatting and release mechanics, structured Cargo/YAML checks, candidate
-selection, metadata mutation/rollback and generic evidence transport. Timers owns
-its runtime/provider boundary, release source/tag/impact policy, product artifact
-identity, probe subjects and IC recovery/cohort qualification. The local
-[release guide](releasing.md) and [hygiene overlay](audits/code-hygiene.md) identify
-those callers and their authority.
+Shared owns common tools/store admission, fixture dependency closure, evidence
+transport, formatting mechanics and Cargo release metadata custody. Timers owns
+runtime/provider boundaries, direct-only delivery in
+[the declaration](../ci/release-delivery.txt), product source/tag/impact policy,
+probe subjects and complete recovery/cohort gates. See [releasing](releasing.md)
+and the [hygiene overlay](audits/code-hygiene.md).
 
-Shared catalogs remain unchanged. Timers' unused qualified IC catalog is retired;
-old IC sets and failed setup diagnostics remain eligible for evidence retention
-without selecting or admitting them. Testkit owns its server and compatibility
-admission through the CLI selected by the root lockfile. No extra tool-store
-manager, fallback installer or implicit setup is introduced.
+Common Rust setup now selects only Cargo sort and sort-derives. Timers has no
+Candid-extraction caller; existing retained extractor installations are not a
+new product dependency or selected common tool. The ordered Make extensions
+prepare/check Testkit through the root-lock-selected CLI. Testkit owns server
+selection and admission. Timers selects no IC executable bundle or PATH.
 
-## Consolidated ownership
+Local script/Make fixtures select explicit roots through the shared
+`prepare-script-fixture.sh`; Shared admits and copies the declared closure.
+Timers retains actual Make inputs, substitutions and product assertions.
+Downloaded-evidence qualification now delegates host-only compact verification
+to Shared's selected-bundle interface. Timers retains source/run identity and
+product paths; it no longer implements a parallel host receipt verifier.
+Unselected IC stores and failed diagnostics remain eligible for retention.
 
-The former root/audit/helper bundles contained 146 records for 123 canonical
-source paths. Canonical preview and `--takeover-snapshot` transferred the root
-supplement and nested helper receipt, proving committed bytes and executable
-modes before publication. The new union adds four directly used helper/fixture
-roots, yielding 127 unique payloads. Eighteen nested payload copies and two
-obsolete manifests are retired; their canonical owners remain. Local Cargo-helper
-callers now use `scripts/ci/` directly.
+## Deployment dependency exclusions
 
-Only one snapshot integrity check and one physical export layout remain. The
-consumer corruption fixture still rejects corruption of actual governance, audit
-and Cargo payloads. Generic untrusted-helper rejection belongs to Shared's
-verifier fixture. Selected workflow bodies use stable
-step IDs through Shared's complete-input extractor; Timers retains actual-step
-execution, ordering and failure assertions. Changelog preflight is read-only;
-coordinated Shared preparation is the sole metadata writer.
+The selected Shared 0.24 checker `check-cargo-dependency-boundaries.sh` is now
+included in `actions-check`. The local policy forbids direct Candid/CDK-family
+edges except Candid/CDK in the two unpublished canisters and the old decoder in
+the native driver. Direct IC0 and executor declarations are forbidden in every
+member; Platform 0.1.8 owns both exact selections. [Published API blockers](architecture.md#candid-and-cdk-dependency-boundary)
+explain those exceptions. The checker resolves aliases through Cargo metadata and
+checks all normal/build/dev/target declarations. The root has one workspace;
+there are no maintained independent Cargo fixtures or manifests.
 
-Local setup and hosted Rust lanes call `scripts/dev/prepare-rust-toolchain.sh`.
-Timers' `prepare-rust.sh` owns the full development/MSRV component policy;
-the tag lane retains its narrower rustfmt selection. `make update-dev` passes
-its existing MSRV selection and prepares both compilers before common tools.
-Validation targets never invoke setup. The one added installer root yields 128
-payloads; canonical preview retains the previous 127 payloads.
+Locked all-feature normal/build graphs for the library were inspected for
+`wasm32-unknown-unknown` and `x86_64-unknown-linux-gnu`. All test/tooling-only
+catalog dependencies are absent, excluding the selected root package itself.
+Rust 1.91 library Wasm compilation passes. This is library-graph evidence, not
+qualification of an application's final linked canister.
 
-Two further entrypoints select generic snapshot and downloaded-evidence owner
-fixtures, yielding 130 payloads. Timers keeps actual export corruption, collector
-integration, source/run identity and qualified-catalog selection. Generic archive,
-receipt and directory/helper rejection cases run at their canonical owner.
-Release callers use the Shared stable-version and graph readers directly; the
-worktree graph selection still explicitly clears ambient `RELEASE_COMMIT`.
+**Missing enforcement:** pin/inheritance and direct-boundary checks do not validate
+role comments, unused catalog boundary entries, unenumerated future family names,
+feature reachability or transitive exclusions; the provider check validates
+source ownership. Platform's default features are disabled in the catalog;
+member features are inspected separately. Its unconditional Principal/Serde
+support is production-transitive even though Candid remains qualification-only.
+No existing automated gate binds this exclusion policy to deployed artifact
+bytes. The consuming canister's build/deployment owner must enforce its own
+exclusions with the exact source, lockfile, target/features and artifact digest.
+A consumer may legitimately use CDK/Candid for its application even though those
+are qualification-only dependencies of this workspace. See the
+[release boundary](releasing.md#dependency-role-boundary).
 
-Three more entrypoints select the common hosted preparation action, its execution
-fixture and a disposable Make-fixture bootstrap, yielding 133 payloads. Timers
-keeps compiler/cache/product policy, local tool extensions and fixture assertions.
-The bootstrap copies only the canonical common Make skeleton; each caller still
-supplies its own Makefile, catalogs and stubs. Shared's existing Make-consumer
-fixture qualifies that layout without a second bootstrap-only suite.
+## Qualification and refresh
 
-The existing shared evidence action also uploads caller-prepared archives and
-collection logs without selecting tools again. Timers keeps product collection,
-original status, identity and downloaded-content qualification; Shared owns safe
-prepared-file selection, the pinned upload and completeness enforcement. The
-private Timers upload action is removed. This changes no entrypoint selection.
+Focused receipts, graph selections, canonical preview/apply and before-image
+identity are retained in `target/qualification/shared024/`; the task arrival is
+`/tmp/ic-timers-shared024-arrival.0djwogzx`. Current results belong in the
+[handoff](status/current.md). Linux caller checks do not qualify native macOS,
+hosted upload/download or the complete release gate.
 
-The existing fixture exit runner owns injected exits, completion-marker selection
-and checked scratch-root retention. Timers keeps its thirteen-source roster,
-absolute/relative/aliased scratch contexts and collector diagnostics. Selected
-mandatory assertion probes use the original owner guards, including return-based
-guards. This also changes no entrypoint selection.
-
-Timers' format and release fixtures use the per-target Make admission helper.
-Shared owns exhaustive flag aliases/replacement cases; Timers keeps actual target
-rosters, substituted effects, snapshot routing and unchanged worktree/index checks.
-
-Generic nested-workflow discovery and failed Git-inventory cases now run at
-Shared's dependency-checker owner. Timers retains a positive/negative caller smoke
-check, its own dependency exceptions and actual Make/provider integration checks.
-This adoption changes no entrypoint or tool selection.
-
-The Cargo reader owns missing/duplicate tables and invalid version syntax.
-Timers exercises reader rejection at its actual bump boundary, preserving status
-and metadata. The release-gate fixture owns the complete CI roster and failure
-order; repository checks keep their own admission and provider boundaries.
-
-## Refreshing and qualification
-
-Use the reviewed source's canonical exporter against the repository root:
-preview first, then apply the same selection. Existing entrypoints are retained;
-select new helpers explicitly after reviewing their callers. No nested temporary
-Git export, manual ownership rewrite or generated-file patch is needed. Follow
-[the canonical procedure](consuming-snapshots.md) for proof and interruption scope.
-
-Preparation evidence and before-images are retained at
-`/tmp/ic-timers-owner-consolidation.eggohebc/`. The handoff records focused native,
-MSRV, Bash 5/genuine Bash 3.2 and consumer qualification. Those checks do not
-replace full owner/native macOS, hosted upload or live PocketIC acceptance.
-Normal Git delivery and package versions remain maintainer-owned.
+Future refreshes use the reviewed source's canonical exporter: preview first,
+then apply the same explicit root selection. Retain directly used helpers and
+review closure changes against local callers, especially supplier-only fixtures.
+No moving sibling source or temporary proposal is adopted implicitly.

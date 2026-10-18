@@ -14,6 +14,9 @@ override SHARED_TOOLING_ROOT := $(CURDIR)
 override RELEASE_DELIVERY_POLICY := $(CURDIR)/ci/release-delivery.txt
 RELEASE_DELIVERY ?= direct
 export RELEASE_DELIVERY
+# Preserve dependency-role groups with the existing sorter.
+FORMAT_WRITE_COMMAND = bash -ec '"$$1" sort --workspace --grouped; "$$1" fmt --all' -- "$(FORMAT_CARGO)"
+FORMAT_CHECK_COMMAND = bash -ec '"$$1" sort --workspace --grouped --check; "$$1" fmt --all -- --check' -- "$(FORMAT_CARGO)"
 include make/consumer.mk
 
 CI_TARGETS := actions-check shell-check provider-check fmt-check check clippy release-check docs-check test wasm-check package
@@ -33,7 +36,7 @@ help:
 	@echo "  pocketic-watchdog   Build and run the focused watchdog canister evidence"
 	@echo "  pocketic-cohorts    Build and run comparable timer policy cohorts"
 	@echo "  pocketic-check      Check the Testkit-selected PocketIC server offline"
-	@echo "  provider-check      Enforce the private ic-cdk-timers provider boundary"
+	@echo "  provider-check      Enforce private IC dispatch and executor ownership"
 	@echo "  testing-check       Check formatting and lint supported unpublished probes"
 	@echo "  release-verify      Run the complete fail-closed release evidence gate"
 	@echo "  release-impact      Classify changes since the current version tag"
@@ -50,7 +53,7 @@ help:
 	@echo "  shell-check         Check repository shell-script syntax"
 	@echo "  msrv                Check with the minimum supported Rust version"
 	@echo "  ci                  Run the local CI gate"
-	@echo "  update-dev          Install pinned Rust/host/IC tools, Wasm target, and hook"
+	@echo "  update-dev          Install selected Rust, host/Cargo tools, Testkit, and hook"
 	@echo "  patch|minor|major   Prepare version metadata without deployment tests"
 	@echo "  release-{patch,minor,major}  Commit, tag, and push a SemVer release"
 	@echo "  release-resume VERSION=x.y.z Resume exact saved shared release intent"
@@ -122,6 +125,7 @@ pocketic-cohorts: pocketic-check
 actions-check: host-tools-check
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/check-dependency-pins.sh \
 		--consumer "$(CURDIR)" --cargo-inheritance
+	bash scripts/ci/check-cargo-dependency-boundaries.sh --consumer "$(CURDIR)"
 
 shell-check:
 	@set -e; for script in .githooks/pre-commit scripts/ci/*.sh scripts/dev/*.sh scripts/release/*.sh; do \
@@ -140,7 +144,6 @@ release-check:
 	bash scripts/ci/test-cloc.sh
 	bash scripts/ci/test-failure-evidence.sh
 	bash scripts/ci/test-format-tools.sh
-	bash scripts/ci/test-prepare-common-tools.sh
 	bash scripts/ci/test-make-consumer.sh
 	bash scripts/ci/test-evidence-checksums.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/test-dependency-pins.sh

@@ -1,14 +1,15 @@
 //! Wire records shared by unpublished canister probes and their native decoder.
 //! This package owns no timer state, runtime authority or platform sampling.
 
-use candid::CandidType;
-use serde::Deserialize;
+use ic_platform::candid::contract::{CandidType, serde::Deserialize};
 
 #[cfg(test)]
 mod tests;
 
 /// Flattened callback memory-page observations.
 #[derive(CandidType, Debug, Deserialize, Eq, PartialEq)]
+#[candid_path("ic_platform::candid::contract")]
+#[serde(crate = "ic_platform::candid::contract::serde")]
 pub struct ProbeMemorySummary {
     pub samples: u64,
     pub latest_wasm_start_pages: u64,
@@ -21,6 +22,8 @@ pub struct ProbeMemorySummary {
 
 /// Runtime recovery and upgrade observations, with absent timer fields empty.
 #[derive(CandidType, Debug, Default, Deserialize, Eq, PartialEq)]
+#[candid_path("ic_platform::candid::contract")]
+#[serde(crate = "ic_platform::candid::contract::serde")]
 pub struct ProbeSnapshot {
     pub registration_id: Option<(u64, u64, u64)>,
     pub registered: bool,
@@ -51,6 +54,8 @@ pub struct ProbeSnapshot {
 
 /// Ordinary callback suspension, abandonment and capture-release observations.
 #[derive(CandidType, Debug, Deserialize)]
+#[candid_path("ic_platform::candid::contract")]
+#[serde(crate = "ic_platform::candid::contract::serde")]
 pub struct OrdinaryObservation {
     pub declared: bool,
     pub running: bool,
@@ -72,6 +77,8 @@ pub struct OrdinaryObservation {
 
 /// Provider replacement and cancellation churn observations.
 #[derive(CandidType, Debug, Deserialize)]
+#[candid_path("ic_platform::candid::contract")]
+#[serde(crate = "ic_platform::candid::contract::serde")]
 pub struct ChurnObservation {
     pub wasm_pages: u64,
     pub inventory_len: u64,
@@ -81,6 +88,8 @@ pub struct ChurnObservation {
 
 /// One measured registration/control operation.
 #[derive(CandidType, Debug, Deserialize)]
+#[candid_path("ic_platform::candid::contract")]
+#[serde(crate = "ic_platform::candid::contract::serde")]
 pub struct OperationMeasurement {
     pub changed: bool,
     pub instructions: u64,
@@ -88,6 +97,8 @@ pub struct OperationMeasurement {
 
 /// Instruction intervals for the probe's memory-sampling calibration.
 #[derive(CandidType, Debug, Deserialize)]
+#[candid_path("ic_platform::candid::contract")]
+#[serde(crate = "ic_platform::candid::contract::serde")]
 pub struct MemorySamplingMeasurement {
     pub empty_bracket_instructions: u64,
     pub sampled_bracket_instructions: u64,
@@ -95,6 +106,8 @@ pub struct MemorySamplingMeasurement {
 
 /// Policy-cohort observations with a borrowed producer or owned decoder label.
 #[derive(CandidType, Debug, Default, Deserialize)]
+#[candid_path("ic_platform::candid::contract")]
+#[serde(crate = "ic_platform::candid::contract::serde")]
 pub struct CohortObservation<Label = String> {
     pub cohort: Label,
     pub registered: bool,
@@ -114,4 +127,21 @@ pub struct CohortObservation<Label = String> {
     pub snapshot_instructions: u64,
     pub inventory_len: u64,
     pub inventory_instructions: u64,
+}
+
+/// Mixed Watchdog/after-completion isolation and volatile upgrade observations.
+#[derive(CandidType, Clone, Debug, Deserialize, Eq, PartialEq)]
+#[candid_path("ic_platform::candid::contract")]
+#[serde(crate = "ic_platform::candid::contract::serde")]
+pub struct TimerProbeSnapshot {
+    pub watchdog_registered: bool,
+    pub application_registered: bool,
+    pub watchdog_callbacks: u32,
+    pub application_callbacks: u32,
+    pub watchdog_instructions: u64,
+    pub application_instructions: u64,
+    pub watchdog_times: Vec<u64>,
+    pub application_times: Vec<u64>,
+    pub trap_at: Option<u64>,
+    pub exhaust_at: Option<u64>,
 }

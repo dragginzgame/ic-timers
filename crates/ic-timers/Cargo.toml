@@ -16,9 +16,8 @@ publish = true
 links = "ic-timers-global-timer"
 
 [dependencies]
-ic-cdk-executor.workspace = true
 ic-metrics.workspace = true
-ic0.workspace = true
+ic-platform = { workspace = true, features = ["executor", "ic0"] }
 thiserror.workspace = true
 
 [lints]

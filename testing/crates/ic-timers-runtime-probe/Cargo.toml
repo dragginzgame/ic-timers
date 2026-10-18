@@ -10,6 +10,8 @@ license.workspace = true
 crate-type = ["cdylib"]
 
 [dependencies]
+# Platform 0.1.8 has no CDK macro/call facade; ic-platform#1 tracks retirement.
+# CDK entrypoints generate direct ::candid references.
 candid.workspace = true
 ic-cdk.workspace = true
 ic-timers.workspace = true

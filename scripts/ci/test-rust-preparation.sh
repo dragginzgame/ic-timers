@@ -9,11 +9,9 @@ trap 'fixture_finish "$?" "$fixture" "Failed Rust preparation fixture retained"'
 
 export PATH="$root/.tools/host/bin:$PATH"
 real_make="$(command -v make)"
-mkdir -p "$fixture/repo/scripts/dev" "$fixture/repo/scripts/ci" "$fixture/repo/make" "$fixture/bin"
-cp "$root/scripts/dev/prepare-rust.sh" "$root/scripts/dev/prepare-rust-toolchain.sh" \
-    "$root/scripts/dev/update-dev.sh" "$fixture/repo/scripts/dev/"
-cp "$root/Makefile" "$root/rust-toolchain.toml" "$fixture/repo/"
-bash "$root/scripts/ci/prepare-make-fixture.sh" "$root" "$fixture/repo"
+mkdir -p "$fixture/repo" "$fixture/bin"
+bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$fixture/repo" \
+    Makefile make/consumer.mk rust-toolchain.toml scripts/dev/update-dev.sh
 cat > "$fixture/bin/rustup" <<'STUB'
 #!/usr/bin/env bash
 set -euo pipefail

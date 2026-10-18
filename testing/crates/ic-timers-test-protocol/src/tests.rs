@@ -1,5 +1,18 @@
 use super::{CohortObservation, ProbeMemorySummary, ProbeSnapshot};
-use candid::{CandidType, Decode, Encode};
+use ic_platform::candid::{
+    DecodeLimits,
+    contract::{CandidType, encode_args},
+    decode_args,
+};
+
+// The protocol subjects use the same finite ceilings as the native probe driver.
+const LIMITS: DecodeLimits = DecodeLimits {
+    reply_bytes: 64 * 1024,
+    decoding_quota: 1_000_000,
+    skipping_quota: 10_000,
+    type_entries: 256,
+    header_bytes: 8 * 1024,
+};
 
 #[test]
 fn borrowed_cohort_label_decodes_into_owned_text_with_wide_totals() {
@@ -13,9 +26,9 @@ fn borrowed_cohort_label_decodes_into_owned_text_with_wide_totals() {
         work_instruction_total: u128::MAX,
         ..CohortObservation::default()
     };
-    let encoded = Encode!(&observed).expect("encode borrowed cohort observation");
-    let decoded =
-        Decode!(&encoded, CohortObservation<String>).expect("decode owned cohort observation");
+    let encoded = encode_args((&observed,)).expect("encode borrowed cohort observation");
+    let (decoded,) = decode_args::<(CohortObservation<String>,)>(&encoded, LIMITS)
+        .expect("decode owned cohort observation");
     assert_eq!(decoded.cohort, "watchdog");
     assert_eq!(
         decoded.scheduler_instruction_total,
@@ -52,6 +65,9 @@ fn snapshot_round_trip_preserves_wide_totals_and_optional_memory() {
         }),
         ..ProbeSnapshot::default()
     };
-    let encoded = Encode!(&observed).expect("encode wide probe snapshot");
-    assert_eq!(Decode!(&encoded, ProbeSnapshot).unwrap(), observed);
+    let encoded = encode_args((&observed,)).expect("encode wide probe snapshot");
+    assert_eq!(
+        decode_args::<(ProbeSnapshot,)>(&encoded, LIMITS).unwrap().0,
+        observed
+    );
 }

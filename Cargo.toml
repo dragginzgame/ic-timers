@@ -1,6 +1,8 @@
 [workspace]
 members = [
+    # Production packages
     "crates/ic-timers",
+    # Tests and tooling packages
     "testing/crates/ic-timers-pocketic",
     "testing/crates/ic-timers-runtime-probe",
     "testing/crates/ic-timers-size-probe",
@@ -22,19 +24,22 @@ documentation = "https://docs.rs/ic-timers"
 keywords = ["internet-computer", "canister", "timer", "dfinity", "icp"]
 categories = ["asynchronous", "wasm"]
 
+# Groups describe use by this workspace's packages; members inherit with `workspace = true`.
 [workspace.dependencies]
+# Production dependencies
+ic-metrics = "0.14"
+ic-platform = { version = "0.1.8", default-features = false }
+thiserror = "2.0"
+
+# Tests and tooling only
 candid = "0.10"
-ic-build = "0.14"
+ic-build = "0.17"
 ic-cdk = "=0.20.3"
-ic-cdk-executor = "=2.0.0"
-ic-metrics = "0.13"
-ic-testkit = "0.51"
-ic-testkit-candid = "0.51"
+ic-host-process = "0.27"
+ic-testkit = "0.53"
+ic-testkit-candid = "0.53"
 ic-timers = { path = "crates/ic-timers" }
 ic-timers-test-protocol = { path = "testing/crates/ic-timers-test-protocol" }
-ic0 = "=1.2.0"
-serde = "1.0"
-thiserror = "2.0"
 
 [workspace.lints.rust]
 missing_docs = "warn"

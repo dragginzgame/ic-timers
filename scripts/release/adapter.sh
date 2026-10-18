@@ -19,18 +19,18 @@ case "${1:-}" in
         make --no-print-directory pocketic-check
         ;;
     check)
-        RELEASE_COMMIT='' bash "$metadata_checker" check ic-timers --manifest-order
+        RELEASE_COMMIT='' bash "$metadata_checker" check ic-timers --manifest-order-grouped
         ;;
     commit-check)
         bash "$script_dir/../ci/check-release-source.sh" \
             --allow Cargo.toml --allow Cargo.lock --allow CHANGELOG.md
         git ls-files --error-unmatch -- Cargo.toml Cargo.lock CHANGELOG.md > /dev/null
         git diff --quiet --
-        RELEASE_COMMIT='' bash "$metadata_checker" check ic-timers --manifest-order
+        RELEASE_COMMIT='' bash "$metadata_checker" check ic-timers --manifest-order-grouped
         ;;
     check-committed)
         : "${RELEASE_COMMIT:?selected release commit is required}"
-        bash "$metadata_checker" check ic-timers --manifest-order
+        bash "$metadata_checker" check ic-timers --manifest-order-grouped
         ;;
     *) echo 'usage: adapter.sh preflight|check|commit-check|check-committed' >&2; exit 2 ;;
 esac

@@ -36,18 +36,10 @@ class DownloadedEvidenceTests(unittest.TestCase):
             workspace, runner = temporary / "checkout", temporary / "runner"
             subprocess.run(["git", "clone", "--quiet", "--shared", "--no-checkout",
                             str(root), str(workspace)], check=True)
-            for name in (
-                "scripts/ci/qualify-failure-evidence.sh",
-                "scripts/ci/qualify-hosted-failure.sh",
-                "scripts/ci/verify-file-checksum.sh",
-                "scripts/ci/tool-catalog-records.pl",
-                "scripts/dev/install-host-tools.sh",
-                "scripts/dev/tool-store.sh",
-                "ci/tool-versions.env",
-            ):
-                target = workspace / name
-                target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(root / name, target)
+            subprocess.run([
+                "bash", str(root / "scripts/ci/prepare-script-fixture.sh"),
+                str(root), str(workspace), "scripts/ci/qualify-failure-evidence.sh",
+            ], check=True)
             runner.mkdir()
             sha = subprocess.check_output(
                 ["git", "-C", str(workspace), "rev-parse", "HEAD"], text=True).strip()

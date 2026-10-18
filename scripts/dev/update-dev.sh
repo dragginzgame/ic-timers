@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Shared companions: scripts/dev/prepare-rust.sh
 set -euo pipefail
 
 [[ $# == 1 && -n "$1" && "$1" != -* && "$1" != *[[:space:]]* ]] || {

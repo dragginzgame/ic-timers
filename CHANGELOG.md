@@ -2,6 +2,57 @@
 
 All notable changes to this project are recorded here.
 
+## [0.28.0]
+
+### Breaking
+
+- Select Metrics 0.14 for the publicly reexported `MeasurementSummary` and
+  timer performance accessors. Its Rust type identity changes from Metrics
+  0.13; align consumers that exchange these values with Metrics directly.
+  Snapshot fields, arithmetic and timer scheduling contracts are unchanged.
+
+### Changed
+
+- Adopt published IC Platform 0.1.8 for the shared CDK executor, raw IC system
+  calls, probe Candid DTOs and native encoding. Remove direct executor/IC0
+  dependencies and their pin exceptions now that Platform owns the exact
+  qualified identities; preserve callback/trap contexts and wire formats.
+  Retain probe CDK/Candid and Testkit's native limits identity pending Platform
+  #1 and #2; host parser/Agent features remain disabled.
+- Reuse checked pending ordinary schedules at completion, selecting their
+  directive observation and cancellation outcome in the same arbitration pass.
+- Share watchdog installation in the runtime probe while retaining separate
+  callbacks, durable scheduling intent and completion counters.
+
+### Development
+
+- Enforce Candid/CDK direct dependency ownership through Shared's canonical
+  checker, with explicit exceptions for the remaining published API blockers.
+- Group production and test/tooling packages and dependencies by their workspace
+  roles; use matching grouped sorting in formatting, hooks and release checks.
+- Prepare remaining local Make/hook/setup fixtures through Shared's declared
+  dependency closures; keep product assertions and supplier-owned fixtures separate.
+- Correct current API/backend/dependency guidance, document capability owners,
+  and archive superseded migration handoffs without changing timer contracts.
+  Retain the size probe's direct Candid dependency required by CDK macro output.
+- Own mixed-policy trap/exhaustion, overdue coalescing and volatile upgrade
+  qualification previously duplicated in IcyDB's standalone timer probe.
+- Qualify the owning runtime proof and isolated Testkit decoder retirement;
+  retain published Testkit 0.53 until its replacement is available. Track IcyDB's
+  corresponding proof retirement in [#379](https://github.com/dragginzgame/icydb/issues/379),
+  with database lifecycle qualification remaining consumer-owned.
+- Adapt probe calls and startup to selected Testkit 0.53, and select explicit
+  Cargo child custody, environment and retention through selected IC Build 0.17.
+
+- Adopt committed Shared Tooling 0.24.0, retaining canonical uploader 7.0.2,
+  direct-only delivery and complete failure-evidence semantics
+  ([#67 — Adopt the canonical Shared artifact uploader 7.0.2](https://github.com/dragginzgame/ic-timers/issues/67)).
+- Prepare script/Make fixtures from declared companion closures, retire the
+  Make-only copier, and delegate host-only compact verification to Shared.
+  Keep supplier CI fixtures at their owner and preserve Timers' actual workflow.
+- Common Cargo setup now prepares only the selected sorters; Candid extraction
+  is not a Timers tool requirement.
+
 ## [0.27.1] - 2026-10-17
 
 ### Added

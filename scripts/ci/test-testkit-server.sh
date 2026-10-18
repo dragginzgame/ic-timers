@@ -94,8 +94,7 @@ cmp "$fixture/next-lock" "$consumer/Cargo.lock"
 # and owner effects. Upstream tests own tool downloads/receipts; this proves the
 # local Testkit extension runs after common setup/check even under parallel Make.
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
-cp "$root/Makefile" "$consumer/"
-bash "$root/scripts/ci/prepare-make-fixture.sh" "$root" "$consumer"
+bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$consumer" Makefile make/consumer.mk
 cp "$fixture/next-lock" "$consumer/Cargo.lock"
 export TESTKIT_AGGREGATE_LOG="$fixture/aggregate-commands"
 cat > "$fixture/common-installer" <<'EOF'

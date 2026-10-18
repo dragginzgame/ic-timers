@@ -12,11 +12,11 @@ use super::backend::{self, DISPATCH_LIMIT, METHOD};
 // here. The IC invokes this no-argument entrypoint in global-timer context.
 #[unsafe(export_name = "canister_global_timer")]
 extern "C" fn global_timer() {
-    ic_cdk_executor::in_tracking_executor_context(|| {
-        let now = ic0::time();
+    ic_platform::executor::in_tracking_executor_context(|| {
+        let now = ic_platform::ic0::time();
         let mut principal = [0; 29];
-        let len = ic0::canister_self_size();
-        ic0::canister_self_copy(&mut principal[..len], 0);
+        let len = ic_platform::ic0::canister_self_size();
+        ic_platform::ic0::canister_self_copy(&mut principal[..len], 0);
         for _ in 0..DISPATCH_LIMIT {
             let Some(id) = backend::due(now) else {
                 break;
@@ -27,7 +27,9 @@ extern "C" fn global_timer() {
             };
             // Reserve memory before checking liquid cycles. There are no further
             // allocations between this check and submitting the call.
-            if ic0::canister_liquid_cycle_balance128() < ic0::cost_call(METHOD.len() as u64, 8) {
+            if ic_platform::ic0::canister_liquid_cycle_balance128()
+                < ic_platform::ic0::cost_call(METHOD.len() as u64, 8)
+            {
                 drop(backend::take_flight(slot));
                 backend::defer(now);
                 break;
@@ -36,12 +38,19 @@ extern "C" fn global_timer() {
             // one terminal path consumes it; nonzero call_perform consumes it
             // locally, and callback rollback restores it for cleanup.
             unsafe {
-                ic0::call_new(&principal[..len], METHOD, response, slot, response, slot);
-                ic0::call_on_cleanup(cleanup, slot);
+                ic_platform::ic0::call_new(
+                    &principal[..len],
+                    METHOD,
+                    response,
+                    slot,
+                    response,
+                    slot,
+                );
+                ic_platform::ic0::call_on_cleanup(cleanup, slot);
             }
-            ic0::call_data_append(&id.to_le_bytes());
-            ic0::call_with_best_effort_response(300);
-            if ic0::call_perform() != 0 {
+            ic_platform::ic0::call_data_append(&id.to_le_bytes());
+            ic_platform::ic0::call_with_best_effort_response(300);
+            if ic_platform::ic0::call_perform() != 0 {
                 drop(backend::take_flight(slot));
                 backend::defer(now);
                 break;
@@ -63,32 +72,32 @@ extern "C" fn global_timer() {
     unsafe(export_name = "ic_timers_internal_dispatch")
 )]
 extern "C" fn dispatch() {
-    ic_cdk_executor::in_tracking_executor_context(|| {
+    ic_platform::executor::in_tracking_executor_context(|| {
         let mut caller = [0; 29];
         let mut own = [0; 29];
-        let own_len = ic0::canister_self_size();
-        if ic0::msg_caller_size() != own_len {
-            ic0::trap(b"ic-timers: self-call required");
+        let own_len = ic_platform::ic0::canister_self_size();
+        if ic_platform::ic0::msg_caller_size() != own_len {
+            ic_platform::ic0::trap(b"ic-timers: self-call required");
         }
-        ic0::msg_caller_copy(&mut caller[..own_len], 0);
-        ic0::canister_self_copy(&mut own[..own_len], 0);
+        ic_platform::ic0::msg_caller_copy(&mut caller[..own_len], 0);
+        ic_platform::ic0::canister_self_copy(&mut own[..own_len], 0);
         if caller[..own_len] != own[..own_len] {
-            ic0::trap(b"ic-timers: self-call required");
+            ic_platform::ic0::trap(b"ic-timers: self-call required");
         }
-        if ic0::msg_arg_data_size() != 8 {
-            ic0::trap(b"ic-timers: invalid dispatch payload");
+        if ic_platform::ic0::msg_arg_data_size() != 8 {
+            ic_platform::ic0::trap(b"ic-timers: invalid dispatch payload");
         }
         let mut bytes = [0; 8];
-        ic0::msg_arg_data_copy(&mut bytes, 0);
+        ic_platform::ic0::msg_arg_data_copy(&mut bytes, 0);
         let task = backend::remove(u64::from_le_bytes(bytes));
         backend::rearm();
         if let Some(task) = task {
-            ic_cdk_executor::spawn_protected(async move {
+            ic_platform::executor::spawn_protected(async move {
                 task.await;
-                ic0::msg_reply();
+                ic_platform::ic0::msg_reply();
             });
         } else {
-            ic0::msg_reply();
+            ic_platform::ic0::msg_reply();
         }
     });
 }
@@ -96,8 +105,8 @@ extern "C" fn dispatch() {
 // SAFETY: callable only with a live FLIGHTS slot supplied by global_timer.
 unsafe extern "C" fn response(slot: usize) {
     let flight = backend::take_flight(slot);
-    ic_cdk_executor::in_callback_executor_context_for(flight.method, || {
-        match ic0::msg_reject_code() {
+    ic_platform::executor::in_callback_executor_context_for(flight.method, || {
+        match ic_platform::ic0::msg_reject_code() {
             2 | 6 => backend::retry(flight.task),
             _ => {
                 drop(backend::remove(flight.task));
@@ -111,8 +120,8 @@ unsafe extern "C" fn response(slot: usize) {
 // cleanup. The method handle is consumed through the executor's recovery API.
 unsafe extern "C" fn cleanup(slot: usize) {
     let flight = backend::take_flight(slot);
-    ic_cdk_executor::in_trap_recovery_context_for(flight.method, || {
-        ic_cdk_executor::cancel_all_tasks_attached_to_current_method();
+    ic_platform::executor::in_trap_recovery_context_for(flight.method, || {
+        ic_platform::executor::cancel_all_tasks_attached_to_current_method();
         backend::retry(flight.task);
         backend::rearm();
     });

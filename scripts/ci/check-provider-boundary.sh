@@ -24,10 +24,10 @@ find({ no_chdir => 1, wanted => sub {
     if ($file =~ m{/platform/} && $text =~ /\bpub\s+(?:(?:async|unsafe)\s+)*(?:struct|enum|type|fn|use|mod|trait|const|static|extern)\b/) {
         die "platform items require restricted visibility: $file\n";
     }
-    if ($file ne $ffi && $text =~ /(?:\bunsafe\s*(?:\{|extern|fn)|unsafe\(export_name|allow\(unsafe_code\)|ic0::call_(?:new|on_cleanup)\b)/) {
+    if ($file ne $ffi && $text =~ /(?:\bunsafe\s*(?:\{|extern|fn)|unsafe\(export_name|allow\(unsafe_code\)|ic_platform::ic0::call_(?:new|on_cleanup)\b)/) {
         die "unsafe operations and IC callback registration belong to FFI: $file\n";
     }
-    if ($file !~ m{/platform/} && $text =~ /ic0::global_timer_set|ic_cdk_executor::/) {
+    if ($file !~ m{/platform/} && $text =~ /ic_platform::ic0::global_timer_set|ic_platform::executor::/) {
         die "timer execution belongs to the private platform: $file\n";
     }
 }}, $root);

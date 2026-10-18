@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Shared companions: scripts/dev/prepare-rust-toolchain.sh
 set -euo pipefail
 
 [[ $# == 1 ]] || { echo 'usage: prepare-rust.sh TOOLCHAIN' >&2; exit 2; }

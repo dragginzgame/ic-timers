@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Shared companions: scripts/ci/qualify-hosted-failure.sh
 set -euo pipefail
 
 # Timers selects evidence paths; Shared admits the explicit manual request

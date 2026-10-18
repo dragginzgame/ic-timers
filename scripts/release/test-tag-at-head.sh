@@ -18,10 +18,10 @@ git config user.email 'release-test@example.invalid'
 printf '%s\n' '[workspace.dependencies.fixture]' 'version = "0.2.0"' \
     '[workspace.package]' 'version = "0.1.0"' > Cargo.toml
 cp "$repository_root/Makefile" .
-bash "$repository_root/scripts/ci/prepare-make-fixture.sh" "$repository_root" "$temporary_root"
+bash "$repository_root/scripts/ci/prepare-script-fixture.sh" "$repository_root" "$temporary_root" make/consumer.mk
 cp "$repository_root/scripts/ci/read-cargo-workspace-version.sh" \
     "$repository_root/scripts/ci/check-release-source.sh" "$checker" scripts/ci/
-git add Cargo.toml Makefile make scripts
+git add Cargo.toml Makefile ci make scripts
 git commit -qm fixture
 
 expect_rejection() {
@@ -146,7 +146,7 @@ make --no-print-directory ensure-clean
 # A source-only checker can admit an empty unborn checkout; publication cannot.
 git init -q "$temporary_root/unborn"
 cp "$repository_root/Makefile" "$temporary_root/unborn/"
-bash "$repository_root/scripts/ci/prepare-make-fixture.sh" "$repository_root" "$temporary_root/unborn"
+bash "$repository_root/scripts/ci/prepare-script-fixture.sh" "$repository_root" "$temporary_root/unborn" make/consumer.mk
 if output="$(cd "$temporary_root/unborn" && make --no-print-directory ensure-clean 2>&1)"; then
     echo 'error: clean publication guard admitted a checkout without a commit' >&2
     exit 1
@@ -167,6 +167,13 @@ while IFS=$'\t' read -r record _digest _mode path; do
 done < "$repository_root/.shared-tooling.snapshot"
 cp "$repository_root/.shared-tooling.snapshot" "${workflow_root}/repository/"
 cp "$repository_root/Makefile" "$repository_root/Cargo.toml" "$repository_root/Cargo.lock" "${workflow_root}/repository/"
+# The current lock graph includes every member's dependency declarations. Keep
+# that one graph coherent rather than combining it with committed manifests.
+members="$(yq -p toml -r '.workspace.members[]' "$repository_root/Cargo.toml")"
+while IFS= read -r member; do
+    mkdir -p "${workflow_root}/repository/$member"
+    cp "$repository_root/$member/Cargo.toml" "${workflow_root}/repository/$member/Cargo.toml"
+done <<< "$members"
 mkdir "${workflow_root}/bin" "${workflow_root}/runner"
 export GITHUB_WORKSPACE="${workflow_root}/repository" RUNNER_TEMP="${workflow_root}/runner"
 TAG_REAL_MAKE="$(command -v make)"

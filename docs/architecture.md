@@ -22,6 +22,86 @@ platform boundary owns one-shot IC dispatch and integrates the selected executor
 
 The sections below describe these boundaries in implementation-level detail.
 
+## Capability ownership
+
+The published [crate facade](../crates/ic-timers/src/lib.rs) exports registration,
+reconciliation, callback contexts, checked schedules and inert snapshots. Its
+implementation modules and platform handles are private. The Cargo `links` key
+rejects competing packages with the same global-timer ownership key; complete
+canister graphs must still exclude older providers that lack that key.
+
+| Capability | Canonical owner | Local integration |
+| --- | --- | --- |
+| Volatile scheduling, claim/generation authority, policy arbitration and timer observations | `crates/ic-timers/src/{runtime,registry,control,schedule,snapshot}` | Public crate facade |
+| One-shot dispatch, pending queue and authenticated IC callbacks | Private `crates/ic-timers/src/platform`; `ic-platform` exposes the shared CDK executor for future polling and call-context cleanup | Only `platform/ffi.rs` owns unsafe exports/callback registration |
+| Measurement arithmetic | `ic-metrics` | Timer-specific sample boundaries, counters and memory extents in `snapshot/metrics.rs` |
+| Durable jobs, readiness, lifecycle order and operator-health labels | Consuming application/framework | Registration claims and snapshots; no durable task database or application lifecycle exports here |
+| Wasm compilation and artifact-cache custody | `ic-build`, with explicit child custody from `ic-host-process` | `testing/crates/ic-timers-pocketic/src/build/mod.rs` selects packages, profile, features and artifact lifetime |
+| PocketIC server selection, admission and lifecycle; bounded Candid decoding | `ic-testkit` and `ic-testkit-candid` | `scripts/dev/testkit-server.sh` selects the root-lock CLI; the native harness supplies instance configuration and reply limits |
+| Common tools, fixture dependency closure, evidence transport and release mechanics | Reviewed Shared Tooling snapshot | Local Make selections, product release/source policy and evidence identity; see [adoption boundaries](shared-tooling.md) |
+
+The [root manifest](../Cargo.toml) owns all five maintained packages and every
+direct dependency, with one lockfile. The four unpublished packages own runtime
+and size probe canisters, the native PocketIC driver, and shared probe wire
+records. The protocol package selects only Platform's Candid contract: it carries values,
+not scheduling authority. The native platform substitute is test-only; it does
+not replace IC execution or prove recovery. Runtime subjects and policy cohorts
+remain separate evidence selections in the [release guide](releasing.md).
+
+## Candid and CDK dependency boundary
+
+The registry-published `ic-platform` **0.1.8** is the selected boundary. Its
+archive (VCS `57fcf8d4f55914dedf0a25e70cec2e8affb3fb82`) exports upstream
+identities, not a second codec or executor. The root catalog disables default
+features; the library selects `executor` and `ic0`, while probe DTOs and the native
+harness select `candid`. No host parser, Agent, certification or management DTO
+or ledger DTO feature is selected.
+
+The private platform uses `ic_platform::ic0` for its existing system calls,
+retaining context placement, method handles, protected spawning and callback/trap cleanup. The lockfile still
+resolves one `ic-cdk-executor` 2.0.0 shared with CDK. Native substitutes cannot
+qualify those IC paths. Executor/system-only Platform remains Candid-free, but its
+unconditional Principal export brings `ic_principal` and Serde transitively.
+
+Probe records use Platform's Candid/Serde derives with explicit crate paths.
+Their labels, optionality, integer widths and top-level argument structure stay
+unchanged. Host init/upgrade encoding uses `contract::encode_args(())`. There is
+no local generator or compatibility alias to retain. These existing Candid probe
+endpoints remain Candid; this does not change an application protocol owned by
+IC Wire or introduce a storage migration.
+
+Platform owns the exact `ic-cdk-executor = "=2.0.0"` and `ic0 = "=1.2.0"`
+constraints. Their direct declarations and local pin exceptions are removed.
+The published exports preserve upstream identities and safe/unsafe signatures;
+all callback registration remains in the private FFI owner. This completes the
+published boundaries requested in [Platform #7](https://github.com/dragginzgame/ic-platform/issues/7)
+and [#8](https://github.com/dragginzgame/ic-platform/issues/8) without a local facade.
+
+The new `candid::decoder::{decode_one, decode_args}` exports use upstream defaults
+and are distinct from Platform's finite-limit parent helpers. The protocol
+subjects continue importing `candid::decode_args` with explicit limits; native
+transport retains Testkit's limits identity. No unbounded decoder is substituted.
+
+Two published API exceptions remain:
+
+- Runtime and size canisters retain direct CDK 0.20.3 and Candid. Platform 0.1.8
+  has no CDK entrypoint/call/storage facade, and the selected entrypoint
+  macros generate absolute `::candid` paths. Their awaited calls, traps and exact
+  upgrade tuple cannot be replaced by a fake. See
+  [Platform #1](https://github.com/dragginzgame/ic-platform/issues/1#issuecomment-6247492583).
+- The native driver retains `ic-testkit-candid` 0.53 because published Testkit
+  0.53 requires that nominal limits/error identity. Its five reply ceilings and
+  typed error sources remain unchanged; no conversion wrapper or local transport
+  is added. See
+  [Platform #2](https://github.com/dragginzgame/ic-platform/issues/2#issuecomment-6247492763).
+
+The [dependency policy](../ci/cargo-dependency-boundaries.json) is enforced through
+Shared's canonical checker in `actions-check`, alongside pin/inheritance checks.
+It allows only the named consumers above. Metadata covers aliases and all
+normal/build/dev and target declarations; enabled features and transitive
+reachability require separate graph inspection. See
+[deployment exclusions](shared-tooling.md#deployment-dependency-exclusions).
+
 ## Current runtime
 
 Direct registration uses one inert `TimerStart` configuration. Retained starts
@@ -88,10 +168,13 @@ The remaining module hierarchy keeps six responsibilities separate:
    explicit scheduling requests retain `ScheduleError` at their input boundary.
    The schedule owner classifies invalid successor proposals, while the registry
    owns terminal state and completion accounting.
-   Ordinary completion resolves the effective directive and validates its inert
-   projection before checking successor allocation. Resolution and allocation
-   failures share one terminal finalization branch and the common declaration
-   removal exit; explicit consumer invariant failure still stops directly.
+   Ordinary completion selects its schedule, directive observation and
+   cancellation outcome together before successor allocation. Authoritative
+   reconciliation reuses its checked schedule, preserving request metadata;
+   cancel/unregister discard the callback proposal. Pending ensures still validate
+   the callback and preserve its directive observation even when the ensure wins.
+   Resolution and allocation failures share one terminal finalization branch and
+   the common removal exit; explicit consumer invariant failure still wins.
    Cancellation in the registry stops scheduled state without allocating a
    generation and queues a command for running work. Stopping with a reason
    discards the running command through state replacement.
@@ -137,8 +220,6 @@ The remaining module hierarchy keeps six responsibilities separate:
    snapshots expose that generation once and project `attempt_status` directly,
    without a separate attempt wrapper. Tokens and owned handles keep their
    independent delivery stamps for stale-callback rejection and separate slots.
-   This 0.11.0 observation change and its pending qualification are recorded in the
-   [generation ownership note](changelog/0.11.0.md).
    Ordinary completion computes its removal-on-stop decision once from pending
    unregister and declaration lifetime; every terminal exit uses it. A successful
    arm retains its declaration. Cancellation derives immediate removal once
@@ -254,32 +335,6 @@ are long: each audited function owns one atomic transition or one provider
 binding path. Their tests live in directory-local `tests.rs` files so test
 volume does not obscure production flow.
 
-The copied Canic code was adapted into generic library types; Canic-specific
-domain work, storage, and metrics were intentionally not copied.
-
-### Terminal removal verification
-
-Source review traces all three failure-removal callers to the selected entry and
-the common map-removal exit. The change preserves generation-before-deadline
-failure precedence, request and completion accounting, and provider detachment
-before terminal removal. Public APIs, snapshot shapes, generation sequences and
-dependencies are unchanged; no generated artifact or downstream adapter changes.
-
-The maintained [registry fixtures](../crates/ic-timers/src/registry/tests.rs)
-`ordinary_terminal_failures_respect_declaration_lifetime` and
-`watchdog_terminal_failures_respect_declaration_lifetime` cover terminal requests,
-scheduler dispatch and completion across both lifetimes. The immediate-request
-coalescing fixture now covers both lifetimes, requiring initial, replacement and
-coalesced requests to retain their declarations. The maintained
-[runtime fixture](../crates/ic-timers/src/runtime/tests.rs)
-`terminal_scheduler_failure_clears_queued_work_before_transient_removal` checks
-queued-work cleanup and reuse of a removed identity.
-
-These fixtures have not been executed for this change. Tests, builds, lint gates
-and deployment validation remain maintainer-owned. Native substitutes cannot
-establish IC rollback or provider heap behavior, and no performance result is
-claimed.
-
 ## Canonical runtime
 
 One canister-local runtime owns the bounded registry and its structured
@@ -318,42 +373,18 @@ exhaustion can prevent post-run measurement, and consecutive expected failures
 remain cheap functional state because recovery decisions consume them. See the
 [observability and Canic parity contract](design/observability.md).
 
-## Frozen 0.3 contract
+## Lifecycle and observations
 
-Patch 1 freezes the registry, callback, ownership, state, counter, lifecycle,
-provider, MSRV, and measurement decisions before runtime mutation. The
-canonical registry holds at most 64 declarations. Ordinary work may be async;
-watchdog work is synchronous so its separate work message cannot cross an
-`await`. Provider handles are private, linear capabilities owned only by the
-registry. See the [Patch 1 runtime contract](design/0.3-patch-1-contract.md).
+The registry holds at most 64 declarations. Ordinary work may be async;
+Watchdog work is synchronous so its separate work message cannot cross an
+`await`. Provider handles are private, linear capabilities owned by the registry.
 
 The live snapshot omits elapsed IC time: message time cannot truthfully measure
-synchronous callback duration. It instead distinguishes scheduler and work
-instructions, plus latest start/end and maximum-growth Wasm/stable memory-page
-observations. Page extent is not exact allocator liveness. A dispatched
-watchdog attempt without a committed completion is *unacknowledged*, not
-definitely trapped, and has no fabricated measurement.
-
-## Implementation sequence
-
-Keep the runtime work in independently testable layers:
-
-1. **Complete:** freeze downstream invariants, API/state decisions, provider
-   behavior, Rust 1.88 feasibility, and measurement subjects.
-2. **Complete:** add the coherent value model and pure bounded policy-specific
-   registry.
-3. **Complete:** bind linear platform handles and implement live `Once` and
-   `AfterCompletion` policies.
-4. **Complete:** implement the one-shot two-message `Watchdog` protocol and
-   prove its initial explicit-trap commit boundary in PocketIC.
-5. **Complete:** add lifecycle reconstruction, live observations, measurement,
-   and the IcyDB-shaped fixture.
-6. **Complete:** close the PocketIC recovery/isolation matrix and report Wasm,
-   instruction, cycle, MSRV, and complexity results.
-
-Each layer lands with its owner-local correctness tests. Cross-owner
-real-canister evidence closes the final patch rather than substituting for
-pure transition coverage.
+synchronous callback duration. It distinguishes scheduler and work instructions,
+plus start/end and maximum-growth Wasm/stable memory-page observations. Page
+extent is not exact allocator liveness. A dispatched Watchdog attempt without a
+committed completion is *unacknowledged*, not definitely trapped, and has no
+fabricated measurement.
 
 Lifecycle reconciliation always installs retained declarations so a
 caller-owned `Option<Registration>` cannot outlive a remove-on-stop canonical
@@ -367,12 +398,13 @@ seam installs and verifies the exact retained claim for all three policies.
 An after-completion interval is not a watchdog: if its callback traps or runs
 out of instructions, code after the callback cannot arm a successor. A
 watchdog policy commits the successor before invoking fallible work while
-preventing concurrent logical execution. PocketIC 15 proves that behavior for
-trap, 40-billion-instruction exhaustion, upgrade reconstruction,
-external-ingress rejection, independent timers, insufficient cycles followed
-by top-up, stop/resume, overdue coalescing, and cancellation in the
-scheduler/work gap. These proofs apply to synchronous `Watchdog`, not
-after-completion recurrence.
+preventing concurrent logical execution. Maintained
+[PocketIC subjects](../testing/crates/ic-timers-pocketic/src/tests.rs) exercise
+trap, actual instruction exhaustion, upgrade reconstruction, external-ingress
+rejection, independent timers, insufficient cycles followed by top-up,
+stop/resume, overdue coalescing and cancellation in the scheduler/work gap.
+[SAFETY.md](../SAFETY.md) owns the guarantees and evidence limits; historical
+server versions and receipts do not qualify a new source/artifact combination.
 
 After normal progress, a Watchdog may replace that exact cadence successor with
 a deadline of now. The replacement remains a scheduler callback in a later
@@ -381,7 +413,7 @@ queues work. Initial immediate reconciliation and running-work requests use the
 same declaration, claim, generation, pending-command, and provider-handle path.
 See the [immediate continuation design](design/immediate-watchdog-continuation.md).
 
-Since 0.8.0, exact Watchdog reconciliation can also move a sleeping deadline
+Exact Watchdog reconciliation can also move a sleeping deadline
 earlier or later. Dispatched or running work retains the committed cadence
 recovery successor until normal completion applies the pending schedule or
 `WatchdogDecision::ScheduleAt`. Snapshots carry a registration identity so
@@ -390,53 +422,42 @@ consumers can detect counter replacement within one runtime epoch. See the
 
 ## Consumer integration
 
-The following records describe the supplied exact-0.5.0 adoption evidence,
-not a current downstream dependency audit or qualification of 0.8.0:
+Read-only inspection on 2026-10-18 found one registry `ic-timers` 0.27.1 package
+in each available Canic, IcyDB and Jobs lockfile, with no `ic-cdk-timers` package.
+These are source/graph observations, not downstream build or deployment results;
+dirty sibling work was preserved and no sibling suite was run for this review.
 
-- Canic adopted exact `ic-timers` 0.5.0 for framework and application timers and
-  exposes schema-3 timer, instruction, and memory observations. Canisters
-  initialize the shared registry independently of declaring jobs: Fleet
-  Coordinator initializes an empty registry, while genuine owners reserve
-  their fixed declarations before application hooks.
-- IcyDB adopted exact `ic-timers` 0.5.0 and the watchdog policy for replicated
-  recovery driving with claim-scoped armed-wakeup observation.
-- A canister using both should see one inventory. Ownership labels distinguish
-  scheduling clients; they do not create separate timer runtimes.
+- Canic's [`workflow/runtime/timer`](https://github.com/dragginzgame/canic/blob/5583496bfa95069809249e8e5d16c77f1ffd744f/crates/canic-core/src/workflow/runtime/timer/mod.rs)
+  integrates native claims and framework authority/suspension policy, including
+  a recovery Watchdog. Its pending
+  `crates/canic-core/src/ops/runtime/timer_status/mod.rs` owns operator-health
+  projection in the inspected worktree; that extraction is not yet in its base
+  commit. Timers must not absorb those application decisions.
+- IcyDB's SQL, lifecycle and startup-timer test canisters import Timers. Its
+  [manifest](https://github.com/dragginzgame/icydb/blob/14051952f449ab0f730c97512a42011b3e06061e/Cargo.toml)
+  also selects a pinned `canic-icydb` adapter; that adapter retains database
+  readiness and lifecycle policy. Available source still contains the standalone
+  primitive timer probe. Its prepared retirement is separate from the already
+  pending mixed-policy qualification here; no sibling deletion is claimed.
+- Jobs' [`apps/job-consumer`](https://github.com/dragginzgame/ic-jobs/blob/312ff2486f7d15d60be92a14c58cc2bbd45e3d05/apps/job-consumer/src/canister.rs)
+  uses a Watchdog to dispatch its consumer-owned queue. The published Jobs
+  library owns job transitions, not a timer registry or global provider.
 
-The combined downstream gate must prove one resolved `ic-timers` package ID,
-both owners in one inventory, synchronous lifecycle reconstruction, IcyDB
-Watchdog recovery, continued Canic timer progress, and no remaining direct
-`ic-cdk-timers` calls across the complete canister. The lifecycle-composition
-blocker in the original 0.5.0 records was resolved within the frozen 0.8.0
-subject described in the [Toko Miner receipt](adoption/toko-miner.md).
-That receipt does not qualify later dependency combinations or deployments.
-The backend separately bounds 130 pending records and 128 outstanding dispatches;
-these are not a global bound on executor or application memory. Canic must also
-retain the validated hard cut that makes its application timer facade return
-typed capacity and identity errors.
+Composed canisters must qualify one resolved Timers package and global-timer
+owner, synchronous reconstruction from durable authority, and progress/recovery
+for each participating policy against their actual linked artifact. The backend
+bounds 130 pending records and 128 outstanding dispatches; these do not bound
+executor or application memory.
 
-The exact implemented hard-cut mapping, including authoritative deadline
-reconciliation, policy choices, and the intentional absence of global
-suspension, is maintained in the [Canic adapter contract](adoption/canic.md).
+A consumer may retain a bounded custody collection of opaque registration
+claims. It makes claims enumerable without duplicating scheduling state,
+deadlines, generations, counters, pending commands or provider handles. Callback
+contexts delegate only policy-valid operations for the exact running generation
+and role; they expire at completion and cannot substitute for stored claims.
 
-Canic may keep one bounded collection whose only values are opaque registration
-claims. That custody makes Canic-owned application timers enumerable for its
-authority-snapshot fence without duplicating registry state. Scheduling,
-deadlines, generations, counters, pending commands, provider handles, and
-reconciliation authority remain exclusively in `ic-timers`.
-
-Consumer callbacks may issue nested control through `OnceContext`,
-`AfterCompletionContext`, or `WatchdogContext`. Each type exposes only the
-operations legal for its policy, while the shared private delegation is
-checked against the exact running generation and work role. A stored context
-expires at callback completion and cannot become another entry in a consumer
-custody collection.
-
-IcyDB's exact dependency, removed parallel timer state, and downstream
-real-canister evidence are recorded in the
-[IcyDB adoption record](adoption/icydb.md). The
-[Canic adapter contract](adoption/canic.md) records its exact-0.5.0/schema-3
-adoption. Both original subjects independently resolve 0.5.0; the later combined
-0.8.0 subject is recorded separately in the [Toko record](adoption/toko-miner.md).
-Qualification of a new combined subject requires evidence against its actual
-dependency graph and Wasm artifact.
+The [Canic](adoption/canic.md), [IcyDB](adoption/icydb.md) and
+[Toko Miner](adoption/toko-miner.md) adoption records preserve older exact-version
+subjects. Their API tables and historical provider limits are not current
+integration instructions. The numbered design records preserve decisions that
+preceded the owned backend; current behavior is defined by the facade,
+implementation and maintained tests above.

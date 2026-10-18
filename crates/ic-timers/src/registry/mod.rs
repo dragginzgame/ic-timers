@@ -1172,42 +1172,28 @@ impl TimerRegistry {
             let pending_command = control.pending();
             let remove_on_stop = matches!(pending_command, Some(OrdinaryPending::Unregister))
                 || matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped);
-            let terminal_pending = matches!(
-                pending_command,
-                Some(OrdinaryPending::Cancel | OrdinaryPending::Unregister)
-            );
-            // Arbitrate authoritative commands before resolving a discarded
-            // callback proposal. Explicit consumer invariant failure still wins.
-            let effective_directive = match pending_command {
-                Some(OrdinaryPending::Cancel | OrdinaryPending::Unregister) => {
-                    OrdinaryDirective::Stop
-                }
-                Some(OrdinaryPending::Reconcile(requested)) => {
-                    OrdinaryDirective::ScheduleAt(requested.deadline_ns)
-                }
-                Some(OrdinaryPending::Schedule(_)) | None => result.directive(),
-            };
             if completion.outcome() == TimerCompletionOutcome::InvariantFailure {
                 let transition = stop_ordinary_completion(entry, completion, now_ns, None);
                 (transition, remove_on_stop)
             } else {
-                let prepared = match effective_directive.resolve(now_ns, cadence) {
-                    Ok((resolved, directive_snapshot)) => {
-                        let selected = select_completion_schedule(pending_command, resolved);
-                        selected
-                            .map_or(Ok(()), |selected| {
-                                control.arm_deadline(selected.deadline_ns)
-                            })
-                            .map(|()| (selected, directive_snapshot))
-                    }
-                    Err(failure) => Err(failure),
-                };
+                let prepared = prepare_ordinary_completion(
+                    pending_command,
+                    result.directive(),
+                    now_ns,
+                    cadence,
+                )
+                .and_then(|(selected, directive_snapshot, cancelled)| {
+                    selected.map_or(Ok(()), |selected| {
+                        control.arm_deadline(selected.deadline_ns)
+                    })?;
+                    Ok((selected, directive_snapshot, cancelled))
+                });
                 match prepared {
                     Err(failure) => (
                         stop_ordinary_completion(entry, completion, now_ns, Some(failure)),
                         remove_on_stop,
                     ),
-                    Ok((selected_schedule, directive_snapshot)) => {
+                    Ok((selected_schedule, directive_snapshot, cancelled)) => {
                         entry.latest_directive = Some(directive_snapshot);
                         entry.observability.record_completion(completion, now_ns);
 
@@ -1221,7 +1207,7 @@ impl TimerRegistry {
                                 arm: WakeupArm::Initial,
                             })
                         } else {
-                            let reason = if terminal_pending {
+                            let reason = if cancelled {
                                 entry.observability.counters_mut().record_cancellation();
                                 InactiveReason::Cancelled
                             } else {
@@ -1877,18 +1863,38 @@ fn stop_ordinary_completion(
     transition
 }
 
-const fn select_completion_schedule(
+// Select authoritative commands before validating a callback proposal they discard.
+// Keep the callback observation when a pending ensure wins; reconciliation instead
+// reports its exact deadline while retaining the already checked schedule metadata.
+fn prepare_ordinary_completion(
     pending: Option<OrdinaryPending>,
-    callback: Option<ResolvedSchedule>,
-) -> Option<ResolvedSchedule> {
+    directive: OrdinaryDirective,
+    now_ns: u64,
+    cadence: Option<TimerCadence>,
+) -> Result<(Option<ResolvedSchedule>, TimerDirectiveSnapshot, bool), TimerControlFailure> {
     match pending {
-        Some(OrdinaryPending::Cancel | OrdinaryPending::Unregister) => None,
-        Some(OrdinaryPending::Reconcile(pending)) => Some(pending),
-        Some(OrdinaryPending::Schedule(pending)) => match callback {
-            Some(callback) if callback.deadline_ns < pending.deadline_ns => Some(callback),
-            Some(_) | None => Some(pending),
-        },
-        None => callback,
+        Some(OrdinaryPending::Cancel | OrdinaryPending::Unregister) => {
+            Ok((None, TimerDirectiveSnapshot::Stop, true))
+        }
+        Some(OrdinaryPending::Reconcile(pending)) => Ok((
+            Some(pending),
+            TimerDirectiveSnapshot::ScheduleAt {
+                deadline_ns: pending.deadline_ns,
+            },
+            false,
+        )),
+        Some(OrdinaryPending::Schedule(_)) | None => {
+            let (callback, snapshot) = directive.resolve(now_ns, cadence)?;
+            let selected = if let Some(OrdinaryPending::Schedule(pending)) = pending {
+                match callback {
+                    Some(callback) if callback.deadline_ns < pending.deadline_ns => Some(callback),
+                    Some(_) | None => Some(pending),
+                }
+            } else {
+                callback
+            };
+            Ok((selected, snapshot, false))
+        }
     }
 }
 

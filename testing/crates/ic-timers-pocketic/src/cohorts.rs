@@ -1,7 +1,7 @@
 use super::harness::REPLY_LIMITS;
 use super::harness::{fresh_pocket_ic, install_probe, update_unit};
-use candid::Principal;
-use ic_testkit::pic::{CandidCallExt, PocketIc, advance_and_tick};
+use ic_platform::Principal;
+use ic_testkit::pic::{PocketIc, advance_and_tick, query_candid_args, update_candid_args};
 use ic_timers_test_protocol::{CohortObservation, MemorySamplingMeasurement, OperationMeasurement};
 use std::{env, fs, path::PathBuf, time::Duration};
 
@@ -96,15 +96,16 @@ fn run_cohort(cohort: &str) {
     assert_eq!(cancelled.next_deadline_ns, None);
 
     let memory_sampling = if cohort == "watchdog" {
-        let measurement: MemorySamplingMeasurement = pic
-            .update_candid(
-                canister_id,
-                Principal::anonymous(),
-                "memory_sampling_overhead",
-                (),
-                REPLY_LIMITS,
-            )
-            .expect("probe update succeeds");
+        let measurement: MemorySamplingMeasurement = update_candid_args(
+            pic,
+            canister_id,
+            Principal::anonymous(),
+            "memory_sampling_overhead",
+            (),
+            REPLY_LIMITS,
+        )
+        .map(|(value,)| value)
+        .expect("probe update succeeds");
         assert!(measurement.sampled_bracket_instructions >= measurement.empty_bracket_instructions);
         Some(measurement)
     } else {
@@ -184,23 +185,27 @@ fn update_measurement(
     canister_id: Principal,
     method: &str,
 ) -> OperationMeasurement {
-    pic.update_candid(
+    update_candid_args(
+        pic,
         canister_id,
         Principal::anonymous(),
         method,
         (),
         REPLY_LIMITS,
     )
+    .map(|(value,)| value)
     .expect("probe update succeeds")
 }
 
 fn observe(pic: &PocketIc, canister_id: Principal) -> CohortObservation {
-    pic.query_candid(
+    query_candid_args(
+        pic,
         canister_id,
         Principal::anonymous(),
         "observe",
         (),
         REPLY_LIMITS,
     )
+    .map(|(value,)| value)
     .expect("probe query succeeds")
 }

@@ -136,6 +136,32 @@ payload and the locked graph without repeating broad release fixtures or full
 Rust builds for the same commit. A successful tag lane alone is not product
 qualification.
 
+## Dependency role boundary
+
+`ic-timers` is this workspace's production library. The root catalog's role
+comments describe local use and do not enforce dependency exclusions. Formatting
+and metadata checks use matching grouped sorting, with release checks always
+read-only. The local `ic-timers` catalog entry is used by the qualification
+packages and is excluded when assessing dependencies of the selected root itself.
+
+For the maintained Wasm library build, inspect the matching locked graph:
+
+```bash
+cargo tree --locked --offline -p ic-timers --all-features \
+  --target wasm32-unknown-unknown --edges normal,build
+```
+
+The 0.24 adoption also inspected the Linux graph and found no test/tooling-only
+catalog dependency in either graph. Executor remains an intentional production
+dependency. Pin/inheritance and source-provider checks do not automatically
+reject transitive test/tooling dependencies. The direct-boundary checker now
+enforces the [named package exceptions](../ci/cargo-dependency-boundaries.json),
+including aliases and normal/build/dev/target declarations; it does not enforce
+unused catalog entries, unenumerated future family names or feature reachability. There is no final production canister artifact deployed by this library repository; its probe artifacts are
+qualification inputs. Deployment owners must enforce their own exclusions and
+bind successful builds to source, lockfile, target/features and final artifact
+digests. This manual library check is not an automated deployment admission gate.
+
 ## Host support
 
 Required native hosts are Linux x86_64, Intel macOS and Apple Silicon macOS,
@@ -195,9 +221,15 @@ The exact reviewed [exceptions](../ci/dependency-pinning-exceptions.json) are:
 
 | Dependency | Selection | Qualification boundary |
 | --- | --- | --- |
-| `ic-cdk-executor` | `=2.0.0` | Async polling, call-context lifetime and trap cleanup |
-| `ic0` | `=1.2.0` | Production platform bindings and instruction counter 1 |
 | `ic-cdk` | `=0.20.3` | Probe callback execution and suspension semantics |
+
+Platform 0.1.8 owns both exact production selections: executor `=2.0.0` and
+IC0 `=1.2.0`. Timers enables `executor` and `ic0`, with no direct declarations
+or local pin exceptions for those providers. The root lockfile resolves one
+qualified executor/IC0 identity shared with CDK. Any Platform update changing
+those identities requires renewed callback/trap/cancellation/upgrade evidence.
+See the [Candid/CDK boundary](architecture.md#candid-and-cdk-dependency-boundary)
+for published API exceptions.
 
 An exception matches its declaring root, name and literal version. A changed
 selection requires renewed source/runtime/host review; the old receipt cannot

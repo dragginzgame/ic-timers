@@ -24,7 +24,7 @@ trap finish EXIT
 mkdir -p "$fixture/current/scripts" "$fixture/current/scripts/ci" \
     "$fixture/selected" "$fixture/bin" "$fixture/tmp"
 cp "$root/Makefile" "$fixture/current/"
-bash "$root/scripts/ci/prepare-make-fixture.sh" "$root" "$fixture/current"
+bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$fixture/current" make/consumer.mk
 mkdir -p "$fixture/current/scripts/release"
 cp "$root/scripts/release/adapter.sh" "$fixture/current/scripts/release/"
 cp "$root/scripts/ci/read-cargo-workspace-version.sh" \
@@ -76,7 +76,7 @@ printf 'cargo %s\n' "$*" >> "$EVENTS"
 case "$*" in
     'locate-project --workspace --message-format plain --manifest-path '*)
         exec "$COMMITTED_RELEASE_REAL_CARGO" "$@" ;;
-    'sort --workspace --check')
+    'sort --workspace --check --grouped')
         cmp "$SELECTED_TREE/Cargo.toml" Cargo.toml
         if [[ "${FAIL_SORT:-}" == "$*" ]]; then
             echo 'fixture manifest ordering failure' >&2
@@ -128,7 +128,7 @@ for target in release-committed-check release-tagged-check release-push-check; d
     check "$target"
     grep -Fqx "cargo metadata --locked --offline --format-version 1" "$EVENTS"
     [[ "$(grep -Fxc "git archive --format=tar $SELECTED_COMMIT" "$EVENTS")" == 1 ]] || exit 1
-    [[ "$(grep -Fxc 'cargo sort --workspace --check' "$EVENTS")" == 1 ]] || exit 1
+    [[ "$(grep -Fxc 'cargo sort --workspace --check --grouped' "$EVENTS")" == 1 ]] || exit 1
     [[ -z "$(ls -A "$fixture/tmp")" ]] || exit 1
 done
 # Documentation need not contain canonical fields or exist in a release tree.
@@ -187,7 +187,7 @@ if grep -Eq '^git cat-file -t refs/tags/' "$EVENTS"; then
     exit 1
 fi
 unset FAIL_METADATA
-command='sort --workspace --check'
+command='sort --workspace --check --grouped'
 : > "$EVENTS"
 export FAIL_SORT="$command"
 reject release-push-check "$command failure"

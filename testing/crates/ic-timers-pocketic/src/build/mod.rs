@@ -1,6 +1,6 @@
 //! Consumer recipes; IC Build owns Cargo execution and exact Wasm artifacts.
 
-use ic_build::artifacts::{ArtifactCachePrunePolicy, WasmBuildSpec, build_wasm_canisters_cached};
+use ic_build::artifacts::{CacheRetentionLimits, WasmBuildSpec, build_wasm_canisters_cached};
 use ic_build::cargo::selection::{CargoFeatureSelection, CargoSelection};
 use std::{path::Path, process::Command, time::Duration};
 
@@ -51,17 +51,18 @@ pub(crate) fn run(mode: &str) -> Result<(), Box<dyn std::error::Error>> {
             },
             ..CargoSelection::default()
         };
-        let spec = WasmBuildSpec::new(&root, &target, &[package])
+        let spec = WasmBuildSpec::new(&root, &target, &[package], std::env::vars_os())
             .with_isolated_builds()
             .with_prune_policy(
-                ArtifactCachePrunePolicy::new()
+                CacheRetentionLimits::new()
                     .with_max_age(Duration::from_secs(7 * 24 * 60 * 60))
                     .with_max_size_bytes(512 * 1024 * 1024),
             )
             .with_cargo_program("cargo")
             .with_rustc_identity_program("rustc")
             .with_cargo_selection(selection);
-        let built = build_wasm_canisters_cached(&spec)?;
+        let built =
+            build_wasm_canisters_cached(&spec, ic_host_process::child::OwnedChild::spawn_direct)?;
         let [artifact] = built.record().artifacts() else {
             return Err(format!("expected exactly one Wasm artifact for {label}").into());
         };
