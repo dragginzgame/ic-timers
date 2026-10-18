@@ -5,7 +5,8 @@ use ic_testkit::pic::{
     PocketIc, PocketIcInstance, advance_and_tick, query_candid_args, update_candid_args,
 };
 use ic_timers_test_protocol::{
-    ChurnObservation, OrdinaryObservation, ProbeMemorySummary, ProbeSnapshot, TimerProbeSnapshot,
+    ChurnObservation, DispatchBatchObservation, OrdinaryObservation, ProbeMemorySummary,
+    ProbeSnapshot, TimerProbeSnapshot,
 };
 use std::{env, fs, path::PathBuf, time::Duration};
 
@@ -1306,4 +1307,165 @@ fn overdue_shared_timers_coalesce_to_bounded_work() {
     );
     assert!(overdue.watchdog_callbacks > 0);
     assert!(overdue.application_callbacks > 0);
+}
+
+fn dispatch_batch_observation(pic: &PocketIc, canister_id: Principal) -> DispatchBatchObservation {
+    query_candid_args(
+        pic,
+        canister_id,
+        Principal::anonymous(),
+        "dispatch_batch_observation",
+        (),
+        REPLY_LIMITS,
+    )
+    .map(|(value,)| value)
+    .expect("batch observation")
+}
+
+#[test]
+fn maximum_capacity_dispatch_preserves_every_survivor_under_pressure_and_await() {
+    let owned = fresh_pocket_ic();
+    let pic = &owned.instance;
+    let canister_id = install_probe(pic, probe_wasm());
+    update_unit(pic, canister_id, "start_dispatch_batch");
+    advance_and_tick(pic, Duration::ZERO, 8);
+    let (failures, replies): (u64, u64) = query_candid_args(
+        pic,
+        canister_id,
+        Principal::anonymous(),
+        "pressure_observation",
+        (),
+        REPLY_LIMITS,
+    )
+    .expect("batch pressure observation");
+    assert!(
+        failures > 0 && replies >= 500,
+        "real queue pressure must be established"
+    );
+    let blocked = dispatch_batch_observation(pic, canister_id);
+    assert_eq!(blocked.inventory_len, 64);
+    assert_eq!(blocked.starts, vec![0; 65]);
+    assert_eq!(blocked.completions, vec![0; 65]);
+
+    // Both original callbacks are still pending, so neither may run afterward.
+    update_unit(pic, canister_id, "change_pending_dispatch_batch");
+    update_unit(pic, canister_id, "release_pressure");
+    advance_and_tick(pic, Duration::ZERO, 16);
+    assert_eq!(
+        dispatch_batch_observation(pic, canister_id).starts,
+        vec![0; 65]
+    );
+    pic.advance_time(Duration::from_secs(1));
+    let expected: Vec<u64> = (0..65).map(|index| u64::from(index >= 2)).collect();
+    let waiting = wait_for_probe(
+        pic,
+        64,
+        |pic| dispatch_batch_observation(pic, canister_id),
+        |state| state.active == 63,
+    );
+    assert_eq!(waiting.starts, expected);
+    assert_eq!(waiting.completions, vec![0; 65]);
+    assert_eq!(waiting.inventory_len, 64);
+    assert_eq!(waiting.peak_active, 63);
+    advance_and_tick(pic, Duration::from_secs(10), 16);
+    assert_eq!(dispatch_batch_observation(pic, canister_id), waiting);
+
+    // Rearm the retained cancelled claim while every survivor is still awaiting.
+    update_unit(pic, canister_id, "rearm_cancelled_dispatch_batch_timer");
+    let mut full_expected = expected;
+    full_expected[0] = 1;
+    let full = wait_for_probe(
+        pic,
+        64,
+        |pic| dispatch_batch_observation(pic, canister_id),
+        |state| state.active == 64,
+    );
+    assert_eq!(full.starts, full_expected);
+    assert_eq!(full.completions, vec![0; 65]);
+    assert_eq!(full.inventory_len, 64);
+    assert_eq!(full.peak_active, 64);
+
+    update_unit(pic, canister_id, "release_dispatch_batch");
+    let finished = wait_for_probe(
+        pic,
+        64,
+        |pic| dispatch_batch_observation(pic, canister_id),
+        |state| state.completions == full_expected,
+    );
+    assert_eq!(finished.starts, full_expected);
+    assert_eq!(finished.active, 0);
+    advance_and_tick(pic, Duration::from_secs(2), 16);
+    assert_eq!(dispatch_batch_observation(pic, canister_id), finished);
+
+    // The cancelled retained claim and production dispatch remain usable at capacity.
+    update_unit(pic, canister_id, "rearm_cancelled_dispatch_batch_timer");
+    let mut rearmed_expected = full_expected;
+    rearmed_expected[0] = 2;
+    let rearmed = wait_for_probe(
+        pic,
+        64,
+        |pic| dispatch_batch_observation(pic, canister_id),
+        |state| state.completions == rearmed_expected,
+    );
+    assert_eq!(rearmed.starts, rearmed_expected);
+    assert_eq!(rearmed.active, 0);
+    assert_eq!(rearmed.inventory_len, 64);
+    advance_and_tick(pic, Duration::from_secs(2), 16);
+    assert_eq!(dispatch_batch_observation(pic, canister_id), rearmed);
+}
+
+fn scheduling_trace(pic: &PocketIc, canister_id: Principal) -> Vec<u8> {
+    query_candid_args(
+        pic,
+        canister_id,
+        Principal::anonymous(),
+        "scheduling_trace",
+        (),
+        REPLY_LIMITS,
+    )
+    .map(|(value,)| value)
+    .expect("scheduling trace")
+}
+
+#[test]
+fn deadline_trace_covers_nested_registration_and_self_cancellation() {
+    for overdue in [false, true] {
+        let owned = fresh_pocket_ic();
+        let pic = &owned.instance;
+        let canister_id = install_probe(pic, probe_wasm());
+        update_unit(pic, canister_id, "start_scheduling_trace");
+        advance_and_tick(pic, Duration::ZERO, 8);
+        assert!(scheduling_trace(pic, canister_id).is_empty());
+        if overdue {
+            advance_and_tick(pic, Duration::from_secs(4), 16);
+            assert_eq!(scheduling_trace(pic, canister_id), [1, 2, 4]);
+            advance_and_tick(pic, Duration::from_secs(1), 8);
+            assert_eq!(scheduling_trace(pic, canister_id), [1, 2, 4]);
+            advance_and_tick(pic, Duration::from_secs(1), 8);
+            assert_eq!(scheduling_trace(pic, canister_id), [1, 2, 4, 3]);
+        } else {
+            for end in 1..=4 {
+                advance_and_tick(pic, Duration::from_secs(1), 8);
+                assert_eq!(
+                    scheduling_trace(pic, canister_id),
+                    (1..=end).collect::<Vec<u8>>()
+                );
+            }
+            advance_and_tick(pic, Duration::from_secs(2), 8);
+            assert_eq!(scheduling_trace(pic, canister_id), [1, 2, 3, 4]);
+        }
+        let mut expected = if overdue {
+            vec![1, 2, 4, 3]
+        } else {
+            vec![1, 2, 3, 4]
+        };
+        for event in [5, 6] {
+            advance_and_tick(pic, Duration::from_secs(1), 8);
+            expected.push(event);
+            assert_eq!(scheduling_trace(pic, canister_id), expected);
+        }
+        // The periodic callback requested recurrence but cancelled itself first.
+        advance_and_tick(pic, Duration::from_secs(20), 32);
+        assert_eq!(scheduling_trace(pic, canister_id), expected);
+    }
 }

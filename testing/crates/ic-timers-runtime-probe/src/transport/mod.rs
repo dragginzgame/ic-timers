@@ -10,10 +10,14 @@ thread_local! {
 
 #[ic_platform::cdk::update]
 fn pressure_and_start() {
+    start_pressure();
+    assert!(super::start_immediately());
+}
+
+pub(super) fn start_pressure() {
     for _ in 0..600 {
         send_pressure();
     }
-    assert!(super::start_immediately());
 }
 
 fn send_pressure() {

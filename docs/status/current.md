@@ -4,6 +4,32 @@
 
 Last updated: 2026-10-18
 
+## Runtime coverage expansion — pending 0.28.2
+
+This task starts at released 0.28.1 (`c9cc95c259cb46637aacccf6f1fbed6a8280aa39`).
+The incoming manifest selects Build 0.18 and the incoming lock selects Build
+0.18.0, Platform 0.1.13, Testkit 0.54.1, Host 0.27.6 and Metrics 0.14.4.
+Those manifest/lock bytes are preserved; package versions remain unchanged.
+
+Two real-Wasm subjects extend the maintained runtime suite. A batch registers
+64 simultaneously due timers under real self-call queue pressure, cancels and
+replaces pending work, then reaches 64 callbacks awaiting real self-calls at
+once. Per-callback counts establish complete progress without replay, continued
+dispatch and retained-claim reuse. A separate trace checks distinct deadlines,
+callback-created timers, incremental and overdue delivery, and both one-shot and
+periodic self-cancellation. These fixtures add no production backend hooks or
+published library changes. They do not demonstrate exhaustion of all 128 backend
+transport slots or add Wasm64 support.
+
+On Linux, actual Rust 1.91 native all-target and Wasm probe Clippy pass with
+warnings denied; both protocol tests and all 27 runtime PocketIC subjects pass.
+The normal lock-selected Testkit setup prepares its CLI and admits PocketIC
+16.1.0 before execution. Runtime output is retained in
+`target/qualification/coverage-parity/runtime.log`. No policy-cohort rerun,
+native macOS, live IC or full maintainer-operated release gate is claimed.
+Earlier sections retain receipts bound to their named source/graph inputs;
+their historical pending/delivery statements do not qualify the current batch.
+
 ## Source and ownership
 
 HEAD is tagged 0.28.0 (`bb74c6299d9ab156741bf2a11a09bfeb02241166`). The

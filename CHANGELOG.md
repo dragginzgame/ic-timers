@@ -2,6 +2,13 @@
 
 All notable changes to this project are recorded here.
 
+## [0.28.2]
+
+- Add real-Wasm qualification for a full timer batch under queue pressure and
+  suspended work, including cancellation, replacement and continued dispatch.
+  Add deadline-order traces covering callback-created timers, overdue delivery
+  and self-cancellation. Published runtime behavior is unchanged.
+
 ## [0.28.1] - 2026-10-18
 
 - Adopt published IC Platform 0.1.12 for probe entrypoints, calls, protected

@@ -145,3 +145,15 @@ pub struct TimerProbeSnapshot {
     pub trap_at: Option<u64>,
     pub exhaust_at: Option<u64>,
 }
+
+/// Per-callback counts for a maximum-capacity batch with suspended work.
+#[derive(CandidType, Debug, Deserialize, Eq, PartialEq)]
+#[candid_path("ic_platform::candid::contract")]
+#[serde(crate = "ic_platform::candid::contract::serde")]
+pub struct DispatchBatchObservation {
+    pub starts: Vec<u64>,
+    pub completions: Vec<u64>,
+    pub active: u64,
+    pub peak_active: u64,
+    pub inventory_len: u64,
+}

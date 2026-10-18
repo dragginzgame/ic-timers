@@ -10,8 +10,10 @@ use std::cell::{Cell, RefCell};
 const CADENCE_NS: u64 = 1_000_000_000;
 
 mod churn;
+mod dispatch_batch;
 mod mixed;
 mod ordinary;
+mod scheduling_trace;
 mod transport;
 mod watchdog;
 
