@@ -2,15 +2,18 @@
 
 ## Current authority
 
-One [snapshot](../.shared-tooling.snapshot) records **136** canonical payloads
+One [snapshot](../.shared-tooling.snapshot) records **132** canonical payloads
 from committed Shared 0.24.0,
 `cab12cd3dfa4fdb34846b25397f0d72881bb9ae0`. Canonical preview and refresh use
 that clean committed source, excluding the sibling's pending 0.24.1 edits.
 The canonical uploader remains exact 7.0.2 source
 `cf430e030ddbb5b0abf93d22962f4752f3646cd9`.
 
-Existing roots remain except the retired Make-only fixture copier and the generic
-preparation fixture. The latter now requires Shared's own CI workflow; keeping
+Generic host/Cargo installer and release-runner regression roots are retired;
+Shared owns their matrices. Timers retains its actual tool admission, release
+integration, failure evidence and product qualification. The earlier retired
+roots are the Make-only fixture copier and generic preparation fixture. The
+latter now requires Shared's own CI workflow; keeping
 that supplier test here would cross Timers' workflow boundary. Its canonical
 owner retains the test. Timers' CI workflow is unchanged. The snapshot adds the
 required host-platform observer; no exported payload is patched locally.

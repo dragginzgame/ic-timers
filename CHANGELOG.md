@@ -2,6 +2,13 @@
 
 All notable changes to this project are recorded here.
 
+## [0.28.2]
+
+- Keep generic host/Cargo installer and release-runner regression matrices at
+  Shared Tooling. Retain Timers' tool admission, release integration, failure
+  evidence and runtime qualification; canonically retire their unused snapshot
+  payloads without changing the reviewed Shared revision.
+
 ## [0.28.1] - 2026-10-18
 
 - Adopt published IC Platform 0.1.12 for probe entrypoints, calls, protected
