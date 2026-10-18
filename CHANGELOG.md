@@ -2,6 +2,11 @@
 
 All notable changes to this project are recorded here.
 
+## [0.28.2]
+
+- Select Rust 1.99.1 for development and hosted qualification, preserving the
+  independent Rust 1.91 library/probe MSRV and dependency selections.
+
 ## [0.28.1] - 2026-10-18
 
 - Adopt published IC Platform 0.1.12 for probe entrypoints, calls, protected

@@ -83,6 +83,17 @@ hosted acceptance and the complete maintainer-operated release gate remain
 separate. Platform's API-gap issue is closed with published/consumer evidence;
 Timers' adoption remains local pending maintainer delivery.
 
+## Development compiler
+
+Development and explicit hosted selectors now use Rust 1.99.1; the library and
+probe MSRV remains Rust 1.91.0. Local Linux checks with the actual 1.99.1 compiler
+pass formatting, strict library/probe/driver/protocol and four-feature cohort
+Clippy, library/protocol/runtime-probe tests, doctests, Rustdoc and library Wasm
+compilation. Explicit Rust 1.91 native/Wasm library checks also pass. Dependency
+and package versions are unchanged. Compiler preparation/workflow routing tests
+pass; hosted native macOS and actual-canister acceptance belongs to the matching
+PR checks, not these local compile/unit results.
+
 ## Runtime implementation and preserved evidence
 
 The 0.28.0 registry completion change chooses checked schedule, directive

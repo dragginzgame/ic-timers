@@ -488,8 +488,8 @@ remain defined in [AGENTS.md](AGENTS.md).
 | `make pocketic-cohorts` | Compare real-canister policy cohorts and measurements |
 | `make release-impact` | Classify changes as crate-impacting, repository-only, or absent |
 
-Normal development and hosted CI use Rust 1.99.0. Hosted CI also lints every
-supported probe configuration with both Rust 1.99.0 and Rust 1.91.0.
+Normal development and hosted CI use Rust 1.99.1. Hosted CI also lints every
+supported probe configuration with both Rust 1.99.1 and Rust 1.91.0.
 `make update-dev` explicitly prepares both compilers with Clippy, rustfmt and
 the Wasm target before installing/checking the common toolsets and hook. Local
 setup and CI use the same reviewed Rust installer; validation remains offline.
@@ -504,7 +504,7 @@ downloads tools. See the [setup and pin boundaries](docs/releasing.md#structured
 Both `fmt` and `fmt-check` first require the exact cargo-sort pin and prepared
 rustfmt for the selected toolchain; missing tools require explicit setup.
 To run the development-toolchain probe checks locally, use
-`make testing-check MSRV=1.99.0`.
+`make testing-check MSRV=1.99.1`.
 
 The host-side real-canister suites select Testkit from the root lockfile.
 `make install-testkit-server` explicitly installs that version's CLI and prepares
