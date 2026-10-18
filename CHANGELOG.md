@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.28.1]
+## [0.28.1] - 2026-10-18
 
 - Adopt published IC Platform 0.1.12 for probe entrypoints, calls, protected
   spawning, stable save/restore and cycle burning. Remove every direct Candid
