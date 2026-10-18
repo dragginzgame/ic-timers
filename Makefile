@@ -137,9 +137,7 @@ release-check:
 	+$(MAKE) --no-print-directory shared-tooling-check
 	bash scripts/ci/test-snapshot-verifier.sh
 	bash scripts/ci/test-shared-snapshots.sh
-	bash scripts/ci/test-host-tools.sh
 	bash scripts/ci/test-tool-commands.sh
-	bash scripts/ci/test-rust-tools.sh
 	bash scripts/ci/test-rust-preparation.sh
 	bash scripts/ci/test-cloc.sh
 	bash scripts/ci/test-failure-evidence.sh
@@ -149,7 +147,6 @@ release-check:
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/test-dependency-pins.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/test-cargo-metadata.sh
 	perl scripts/ci/test-local-lock-versions.pl
-	bash scripts/ci/test-release-runner.sh
 	bash scripts/ci/check-release-commands.sh "$(CURDIR)" \
 		ci/tool-versions.env ci/release-delivery.txt make/consumer.mk make/tools.mk make/rust-format.mk make/release.mk \
 		scripts/ci/check-release-delivery.sh \

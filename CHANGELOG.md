@@ -8,6 +8,12 @@ All notable changes to this project are recorded here.
   suspended work, including cancellation, replacement and continued dispatch.
   Add deadline-order traces covering callback-created timers, overdue delivery
   and self-cancellation. Published runtime behavior is unchanged.
+- Keep generic host/Cargo installer and release-runner regression matrices at
+  Shared Tooling. Retain Timers' tool admission, release integration, failure
+  evidence and runtime qualification; canonically retire their unused snapshot
+  payloads without changing the reviewed Shared revision.
+- Select Rust 1.99.1 for development and hosted qualification, preserving the
+  independent Rust 1.91 library/probe MSRV and dependency selections.
 
 ## [0.28.1] - 2026-10-18
 
