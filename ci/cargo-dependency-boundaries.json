@@ -1,10 +1,7 @@
 [
   {
     "dependency": "candid",
-    "allowed_packages": [
-      "ic-timers-runtime-probe",
-      "ic-timers-size-probe"
-    ]
+    "allowed_packages": []
   },
   {
     "dependency": "candid_parser",
@@ -12,10 +9,7 @@
   },
   {
     "dependency": "ic-cdk",
-    "allowed_packages": [
-      "ic-timers-runtime-probe",
-      "ic-timers-size-probe"
-    ]
+    "allowed_packages": []
   },
   {
     "dependency": "ic-cdk-executor",
@@ -30,10 +24,12 @@
     "allowed_packages": []
   },
   {
+    "dependency": "ic-platform-macros",
+    "allowed_packages": []
+  },
+  {
     "dependency": "ic-testkit-candid",
-    "allowed_packages": [
-      "ic-timers-pocketic"
-    ]
+    "allowed_packages": []
   },
   {
     "dependency": "ic0",

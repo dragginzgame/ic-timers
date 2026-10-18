@@ -29,14 +29,14 @@ thread_local! {
     static POST_UPGRADE_RECONSTRUCTED: Cell<bool> = const { Cell::new(false) };
 }
 
-#[ic_cdk::init]
+#[ic_platform::cdk::init]
 fn init() {
     if initialize_runtime().is_err() {
-        ic_cdk::trap("ic-timers runtime initialization failed");
+        ic_platform::cdk::api::trap("ic-timers runtime initialization failed");
     }
 }
 
-#[ic_cdk::pre_upgrade]
+#[ic_platform::cdk::pre_upgrade]
 fn pre_upgrade() {
     let state = (
         DESIRED_SCHEDULED.with(Cell::get),
@@ -44,32 +44,32 @@ fn pre_upgrade() {
         COMPLETED_WORK.with(Cell::get),
         SECONDARY_COMPLETED_WORK.with(Cell::get),
     );
-    if ic_cdk::storage::stable_save(state).is_err() {
-        ic_cdk::trap("runtime probe stable save failed");
+    if ic_platform::cdk::storage::stable_save(state).is_err() {
+        ic_platform::cdk::api::trap("runtime probe stable save failed");
     }
 }
 
-#[ic_cdk::post_upgrade]
+#[ic_platform::cdk::post_upgrade]
 fn post_upgrade() {
     let (desired_scheduled, secondary_desired, completed_work, secondary_completed): (
         bool,
         bool,
         u64,
         u64,
-    ) = ic_cdk::storage::stable_restore()
-        .unwrap_or_else(|_| ic_cdk::trap("runtime probe stable restore failed"));
+    ) = ic_platform::cdk::storage::stable_restore()
+        .unwrap_or_else(|_| ic_platform::cdk::api::trap("runtime probe stable restore failed"));
     DESIRED_SCHEDULED.with(|desired| desired.set(desired_scheduled));
     SECONDARY_DESIRED_SCHEDULED.with(|desired| desired.set(secondary_desired));
     COMPLETED_WORK.with(|completed| completed.set(completed_work));
     SECONDARY_COMPLETED_WORK.with(|completed| completed.set(secondary_completed));
     if initialize_runtime().is_err() {
-        ic_cdk::trap("post-upgrade runtime initialization failed");
+        ic_platform::cdk::api::trap("post-upgrade runtime initialization failed");
     }
     if desired_scheduled && !install_watchdog() {
-        ic_cdk::trap("post-upgrade watchdog reconstruction failed");
+        ic_platform::cdk::api::trap("post-upgrade watchdog reconstruction failed");
     }
     if secondary_desired && !install_secondary_watchdog() {
-        ic_cdk::trap("post-upgrade secondary watchdog reconstruction failed");
+        ic_platform::cdk::api::trap("post-upgrade secondary watchdog reconstruction failed");
     }
     let reconstructed = timer_snapshot(&probe_identity())
         .ok()
@@ -79,13 +79,13 @@ fn post_upgrade() {
     POST_UPGRADE_RECONSTRUCTED.with(|observed| observed.set(reconstructed));
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn start() -> bool {
     DESIRED_SCHEDULED.with(|desired| desired.set(true));
     install_watchdog()
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn start_immediately() -> bool {
     DESIRED_SCHEDULED.with(|desired| desired.set(true));
     install_watchdog_with_initial_schedule(true)
@@ -102,7 +102,7 @@ fn install_watchdog_with_initial_schedule(immediate: bool) -> bool {
             probe_identity(),
             if immediate { 0 } else { CADENCE_NS },
             |context| {
-                let now_ns = ic_cdk::api::time();
+                let now_ns = ic_platform::cdk::api::time();
                 let should_trap = TRAP_WINDOW
                     .with(Cell::get)
                     .is_some_and(|(start, end)| now_ns >= start && now_ns < end);
@@ -114,10 +114,10 @@ fn install_watchdog_with_initial_schedule(immediate: bool) -> bool {
                         .reconcile_schedule(Some(TimerSchedule::At(now_ns + 60 * CADENCE_NS)))
                         .is_err()
                     {
-                        ic_cdk::trap("deadline proposal failed");
+                        ic_platform::cdk::api::trap("deadline proposal failed");
                     }
                     if should_trap {
-                        ic_cdk::trap("intentional watchdog work trap");
+                        ic_platform::cdk::api::trap("intentional watchdog work trap");
                     }
                     exhaust_message_instructions();
                 }
@@ -140,46 +140,46 @@ fn take_work_decision() -> WatchdogDecision {
     decision
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn continue_immediately_on_next_work() {
     NEXT_WORK_DECISION.with(|requested| requested.set(WatchdogDecision::ContinueImmediately));
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn schedule_at(deadline_ns: u64) {
     REGISTRATION.with_borrow(|slot| {
         let Some(registration) = slot else {
-            ic_cdk::trap("missing registration")
+            ic_platform::cdk::api::trap("missing registration")
         };
         if registration
             .reconcile_schedule(Some(TimerSchedule::At(deadline_ns)))
             .is_err()
         {
-            ic_cdk::trap("deadline reconciliation failed");
+            ic_platform::cdk::api::trap("deadline reconciliation failed");
         }
     });
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn schedule_at_on_next_work(deadline_ns: u64) {
     NEXT_WORK_DECISION.with(|requested| requested.set(WatchdogDecision::ScheduleAt(deadline_ns)));
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn replace_registration() {
     REGISTRATION.with_borrow_mut(|slot| {
         if let Some(registration) = slot.take()
             && registration.unregister().is_err()
         {
-            ic_cdk::trap("unregister failed");
+            ic_platform::cdk::api::trap("unregister failed");
         }
     });
     if !install_watchdog() {
-        ic_cdk::trap("replacement failed");
+        ic_platform::cdk::api::trap("replacement failed");
     }
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn start_secondary() -> bool {
     SECONDARY_DESIRED_SCHEDULED.with(|desired| desired.set(true));
     install_secondary_watchdog()
@@ -196,14 +196,14 @@ fn install_secondary_watchdog() -> bool {
     })
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn arm_trap() -> u64 {
     let window = failure_window();
     TRAP_WINDOW.with(|target| target.set(Some(window)));
     window.0
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn arm_exhaustion() -> u64 {
     let window = failure_window();
     EXHAUST_WINDOW.with(|target| target.set(Some(window)));
@@ -211,68 +211,68 @@ fn arm_exhaustion() -> u64 {
 }
 
 fn failure_window() -> (u64, u64) {
-    let start = ic_cdk::api::time()
+    let start = ic_platform::cdk::api::time()
         .checked_add(CADENCE_NS)
-        .unwrap_or_else(|| ic_cdk::trap("failure deadline overflow"));
+        .unwrap_or_else(|| ic_platform::cdk::api::trap("failure deadline overflow"));
     let end = start
         .checked_add(CADENCE_NS)
-        .unwrap_or_else(|| ic_cdk::trap("failure window overflow"));
+        .unwrap_or_else(|| ic_platform::cdk::api::trap("failure window overflow"));
     (start, end)
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn stop_on_next_work() {
     NEXT_WORK_DECISION.with(|requested| requested.set(WatchdogDecision::Stop));
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn stop() {
     DESIRED_SCHEDULED.with(|desired| desired.set(false));
     REGISTRATION.with_borrow(|slot| {
         if let Some(registration) = slot.as_ref()
             && registration.cancel().is_err()
         {
-            ic_cdk::trap("watchdog cancellation failed");
+            ic_platform::cdk::api::trap("watchdog cancellation failed");
         }
     });
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn ensure_from_returned_error() -> bool {
     DESIRED_SCHEDULED.with(|desired| desired.set(true));
     REGISTRATION.with_borrow(|slot| {
         let Some(registration) = slot.as_ref() else {
-            ic_cdk::trap("watchdog registration is absent");
+            ic_platform::cdk::api::trap("watchdog registration is absent");
         };
         if registration.ensure_scheduled().is_err() {
-            ic_cdk::trap("commit-window ensure failed");
+            ic_platform::cdk::api::trap("commit-window ensure failed");
         }
     });
     false
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn burn_to_below_timer_call_cost() -> (u128, u128) {
     let method_len = "<ic-timers internal> dispatch".len() as u64;
-    let call_cost = ic_cdk::api::cost_call(method_len, 8);
-    let liquid = ic_cdk::api::canister_liquid_cycle_balance();
+    let call_cost = ic_platform::cdk::api::cost_call(method_len, 8);
+    let liquid = ic_platform::ic0::canister_liquid_cycle_balance128();
     let target = call_cost.saturating_sub(1);
-    let burned = ic_cdk::api::cycles_burn(liquid.saturating_sub(target));
+    let burned = ic_platform::cdk::api::cycles_burn(liquid.saturating_sub(target));
     (burned, call_cost)
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn fill_inventory() -> u64 {
     let current = timer_inventory()
-        .unwrap_or_else(|_| ic_cdk::trap("inventory lookup failed"))
+        .unwrap_or_else(|_| ic_platform::cdk::api::trap("inventory lookup failed"))
         .len();
     let cadence = TimerCadence::from_nanos(CADENCE_NS)
-        .unwrap_or_else(|_| ic_cdk::trap("extra probe cadence is invalid"));
+        .unwrap_or_else(|_| ic_platform::cdk::api::trap("extra probe cadence is invalid"));
     for _ in current..MAX_TIMER_REGISTRATIONS {
         let index = NEXT_EXTRA_NAME.with(Cell::get);
         let name = format!("extra-{index:02}");
         let identity = TimerIdentity::try_new("ic-timers", "runtime-probe", name)
-            .unwrap_or_else(|_| ic_cdk::trap("extra probe identity is invalid"));
+            .unwrap_or_else(|_| ic_platform::cdk::api::trap("extra probe identity is invalid"));
         // Retained declarations belong to the registry; these inert extras
         // need no caller-held control capabilities after registration.
         let _ = register_watchdog(
@@ -281,17 +281,18 @@ fn fill_inventory() -> u64 {
             TimerStart::Retained { initial: None },
             |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop),
         )
-        .unwrap_or_else(|_| ic_cdk::trap("extra watchdog registration failed"));
+        .unwrap_or_else(|_| ic_platform::cdk::api::trap("extra watchdog registration failed"));
         NEXT_EXTRA_NAME.with(|next| next.set(index + 1));
     }
     MAX_TIMER_REGISTRATIONS as u64
 }
 
-#[ic_cdk::query]
+#[ic_platform::cdk::query]
 fn inventory_measurement() -> (u64, u64, bool) {
-    let before = ic_cdk::api::performance_counter(1);
-    let inventory = timer_inventory().unwrap_or_else(|_| ic_cdk::trap("inventory snapshot failed"));
-    let instructions = ic_cdk::api::performance_counter(1).saturating_sub(before);
+    let before = ic_platform::ic0::performance_counter(1);
+    let inventory = timer_inventory()
+        .unwrap_or_else(|_| ic_platform::cdk::api::trap("inventory snapshot failed"));
+    let instructions = ic_platform::ic0::performance_counter(1).saturating_sub(before);
     let ordered = inventory
         .timers()
         .windows(2)
@@ -302,16 +303,16 @@ fn inventory_measurement() -> (u64, u64, bool) {
 #[inline(never)]
 fn exhaust_message_instructions() -> ! {
     loop {
-        std::hint::black_box(ic_cdk::api::performance_counter(0));
+        std::hint::black_box(ic_platform::ic0::performance_counter(0));
     }
 }
 
-#[ic_cdk::query]
+#[ic_platform::cdk::query]
 fn snapshot() -> ProbeSnapshot {
     let registered = REGISTRATION.with_borrow(Option::is_some);
     let completed_work = COMPLETED_WORK.with(Cell::get);
     let snapshot = timer_snapshot(&probe_identity())
-        .unwrap_or_else(|_| ic_cdk::trap("snapshot lookup failed"));
+        .unwrap_or_else(|_| ic_platform::cdk::api::trap("snapshot lookup failed"));
     let observed = ProbeSnapshot {
         registered,
         completed_work,
@@ -372,12 +373,12 @@ fn probe_memory_summary(summary: MemoryPageSummary) -> Option<ProbeMemorySummary
 
 fn probe_identity() -> TimerIdentity {
     TimerIdentity::try_new("ic-timers", "runtime-probe", "watchdog")
-        .unwrap_or_else(|_| ic_cdk::trap("probe identity is invalid"))
+        .unwrap_or_else(|_| ic_platform::cdk::api::trap("probe identity is invalid"))
 }
 
 fn secondary_identity() -> TimerIdentity {
     TimerIdentity::try_new("ic-timers", "runtime-probe", "secondary")
-        .unwrap_or_else(|_| ic_cdk::trap("secondary identity is invalid"))
+        .unwrap_or_else(|_| ic_platform::cdk::api::trap("secondary identity is invalid"))
 }
 
 #[cfg(test)]
@@ -408,10 +409,10 @@ mod tests {
 }
 
 // Unpublished fixture: exercise the authenticated backend payload boundary.
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 async fn fixture_dispatch_payload(payload: Vec<u8>) -> bool {
-    ic_cdk::call::Call::unbounded_wait(
-        ic_cdk::api::canister_self(),
+    ic_platform::cdk::call::Call::unbounded_wait(
+        ic_platform::cdk::api::canister_self(),
         "<ic-timers internal> dispatch",
     )
     .take_raw_args(payload)

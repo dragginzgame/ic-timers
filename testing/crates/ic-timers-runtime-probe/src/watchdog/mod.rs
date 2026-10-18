@@ -14,7 +14,7 @@ pub(super) fn install(
         return false;
     }
     let cadence = TimerCadence::from_nanos(super::CADENCE_NS)
-        .unwrap_or_else(|_| ic_cdk::trap("probe cadence is invalid"));
+        .unwrap_or_else(|_| ic_platform::cdk::api::trap("probe cadence is invalid"));
     let registration = register_watchdog(
         identity,
         cadence,
@@ -23,7 +23,7 @@ pub(super) fn install(
         },
         callback,
     )
-    .unwrap_or_else(|_| ic_cdk::trap("watchdog registration failed"));
+    .unwrap_or_else(|_| ic_platform::cdk::api::trap("watchdog registration failed"));
     *slot = Some(registration);
     true
 }

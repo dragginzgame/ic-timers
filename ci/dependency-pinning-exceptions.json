@@ -1,10 +1,1 @@
-[
-  {
-    "rule": "cargo-exact",
-    "file": "Cargo.toml",
-    "subject": "ic-cdk",
-    "value": "=0.20.3",
-    "reason": "Probe callback execution and suspension use this CDK runtime; changing it requires fresh canister recovery evidence.",
-    "evidence": "docs/releasing.md#dependency-pin-exceptions"
-  }
-]
+[]

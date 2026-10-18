@@ -16,7 +16,7 @@ thread_local! {
     static COMPLETED: Cell<u64> = const { Cell::new(0) };
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn replace_distant_deadlines(count: u32) {
     assert!(
         count > 0 && count <= MAX_REPLACEMENTS,
@@ -50,7 +50,7 @@ fn replace_distant_deadlines(count: u32) {
             );
         }
         let timer = slot.as_ref().expect("registered");
-        let base = ic_cdk::api::time()
+        let base = ic_platform::cdk::api::time()
             .checked_add(CADENCE_NS)
             .expect("distant deadline");
         for index in 0..count {
@@ -64,7 +64,7 @@ fn replace_distant_deadlines(count: u32) {
     });
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn start_immediate_churn() {
     REGISTRATION.with_borrow(|slot| {
         slot.as_ref()
@@ -74,7 +74,7 @@ fn start_immediate_churn() {
     });
 }
 
-#[ic_cdk::query]
+#[ic_platform::cdk::query]
 fn churn_observation() -> ChurnObservation {
     #[cfg(target_arch = "wasm32")]
     let wasm_pages = core::arch::wasm32::memory_size::<0>() as u64;

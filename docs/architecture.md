@@ -37,7 +37,8 @@ canister graphs must still exclude older providers that lack that key.
 | Measurement arithmetic | `ic-metrics` | Timer-specific sample boundaries, counters and memory extents in `snapshot/metrics.rs` |
 | Durable jobs, readiness, lifecycle order and operator-health labels | Consuming application/framework | Registration claims and snapshots; no durable task database or application lifecycle exports here |
 | Wasm compilation and artifact-cache custody | `ic-build`, with explicit child custody from `ic-host-process` | `testing/crates/ic-timers-pocketic/src/build/mod.rs` selects packages, profile, features and artifact lifetime |
-| PocketIC server selection, admission and lifecycle; bounded Candid decoding | `ic-testkit` and `ic-testkit-candid` | `scripts/dev/testkit-server.sh` selects the root-lock CLI; the native harness supplies instance configuration and reply limits |
+| PocketIC server selection, admission, lifecycle and call transport | `ic-testkit` | `scripts/dev/testkit-server.sh` selects the root-lock CLI; the native harness supplies instance configuration |
+| Bounded Candid decoding and its limits/error identities | `ic-platform::candid` | Native harness and protocol subjects supply their existing finite limits; Testkit 0.54 consumes the same identities |
 | Common tools, fixture dependency closure, evidence transport and release mechanics | Reviewed Shared Tooling snapshot | Local Make selections, product release/source policy and evidence identity; see [adoption boundaries](shared-tooling.md) |
 
 The [root manifest](../Cargo.toml) owns all five maintained packages and every
@@ -50,12 +51,14 @@ remain separate evidence selections in the [release guide](releasing.md).
 
 ## Candid and CDK dependency boundary
 
-The registry-published `ic-platform` **0.1.8** is the selected boundary. Its
-archive (VCS `57fcf8d4f55914dedf0a25e70cec2e8affb3fb82`) exports upstream
+The registry-published `ic-platform` **0.1.12** is the selected boundary. Its
+archive (VCS `338b14baf97690abdfc0e386d6d5261b309a3ac8`) exports upstream
 identities, not a second codec or executor. The root catalog disables default
 features; the library selects `executor` and `ic0`, while probe DTOs and the native
-harness select `candid`. No host parser, Agent, certification or management DTO
-or ledger DTO feature is selected.
+harness select `candid`. The two canister probes select `cdk` for Platform-owned
+entrypoint generation, exact upstream calls and protected spawning. Its published
+macro helper supplies both runtime and codec paths. No host parser, Agent,
+cryptographic verification, certification, management or ledger feature is selected.
 
 The private platform uses `ic_platform::ic0` for its existing system calls,
 retaining context placement, method handles, protected spawning and callback/trap cleanup. The lockfile still
@@ -80,24 +83,34 @@ and [#8](https://github.com/dragginzgame/ic-platform/issues/8) without a local f
 The new `candid::decoder::{decode_one, decode_args}` exports use upstream defaults
 and are distinct from Platform's finite-limit parent helpers. The protocol
 subjects continue importing `candid::decode_args` with explicit limits; native
-transport retains Testkit's limits identity. No unbounded decoder is substituted.
+transport accepts Platform's limits/error identities through Testkit 0.54.
+No unbounded decoder is substituted.
 
-Two published API exceptions remain:
+The runtime probe uses Platform's `cdk::storage::{stable_save, stable_restore}`
+and `cdk::api::cycles_burn`, which directly reexport the existing CDK 0.20.3
+helpers. The `(bool, bool, u64, u64)` upgrade tuple, Candid error identities,
+restore's lack of decoder finalization, trap messages and actual cycle-burning
+behavior remain unchanged. This completes the published boundary requested in
+[Platform #19 — Timers stable-helper and cycle-burn boundary](https://github.com/dragginzgame/ic-platform/issues/19),
+without a local storage implementation or compatibility wrapper.
 
-- Runtime and size canisters retain direct CDK 0.20.3 and Candid. Platform 0.1.8
-  has no CDK entrypoint/call/storage facade, and the selected entrypoint
-  macros generate absolute `::candid` paths. Their awaited calls, traps and exact
-  upgrade tuple cannot be replaced by a fake. See
-  [Platform #1](https://github.com/dragginzgame/ic-platform/issues/1#issuecomment-6247492583).
-- The native driver retains `ic-testkit-candid` 0.53 because published Testkit
-  0.53 requires that nominal limits/error identity. Its five reply ceilings and
-  typed error sources remain unchanged; no conversion wrapper or local transport
-  is added. See
-  [Platform #2](https://github.com/dragginzgame/ic-platform/issues/2#issuecomment-6247492763).
+No workspace member declares Candid or any CDK-family package directly.
+Candid, upstream CDK/macros, Platform's generator and the shared
+executor remain transitive dependencies of the qualification canisters. Their
+presence does not change the library's executor/IC0-only feature selection or
+make the qualification Wasm Candid-free. Raw counter/page observations use
+Platform's exact IC0 exports; CDK spawning keeps its unfinished-task drop policy.
+
+The native driver selects published Testkit 0.54 and imports Platform's
+`DecodeLimits` directly. The retired `ic-testkit-candid` declaration, package and
+ownership exception are removed; its five reply ceilings and typed error sources
+remain unchanged. No conversion wrapper or local transport is added. This
+completes Timers' consumer migration under
+[Platform #2 — Coordinate published Testkit limits identity](https://github.com/dragginzgame/ic-platform/issues/2).
 
 The [dependency policy](../ci/cargo-dependency-boundaries.json) is enforced through
 Shared's canonical checker in `actions-check`, alongside pin/inheritance checks.
-It allows only the named consumers above. Metadata covers aliases and all
+It forbids these direct upstream declarations in every member. Metadata covers aliases and all
 normal/build/dev and target declarations; enabled features and transitive
 reachability require separate graph inspection. See
 [deployment exclusions](shared-tooling.md#deployment-dependency-exclusions).

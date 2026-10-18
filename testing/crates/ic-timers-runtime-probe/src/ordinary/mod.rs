@@ -37,7 +37,7 @@ struct CapturedState;
 impl Drop for CapturedState {
     fn drop(&mut self) {
         if TRAP_CAPTURE_DROP.get() {
-            ic_cdk::trap("probe capture drop trap");
+            ic_platform::cdk::api::trap("probe capture drop trap");
         }
         CAPTURE_REGISTRY_ACCESSIBLE.with(|accessible| {
             accessible.set(accessible.get() && timer_inventory().is_ok());
@@ -63,7 +63,7 @@ thread_local! {
 
 // Deliberately violates the consumer destructor contract to exercise an actual
 // dispatch response trap and its IC cleanup callback, without backend hooks.
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn trap_ordinary_capture_drop(enabled: bool) {
     TRAP_CAPTURE_DROP.set(enabled);
 }
@@ -72,9 +72,9 @@ fn identity() -> TimerIdentity {
     TimerIdentity::try_new("ic-timers", "await-probe", "ordinary").expect("fixed identity")
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn start_ordinary(after_completion: bool, transient: bool) {
-    let initial = TimerSchedule::At(ic_cdk::api::time());
+    let initial = TimerSchedule::At(ic_platform::cdk::api::time());
     let start = if transient {
         TimerStart::RemoveWhenStopped { initial }
     } else {
@@ -128,18 +128,20 @@ fn start_ordinary(after_completion: bool, transient: bool) {
 
 async fn work() -> TimerCompletion {
     if TRAP_POINT.with(Cell::get) == TrapPoint::BeforeAwait {
-        ic_cdk::trap("ordinary probe trap before await");
+        ic_platform::cdk::api::trap("ordinary probe trap before await");
     }
     GATE_WAITING.with(|waiting| waiting.set(true));
     loop {
         // Every closed-gate reply is followed by another real call await. A bare
         // Pending future cannot keep the IC call context alive, and a protected
         // CDK task cannot resume in the separate ingress that opens the gate.
-        let result =
-            ic_cdk::call::Call::unbounded_wait(ic_cdk::api::canister_self(), "ordinary_gate")
-                .await
-                .map_err(|error| error.to_string())
-                .and_then(|response| response.candid::<bool>().map_err(|error| error.to_string()));
+        let result = ic_platform::cdk::call::Call::unbounded_wait(
+            ic_platform::cdk::api::canister_self(),
+            "ordinary_gate",
+        )
+        .await
+        .map_err(|error| error.to_string())
+        .and_then(|response| response.candid::<bool>().map_err(|error| error.to_string()));
         let open = match result {
             Ok(open) => open,
             Err(error) => {
@@ -154,30 +156,30 @@ async fn work() -> TimerCompletion {
         }
     }
     if TRAP_POINT.with(Cell::get) == TrapPoint::AfterAwait {
-        ic_cdk::trap("ordinary probe trap after await");
+        ic_platform::cdk::api::trap("ordinary probe trap after await");
     }
     GATE_WAITING.with(|waiting| waiting.set(false));
     COMPLETIONS.with(|count| count.set(count.get() + 1));
-    COMPLETED_AT_NS.with(|time| time.set(Some(ic_cdk::api::time())));
+    COMPLETED_AT_NS.with(|time| time.set(Some(ic_platform::cdk::api::time())));
     TimerCompletion::success(1)
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn ordinary_gate() -> bool {
     assert_eq!(
-        ic_cdk::api::msg_caller(),
-        ic_cdk::api::canister_self(),
+        ic_platform::cdk::api::msg_caller(),
+        ic_platform::cdk::api::canister_self(),
         "self-call gate"
     );
     GATE_OPEN.with(Cell::get)
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn release_ordinary_work() {
     GATE_OPEN.with(|open| open.set(true));
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn trap_ordinary_work(before_await: bool) {
     TRAP_POINT.with(|point| {
         point.set(if before_await {
@@ -188,12 +190,12 @@ fn trap_ordinary_work(before_await: bool) {
     });
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn clear_ordinary_trap() {
     TRAP_POINT.with(|point| point.set(TrapPoint::None));
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn expired_ordinary_context_rejected() -> bool {
     WORK_CONTEXT.with_borrow(|slot| {
         let result = match slot.as_ref().expect("committed work context") {
@@ -204,7 +206,7 @@ fn expired_ordinary_context_rejected() -> bool {
     })
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn discard_expired_ordinary_claim() {
     REGISTRATION.with_borrow_mut(|slot| {
         let result = match slot.as_ref().expect("expired registration") {
@@ -224,7 +226,7 @@ fn reconcile(registration: &Registration, desired: Option<TimerSchedule>) {
     result.expect("ordinary reconciliation");
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn reconcile_ordinary_at(deadline_ns: u64) {
     REGISTRATION.with_borrow(|slot| {
         reconcile(
@@ -234,12 +236,12 @@ fn reconcile_ordinary_at(deadline_ns: u64) {
     });
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn cancel_ordinary() {
     REGISTRATION.with_borrow(|slot| reconcile(slot.as_ref().expect("registered"), None));
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn unregister_ordinary() {
     let registration = REGISTRATION
         .with_borrow_mut(Option::take)
@@ -251,7 +253,7 @@ fn unregister_ordinary() {
     .expect("ordinary unregister");
 }
 
-#[ic_cdk::query]
+#[ic_platform::cdk::query]
 fn ordinary_observation() -> OrdinaryObservation {
     let snapshot = timer_snapshot(&identity()).expect("ordinary snapshot");
     let armed = REGISTRATION.with_borrow(|slot| {
@@ -308,9 +310,9 @@ fn ordinary_observation() -> OrdinaryObservation {
 }
 
 /// Remove armed authority in one message before any consumer work can start.
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn remove_armed_callback(policy: u8) {
-    let deadline = ic_cdk::api::time()
+    let deadline = ic_platform::cdk::api::time()
         .checked_add(super::CADENCE_NS)
         .expect("fixture deadline");
     let captured = CapturedState;
@@ -364,12 +366,12 @@ fn remove_armed_callback(policy: u8) {
             .expect("register Watchdog");
             timer.unregister().expect("unregister Watchdog");
         }
-        _ => ic_cdk::trap("unknown removal policy"),
+        _ => ic_platform::cdk::api::trap("unknown removal policy"),
     }
 }
 
 /// A rejected initial request must not leave callback authority in the IC heap.
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn reject_initial_schedule(policy: u8, transient: bool) -> (bool, u64, bool) {
     let before = timer_inventory().expect("initial inventory");
     let dropped_before = CAPTURES_DROPPED.with(Cell::get);
@@ -413,7 +415,7 @@ fn reject_initial_schedule(policy: u8, transient: bool) -> (bool, u64, bool) {
             },
         )
         .map(|_| ()),
-        _ => ic_cdk::trap("unknown initial policy"),
+        _ => ic_platform::cdk::api::trap("unknown initial policy"),
     };
     let rejected = matches!(
         result,
@@ -430,7 +432,7 @@ fn reject_initial_schedule(policy: u8, transient: bool) -> (bool, u64, bool) {
 }
 
 /// A rejected first lifecycle reconciliation must leave its owner slot empty.
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn reject_initial_reconciliation(policy: u8) -> (bool, bool, u64, bool) {
     let before = timer_inventory().expect("initial inventory");
     let dropped_before = CAPTURES_DROPPED.with(Cell::get);
@@ -483,7 +485,7 @@ fn reject_initial_reconciliation(policy: u8) -> (bool, bool, u64, bool) {
             );
             (result, slot.is_none())
         }
-        _ => ic_cdk::trap("unknown reconciliation policy"),
+        _ => ic_platform::cdk::api::trap("unknown reconciliation policy"),
     };
     let rejected = matches!(
         (policy, result),

@@ -8,7 +8,7 @@ thread_local! {
     static ENABLED: Cell<bool> = const { Cell::new(true) };
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn pressure_and_start() {
     for _ in 0..600 {
         send_pressure();
@@ -17,9 +17,12 @@ fn pressure_and_start() {
 }
 
 fn send_pressure() {
-    ic_cdk::futures::spawn(async {
-        match ic_cdk::call::Call::unbounded_wait(ic_cdk::api::canister_self(), "pressure_reply")
-            .await
+    ic_platform::cdk::futures::spawn(async {
+        match ic_platform::cdk::call::Call::unbounded_wait(
+            ic_platform::cdk::api::canister_self(),
+            "pressure_reply",
+        )
+        .await
         {
             Ok(_) => {
                 REPLIES.set(REPLIES.get() + 1);
@@ -27,23 +30,25 @@ fn send_pressure() {
                     send_pressure();
                 }
             }
-            Err(ic_cdk::call::CallFailed::CallPerformFailed(_)) => {
+            Err(ic_platform::cdk::call::CallFailed::CallPerformFailed(_)) => {
                 SUBMISSION_FAILURES.set(SUBMISSION_FAILURES.get() + 1);
             }
-            Err(error) => ic_cdk::trap(format!("unexpected pressure error: {error}")),
+            Err(error) => {
+                ic_platform::cdk::api::trap(format!("unexpected pressure error: {error}"))
+            }
         }
     });
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn release_pressure() {
     ENABLED.set(false);
 }
 
-#[ic_cdk::update]
+#[ic_platform::cdk::update]
 fn pressure_reply() {}
 
-#[ic_cdk::query]
+#[ic_platform::cdk::query]
 fn pressure_observation() -> (u64, u64) {
     (SUBMISSION_FAILURES.get(), REPLIES.get())
 }

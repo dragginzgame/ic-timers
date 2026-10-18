@@ -6,10 +6,9 @@ Last updated: 2026-10-18
 
 ## Source and ownership
 
-HEAD is released 0.27.1 (`194204db30444f0355729deda32f1de739160734`). The
-working tree prepares the undated 0.28.0 batch in `CHANGELOG.md`. Metrics 0.14
-changes the publicly reexported `MeasurementSummary` identity, so this batch
-requires a minor release even though its timer scheduling API is unchanged.
+HEAD is tagged 0.28.0 (`bb74c6299d9ab156741bf2a11a09bfeb02241166`). The
+working tree prepares the undated 0.28.1 batch in `CHANGELOG.md`. The released
+0.28.0 batch includes Metrics 0.14's public `MeasurementSummary` identity change.
 Cargo versions, staging, commits, pushes and releases remain user-owned.
 
 Timers owns volatile registration, scheduling, observation and private one-shot
@@ -23,7 +22,7 @@ One root workspace/catalog and lockfile select all five maintained packages.
 The root manifest uses the canonical production and test/tooling role groups;
 matching grouped sorting is active in Make, hooks and all release metadata
 checks. The current catalog still selects Metrics 0.14, Build 0.17,
-Testkit/Candid 0.53 and Host Process 0.27. Platform 0.1.8 is selected;
+Testkit 0.54 and Host Process 0.27. Platform 0.1.12 is selected;
 the incoming Build/Host/Metrics selections are preserved.
 Shared 0.24.0 (`cab12cd3dfa4fdb34846b25397f0d72881bb9ae0`) now supplies 136
 canonical payloads. The Make-only copier is retired; the supplier preparation
@@ -34,59 +33,59 @@ selected setup; there is no IC executable bundle.
 
 ## Published Platform adoption
 
-Cargo registry refresh on 2026-10-18 selected published Platform 0.1.8
-(checksum `4a3adb6d9785133587b854b66b37dfdd8f7945555bdc59b6d0be26995187484d`,
-VCS `57fcf8d4f55914dedf0a25e70cec2e8affb3fb82`, MSRV 1.88). The root
-catalog/lock select this registry archive. All other package identities and
-incoming work are preserved. Default features stay disabled: production selects
-`executor` and `ic0`, protocol DTOs/native encoding select `candid`. No parser,
-Agent, certification, management or ledger feature is selected.
+The selected published facade is **0.1.12**, SHA-256
+`e0ab384614a5d8fe251bc2c27c508263d4001d776edf31382b5b985a1a4ced2d`,
+VCS `338b14baf97690abdfc0e386d6d5261b309a3ac8`, MSRV 1.88. Its coordinated
+macro helper 0.1.12 matches SHA-256
+`9b5de9771169e34ca8da9bbb04c9c6196b1d2de8d2d0d21bc79d5921984ce6be`.
+Both downloaded archives match the registry. Generator source is unchanged from
+0.1.11. The lock updates only these two packages and removes the runtime probe's
+direct CDK edge; all other incoming selections are preserved.
 
-The release adds snapshot/status management DTO exports behind an unselected
-feature. All executor, IC0 and Candid module bytes used here match 0.1.7; exact
-executor 2.0.0/IC0 1.2.0 identities remain shared with CDK. Production calls stay
-on Platform with no direct executor/IC0 declarations or local pin exceptions.
-No Rust implementation, decoder policy, callback/trap context, upgrade tuple or
-wire shape needs to change for this update. Parent bounded Candid helpers retain
-explicit limits; no unbounded convenience function replaces them.
+Both canister probes use Platform's `cdk` capability for entrypoints, calls,
+traps and protected spawning. The runtime probe's final three direct CDK calls
+now use its exact upstream `storage::{stable_save, stable_restore}` and
+`api::cycles_burn` exports. The existing four-field upgrade tuple, checkpoint
+bytes, decoder/error behavior, trap messages and low-cycle semantics are unchanged.
+The direct dependency, local exact-pin exception and dependency-policy allowance
+are removed. The published delivery completes
+[Platform #19](https://github.com/dragginzgame/ic-platform/issues/19).
+No local wrapper or storage migration is
+introduced; existing counter/page observations retain their Platform IC0 paths.
 
-The archive still documents direct probe CDK/Candid for unsupported typed
-entrypoint/call/spawn/lifecycle APIs
-([Platform #1](https://github.com/dragginzgame/ic-platform/issues/1)); published
-Testkit 0.53 still requires its old limits/error identity
-([Platform #2](https://github.com/dragginzgame/ic-platform/issues/2)). The actual
-limits-import E0308 trial and full 0.1.7 runtime evidence remain retained under
-`target/qualification/platform017/`; unchanged API bytes and constraints preserve
-that explanation. No duplicate issue or local facade is justified by this release.
+Default features stay disabled. The published library selects only `executor`
+and `ic0`; DTO/native decoding selects `candid`, and only the canister probes
+select `cdk`. Parser, Agent, crypto/signature, certification, management and ledger
+features are unselected. Candid/CDK/macros intentionally remain transitive in the
+qualification graph; production library graph admission is a separate check.
+Shared's direct checker forbids Candid/CDK-family, Platform-macro, retired decoder,
+IC0 and executor declarations in every member, including aliases and
+normal/build/dev/target declarations. Transitive feature/artifact exclusion
+remains a separate deployment-owner obligation; see
+[deployment exclusions](../shared-tooling.md#deployment-dependency-exclusions).
 
-Current receipts are in `target/qualification/platform018/`, compared with
-`/tmp/ic-timers-platform018-arrival.17psrb19`. Rust 1.91 library Wasm, 160 library
-and two protocol tests, eight doctests, Rustdoc, strict library/runtime/driver
-and all four cohort lint selections pass. The graph audit confirms only
-Platform's identity changed; all-feature Linux/Wasm library normal/build graphs
-exclude Candid/full CDK, parser, Agent, management/ledger DTOs and test tooling.
-One executor/IC0/CDK identity is resolved. All 24 runtime PocketIC subjects
-and the four-artifact cohort subject pass on admitted server 16.1.0, covering
-real await, callback traps, cancellation, queue pressure, instruction exhaustion
-and upgrades. Eight DTO wire descriptions and both encoded vectors match the
-pre-Platform output. This is fresh 0.1.8 Linux simulator evidence.
-Grouped formatting, pin/inheritance/direct/provider checks, snapshot integrity,
-release metadata and local documentation links pass. No new consumer regression
-or previously untracked API gap was found. Existing #1/#2 already cover the
-remaining exceptions, so no duplicate issue or repeated unchanged comment was
-posted. Prior evidence retains its own source/graph scope.
+Current receipts belong to `target/qualification/platform0112/`, compared with
+`/tmp/ic-timers-platform0112-arrival.ct2vmuet`. Prior 0.1.10 and 0.1.11
+qualification remains source-bound in `target/qualification/platform0110/` and
+`target/qualification/platform0111/`; it does not by itself qualify this selection.
 
-Shared's direct policy forbids all member IC0/executor declarations, including
-aliases and normal/build/dev/target tables, with only the documented consumer
-exceptions. Unused catalog entries, future unenumerated names, transitive feature
-reachability and deployed-artifact admission remain separate obligations; see
-[architecture](../architecture.md#candid-and-cdk-dependency-boundary) and
-[adoption boundaries](../shared-tooling.md#deployment-dependency-exclusions).
-Native macOS, live IC, hosted and complete release gates remain independent.
+Rust 1.91 strict probe/driver/protocol and four-feature cohort lint, native
+all-target and Wasm library checks, 160 library tests and both protocol tests
+pass. All 25 runtime PocketIC subjects and the four-artifact policy-cohort subject
+pass on Testkit-admitted server 16.1.0, including stable upgrade/reconstruction,
+low-cycle refusal/retry, callback/trap/cancellation and typed Candid rejection.
+The original minimal helper-import consumer now compiles. Native/Wasm standalone
+library graphs exclude Candid, full CDK, generators and host tooling; the full
+qualification graph retains one CDK 0.20.3, executor 2.0.0 and IC0 1.2.0 identity.
+Direct-boundary, pin/inheritance, provider, formatting, changelog and local-doc
+link checks pass. These are Linux simulator/MSRV results; native macOS, live IC,
+hosted acceptance and the complete maintainer-operated release gate remain
+separate. Platform's API-gap issue is closed with published/consumer evidence;
+Timers' adoption remains local pending maintainer delivery.
 
-## Pending implementation and preserved evidence
+## Runtime implementation and preserved evidence
 
-The incoming registry completion change chooses checked schedule, directive
+The 0.28.0 registry completion change chooses checked schedule, directive
 observation and cancellation together. The runtime probe shares Watchdog
 installation while preserving independent callbacks, counters and durable tuple.
 The mixed-policy probe and three subjects are now local to Timers; probe startup,
@@ -111,9 +110,9 @@ fixture suites, fixture completion/retention, provider boundaries, source-follow
 ShellCheck, snapshot integrity, locked offline metadata and local documentation
 links pass on Linux. Both non-ignored README Rust examples compile against
 published exact 0.27.1 on Rust 1.91, and the size probe compiles to Wasm with its
-baseline feature. The unused-dependency scan flags only size-probe `candid`:
-selected CDK macros emit direct `::candid` references, so that edge is retained
-and documented beside its declaration. No full gate, live PocketIC, native macOS
+baseline feature. That earlier selection retained size-probe `candid` because
+upstream CDK macros generated direct references. The subsequent Platform
+migration replaced those macros and removed that edge. No full gate, live PocketIC, native macOS
 or sibling build was run for this tooling/documentation cleanup.
 
 ## Ownership convergence closeout
@@ -135,14 +134,30 @@ Build 0.17.2 constructor/removed-environment-method errors; the reproducer is on
 The tool packages require Rust 1.96; these failing attempts use Rust 1.99.0.
 No database recovery or lifecycle proof is replaced by the primitive suite.
 
-The registry still ends at Testkit 0.53.0. An isolated consumer of captured pending
-Testkit source removes both old-decoder declarations, uses Platform's limits
-identity and forbids the retired dependency without changing the five ceilings.
-Actual Rust 1.91 strict all-target driver Clippy and all six producer call/decoder
-subjects pass. [Platform #2](https://github.com/dragginzgame/ic-platform/issues/2#issuecomment-6249021600)
-records readiness and the publication prerequisite. This is unpublished-source
-evidence only: the normal catalog, lockfile and decoder exception remain intact.
-No compatibility wrapper or alternate transport is introduced.
+Published Testkit 0.54.0 now replaces the earlier unpublished-source trial. Its
+registry archive matches SHA-256
+`787c2ea232d8dd36586d7bd2fb72d78d098a2b892cedd1a319450b2ecea7347d`, identifies
+source `ff88087d6757121ac92e0dec4705ecaccfd8ebed` and retains Rust 1.91 support.
+The published calls and typed errors consume Platform's identities directly.
+The incoming root catalog had already selected 0.54 and removed the old decoder;
+the completed cut removes its remaining member declaration, switches the actual
+harness import and forbids the retired dependency in every workspace member.
+All five ceilings are unchanged. The lock drops Testkit 0.53, the old decoder and
+the now-unused Metrics 0.13 copy while preserving other selected versions.
+[Platform #2 — Coordinate published Testkit limits identity](https://github.com/dragginzgame/ic-platform/issues/2)
+owns the upstream coordination. No compatibility wrapper or alternate transport
+is introduced. Current receipts and captured incoming bytes are in
+`target/qualification/testkit054/`.
+
+The actual Rust 1.91 all-target driver/protocol Clippy, both protocol tests,
+all 24 runtime PocketIC subjects and the four-artifact cohort subject pass
+against the published release. Normal
+Testkit 0.54 CLI preparation and offline server admission pass for PocketIC
+16.1.0. Complete metadata/tree inspection contains no retired decoder package
+and one Metrics 0.14.1 identity. The library's standalone Wasm normal/build graph
+remains free of Candid/full CDK. Direct dependency and pin/inheritance checks pass.
+These are Linux simulator/MSRV results; native macOS, live IC and complete
+release qualification remain separate.
 
 ## Coordination and limits
 

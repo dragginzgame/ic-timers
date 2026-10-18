@@ -17,10 +17,7 @@ after-completion = []
 watchdog = []
 
 [dependencies]
-# Platform 0.1.8 has no CDK macro facade; ic-platform#1 tracks retirement.
-# CDK entrypoint macros generate ::candid calls even with wire DTOs in the protocol crate.
-candid.workspace = true
-ic-cdk.workspace = true
+ic-platform = { workspace = true, features = ["cdk"] }
 ic-timers.workspace = true
 ic-timers-test-protocol.workspace = true
 

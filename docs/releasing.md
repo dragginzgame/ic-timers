@@ -217,19 +217,13 @@ shared-server reuse or recovery guarantees.
 
 ## Dependency pin exceptions
 
-The exact reviewed [exceptions](../ci/dependency-pinning-exceptions.json) are:
-
-| Dependency | Selection | Qualification boundary |
-| --- | --- | --- |
-| `ic-cdk` | `=0.20.3` | Probe callback execution and suspension semantics |
-
-Platform 0.1.8 owns both exact production selections: executor `=2.0.0` and
-IC0 `=1.2.0`. Timers enables `executor` and `ic0`, with no direct declarations
-or local pin exceptions for those providers. The root lockfile resolves one
-qualified executor/IC0 identity shared with CDK. Any Platform update changing
-those identities requires renewed callback/trap/cancellation/upgrade evidence.
-See the [Candid/CDK boundary](architecture.md#candid-and-cdk-dependency-boundary)
-for published API exceptions.
+The reviewed [exception list](../ci/dependency-pinning-exceptions.json) is empty.
+Platform 0.1.12 owns exact selections for CDK `=0.20.3`, executor `=2.0.0` and
+IC0 `=1.2.0`; Timers declares none of these providers directly. The library
+selects only `executor` and `ic0`, while canister probes select `cdk`. The root
+lockfile resolves one qualified identity for each provider. Any Platform update
+changing those identities requires renewed callback/trap/cancellation/upgrade
+evidence. See the [Candid/CDK boundary](architecture.md#candid-and-cdk-dependency-boundary).
 
 An exception matches its declaring root, name and literal version. A changed
 selection requires renewed source/runtime/host review; the old receipt cannot

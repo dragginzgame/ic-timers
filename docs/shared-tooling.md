@@ -70,11 +70,12 @@ Unselected IC stores and failed diagnostics remain eligible for retention.
 ## Deployment dependency exclusions
 
 The selected Shared 0.24 checker `check-cargo-dependency-boundaries.sh` is now
-included in `actions-check`. The local policy forbids direct Candid/CDK-family
-edges except Candid/CDK in the two unpublished canisters and the old decoder in
-the native driver. Direct IC0 and executor declarations are forbidden in every
-member; Platform 0.1.8 owns both exact selections. [Published API blockers](architecture.md#candid-and-cdk-dependency-boundary)
-explain those exceptions. The checker resolves aliases through Cargo metadata and
+included in `actions-check`. The local policy forbids direct Candid/CDK-family,
+Platform macro-helper, retired Testkit decoder, IC0 and executor declarations in
+every member. Platform 0.1.12 owns generator/runtime paths, stable helpers and
+exact upstream selections. There are no consumer exceptions. See the
+[published boundary](architecture.md#candid-and-cdk-dependency-boundary).
+The checker resolves aliases through Cargo metadata and
 checks all normal/build/dev/target declarations. The root has one workspace;
 there are no maintained independent Cargo fixtures or manifests.
 

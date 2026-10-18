@@ -12,6 +12,45 @@ use std::{env, fs, path::PathBuf, time::Duration};
 const TIMER_EXECUTOR_METHOD: &str = "<ic-timers internal> dispatch";
 
 #[test]
+fn typed_entrypoints_reject_invalid_candid_before_mutating_timer_state() {
+    let owned = fresh_pocket_ic();
+    let pic = &owned.instance;
+    let canister_id = install_probe(pic, probe_wasm());
+    let mut truncated = encode_args((false, false)).expect("encode valid arguments");
+    truncated.pop();
+    for arguments in [
+        b"not candid".to_vec(),
+        encode_args((1_u64, false)).expect("encode wrong argument type"),
+        encode_args((false,)).expect("encode missing argument"),
+        truncated,
+    ] {
+        assert!(
+            pic.update_call(
+                canister_id,
+                Principal::anonymous(),
+                "start_ordinary",
+                arguments,
+            )
+            .is_err(),
+            "invalid typed arguments must reject before registration"
+        );
+        assert!(!ordinary_observation(pic, canister_id).declared);
+        assert_eq!(snapshot(pic, canister_id).scheduler_started, 0);
+    }
+    // Preserve the existing generator's bounded skipping and one-unit reply.
+    let reply = pic
+        .update_call(
+            canister_id,
+            Principal::anonymous(),
+            "start_ordinary",
+            encode_args((false, false, "extra argument")).expect("encode extra argument"),
+        )
+        .expect("valid arguments still work after rejected input");
+    assert_eq!(reply, encode_args(((),)).expect("encode one unit reply"));
+    assert!(ordinary_observation(pic, canister_id).declared);
+}
+
+#[test]
 fn self_call_queue_pressure_defers_timer_submission_without_losing_work() {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;

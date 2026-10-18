@@ -1,11 +1,13 @@
 //! Fresh, caller-owned testkit servers and IC instances from the verified binary.
 
-use ic_platform::{Principal, candid::contract::encode_args};
+use ic_platform::{
+    Principal,
+    candid::{DecodeLimits, contract::encode_args},
+};
 use ic_testkit::pic::{
     CanisterInstallExt, InstallSpec, PocketIc, PocketIcBuilder, PocketIcInstance,
     PocketIcStartupConfig, tick_until, update_candid_args,
 };
-use ic_testkit_candid::DecodeLimits;
 use std::{convert::Infallible, env, fmt::Debug, path::PathBuf, task::Poll, time::Duration};
 
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(60);

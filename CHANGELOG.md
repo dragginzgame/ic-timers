@@ -2,6 +2,18 @@
 
 All notable changes to this project are recorded here.
 
+## [0.28.1]
+
+- Adopt published IC Platform 0.1.12 for probe entrypoints, calls, protected
+  spawning, stable save/restore and cycle burning. Remove every direct Candid
+  and CDK-family declaration and the last local pin/policy exception. Preserve
+  the qualified executor/system identities, wire contracts and existing upgrade
+  encoding/error behavior through Platform's exact upstream helpers
+  ([Platform #19 — Timers stable-helper and cycle-burn boundary](https://github.com/dragginzgame/ic-platform/issues/19)).
+- Adopt published Testkit 0.54 and remove `ic-testkit-candid`. The native driver
+  uses Platform's decoder limits directly, preserving all five ceilings and
+  typed errors; dependency policy forbids the retired package in every member.
+
 ## [0.28.0] - 2026-10-18
 
 ### Breaking

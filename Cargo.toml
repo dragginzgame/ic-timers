@@ -28,16 +28,13 @@ categories = ["asynchronous", "wasm"]
 [workspace.dependencies]
 # Production dependencies
 ic-metrics = "0.14"
-ic-platform = { version = "0.1.8", default-features = false }
+ic-platform = { version = "0.1.12", default-features = false }
 thiserror = "2.0"
 
 # Tests and tooling only
-candid = "0.10"
 ic-build = "0.17"
-ic-cdk = "=0.20.3"
 ic-host-process = "0.27"
-ic-testkit = "0.53"
-ic-testkit-candid = "0.53"
+ic-testkit = "0.54"
 ic-timers = { path = "crates/ic-timers" }
 ic-timers-test-protocol = { path = "testing/crates/ic-timers-test-protocol" }
 
