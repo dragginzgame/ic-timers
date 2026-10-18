@@ -8,6 +8,8 @@ All notable changes to this project are recorded here.
   Shared Tooling. Retain Timers' tool admission, release integration, failure
   evidence and runtime qualification; canonically retire their unused snapshot
   payloads without changing the reviewed Shared revision.
+- Select Rust 1.99.1 for development and hosted qualification, preserving the
+  independent Rust 1.91 library/probe MSRV and dependency selections.
 
 ## [0.28.1] - 2026-10-18
 
