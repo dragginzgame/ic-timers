@@ -6,8 +6,8 @@ Last updated: 2026-10-18
 
 ## Source and ownership
 
-HEAD is tagged 0.28.0 (`bb74c6299d9ab156741bf2a11a09bfeb02241166`). The
-working tree prepares the undated 0.28.1 batch in `CHANGELOG.md`. The released
+The source base is released 0.28.1 (`c9cc95c259cb46637aacccf6f1fbed6a8280aa39`).
+The working tree prepares the undated 0.28.2 batch in `CHANGELOG.md`. The released
 0.28.0 batch includes Metrics 0.14's public `MeasurementSummary` identity change.
 Cargo versions, staging, commits, pushes and releases remain user-owned.
 
@@ -24,8 +24,11 @@ matching grouped sorting is active in Make, hooks and all release metadata
 checks. The current catalog still selects Metrics 0.14, Build 0.17,
 Testkit 0.54 and Host Process 0.27. Platform 0.1.12 is selected;
 the incoming Build/Host/Metrics selections are preserved.
-Shared 0.24.0 (`cab12cd3dfa4fdb34846b25397f0d72881bb9ae0`) now supplies 136
-canonical payloads. The Make-only copier is retired; the supplier preparation
+Shared 0.24.0 (`cab12cd3dfa4fdb34846b25397f0d72881bb9ae0`) now supplies 132
+canonical payloads. Generic installer/release-runner matrices now stay at Shared;
+their three entrypoint roots and unused cache-key companion are canonically retired.
+Timers retains actual tool admission, release integration and all runtime gates.
+The Make-only copier is retired; the supplier preparation
 fixture stays at its owner because its new closure includes Shared's CI workflow.
 Timers' actual CI workflow is preserved. Common Cargo setup selects two sorters;
 Candid extraction is not selected. Host/Cargo tools and Testkit remain the only

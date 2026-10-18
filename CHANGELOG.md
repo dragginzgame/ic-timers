@@ -4,6 +4,10 @@ All notable changes to this project are recorded here.
 
 ## [0.28.2]
 
+- Keep generic host/Cargo installer and release-runner regression matrices at
+  Shared Tooling. Retain Timers' tool admission, release integration, failure
+  evidence and runtime qualification; canonically retire their unused snapshot
+  payloads without changing the reviewed Shared revision.
 - Select Rust 1.99.1 for development and hosted qualification, preserving the
   independent Rust 1.91 library/probe MSRV and dependency selections.
 
