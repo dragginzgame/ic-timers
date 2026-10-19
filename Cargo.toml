@@ -35,7 +35,8 @@ thiserror = "2.0"
 
 # Tests and tooling only
 ic-build = "0.19"
-ic-host-process = "0.28"
+# Match the Host family exposed by IC Build's injected OwnedChild spawner.
+ic-host-process = "0.27.3"
 ic-testkit = "0.54"
 ic-timers = { path = "crates/ic-timers" }
 ic-timers-test-protocol = { path = "testing/crates/ic-timers-test-protocol" }

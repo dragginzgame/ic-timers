@@ -4,6 +4,10 @@ All notable changes to this project are recorded here.
 
 ## [0.29.1]
 
+- Align the PocketIC harness with the Host Process 0.27 family exposed by
+  IC Build 0.19, fixing the injected-spawner type error in `testing-check` and
+  removing the unused Host 0.28 dependency copies.
+
 - Move unpublished probe RPCs, self-call gates and upgrade checkpoints to
   published IC Wire. Remove local Candid records, codec calls and explicit
   Candid feature selections. Preserve timer scheduling and callback contexts;

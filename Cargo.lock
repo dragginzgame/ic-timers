@@ -490,7 +490,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -787,9 +787,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6f0b54a64c09394cf5714516fe778844b57ace78a59c8ddd7b12037bb9f056a1"
 dependencies = [
  "cargo_metadata",
- "ic-host-artifacts 0.27.6",
- "ic-host-fs 0.27.6",
- "ic-host-process 0.27.6",
+ "ic-host-artifacts",
+ "ic-host-fs",
+ "ic-host-process",
  "rustix",
  "serde",
  "serde_json",
@@ -873,32 +873,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "ic-host-artifacts"
-version = "0.28.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8011c020d36d02ac3d2c90fe9e8af3fd4e611b2bd80347c190d02dbe35f459ac"
-dependencies = [
- "sha2",
-]
-
-[[package]]
 name = "ic-host-fs"
 version = "0.27.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c32654120b530ced534af7fca1cf979df573b5addcf3af59cfebbde63b58f555"
 dependencies = [
- "ic-host-artifacts 0.27.6",
- "rustix",
- "thiserror 2.0.18",
-]
-
-[[package]]
-name = "ic-host-fs"
-version = "0.28.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd79d66eb2f7fe3d6d086e201c50ad2f63e60562a43a8bdc452e609c4f2777c6"
-dependencies = [
- "ic-host-artifacts 0.28.0",
+ "ic-host-artifacts",
  "rustix",
  "thiserror 2.0.18",
 ]
@@ -910,21 +890,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6a139f4beff95d0b843b6ce9d542fb1e1d62537341d2ffb10bed531cee93a485"
 dependencies = [
  "command-fds",
- "ic-host-artifacts 0.27.6",
- "ic-host-fs 0.27.6",
- "libc",
- "rustix",
-]
-
-[[package]]
-name = "ic-host-process"
-version = "0.28.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "914d1ca1e366dcee84bb77a03c29251b615c02854f2336a7839e75a465a82896"
-dependencies = [
- "command-fds",
- "ic-host-artifacts 0.28.0",
- "ic-host-fs 0.28.0",
+ "ic-host-artifacts",
+ "ic-host-fs",
  "libc",
  "rustix",
 ]
@@ -979,9 +946,9 @@ version = "0.54.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9a49a99670baf7b563b83a667912bd9720a70e15aa54da44da1f814f6a2cc4a1"
 dependencies = [
- "ic-host-artifacts 0.27.6",
- "ic-host-fs 0.27.6",
- "ic-host-process 0.27.6",
+ "ic-host-artifacts",
+ "ic-host-fs",
+ "ic-host-process",
  "ic-metrics",
  "ic-platform",
  "libc",
@@ -1005,7 +972,7 @@ name = "ic-timers-pocketic"
 version = "0.29.0"
 dependencies = [
  "ic-build",
- "ic-host-process 0.28.0",
+ "ic-host-process",
  "ic-platform",
  "ic-testkit",
  "ic-timers-test-protocol",
@@ -1674,7 +1641,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1826,7 +1793,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -1883,7 +1850,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2297,7 +2264,7 @@ dependencies = [
  "getrandom 0.4.3",
  "once_cell",
  "rustix",
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -2833,7 +2800,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.61.2",
+ "windows-sys 0.52.0",
 ]
 
 [[package]]

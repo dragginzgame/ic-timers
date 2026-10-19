@@ -4,6 +4,26 @@
 
 Last updated: 2026-10-19
 
+## Harness Host alignment — pending 0.29.1
+
+The reported `testing-check` E0271 is fixed by selecting Host Process `^0.27.3`,
+matching published Build 0.19's exposed spawner type. The single resolved Host
+Process 0.27.6 now serves Build, Testkit and the native harness. No Rust adapter,
+conversion or parallel process owner is added. Unused Host Process/FS/Artifacts
+0.28.1 copies leave the lock; every other incoming package identity is preserved,
+including Platform/macros 0.1.16 and Wire/derive 0.4.5. Cargo versions stay 0.29.0.
+
+The actual Rust 1.91 `make testing-check` passes for the complete probe/driver/
+protocol selection and all four size features. Locked metadata, normal Testkit
+server admission and the reverse Host graph also pass. The normal root
+`make pocketic-watchdog` passes all 27 runtime subjects, and `make pocketic-cohorts`
+passes the four-artifact policy subject on this repaired graph. All three
+protocol tests pass. This closes the former isolated-only Wire qualification
+gap with Platform 0.1.16 and Wire 0.4.5; native macOS, live IC and the full
+maintainer-operated release gate remain separate. Current receipts are in
+`target/qualification/host-alignment/`; incoming dirty bytes are captured under
+`/tmp/ic-timers-host-alignment.gxh5z_6s/`. Full release execution remains user-owned.
+
 ## Probe Wire cut — pending 0.29.1
 
 This task starts from clean released 0.29.0 (`8f4b72f`). All authored probe RPCs,
@@ -36,20 +56,16 @@ PocketIC/Testkit. Source-owner checks reject local Candid codec references and
 query/update attributes that omit admission/custom-codec hooks; they do not
 claim to remove or forbid those intentional transitive packages.
 
-During artifact acquisition the maintainer independently selected Build 0.19
-and Host Process 0.28. These manifest/lock updates are preserved. Current driver
-checking fails before tests because Build 0.19 exposes Host 0.27's `OwnedChild`
-while the injected direct spawner returns Host 0.28's type. No local conversion,
-parallel custody provider or downgrade is added. The concrete caller and release
-coordination are recorded on
+Initial Wire qualification was interrupted when the maintainer independently
+selected Build 0.19 and Host Process 0.28. That mixed spawner boundary failed
+before tests; the alignment above resolves this consumer failure. Its original
+report remains on
 [Build #9 — Qualify consumers against the exposed Host boundary](https://github.com/dragginzgame/ic-build/issues/9#issuecomment-6263501759).
-The maintained graph needs compatible producer delivery or a maintainer-selected
-aligned Host family before its complete runtime/cohort gate can pass.
 
-Current Linux/Rust 1.91 focused probe/protocol tests, native probe/protocol lint,
-library native compilation, library/runtime-probe Wasm lint and source/dependency
-boundary checks pass. Native driver/four-cohort lint passed before the concurrent
-host update; current driver qualification is blocked by the type mismatch above.
+The following Wire qualification receipts precede the current Host alignment:
+Linux/Rust 1.91 probe/protocol tests, native probe/protocol lint, library native
+compilation, library/runtime-probe Wasm lint and source/dependency checks passed.
+
 All 27 real-Wasm runtime subjects pass in an explicitly isolated source copy,
 `/tmp/ic-timers-wire-qualification.kgk8ej5r`, using the arrival Build 0.18 / Host
 0.27 pair with Wire 0.4.4 and admitted PocketIC 16.1.0. This tests the migrated
@@ -176,9 +192,9 @@ One root workspace/catalog and lockfile select all five maintained packages.
 The root manifest uses the canonical production and test/tooling role groups;
 matching grouped sorting is active in Make, hooks and all release metadata
 checks. The current catalog selects Metrics 0.14, Build 0.19, Testkit 0.54,
-Host Process 0.28, Platform 0.1 and qualification-only Wire 0.4.4. The concurrent
-Build/Host selections are preserved with their exposed-type qualification gap;
-Platform 0.1.15, Metrics 0.14.4 and Testkit 0.54.1 remain selected.
+Host Process 0.27.3, Platform 0.1 and qualification-only Wire 0.4.4. The lock
+selects Host Process 0.27.6, Platform 0.1.16, Wire 0.4.5, Metrics 0.14.4 and
+Testkit 0.54.1. The harness's spawner family now matches Build 0.19.
 Shared 0.24.0 (`cab12cd3dfa4fdb34846b25397f0d72881bb9ae0`) now supplies 132
 canonical payloads. Generic installer/release-runner matrices now stay at Shared;
 their three entrypoint roots and unused cache-key companion are canonically retired.
