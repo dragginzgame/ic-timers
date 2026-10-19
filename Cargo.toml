@@ -29,14 +29,17 @@ categories = ["asynchronous", "wasm"]
 # Production dependencies
 ic-metrics = "0.14"
 ic-platform = { version = "0.1.12", default-features = false }
+# Already production-transitive through Platform's Principal; probes inherit this entry.
+serde = { version = "1.0", features = ["derive"] }
 thiserror = "2.0"
 
 # Tests and tooling only
-ic-build = "0.18"
-ic-host-process = "0.27"
+ic-build = "0.19"
+ic-host-process = "0.28"
 ic-testkit = "0.54"
 ic-timers = { path = "crates/ic-timers" }
 ic-timers-test-protocol = { path = "testing/crates/ic-timers-test-protocol" }
+ic-wire = "0.4.4"
 
 [workspace.lints.rust]
 missing_docs = "warn"

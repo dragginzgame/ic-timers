@@ -58,7 +58,12 @@ fn record_callback(
     });
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartupTimerProbeStart as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::StartupTimerProbeStart as u64 }>"
+)]
 fn startup_timer_probe_start() -> bool {
     if WATCHDOG_TIMER.with_borrow(Option::is_some) {
         return false;
@@ -124,7 +129,12 @@ fn startup_timer_probe_start() -> bool {
     true
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartupTimerProbeStop as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::StartupTimerProbeStop as u64 }>"
+)]
 fn startup_timer_probe_stop() {
     WATCHDOG_TIMER.with_borrow_mut(|slot| {
         if let Some(registration) = slot.take()
@@ -142,21 +152,36 @@ fn startup_timer_probe_stop() {
     });
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartupTimerProbeArmTrap as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::StartupTimerProbeArmTrap as u64 }>"
+)]
 fn startup_timer_probe_arm_trap() -> u64 {
     let trap_at = ic_platform::cdk::api::time().saturating_add(WATCHDOG_INTERVAL_NANOS);
     TRAP_AT.with(|slot| slot.set(Some(trap_at)));
     trap_at
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartupTimerProbeArmExhaustion as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::StartupTimerProbeArmExhaustion as u64 }>"
+)]
 fn startup_timer_probe_arm_exhaustion() -> u64 {
     let exhaust_at = ic_platform::cdk::api::time().saturating_add(WATCHDOG_INTERVAL_NANOS);
     EXHAUST_AT.with(|slot| slot.set(Some(exhaust_at)));
     exhaust_at
 }
 
-#[ic_platform::cdk::query]
+#[ic_platform::cdk::query(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartupTimerProbeSnapshot as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::StartupTimerProbeSnapshot as u64 }>"
+)]
 fn startup_timer_probe_snapshot() -> TimerProbeSnapshot {
     TimerProbeSnapshot {
         watchdog_registered: timer_is_scheduled(&watchdog_identity()),

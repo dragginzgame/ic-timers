@@ -2,6 +2,17 @@
 
 All notable changes to this project are recorded here.
 
+## [0.29.1]
+
+- Move unpublished probe RPCs, self-call gates and upgrade checkpoints to
+  published IC Wire. Remove local Candid records, codec calls and explicit
+  Candid feature selections. Preserve timer scheduling and callback contexts;
+  the published library API and its fixed internal dispatch payload are unchanged.
+- Rebuild both probe canisters and their native driver together. The private
+  endpoints and checkpoint have one current Wire format with no legacy reader.
+  Candid remains transitive through Platform CDK and PocketIC/Testkit; this is
+  not a Candid-free qualification graph.
+
 ## [0.29.0] - 2026-10-19
 
 ### Breaking

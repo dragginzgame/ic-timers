@@ -31,5 +31,26 @@ find({ no_chdir => 1, wanted => sub {
         die "timer execution belongs to the private platform: $file\n";
     }
 }}, $root);
+# Probe transport owns a Wire contract; reject accidental Candid defaults locally.
+for my $probe (qw(ic-timers-runtime-probe ic-timers-size-probe ic-timers-test-protocol ic-timers-pocketic)) {
+    my $probe_root = "testing/crates/$probe/src";
+    next unless -d $probe_root; # Disposable provider fixtures may omit probes.
+    find({ no_chdir => 1, wanted => sub {
+        return unless /\.rs$/ && -f $_;
+        my $file = $_;
+        open my $input, '<', $file or die "$file: $!";
+        my $text = do { local $/; <$input> };
+        $text !~ /(?:ic_platform::candid|\bcandid::|\bCandidType\b|\b(?:query_candid_args|update_candid_args|stable_save|stable_restore)\s*[(<])/s
+            or die "probe protocols must use Wire: $file\n";
+        while ($text =~ /#\[ic_platform::cdk::(?:query|update)\b(.*?)\]/sg) {
+            my $attributes = $1;
+            $attributes =~ /decode_with\s*=/ && $attributes =~ /encode_with\s*=/
+                && $attributes =~ /guard\s*=\s*"crate::codec::admit_request"/
+                && $attributes =~ /hidden\s*=\s*true/
+                or die "probe entrypoints require admitted Wire hooks: $file\n";
+        }
+    }}, $probe_root);
+}
+
 PERL
 echo "Provider boundary checks passed"

@@ -9,7 +9,9 @@ use std::cell::{Cell, RefCell};
 
 const CADENCE_NS: u64 = 1_000_000_000;
 
+mod checkpoint;
 mod churn;
+mod codec;
 mod dispatch_batch;
 mod mixed;
 mod ordinary;
@@ -31,7 +33,7 @@ thread_local! {
     static POST_UPGRADE_RECONSTRUCTED: Cell<bool> = const { Cell::new(false) };
 }
 
-#[ic_platform::cdk::init]
+#[ic_platform::cdk::init(hidden = true)]
 fn init() {
     if initialize_runtime().is_err() {
         ic_platform::cdk::api::trap("ic-timers runtime initialization failed");
@@ -46,9 +48,7 @@ fn pre_upgrade() {
         COMPLETED_WORK.with(Cell::get),
         SECONDARY_COMPLETED_WORK.with(Cell::get),
     );
-    if ic_platform::cdk::storage::stable_save(state).is_err() {
-        ic_platform::cdk::api::trap("runtime probe stable save failed");
-    }
+    checkpoint::save(&state);
 }
 
 #[ic_platform::cdk::post_upgrade]
@@ -58,8 +58,7 @@ fn post_upgrade() {
         bool,
         u64,
         u64,
-    ) = ic_platform::cdk::storage::stable_restore()
-        .unwrap_or_else(|_| ic_platform::cdk::api::trap("runtime probe stable restore failed"));
+    ) = checkpoint::load();
     DESIRED_SCHEDULED.with(|desired| desired.set(desired_scheduled));
     SECONDARY_DESIRED_SCHEDULED.with(|desired| desired.set(secondary_desired));
     COMPLETED_WORK.with(|completed| completed.set(completed_work));
@@ -81,13 +80,23 @@ fn post_upgrade() {
     POST_UPGRADE_RECONSTRUCTED.with(|observed| observed.set(reconstructed));
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::Start as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::Start as u64 }>"
+)]
 fn start() -> bool {
     DESIRED_SCHEDULED.with(|desired| desired.set(true));
     install_watchdog()
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartImmediately as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::StartImmediately as u64 }>"
+)]
 fn start_immediately() -> bool {
     DESIRED_SCHEDULED.with(|desired| desired.set(true));
     install_watchdog_with_initial_schedule(true)
@@ -142,12 +151,22 @@ fn take_work_decision() -> WatchdogDecision {
     decision
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ContinueImmediatelyOnNextWork as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::ContinueImmediatelyOnNextWork as u64 }>"
+)]
 fn continue_immediately_on_next_work() {
     NEXT_WORK_DECISION.with(|requested| requested.set(WatchdogDecision::ContinueImmediately));
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ScheduleAt as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::ScheduleAt as u64 }>"
+)]
 fn schedule_at(deadline_ns: u64) {
     REGISTRATION.with_borrow(|slot| {
         let Some(registration) = slot else {
@@ -162,12 +181,22 @@ fn schedule_at(deadline_ns: u64) {
     });
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ScheduleAtOnNextWork as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::ScheduleAtOnNextWork as u64 }>"
+)]
 fn schedule_at_on_next_work(deadline_ns: u64) {
     NEXT_WORK_DECISION.with(|requested| requested.set(WatchdogDecision::ScheduleAt(deadline_ns)));
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ReplaceRegistration as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::ReplaceRegistration as u64 }>"
+)]
 fn replace_registration() {
     REGISTRATION.with_borrow_mut(|slot| {
         if let Some(registration) = slot.take()
@@ -181,7 +210,12 @@ fn replace_registration() {
     }
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartSecondary as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::StartSecondary as u64 }>"
+)]
 fn start_secondary() -> bool {
     SECONDARY_DESIRED_SCHEDULED.with(|desired| desired.set(true));
     install_secondary_watchdog()
@@ -198,14 +232,24 @@ fn install_secondary_watchdog() -> bool {
     })
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ArmTrap as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::ArmTrap as u64 }>"
+)]
 fn arm_trap() -> u64 {
     let window = failure_window();
     TRAP_WINDOW.with(|target| target.set(Some(window)));
     window.0
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ArmExhaustion as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::ArmExhaustion as u64 }>"
+)]
 fn arm_exhaustion() -> u64 {
     let window = failure_window();
     EXHAUST_WINDOW.with(|target| target.set(Some(window)));
@@ -222,12 +266,22 @@ fn failure_window() -> (u64, u64) {
     (start, end)
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StopOnNextWork as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::StopOnNextWork as u64 }>"
+)]
 fn stop_on_next_work() {
     NEXT_WORK_DECISION.with(|requested| requested.set(WatchdogDecision::Stop));
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::Stop as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::Stop as u64 }>"
+)]
 fn stop() {
     DESIRED_SCHEDULED.with(|desired| desired.set(false));
     REGISTRATION.with_borrow(|slot| {
@@ -239,7 +293,12 @@ fn stop() {
     });
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::EnsureFromReturnedError as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::EnsureFromReturnedError as u64 }>"
+)]
 fn ensure_from_returned_error() -> bool {
     DESIRED_SCHEDULED.with(|desired| desired.set(true));
     REGISTRATION.with_borrow(|slot| {
@@ -253,7 +312,12 @@ fn ensure_from_returned_error() -> bool {
     false
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::BurnToBelowTimerCallCost as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::BurnToBelowTimerCallCost as u64 }>"
+)]
 fn burn_to_below_timer_call_cost() -> (u128, u128) {
     let method_len = "<ic-timers internal> dispatch".len() as u64;
     let call_cost = ic_platform::cdk::api::cost_call(method_len, 8);
@@ -263,7 +327,12 @@ fn burn_to_below_timer_call_cost() -> (u128, u128) {
     (burned, call_cost)
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::FillInventory as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::FillInventory as u64 }>"
+)]
 fn fill_inventory() -> u64 {
     let current = timer_inventory()
         .unwrap_or_else(|_| ic_platform::cdk::api::trap("inventory lookup failed"))
@@ -289,7 +358,12 @@ fn fill_inventory() -> u64 {
     MAX_TIMER_REGISTRATIONS as u64
 }
 
-#[ic_platform::cdk::query]
+#[ic_platform::cdk::query(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::InventoryMeasurement as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::InventoryMeasurement as u64 }>"
+)]
 fn inventory_measurement() -> (u64, u64, bool) {
     let before = ic_platform::ic0::performance_counter(1);
     let inventory = timer_inventory()
@@ -309,7 +383,12 @@ fn exhaust_message_instructions() -> ! {
     }
 }
 
-#[ic_platform::cdk::query]
+#[ic_platform::cdk::query(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::Snapshot as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::Snapshot as u64 }>"
+)]
 fn snapshot() -> ProbeSnapshot {
     let registered = REGISTRATION.with_borrow(Option::is_some);
     let completed_work = COMPLETED_WORK.with(Cell::get);
@@ -411,7 +490,12 @@ mod tests {
 }
 
 // Unpublished fixture: exercise the authenticated backend payload boundary.
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::FixtureDispatchPayload as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::FixtureDispatchPayload as u64 }>"
+)]
 async fn fixture_dispatch_payload(payload: Vec<u8>) -> bool {
     ic_platform::cdk::call::Call::unbounded_wait(
         ic_platform::cdk::api::canister_self(),

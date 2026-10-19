@@ -16,7 +16,12 @@ thread_local! {
     static COMPLETED: Cell<u64> = const { Cell::new(0) };
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ReplaceDistantDeadlines as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::ReplaceDistantDeadlines as u64 }>"
+)]
 fn replace_distant_deadlines(count: u32) {
     assert!(
         count > 0 && count <= MAX_REPLACEMENTS,
@@ -64,7 +69,12 @@ fn replace_distant_deadlines(count: u32) {
     });
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartImmediateChurn as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::StartImmediateChurn as u64 }>"
+)]
 fn start_immediate_churn() {
     REGISTRATION.with_borrow(|slot| {
         slot.as_ref()
@@ -74,7 +84,12 @@ fn start_immediate_churn() {
     });
 }
 
-#[ic_platform::cdk::query]
+#[ic_platform::cdk::query(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ChurnObservation as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::ChurnObservation as u64 }>"
+)]
 fn churn_observation() -> ChurnObservation {
     #[cfg(target_arch = "wasm32")]
     let wasm_pages = core::arch::wasm32::memory_size::<0>() as u64;

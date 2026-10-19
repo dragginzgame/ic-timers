@@ -9,9 +9,11 @@ license.workspace = true
 [dependencies]
 ic-build.workspace = true
 ic-host-process.workspace = true
-ic-platform = { workspace = true, features = ["candid"] }
+ic-platform.workspace = true
 ic-testkit.workspace = true
 ic-timers-test-protocol.workspace = true
+ic-wire.workspace = true
+serde.workspace = true
 
 [lints.rust]
 unsafe_code = "forbid"

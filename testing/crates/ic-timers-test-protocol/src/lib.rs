@@ -1,24 +1,22 @@
 //! Wire records shared by unpublished canister probes and their native decoder.
 //! This package owns no timer state, runtime authority or platform sampling.
 
-use ic_platform::candid::contract::{CandidType, serde::Deserialize};
+use serde::{Deserialize, Serialize};
+
+pub mod rpc;
 
 #[cfg(test)]
 mod tests;
 
 /// Lossless wire projection of a diagnostic counter; arithmetic stays in Metrics.
-#[derive(CandidType, Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq)]
-#[candid_path("ic_platform::candid::contract")]
-#[serde(crate = "ic_platform::candid::contract::serde")]
+#[derive(Serialize, Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq)]
 pub struct CounterObservation {
     pub total: u128,
     pub total_overflowed: bool,
 }
 
 /// Flattened callback memory-page observations.
-#[derive(CandidType, Debug, Deserialize, Eq, PartialEq)]
-#[candid_path("ic_platform::candid::contract")]
-#[serde(crate = "ic_platform::candid::contract::serde")]
+#[derive(Serialize, Debug, Deserialize, Eq, PartialEq)]
 pub struct ProbeMemorySummary {
     pub samples: u64,
     pub latest_wasm_start_pages: u64,
@@ -30,9 +28,7 @@ pub struct ProbeMemorySummary {
 }
 
 /// Runtime recovery and upgrade observations, with absent timer fields empty.
-#[derive(CandidType, Debug, Default, Deserialize, Eq, PartialEq)]
-#[candid_path("ic_platform::candid::contract")]
-#[serde(crate = "ic_platform::candid::contract::serde")]
+#[derive(Serialize, Debug, Default, Deserialize, Eq, PartialEq)]
 pub struct ProbeSnapshot {
     pub registration_id: Option<(u64, u64, u64)>,
     pub registered: bool,
@@ -62,9 +58,7 @@ pub struct ProbeSnapshot {
 }
 
 /// Ordinary callback suspension, abandonment and capture-release observations.
-#[derive(CandidType, Debug, Deserialize)]
-#[candid_path("ic_platform::candid::contract")]
-#[serde(crate = "ic_platform::candid::contract::serde")]
+#[derive(Serialize, Debug, Deserialize)]
 pub struct OrdinaryObservation {
     pub declared: bool,
     pub running: bool,
@@ -85,9 +79,7 @@ pub struct OrdinaryObservation {
 }
 
 /// Provider replacement and cancellation churn observations.
-#[derive(CandidType, Debug, Deserialize)]
-#[candid_path("ic_platform::candid::contract")]
-#[serde(crate = "ic_platform::candid::contract::serde")]
+#[derive(Serialize, Debug, Deserialize)]
 pub struct ChurnObservation {
     pub wasm_pages: u64,
     pub inventory_len: u64,
@@ -96,27 +88,21 @@ pub struct ChurnObservation {
 }
 
 /// One measured registration/control operation.
-#[derive(CandidType, Debug, Deserialize)]
-#[candid_path("ic_platform::candid::contract")]
-#[serde(crate = "ic_platform::candid::contract::serde")]
+#[derive(Serialize, Debug, Deserialize)]
 pub struct OperationMeasurement {
     pub changed: bool,
     pub instructions: u64,
 }
 
 /// Instruction intervals for the probe's memory-sampling calibration.
-#[derive(CandidType, Debug, Deserialize)]
-#[candid_path("ic_platform::candid::contract")]
-#[serde(crate = "ic_platform::candid::contract::serde")]
+#[derive(Serialize, Debug, Deserialize)]
 pub struct MemorySamplingMeasurement {
     pub empty_bracket_instructions: u64,
     pub sampled_bracket_instructions: u64,
 }
 
 /// Policy-cohort observations with a borrowed producer or owned decoder label.
-#[derive(CandidType, Debug, Default, Deserialize)]
-#[candid_path("ic_platform::candid::contract")]
-#[serde(crate = "ic_platform::candid::contract::serde")]
+#[derive(Serialize, Debug, Default, Deserialize)]
 pub struct CohortObservation<Label = String> {
     pub cohort: Label,
     pub registered: bool,
@@ -139,9 +125,7 @@ pub struct CohortObservation<Label = String> {
 }
 
 /// Mixed Watchdog/after-completion isolation and volatile upgrade observations.
-#[derive(CandidType, Clone, Debug, Deserialize, Eq, PartialEq)]
-#[candid_path("ic_platform::candid::contract")]
-#[serde(crate = "ic_platform::candid::contract::serde")]
+#[derive(Serialize, Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct TimerProbeSnapshot {
     pub watchdog_registered: bool,
     pub application_registered: bool,
@@ -156,9 +140,7 @@ pub struct TimerProbeSnapshot {
 }
 
 /// Per-callback counts for a maximum-capacity batch with suspended work.
-#[derive(CandidType, Debug, Deserialize, Eq, PartialEq)]
-#[candid_path("ic_platform::candid::contract")]
-#[serde(crate = "ic_platform::candid::contract::serde")]
+#[derive(Serialize, Debug, Deserialize, Eq, PartialEq)]
 pub struct DispatchBatchObservation {
     pub starts: Vec<u64>,
     pub completions: Vec<u64>,

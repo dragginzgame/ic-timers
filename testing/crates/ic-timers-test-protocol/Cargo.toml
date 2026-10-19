@@ -7,7 +7,8 @@ publish = false
 license.workspace = true
 
 [dependencies]
-ic-platform = { workspace = true, features = ["candid"] }
+ic-wire.workspace = true
+serde.workspace = true
 
 [lints.rust]
 unsafe_code = "forbid"

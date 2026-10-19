@@ -32,7 +32,12 @@ fn install_once(name: &str, seconds: u64, event: u8) {
     ONCE.with_borrow_mut(|slots| slots.push(registration));
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartSchedulingTrace as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::StartSchedulingTrace as u64 }>"
+)]
 fn start_scheduling_trace() {
     assert!(ONCE.with_borrow(Vec::is_empty), "fresh trace");
     let parent = register_once(
@@ -82,7 +87,12 @@ fn start_scheduling_trace() {
     ONCE.with_borrow_mut(|slots| slots.push(once));
 }
 
-#[ic_platform::cdk::query]
+#[ic_platform::cdk::query(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::SchedulingTrace as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::SchedulingTrace as u64 }>"
+)]
 fn scheduling_trace() -> Vec<u8> {
     EVENTS.with_borrow(Clone::clone)
 }

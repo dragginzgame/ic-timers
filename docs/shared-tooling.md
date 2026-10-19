@@ -33,8 +33,12 @@ There is still one catalog and lockfile; member dependency tables determine
 actual use through `workspace = true`.
 
 The published `ic-timers` library uses Metrics, Thiserror and Platform
-(executor and raw IC system bindings). Candid, the full CDK, Build, Host Process, Testkit,
-its Candid adapter and the probe protocol serve only qualification packages here.
+(executor and raw IC system bindings). Serde is already production-transitive
+through Platform's Principal; only probes directly inherit its catalog entry.
+Wire, the full CDK, Build, Host Process, Testkit and the probe protocol serve
+qualification packages here.
+Candid remains transitive through Platform CDK and PocketIC/Testkit; local probe
+protocols use Wire. There is no separate Testkit Candid adapter dependency.
 The catalog's
 local `ic-timers` entry is the probes' dependency on the production library.
 

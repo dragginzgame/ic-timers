@@ -1,9 +1,7 @@
-use super::harness::REPLY_LIMITS;
 use super::harness::{INIT_CYCLES, fresh_pocket_ic, install_probe, update_unit, wait_for_probe};
-use ic_platform::{Principal, candid::contract::encode_args};
-use ic_testkit::pic::{
-    PocketIc, PocketIcInstance, advance_and_tick, query_candid_args, update_candid_args,
-};
+use super::harness::{query_wire, update_wire};
+use ic_platform::Principal;
+use ic_testkit::pic::{PocketIc, PocketIcInstance, advance_and_tick};
 use ic_timers_test_protocol::{
     ChurnObservation, DispatchBatchObservation, OrdinaryObservation, ProbeMemorySummary,
     ProbeSnapshot, TimerProbeSnapshot,
@@ -13,16 +11,29 @@ use std::{env, fs, path::PathBuf, time::Duration};
 const TIMER_EXECUTOR_METHOD: &str = "<ic-timers internal> dispatch";
 
 #[test]
-fn typed_entrypoints_reject_invalid_candid_before_mutating_timer_state() {
+fn typed_entrypoints_reject_invalid_wire_before_mutating_timer_state() {
+    use ic_timers_test_protocol::rpc::{Method, REQUEST_LIMITS, RESPONSE_LIMITS};
+    use ic_wire::native::{decode_response, encode_request, encode_response};
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
     let canister_id = install_probe(pic, probe_wasm());
-    let mut truncated = encode_args((false, false)).expect("encode valid arguments");
+    let id = Method::StartOrdinary as u64;
+    let valid = encode_request(id, &(false, false), REQUEST_LIMITS).unwrap();
+    let mut truncated = valid.clone();
     truncated.pop();
     for arguments in [
-        b"not candid".to_vec(),
-        encode_args((1_u64, false)).expect("encode wrong argument type"),
-        encode_args((false,)).expect("encode missing argument"),
+        b"not wire".to_vec(),
+        encode_request(id, &(2_u8, false), REQUEST_LIMITS).unwrap(),
+        encode_request(id, &(false,), REQUEST_LIMITS).unwrap(),
+        encode_request(id, &(false, false, 0_u8), REQUEST_LIMITS).unwrap(),
+        encode_request(
+            Method::TrapOrdinaryWork as u64,
+            &(false, false),
+            REQUEST_LIMITS,
+        )
+        .unwrap(),
+        encode_response(id, &(false, false), RESPONSE_LIMITS).unwrap(),
+        vec![0; REQUEST_LIMITS.bytes + 1],
         truncated,
     ] {
         assert!(
@@ -30,24 +41,18 @@ fn typed_entrypoints_reject_invalid_candid_before_mutating_timer_state() {
                 canister_id,
                 Principal::anonymous(),
                 "start_ordinary",
-                arguments,
+                arguments
             )
             .is_err(),
-            "invalid typed arguments must reject before registration"
+            "invalid Wire arguments must reject before registration"
         );
         assert!(!ordinary_observation(pic, canister_id).declared);
         assert_eq!(snapshot(pic, canister_id).scheduler_started.total, 0);
     }
-    // Preserve the existing generator's bounded skipping and one-unit reply.
     let reply = pic
-        .update_call(
-            canister_id,
-            Principal::anonymous(),
-            "start_ordinary",
-            encode_args((false, false, "extra argument")).expect("encode extra argument"),
-        )
+        .update_call(canister_id, Principal::anonymous(), "start_ordinary", valid)
         .expect("valid arguments still work after rejected input");
-    assert_eq!(reply, encode_args(((),)).expect("encode one unit reply"));
+    decode_response::<()>(id, &reply, RESPONSE_LIMITS).expect("method-bound unit reply");
     assert!(ordinary_observation(pic, canister_id).declared);
 }
 
@@ -58,13 +63,12 @@ fn self_call_queue_pressure_defers_timer_submission_without_losing_work() {
     let canister_id = install_probe(pic, probe_wasm());
     update_unit(pic, canister_id, "pressure_and_start");
     advance_and_tick(pic, Duration::ZERO, 8);
-    let (failed, replies): (u64, u64) = query_candid_args(
+    let (failed, replies): (u64, u64) = query_wire(
         pic,
         canister_id,
         Principal::anonymous(),
         "pressure_observation",
         (),
-        REPLY_LIMITS,
     )
     .expect("pressure counters");
     println!("ic_timers_queue_pressure failed={failed} replies={replies}");
@@ -114,15 +118,13 @@ fn deferred_submission_cancellation_and_replacement_do_not_revive_old_work() {
         advance_and_tick(pic, Duration::ZERO, 16);
         // A fresh canister's first backend identity belongs to the old scheduler.
         // Even an authenticated late delivery must not revive it after removal.
-        let stale_delivery: bool = update_candid_args(
+        let stale_delivery: bool = update_wire(
             pic,
             canister_id,
             Principal::anonymous(),
             "fixture_dispatch_payload",
             (1_u64.to_le_bytes().to_vec(),),
-            REPLY_LIMITS,
         )
-        .map(|(value,)| value)
         .expect("stale self-call result");
         assert!(stale_delivery);
         assert_eq!(snapshot(pic, canister_id).completed_work, 0);
@@ -132,13 +134,12 @@ fn deferred_submission_cancellation_and_replacement_do_not_revive_old_work() {
         assert_eq!(recovered.completed_work, u64::from(replace));
         assert_eq!(recovered.scheduler_started.total, u128::from(replace));
         if !replace {
-            update_candid_args::<(), _>(
+            update_wire::<(), _>(
                 pic,
                 canister_id,
                 Principal::anonymous(),
                 "schedule_at",
                 (0_u64,),
-                REPLY_LIMITS,
             )
             .expect("reschedule retained registration");
             advance_and_tick(pic, Duration::ZERO, 16);
@@ -305,13 +306,8 @@ fn trapped_work_keeps_committed_successor_and_executor_is_private() {
             .is_some_and(|deadline| deadline > trap_at)
     );
 
-    pic.upgrade_canister(
-        canister_id,
-        probe_wasm(),
-        encode_args(()).expect("encode upgrade"),
-        None,
-    )
-    .expect("upgrade should succeed");
+    pic.upgrade_canister(canister_id, probe_wasm(), Vec::new(), None)
+        .expect("upgrade should succeed");
     let upgraded = snapshot(pic, canister_id);
     assert_ne!(upgraded.registration_id, recovered.registration_id);
     assert!(upgraded.registered);
@@ -460,13 +456,12 @@ fn insufficient_cycles_defer_due_work_until_top_up() {
     let pic = &owned.instance;
     let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(pic, canister_id, "start"));
-    let (_burned, call_cost): (u128, u128) = update_candid_args(
+    let (_burned, call_cost): (u128, u128) = update_wire(
         pic,
         canister_id,
         Principal::anonymous(),
         "burn_to_below_timer_call_cost",
         (),
-        REPLY_LIMITS,
     )
     .expect("probe multi-result update succeeds");
     assert!(call_cost > 0);
@@ -497,13 +492,12 @@ fn full_inventory_is_bounded_deterministic_and_measured() {
     assert_eq!(update_u64(pic, canister_id, "fill_inventory"), 64);
     assert_eq!(update_u64(pic, canister_id, "fill_inventory"), 64);
 
-    let (len, instructions, ordered): (u64, u64, bool) = query_candid_args(
+    let (len, instructions, ordered): (u64, u64, bool) = query_wire(
         pic,
         canister_id,
         Principal::anonymous(),
         "inventory_measurement",
         (),
-        REPLY_LIMITS,
     )
     .expect("probe inventory query succeeds");
     assert_eq!(len, 64);
@@ -546,42 +540,19 @@ fn probe_wasm() -> Vec<u8> {
 }
 
 fn update_bool(pic: &PocketIc, canister_id: Principal, method: &str) -> bool {
-    update_candid_args(
-        pic,
-        canister_id,
-        Principal::anonymous(),
-        method,
-        (),
-        REPLY_LIMITS,
-    )
-    .map(|(value,)| value)
-    .expect("probe update succeeds")
+    update_wire(pic, canister_id, Principal::anonymous(), method, ())
+        .expect("probe update succeeds")
 }
 
 fn update_u64(pic: &PocketIc, canister_id: Principal, method: &str) -> u64 {
-    update_candid_args(
-        pic,
-        canister_id,
-        Principal::anonymous(),
-        method,
-        (),
-        REPLY_LIMITS,
-    )
-    .map(|(value,)| value)
-    .expect("probe update succeeds")
+    update_wire(pic, canister_id, Principal::anonymous(), method, ())
+        .expect("probe update succeeds")
 }
 
 fn snapshot(pic: &PocketIc, canister_id: Principal) -> ProbeSnapshot {
-    let observed: ProbeSnapshot = query_candid_args(
-        pic,
-        canister_id,
-        Principal::anonymous(),
-        "snapshot",
-        (),
-        REPLY_LIMITS,
-    )
-    .map(|(value,)| value)
-    .expect("probe query succeeds");
+    let observed: ProbeSnapshot =
+        query_wire(pic, canister_id, Principal::anonymous(), "snapshot", ())
+            .expect("probe query succeeds");
     assert!(!observed.schedule_requests.total_overflowed);
     assert!(!observed.scheduler_started.total_overflowed);
     assert!(!observed.wakeups_armed.total_overflowed);
@@ -653,27 +624,24 @@ fn exact_deadline_sleeps_and_registration_replacement_marks_counter_regrowth() {
 }
 
 fn update_deadline(pic: &PocketIc, canister_id: Principal, method: &str, deadline: u64) {
-    update_candid_args::<(), _>(
+    update_wire::<(), _>(
         pic,
         canister_id,
         Principal::anonymous(),
         method,
         (deadline,),
-        REPLY_LIMITS,
     )
     .expect("probe update succeeds");
 }
 
 fn ordinary_observation(pic: &PocketIc, canister_id: Principal) -> OrdinaryObservation {
-    let observed: OrdinaryObservation = query_candid_args(
+    let observed: OrdinaryObservation = query_wire(
         pic,
         canister_id,
         Principal::anonymous(),
         "ordinary_observation",
         (),
-        REPLY_LIMITS,
     )
-    .map(|(value,)| value)
     .expect("probe query succeeds");
     assert!(!observed.work_completed.total_overflowed);
     assert!(!observed.unacknowledged.total_overflowed);
@@ -691,13 +659,12 @@ fn ordinary_await_allows_ingress_and_other_timers_before_completion() {
             let pic = &owned.instance;
             let canister_id = install_probe(pic, probe_wasm());
             let transient = command == "cancel";
-            update_candid_args::<(), _>(
+            update_wire::<(), _>(
                 pic,
                 canister_id,
                 Principal::anonymous(),
                 "start_ordinary",
                 (after_completion, transient),
-                REPLY_LIMITS,
             )
             .expect("probe update succeeds");
             let suspended = wait_for_probe(
@@ -769,22 +736,20 @@ fn trapping_ordinary_probe(
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
     let canister_id = install_probe(pic, probe_wasm());
-    update_candid_args::<(), _>(
+    update_wire::<(), _>(
         pic,
         canister_id,
         Principal::anonymous(),
         "trap_ordinary_work",
         (before_await,),
-        REPLY_LIMITS,
     )
     .expect("probe update succeeds");
-    update_candid_args::<(), _>(
+    update_wire::<(), _>(
         pic,
         canister_id,
         Principal::anonymous(),
         "start_ordinary",
         (after_completion, transient),
-        REPLY_LIMITS,
     )
     .expect("probe update succeeds");
     (owned, canister_id)
@@ -814,31 +779,28 @@ fn dispatch_response_trap_cleanup_preserves_pending_work_for_retry() {
         let owned = fresh_pocket_ic();
         let pic = &owned.instance;
         let canister_id = install_probe(pic, probe_wasm());
-        update_candid_args::<(), _>(
+        update_wire::<(), _>(
             pic,
             canister_id,
             Principal::anonymous(),
             "trap_ordinary_capture_drop",
             (true,),
-            REPLY_LIMITS,
         )
         .expect("enable destructor trap");
-        update_candid_args::<(), _>(
+        update_wire::<(), _>(
             pic,
             canister_id,
             Principal::anonymous(),
             "trap_ordinary_work",
             (true,),
-            REPLY_LIMITS,
         )
         .expect("enable pre-await trap");
-        update_candid_args::<(), _>(
+        update_wire::<(), _>(
             pic,
             canister_id,
             Principal::anonymous(),
             "start_ordinary",
             (after_completion, true),
-            REPLY_LIMITS,
         )
         .expect("start transient work");
         advance_and_tick(pic, Duration::ZERO, 32);
@@ -848,13 +810,12 @@ fn dispatch_response_trap_cleanup_preserves_pending_work_for_retry() {
         assert_eq!(pending.captures_dropped, 0);
         assert_eq!(pending.completed, 0);
 
-        update_candid_args::<(), _>(
+        update_wire::<(), _>(
             pic,
             canister_id,
             Principal::anonymous(),
             "trap_ordinary_capture_drop",
             (false,),
-            REPLY_LIMITS,
         )
         .expect("disable destructor trap");
         advance_and_tick(pic, Duration::ZERO, 8);
@@ -932,13 +893,12 @@ fn ordinary_continuation_trap_retires_running_work_and_releases_expired_authorit
                     if command != "unregister" {
                         update_unit(pic, canister_id, "discard_expired_ordinary_claim");
                     }
-                    update_candid_args::<(), _>(
+                    update_wire::<(), _>(
                         pic,
                         canister_id,
                         Principal::anonymous(),
                         "start_ordinary",
                         (after_completion, false),
-                        REPLY_LIMITS,
                     )
                     .expect("probe update succeeds");
                 } else {
@@ -966,15 +926,13 @@ fn ordinary_continuation_trap_retires_running_work_and_releases_expired_authorit
 }
 
 fn churn_observation(pic: &PocketIc, canister_id: Principal) -> ChurnObservation {
-    query_candid_args(
+    query_wire(
         pic,
         canister_id,
         Principal::anonymous(),
         "churn_observation",
         (),
-        REPLY_LIMITS,
     )
-    .map(|(value,)| value)
     .expect("probe query succeeds")
 }
 
@@ -984,13 +942,12 @@ fn provider_replacement_churn_preserves_cancellation_and_reports_memory() {
     let pic = &owned.instance;
     let canister_id = install_probe(pic, probe_wasm());
     let before = churn_observation(pic, canister_id);
-    update_candid_args::<(), _>(
+    update_wire::<(), _>(
         pic,
         canister_id,
         Principal::anonymous(),
         "replace_distant_deadlines",
         (32_768_u32,),
-        REPLY_LIMITS,
     )
     .expect("probe update succeeds");
     let replaced = churn_observation(pic, canister_id);
@@ -1034,13 +991,12 @@ fn armed_callback_removal_releases_captures_with_registry_access() {
         let owned = fresh_pocket_ic();
         let pic = &owned.instance;
         let canister_id = install_probe(pic, probe_wasm());
-        update_candid_args::<(), _>(
+        update_wire::<(), _>(
             pic,
             canister_id,
             Principal::anonymous(),
             "remove_armed_callback",
             (policy,),
-            REPLY_LIMITS,
         )
         .expect("probe update succeeds");
         let removed = ordinary_observation(pic, canister_id);
@@ -1064,13 +1020,12 @@ fn rejected_initial_schedules_preserve_ic_inventory_and_release_captures() {
     let canister_id = install_probe(pic, probe_wasm());
     for policy in 0_u8..3 {
         for transient in [false, true] {
-            let result: (bool, u64, bool) = update_candid_args(
+            let result: (bool, u64, bool) = update_wire(
                 pic,
                 canister_id,
                 Principal::anonymous(),
                 "reject_initial_schedule",
                 (policy, transient),
-                REPLY_LIMITS,
             )
             .expect("initial schedule rejection observation");
             assert_eq!(result, (true, 1, true));
@@ -1092,13 +1047,12 @@ fn rejected_initial_reconciliation_preserves_ic_inventory_and_releases_captures(
     pic.advance_time(Duration::from_secs(1));
     let canister_id = install_probe(pic, probe_wasm());
     for policy in 0_u8..3 {
-        let result: (bool, bool, u64, bool) = update_candid_args(
+        let result: (bool, bool, u64, bool) = update_wire(
             pic,
             canister_id,
             Principal::anonymous(),
             "reject_initial_reconciliation",
             (policy,),
-            REPLY_LIMITS,
         )
         .expect("initial reconciliation rejection observation");
         assert_eq!(result, (true, true, 1, true));
@@ -1119,28 +1073,24 @@ fn backend_rejects_malformed_self_calls_and_ignores_unknown_deliveries() {
     assert!(update_bool(pic, canister_id, "start"));
     let before = snapshot(pic, canister_id);
     for payload in [vec![], vec![0_u8; 7], vec![0_u8; 9]] {
-        let accepted: bool = update_candid_args(
+        let accepted: bool = update_wire(
             pic,
             canister_id,
             Principal::anonymous(),
             "fixture_dispatch_payload",
             (payload,),
-            REPLY_LIMITS,
         )
-        .map(|(value,)| value)
         .unwrap();
         assert!(!accepted);
     }
     for _ in 0..2 {
-        let accepted: bool = update_candid_args(
+        let accepted: bool = update_wire(
             pic,
             canister_id,
             Principal::anonymous(),
             "fixture_dispatch_payload",
             (0_u64.to_le_bytes().to_vec(),),
-            REPLY_LIMITS,
         )
-        .map(|(value,)| value)
         .unwrap();
         assert!(accepted);
     }
@@ -1152,15 +1102,13 @@ fn accepted_ordinary_work_survives_dispatch_timeout_without_replay() {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
     let canister_id = install_probe(pic, probe_wasm());
-    let (): () = update_candid_args(
+    let (): () = update_wire(
         pic,
         canister_id,
         Principal::anonymous(),
         "start_ordinary",
         (false, false),
-        REPLY_LIMITS,
     )
-    .map(|(value,)| value)
     .unwrap();
     let waiting = wait_for_probe(
         pic,
@@ -1171,15 +1119,13 @@ fn accepted_ordinary_work_survives_dispatch_timeout_without_replay() {
     assert!(waiting.running);
     // The first pending task identity is 1 in this fresh canister. Acceptance
     // consumed it before the ordinary callback awaited its application gate.
-    let accepted: bool = update_candid_args(
+    let accepted: bool = update_wire(
         pic,
         canister_id,
         Principal::anonymous(),
         "fixture_dispatch_payload",
         (1_u64.to_le_bytes().to_vec(),),
-        REPLY_LIMITS,
     )
-    .map(|(value,)| value)
     .unwrap();
     assert!(accepted);
     pic.advance_time(Duration::from_secs(301));
@@ -1201,15 +1147,13 @@ fn accepted_ordinary_work_survives_dispatch_timeout_without_replay() {
 }
 
 fn mixed_snapshot(pic: &PocketIc, canister_id: Principal) -> TimerProbeSnapshot {
-    query_candid_args(
+    query_wire(
         pic,
         canister_id,
         Principal::anonymous(),
         "startup_timer_probe_snapshot",
         (),
-        REPLY_LIMITS,
     )
-    .map(|(value,)| value)
     .expect("mixed timer snapshot")
 }
 
@@ -1281,13 +1225,8 @@ fn shared_watchdog_survives_trap_and_upgrade() {
     );
     assert!(recovered.watchdog_instructions > 0);
     assert!(recovered.application_instructions > 0);
-    pic.upgrade_canister(
-        canister_id,
-        probe_wasm(),
-        encode_args(()).expect("encode upgrade"),
-        None,
-    )
-    .expect("upgrade without durable mixed-timer intent");
+    pic.upgrade_canister(canister_id, probe_wasm(), Vec::new(), None)
+        .expect("upgrade without durable mixed-timer intent");
     let upgraded = mixed_snapshot(pic, canister_id);
     assert!(!upgraded.watchdog_registered);
     assert!(!upgraded.application_registered);
@@ -1325,15 +1264,13 @@ fn overdue_shared_timers_coalesce_to_bounded_work() {
 }
 
 fn dispatch_batch_observation(pic: &PocketIc, canister_id: Principal) -> DispatchBatchObservation {
-    query_candid_args(
+    query_wire(
         pic,
         canister_id,
         Principal::anonymous(),
         "dispatch_batch_observation",
         (),
-        REPLY_LIMITS,
     )
-    .map(|(value,)| value)
     .expect("batch observation")
 }
 
@@ -1344,13 +1281,12 @@ fn maximum_capacity_dispatch_preserves_every_survivor_under_pressure_and_await()
     let canister_id = install_probe(pic, probe_wasm());
     update_unit(pic, canister_id, "start_dispatch_batch");
     advance_and_tick(pic, Duration::ZERO, 8);
-    let (failures, replies): (u64, u64) = query_candid_args(
+    let (failures, replies): (u64, u64) = query_wire(
         pic,
         canister_id,
         Principal::anonymous(),
         "pressure_observation",
         (),
-        REPLY_LIMITS,
     )
     .expect("batch pressure observation");
     assert!(
@@ -1430,15 +1366,13 @@ fn maximum_capacity_dispatch_preserves_every_survivor_under_pressure_and_await()
 }
 
 fn scheduling_trace(pic: &PocketIc, canister_id: Principal) -> Vec<u8> {
-    query_candid_args(
+    query_wire(
         pic,
         canister_id,
         Principal::anonymous(),
         "scheduling_trace",
         (),
-        REPLY_LIMITS,
     )
-    .map(|(value,)| value)
     .expect("scheduling trace")
 }
 

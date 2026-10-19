@@ -173,5 +173,18 @@ for item in TimerHandle set_timer; do
     expect_failure "${item}" "${consumer_rustc[@]}"
 done
 
+# The owner checker rejects both direct codecs and generator-default regressions.
+probe_dir=testing/crates/ic-timers-runtime-probe/src
+mkdir -p "$probe_dir"
+for codec in 'use ic_platform::candid::DecodeLimits;' 'use candid::CandidType;' \
+    'fn checkpoint() { stable_save(()); }'; do
+    printf '%s\n' "$codec" > "$probe_dir/leak.rs"
+    expect_failure 'probe protocols must use Wire' bash scripts/ci/check-provider-boundary.sh
+done
+printf '%s\n' '#[ic_platform::cdk::update]' 'fn leaked() {}' > "$probe_dir/leak.rs"
+expect_failure 'admitted Wire hooks' bash scripts/ci/check-provider-boundary.sh
+rm "$probe_dir/leak.rs"
+bash scripts/ci/check-provider-boundary.sh >/dev/null
+
 fixture_complete=true
 echo 'Repository check regression tests passed'

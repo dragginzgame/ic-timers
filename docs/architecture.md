@@ -38,13 +38,13 @@ canister graphs must still exclude older providers that lack that key.
 | Durable jobs, readiness, lifecycle order and operator-health labels | Consuming application/framework | Registration claims and snapshots; no durable task database or application lifecycle exports here |
 | Wasm compilation and artifact-cache custody | `ic-build`, with explicit child custody from `ic-host-process` | `testing/crates/ic-timers-pocketic/src/build/mod.rs` selects packages, profile, features and artifact lifetime |
 | PocketIC server selection, admission, lifecycle and call transport | `ic-testkit` | `scripts/dev/testkit-server.sh` selects the root-lock CLI; the native harness supplies instance configuration |
-| Bounded Candid decoding and its limits/error identities | `ic-platform::candid` | Native harness and protocol subjects supply their existing finite limits; Testkit 0.54 consumes the same identities |
+| Controlled probe codecs | Published `ic-wire::native` and Serde | The unpublished protocol owns method identities/limits; Platform hooks and the native harness own transport integration |
 | Common tools, fixture dependency closure, evidence transport and release mechanics | Reviewed Shared Tooling snapshot | Local Make selections, product release/source policy and evidence identity; see [adoption boundaries](shared-tooling.md) |
 
 The [root manifest](../Cargo.toml) owns all five maintained packages and every
 direct dependency, with one lockfile. The four unpublished packages own runtime
 and size probe canisters, the native PocketIC driver, and shared probe wire
-records. The protocol package selects only Platform's Candid contract: it carries values,
+records. The protocol package selects Wire and Serde only: it carries values,
 not scheduling authority. The native platform substitute is test-only; it does
 not replace IC execution or prove recovery. Runtime subjects and policy cohorts
 remain separate evidence selections in the [release guide](releasing.md).
@@ -54,12 +54,12 @@ remain separate evidence selections in the [release guide](releasing.md).
 Registry-published `ic-platform` is the selected boundary; the current lock and
 source-qualified receipts are recorded in [current status](status/current.md).
 The initial 0.1.12 adoption (VCS `338b14baf97690abdfc0e386d6d5261b309a3ac8`)
-established upstream identities, not a second codec or executor. The root catalog disables default
-features; the library selects `executor` and `ic0`, while probe DTOs and the native
-harness select `candid`. The two canister probes select `cdk` for Platform-owned
-entrypoint generation, exact upstream calls and protected spawning. Its published
-macro helper supplies both runtime and codec paths. No host parser, Agent,
-cryptographic verification, certification, management or ledger feature is selected.
+established upstream identities, not a second codec or executor. The root catalog
+disables default Platform features. The library selects only
+`executor` and `ic0`; the two canister probes select `cdk` for entrypoint contexts,
+protected calls/spawning, traps, cycle burning and stable byte I/O. The native
+harness selects no Platform features and the protocol package has no Platform
+edge. Parser, Agent, certification and ledger capabilities remain unselected.
 
 The private platform uses `ic_platform::ic0` for its existing system calls,
 retaining context placement, method handles, protected spawning and callback/trap cleanup. The lockfile still
@@ -67,14 +67,22 @@ resolves one `ic-cdk-executor` 2.0.0 shared with CDK. Native substitutes cannot
 qualify those IC paths. Executor/system-only Platform remains Candid-free, but its
 unconditional Principal export brings `ic_principal` and Serde transitively.
 
-Probe records use Platform's Candid/Serde derives with explicit crate paths.
-Labels, optionality and top-level argument structure stay unchanged. The 0.29
-counter cut changes private diagnostic event fields to lossless total/overflow
-records; memory and instruction observations retain their existing widths.
-Host init/upgrade encoding uses `contract::encode_args(())`. There is
-no local generator or compatibility alias to retain. These existing Candid probe
-endpoints remain Candid; this does not change an application protocol owned by
-IC Wire or introduce a storage migration.
+Probe records use Serde and published Wire 0.4.4's native codec. The shared
+`test-protocol::rpc` roster owns explicit method IDs; both endpoint hooks and
+native callers bind to those identities. Request limits admit at most 1 KiB,
+16 KiB allocation charge, 1,024 nodes and depth 16; replies retain a 64 KiB byte
+ceiling with a 1 MiB allocation charge, 16,384 nodes and depth 32. These are Wire
+budgets, not renamed Candid quotas. Pre-copy guards check incoming IC size before
+Platform copies arguments. Decode failure prevents the handler; reply encoding
+failure traps rather than committing a partial response. Empty RPCs still carry
+a method-bound frame. Init and upgrade hooks take raw empty arguments.
+
+Platform's published custom-codec/hidden entrypoint hooks retain its original
+query/update contexts and async protected spawning. The two private canister
+adapters translate codec rejection to traps; they own no serialization arithmetic
+or timer authority. Real self-call gates and queue pressure use raw Wire frames,
+retaining their IC suspension and call-failure behavior. The production dispatch
+remains its authenticated eight-byte payload, without a Wire envelope.
 
 Platform owns the exact `ic-cdk-executor = "=2.0.0"` and `ic0 = "=1.2.0"`
 constraints. Their direct declarations and local pin exceptions are removed.
@@ -83,19 +91,13 @@ all callback registration remains in the private FFI owner. This completes the
 published boundaries requested in [Platform #7](https://github.com/dragginzgame/ic-platform/issues/7)
 and [#8](https://github.com/dragginzgame/ic-platform/issues/8) without a local facade.
 
-The new `candid::decoder::{decode_one, decode_args}` exports use upstream defaults
-and are distinct from Platform's finite-limit parent helpers. The protocol
-subjects continue importing `candid::decode_args` with explicit limits; native
-transport accepts Platform's limits/error identities through Testkit 0.54.
-No unbounded decoder is substituted.
-
-The runtime probe uses Platform's `cdk::storage::{stable_save, stable_restore}`
-and `cdk::api::cycles_burn`, which directly reexport the existing CDK 0.20.3
-helpers. The `(bool, bool, u64, u64)` upgrade tuple, Candid error identities,
-restore's lack of decoder finalization, trap messages and actual cycle-burning
-behavior remain unchanged. This completes the published boundary requested in
-[Platform #19 — Timers stable-helper and cycle-burn boundary](https://github.com/dragginzgame/ic-platform/issues/19),
-without a local storage implementation or compatibility wrapper.
+The runtime fixture's four-field `(bool, bool, u64, u64)` checkpoint now uses a
+bounded Wire frame with a checked little-endian length prefix in its existing
+stable-memory fixture page. Both upgrade participants use this one format;
+there is no Candid reader or cross-release probe migration. Database/application
+storage is outside this fixture. Stable byte I/O and cycle burning remain
+Platform's exact upstream helpers, adopted under
+[Platform #19 — Timers stable-helper and cycle-burn boundary](https://github.com/dragginzgame/ic-platform/issues/19).
 
 No workspace member declares Candid or any CDK-family package directly.
 Candid, upstream CDK/macros, Platform's generator and the shared
@@ -104,12 +106,12 @@ presence does not change the library's executor/IC0-only feature selection or
 make the qualification Wasm Candid-free. Raw counter/page observations use
 Platform's exact IC0 exports; CDK spawning keeps its unfinished-task drop policy.
 
-The native driver selects published Testkit 0.54 and imports Platform's
-`DecodeLimits` directly. The retired `ic-testkit-candid` declaration, package and
-ownership exception are removed; its five reply ceilings and typed error sources
-remain unchanged. No conversion wrapper or local transport is added. This
-completes Timers' consumer migration under
-[Platform #2 — Coordinate published Testkit limits identity](https://github.com/dragginzgame/ic-platform/issues/2).
+The native driver retains published Testkit for server admission, lifecycle and
+bounded progress. Probe RPCs use PocketIC's raw query/update APIs plus the shared
+Wire identities/limits. Candid and management types remain upstream transport
+implementation details. The retired `ic-testkit-candid` package remains absent.
+The local provider check also rejects Candid codec paths and default-codec
+query/update attributes in maintained probe source.
 
 The [dependency policy](../ci/cargo-dependency-boundaries.json) is enforced through
 Shared's canonical checker in `actions-check`, alongside pin/inheritance checks.
@@ -381,7 +383,7 @@ parallel integer counter arithmetic. Instruction observations already use Metric
 summaries. The 0.29 getter cut requires downstream projections to preserve wide
 totals and actual-overflow quality, or use checked narrowing. Page extent sampling
 and functional failure streaks remain timer-specific. Probe wire records only
-project values; the protocol package depends on Platform Candid alone.
+project values; the protocol package depends on Wire and Serde alone.
 
 Operator-health labels belong to consumers. Snapshots expose runtime state,
 scheduling mode and callback outcomes for a single consumer-owned projection.

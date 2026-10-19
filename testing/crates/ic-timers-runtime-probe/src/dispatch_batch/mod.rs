@@ -38,9 +38,23 @@ fn install(index: usize, counter: usize) -> OnceRegistration {
                     ic_platform::cdk::api::canister_self(),
                     "dispatch_batch_gate",
                 )
+                .take_raw_args(
+                    ic_wire::native::encode_request(
+                        ic_timers_test_protocol::rpc::Method::DispatchBatchGate as u64,
+                        &(),
+                        ic_timers_test_protocol::rpc::REQUEST_LIMITS,
+                    )
+                    .expect("gate request"),
+                )
                 .await
                 .expect("batch gate call");
-                if response.candid::<bool>().expect("batch gate response") {
+                if ic_wire::native::decode_response::<bool>(
+                    ic_timers_test_protocol::rpc::Method::DispatchBatchGate as u64,
+                    &response.into_bytes(),
+                    ic_timers_test_protocol::rpc::RESPONSE_LIMITS,
+                )
+                .expect("batch gate response")
+                {
                     break;
                 }
             }
@@ -52,7 +66,12 @@ fn install(index: usize, counter: usize) -> OnceRegistration {
     .expect("batch registration")
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartDispatchBatch as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::StartDispatchBatch as u64 }>"
+)]
 fn start_dispatch_batch() {
     assert!(REGISTRATIONS.with_borrow(Vec::is_empty), "fresh batch");
     super::transport::start_pressure();
@@ -63,7 +82,12 @@ fn start_dispatch_batch() {
     });
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ChangePendingDispatchBatch as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::ChangePendingDispatchBatch as u64 }>"
+)]
 fn change_pending_dispatch_batch() {
     REGISTRATIONS.with_borrow_mut(|slots| {
         slots[0]
@@ -80,7 +104,12 @@ fn change_pending_dispatch_batch() {
     });
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::RearmCancelledDispatchBatchTimer as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::RearmCancelledDispatchBatchTimer as u64 }>"
+)]
 fn rearm_cancelled_dispatch_batch_timer() {
     REGISTRATIONS.with_borrow(|slots| {
         slots[0]
@@ -91,17 +120,32 @@ fn rearm_cancelled_dispatch_batch_timer() {
     });
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ReleaseDispatchBatch as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::ReleaseDispatchBatch as u64 }>"
+)]
 fn release_dispatch_batch() {
     RELEASED.set(true);
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::DispatchBatchGate as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::DispatchBatchGate as u64 }>"
+)]
 fn dispatch_batch_gate() -> bool {
     RELEASED.get()
 }
 
-#[ic_platform::cdk::query]
+#[ic_platform::cdk::query(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::DispatchBatchObservation as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::DispatchBatchObservation as u64 }>"
+)]
 fn dispatch_batch_observation() -> DispatchBatchObservation {
     DispatchBatchObservation {
         starts: STARTS.with_borrow(|counts| counts.to_vec()),

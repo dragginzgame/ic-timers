@@ -20,6 +20,8 @@ watchdog = []
 ic-platform = { workspace = true, features = ["cdk"] }
 ic-timers.workspace = true
 ic-timers-test-protocol.workspace = true
+ic-wire.workspace = true
+serde.workspace = true
 
 [lints.rust]
 unsafe_code = "forbid"

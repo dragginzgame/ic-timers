@@ -4,7 +4,74 @@
 
 Last updated: 2026-10-19
 
-## Metrics event delegation — pending 0.29.0
+## Probe Wire cut — pending 0.29.1
+
+This task starts from clean released 0.29.0 (`8f4b72f`). All authored probe RPCs,
+self-call gate replies and the four-field fixture checkpoint now use published
+Wire 0.4.4's native Serde codec. Its runtime/derive archives match registry
+checksums and are un-yanked; normal registry resolution confirms the selection.
+The protocol package depends only on Wire and Serde. The harness no longer
+selects Platform Candid, and there are no local Candid records, codec calls,
+checkpoint helpers or generated Candid query/update defaults. Platform's hidden
+custom-codec hooks preserve CDK contexts and protected async calls. The production
+library, public API and authenticated eight-byte dispatch are unchanged.
+
+One protocol roster owns method identities; the cohort's distinct start contract
+is `cohort_start`. Requests are checked before copying IC arguments and decoded
+with explicit Wire byte/allocation/node/depth budgets. Replies preserve the prior
+64 KiB byte ceiling. Wire errors cannot enter a handler, and reply encoding failure
+traps. The checkpoint retains the same four values in a bounded Wire frame with
+a checked length prefix. Both upgrade participants must be rebuilt together;
+there is no Candid fallback or cross-release probe checkpoint migration. These
+are qualification fixtures, not application/database storage. Details belong in
+[architecture](../architecture.md#candid-and-cdk-dependency-boundary).
+
+The undated 0.29.1 notes classify this as repository-only qualification work;
+Cargo package versions remain 0.29.0. Wire/Postcard are test/tooling-only.
+The new Serde entry is inherited only by probes, but Serde already appears in the
+production graph through Platform's Principal, so its catalog role is production. The library's standalone Wasm graph still excludes Candid, full CDK and
+Wire; the protocol's standalone graph excludes Platform/CDK/Candid. Qualification
+graphs still contain Candid 0.10.38 via Platform's `cdk` capability and
+PocketIC/Testkit. Source-owner checks reject local Candid codec references and
+query/update attributes that omit admission/custom-codec hooks; they do not
+claim to remove or forbid those intentional transitive packages.
+
+During artifact acquisition the maintainer independently selected Build 0.19
+and Host Process 0.28. These manifest/lock updates are preserved. Current driver
+checking fails before tests because Build 0.19 exposes Host 0.27's `OwnedChild`
+while the injected direct spawner returns Host 0.28's type. No local conversion,
+parallel custody provider or downgrade is added. The concrete caller and release
+coordination are recorded on
+[Build #9 — Qualify consumers against the exposed Host boundary](https://github.com/dragginzgame/ic-build/issues/9#issuecomment-6263501759).
+The maintained graph needs compatible producer delivery or a maintainer-selected
+aligned Host family before its complete runtime/cohort gate can pass.
+
+Current Linux/Rust 1.91 focused probe/protocol tests, native probe/protocol lint,
+library native compilation, library/runtime-probe Wasm lint and source/dependency
+boundary checks pass. Native driver/four-cohort lint passed before the concurrent
+host update; current driver qualification is blocked by the type mismatch above.
+All 27 real-Wasm runtime subjects pass in an explicitly isolated source copy,
+`/tmp/ic-timers-wire-qualification.kgk8ej5r`, using the arrival Build 0.18 / Host
+0.27 pair with Wire 0.4.4 and admitted PocketIC 16.1.0. This tests the migrated
+RPCs, strict rejection before effects, real gate awaits/queue pressure, traps,
+checkpoint upgrades and reconstruction. The four-artifact policy-cohort subject
+also passes in that same isolated source/graph. Comparable loaded probe sizes
+fall from 242,853 to 78,809 bytes (baseline), 292,712 to 136,654 (Once), 292,903
+to 136,600 (after-completion) and 293,978 to 137,427 (Watchdog). These are full
+stripped qualification artifacts on Rust 1.91's unchanged `timer-probe` profile,
+not the published library's standalone size or complete-message cost. Watchdog
+scheduler instructions stay at 12,539; its work envelope changes from 8,851 to
+8,878. Full operation/cycle rows are in `isolated-cohorts.log`, compared with
+`cohorts-before.log`; no timer execution speed-up is claimed. This is auxiliary implementation evidence,
+not qualification of the maintained 0.19/0.28 graph. No native macOS, live IC,
+hosted acceptance, sibling mutation or complete release gate is claimed.
+
+Source before-images are `/tmp/ic-timers-wire-arrival.rn42k31j/before/`; focused
+receipts live in `target/qualification/wire-probes/`. The pre-change cohort
+baseline is source/graph-bound. Older sections below retain their historical
+receipts and do not describe current pending work or dependency selections.
+
+## Metrics event delegation — delivered 0.29.0
 
 Current source base: `8d69266` (`fix`), following released 0.28.2. The only
 incoming edit was Cargo.lock, selecting Platform/macros 0.1.15 alongside Metrics
@@ -94,10 +161,9 @@ their historical pending/delivery statements do not qualify the current batch.
 
 ## Source and ownership
 
-The source base is `8d69266`, following released 0.28.2. The working tree prepares
-the undated 0.29.0 batch described above. The released 0.28.0 batch includes
-Metrics 0.14's public `MeasurementSummary` identity change.
-Cargo versions, staging, commits, pushes and releases remain user-owned.
+The source base is released 0.29.0 (`8f4b72f`). The working tree prepares the
+undated 0.29.1 probe codec cut above. Cargo versions, staging, commits, pushes
+and releases remain user-owned.
 
 Timers owns volatile registration, scheduling, observation and private one-shot
 IC dispatch. Consumers retain durable intent, lifecycle order and operational
@@ -109,9 +175,10 @@ historical version or a native platform substitute.
 One root workspace/catalog and lockfile select all five maintained packages.
 The root manifest uses the canonical production and test/tooling role groups;
 matching grouped sorting is active in Make, hooks and all release metadata
-checks. The current catalog selects Metrics 0.14, Build 0.18,
-Testkit 0.54, Host Process 0.27 and Platform 0.1. The selected incoming lock,
-including Platform 0.1.15, is preserved.
+checks. The current catalog selects Metrics 0.14, Build 0.19, Testkit 0.54,
+Host Process 0.28, Platform 0.1 and qualification-only Wire 0.4.4. The concurrent
+Build/Host selections are preserved with their exposed-type qualification gap;
+Platform 0.1.15, Metrics 0.14.4 and Testkit 0.54.1 remain selected.
 Shared 0.24.0 (`cab12cd3dfa4fdb34846b25397f0d72881bb9ae0`) now supplies 132
 canonical payloads. Generic installer/release-runner matrices now stay at Shared;
 their three entrypoint roots and unused cache-key companion are canonically retired.

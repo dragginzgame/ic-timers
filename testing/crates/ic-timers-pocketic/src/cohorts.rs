@@ -1,7 +1,7 @@
-use super::harness::REPLY_LIMITS;
 use super::harness::{fresh_pocket_ic, install_probe, update_unit};
+use super::harness::{query_wire, update_wire};
 use ic_platform::Principal;
-use ic_testkit::pic::{PocketIc, advance_and_tick, query_candid_args, update_candid_args};
+use ic_testkit::pic::{PocketIc, advance_and_tick};
 use ic_timers_test_protocol::{CohortObservation, MemorySamplingMeasurement, OperationMeasurement};
 use std::{env, fs, path::PathBuf, time::Duration};
 
@@ -28,7 +28,7 @@ fn run_cohort(cohort: &str) {
     assert_eq!(initial.callbacks, 0);
     assert_eq!(initial.inventory_len, 0);
 
-    let start = update_measurement(pic, canister_id, "start");
+    let start = update_measurement(pic, canister_id, "cohort_start");
     let duplicate = update_measurement(pic, canister_id, "ensure_again");
     assert_eq!(start.changed, cohort != "baseline");
     assert!(!duplicate.changed);
@@ -96,15 +96,13 @@ fn run_cohort(cohort: &str) {
     assert_eq!(cancelled.next_deadline_ns, None);
 
     let memory_sampling = if cohort == "watchdog" {
-        let measurement: MemorySamplingMeasurement = update_candid_args(
+        let measurement: MemorySamplingMeasurement = update_wire(
             pic,
             canister_id,
             Principal::anonymous(),
             "memory_sampling_overhead",
             (),
-            REPLY_LIMITS,
         )
-        .map(|(value,)| value)
         .expect("probe update succeeds");
         assert!(measurement.sampled_bracket_instructions >= measurement.empty_bracket_instructions);
         Some(measurement)
@@ -147,7 +145,7 @@ fn run_watchdog_calibration(profile: &str, representative_work: bool) -> u128 {
     if representative_work {
         update_unit(pic, canister_id, "use_representative_watchdog_work");
     }
-    let start = update_measurement(pic, canister_id, "start");
+    let start = update_measurement(pic, canister_id, "cohort_start");
     assert!(start.changed);
 
     let cycles_before_dispatch = pic.cycle_balance(canister_id);
@@ -185,29 +183,14 @@ fn update_measurement(
     canister_id: Principal,
     method: &str,
 ) -> OperationMeasurement {
-    update_candid_args(
-        pic,
-        canister_id,
-        Principal::anonymous(),
-        method,
-        (),
-        REPLY_LIMITS,
-    )
-    .map(|(value,)| value)
-    .expect("probe update succeeds")
+    update_wire(pic, canister_id, Principal::anonymous(), method, ())
+        .expect("probe update succeeds")
 }
 
 fn observe(pic: &PocketIc, canister_id: Principal) -> CohortObservation {
-    let observed: CohortObservation = query_candid_args(
-        pic,
-        canister_id,
-        Principal::anonymous(),
-        "observe",
-        (),
-        REPLY_LIMITS,
-    )
-    .map(|(value,)| value)
-    .expect("probe query succeeds");
+    let observed: CohortObservation =
+        query_wire(pic, canister_id, Principal::anonymous(), "observe", ())
+            .expect("probe query succeeds");
     assert!(!observed.schedule_requests.total_overflowed);
     assert!(!observed.scheduler_started.total_overflowed);
     assert!(!observed.wakeups_armed.total_overflowed);

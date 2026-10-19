@@ -63,7 +63,12 @@ thread_local! {
 
 // Deliberately violates the consumer destructor contract to exercise an actual
 // dispatch response trap and its IC cleanup callback, without backend hooks.
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::TrapOrdinaryCaptureDrop as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::TrapOrdinaryCaptureDrop as u64 }>"
+)]
 fn trap_ordinary_capture_drop(enabled: bool) {
     TRAP_CAPTURE_DROP.set(enabled);
 }
@@ -72,7 +77,12 @@ fn identity() -> TimerIdentity {
     TimerIdentity::try_new("ic-timers", "await-probe", "ordinary").expect("fixed identity")
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartOrdinary as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::StartOrdinary as u64 }>"
+)]
 fn start_ordinary(after_completion: bool, transient: bool) {
     let initial = TimerSchedule::At(ic_platform::cdk::api::time());
     let start = if transient {
@@ -139,9 +149,24 @@ async fn work() -> TimerCompletion {
             ic_platform::cdk::api::canister_self(),
             "ordinary_gate",
         )
+        .take_raw_args(
+            ic_wire::native::encode_request(
+                ic_timers_test_protocol::rpc::Method::OrdinaryGate as u64,
+                &(),
+                ic_timers_test_protocol::rpc::REQUEST_LIMITS,
+            )
+            .expect("gate request"),
+        )
         .await
         .map_err(|error| error.to_string())
-        .and_then(|response| response.candid::<bool>().map_err(|error| error.to_string()));
+        .and_then(|response| {
+            ic_wire::native::decode_response::<bool>(
+                ic_timers_test_protocol::rpc::Method::OrdinaryGate as u64,
+                &response.into_bytes(),
+                ic_timers_test_protocol::rpc::RESPONSE_LIMITS,
+            )
+            .map_err(|error| error.to_string())
+        });
         let open = match result {
             Ok(open) => open,
             Err(error) => {
@@ -164,7 +189,12 @@ async fn work() -> TimerCompletion {
     TimerCompletion::success(1)
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::OrdinaryGate as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::OrdinaryGate as u64 }>"
+)]
 fn ordinary_gate() -> bool {
     assert_eq!(
         ic_platform::cdk::api::msg_caller(),
@@ -174,12 +204,22 @@ fn ordinary_gate() -> bool {
     GATE_OPEN.with(Cell::get)
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ReleaseOrdinaryWork as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::ReleaseOrdinaryWork as u64 }>"
+)]
 fn release_ordinary_work() {
     GATE_OPEN.with(|open| open.set(true));
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::TrapOrdinaryWork as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::TrapOrdinaryWork as u64 }>"
+)]
 fn trap_ordinary_work(before_await: bool) {
     TRAP_POINT.with(|point| {
         point.set(if before_await {
@@ -190,12 +230,22 @@ fn trap_ordinary_work(before_await: bool) {
     });
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ClearOrdinaryTrap as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::ClearOrdinaryTrap as u64 }>"
+)]
 fn clear_ordinary_trap() {
     TRAP_POINT.with(|point| point.set(TrapPoint::None));
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ExpiredOrdinaryContextRejected as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::ExpiredOrdinaryContextRejected as u64 }>"
+)]
 fn expired_ordinary_context_rejected() -> bool {
     WORK_CONTEXT.with_borrow(|slot| {
         let result = match slot.as_ref().expect("committed work context") {
@@ -206,7 +256,12 @@ fn expired_ordinary_context_rejected() -> bool {
     })
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::DiscardExpiredOrdinaryClaim as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::DiscardExpiredOrdinaryClaim as u64 }>"
+)]
 fn discard_expired_ordinary_claim() {
     REGISTRATION.with_borrow_mut(|slot| {
         let result = match slot.as_ref().expect("expired registration") {
@@ -226,7 +281,12 @@ fn reconcile(registration: &Registration, desired: Option<TimerSchedule>) {
     result.expect("ordinary reconciliation");
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ReconcileOrdinaryAt as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::ReconcileOrdinaryAt as u64 }>"
+)]
 fn reconcile_ordinary_at(deadline_ns: u64) {
     REGISTRATION.with_borrow(|slot| {
         reconcile(
@@ -236,12 +296,22 @@ fn reconcile_ordinary_at(deadline_ns: u64) {
     });
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::CancelOrdinary as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::CancelOrdinary as u64 }>"
+)]
 fn cancel_ordinary() {
     REGISTRATION.with_borrow(|slot| reconcile(slot.as_ref().expect("registered"), None));
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::UnregisterOrdinary as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::UnregisterOrdinary as u64 }>"
+)]
 fn unregister_ordinary() {
     let registration = REGISTRATION
         .with_borrow_mut(Option::take)
@@ -253,7 +323,12 @@ fn unregister_ordinary() {
     .expect("ordinary unregister");
 }
 
-#[ic_platform::cdk::query]
+#[ic_platform::cdk::query(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::OrdinaryObservation as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::OrdinaryObservation as u64 }>"
+)]
 fn ordinary_observation() -> OrdinaryObservation {
     let snapshot = timer_snapshot(&identity()).expect("ordinary snapshot");
     let armed = REGISTRATION.with_borrow(|slot| {
@@ -316,7 +391,12 @@ fn ordinary_observation() -> OrdinaryObservation {
 }
 
 /// Remove armed authority in one message before any consumer work can start.
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::RemoveArmedCallback as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::RemoveArmedCallback as u64 }>"
+)]
 fn remove_armed_callback(policy: u8) {
     let deadline = ic_platform::cdk::api::time()
         .checked_add(super::CADENCE_NS)
@@ -377,7 +457,12 @@ fn remove_armed_callback(policy: u8) {
 }
 
 /// A rejected initial request must not leave callback authority in the IC heap.
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::RejectInitialSchedule as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::RejectInitialSchedule as u64 }>"
+)]
 fn reject_initial_schedule(policy: u8, transient: bool) -> (bool, u64, bool) {
     let before = timer_inventory().expect("initial inventory");
     let dropped_before = CAPTURES_DROPPED.with(Cell::get);
@@ -438,7 +523,12 @@ fn reject_initial_schedule(policy: u8, transient: bool) -> (bool, u64, bool) {
 }
 
 /// A rejected first lifecycle reconciliation must leave its owner slot empty.
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::RejectInitialReconciliation as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::RejectInitialReconciliation as u64 }>"
+)]
 fn reject_initial_reconciliation(policy: u8) -> (bool, bool, u64, bool) {
     let before = timer_inventory().expect("initial inventory");
     let dropped_before = CAPTURES_DROPPED.with(Cell::get);

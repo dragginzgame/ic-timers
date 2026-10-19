@@ -22,6 +22,8 @@ use ic_timers::{
     register_watchdog,
 };
 
+mod codec;
+
 const _: () = assert!(
     cfg!(feature = "baseline") as u8
         + cfg!(feature = "once") as u8
@@ -55,15 +57,20 @@ thread_local! {
     static REPRESENTATIVE_WATCHDOG_WORK: Cell<bool> = const { Cell::new(false) };
 }
 
-#[ic_platform::cdk::init]
+#[ic_platform::cdk::init(hidden = true)]
 fn init() {
     if initialize_runtime().is_err() {
         ic_platform::cdk::api::trap("size-probe runtime initialization failed");
     }
 }
 
-#[ic_platform::cdk::update]
-fn start() -> OperationMeasurement {
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::CohortStart as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::CohortStart as u64 }>"
+)]
+fn cohort_start() -> OperationMeasurement {
     let (changed, instructions) = measure(start_inner);
     OperationMeasurement {
         changed,
@@ -71,7 +78,12 @@ fn start() -> OperationMeasurement {
     }
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::EnsureAgain as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::EnsureAgain as u64 }>"
+)]
 fn ensure_again() -> OperationMeasurement {
     let (changed, instructions) = measure(ensure_again_inner);
     OperationMeasurement {
@@ -80,7 +92,12 @@ fn ensure_again() -> OperationMeasurement {
     }
 }
 
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::Cancel as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::Cancel as u64 }>"
+)]
 fn cancel() -> OperationMeasurement {
     let (changed, instructions) = measure(cancel_inner);
     OperationMeasurement {
@@ -92,7 +109,12 @@ fn cancel() -> OperationMeasurement {
 /// Isolate the raw instruction cost of the start/end page reads used by one
 /// normally completed callback. This probe-only endpoint does not alter the
 /// runtime's callback instruction aggregate.
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::MemorySamplingOverhead as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::MemorySamplingOverhead as u64 }>"
+)]
 fn memory_sampling_overhead() -> MemorySamplingMeasurement {
     let ((), empty_bracket_instructions) = measure(|| {
         std::hint::black_box((0_u64, 0_u64));
@@ -111,12 +133,22 @@ fn memory_sampling_overhead() -> MemorySamplingMeasurement {
 /// Select a bounded non-trivial callback body for the probe's next Watchdog
 /// registration. This endpoint exists only in the Watchdog test canister.
 #[cfg(feature = "watchdog")]
-#[ic_platform::cdk::update]
+#[ic_platform::cdk::update(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::UseRepresentativeWatchdogWork as u64 }>",
+    encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::UseRepresentativeWatchdogWork as u64 }>"
+)]
 fn use_representative_watchdog_work() {
     REPRESENTATIVE_WATCHDOG_WORK.with(|enabled| enabled.set(true));
 }
 
-#[ic_platform::cdk::query]
+#[ic_platform::cdk::query(
+    hidden = true,
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::Observe as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::Observe as u64 }>"
+)]
 fn observe() -> CohortObservation<&'static str> {
     let snapshot_before = ic_platform::ic0::performance_counter(1);
     let snapshot = timer_snapshot(&cohort_identity())

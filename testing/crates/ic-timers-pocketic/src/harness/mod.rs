@@ -1,27 +1,16 @@
 //! Fresh, caller-owned testkit servers and IC instances from the verified binary.
 
-use ic_platform::{
-    Principal,
-    candid::{DecodeLimits, contract::encode_args},
-};
+use ic_platform::Principal;
 use ic_testkit::pic::{
     CanisterInstallExt, InstallSpec, PocketIc, PocketIcBuilder, PocketIcInstance,
-    PocketIcStartupConfig, tick_until, update_candid_args,
+    PocketIcStartupConfig, tick_until,
 };
+use ic_timers_test_protocol::rpc::{REQUEST_LIMITS, RESPONSE_LIMITS, method_id};
+use serde::{Serialize, de::DeserializeOwned};
 use std::{convert::Infallible, env, fmt::Debug, path::PathBuf, task::Poll, time::Duration};
 
 const STARTUP_TIMEOUT: Duration = Duration::from_secs(60);
 pub const INIT_CYCLES: u128 = 2_000_000_000_000;
-
-// Probe replies are bounded snapshots/counters, not application payloads.
-// These ceilings bound decoding only; tick budgets and transport stay separate.
-pub const REPLY_LIMITS: DecodeLimits = DecodeLimits {
-    reply_bytes: 64 * 1024,
-    decoding_quota: 1_000_000,
-    skipping_quota: 10_000,
-    type_entries: 256,
-    header_bytes: 8 * 1024,
-};
 
 /// Preserve tick-before-observation boundaries while Testkit owns bounded progress.
 pub fn wait_for_probe<T: Debug>(
@@ -49,7 +38,7 @@ pub fn wait_for_probe<T: Debug>(
 pub fn install_probe(pic: &PocketIc, wasm: Vec<u8>) -> Principal {
     pic.try_create_and_install(InstallSpec {
         wasm,
-        init_bytes: encode_args(()).expect("encode probe init"),
+        init_bytes: Vec::new(),
         cycles: INIT_CYCLES,
         install_sender: None,
         label: Some("ic-timers probe".to_owned()),
@@ -78,13 +67,46 @@ pub fn fresh_pocket_ic() -> PocketIcInstance<PocketIc> {
 
 /// Invoke an anonymous update with no arguments or return values.
 pub fn update_unit(pic: &PocketIc, canister_id: Principal, method: &str) {
-    update_candid_args::<(), _>(
-        pic,
-        canister_id,
-        Principal::anonymous(),
-        method,
-        (),
-        REPLY_LIMITS,
-    )
-    .expect("probe update succeeds");
+    update_wire::<(), _>(pic, canister_id, Principal::anonymous(), method, ())
+        .expect("probe update succeeds");
+}
+
+/// Send one method-bound Wire request through the maintained raw PocketIC API.
+pub fn update_wire<T: Serialize + DeserializeOwned, A: Serialize>(
+    pic: &PocketIc,
+    canister_id: Principal,
+    caller: Principal,
+    method: &str,
+    args: A,
+) -> Result<T, Box<dyn std::error::Error>> {
+    let id = method_id(method).ok_or("unknown probe method")?;
+    let request = ic_wire::native::encode_request(id, &args, REQUEST_LIMITS)?;
+    let response = pic
+        .update_call(canister_id, caller, method, request)
+        .map_err(|error| format!("{method}: {error:?}"))?;
+    Ok(ic_wire::native::decode_response(
+        id,
+        &response,
+        RESPONSE_LIMITS,
+    )?)
+}
+
+/// Decode a bounded Wire query reply without changing its caller or timing.
+pub fn query_wire<T: Serialize + DeserializeOwned, A: Serialize>(
+    pic: &PocketIc,
+    canister_id: Principal,
+    caller: Principal,
+    method: &str,
+    args: A,
+) -> Result<T, Box<dyn std::error::Error>> {
+    let id = method_id(method).ok_or("unknown probe method")?;
+    let request = ic_wire::native::encode_request(id, &args, REQUEST_LIMITS)?;
+    let response = pic
+        .query_call(canister_id, caller, method, request)
+        .map_err(|error| format!("{method}: {error:?}"))?;
+    Ok(ic_wire::native::decode_response(
+        id,
+        &response,
+        RESPONSE_LIMITS,
+    )?)
 }

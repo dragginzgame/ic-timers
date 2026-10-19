@@ -1,34 +1,23 @@
+use super::rpc::{Method, REQUEST_LIMITS, RESPONSE_LIMITS};
 use super::{CohortObservation, CounterObservation, ProbeMemorySummary, ProbeSnapshot};
-use ic_platform::candid::{
-    DecodeLimits,
-    contract::{CandidType, encode_args},
-    decode_args,
-};
-
-// The protocol subjects use the same finite ceilings as the native probe driver.
-const LIMITS: DecodeLimits = DecodeLimits {
-    reply_bytes: 64 * 1024,
-    decoding_quota: 1_000_000,
-    skipping_quota: 10_000,
-    type_entries: 256,
-    header_bytes: 8 * 1024,
-};
+use ic_wire::native::{decode_response, encode_response};
 
 #[test]
 fn borrowed_cohort_label_decodes_into_owned_text_with_wide_totals() {
-    assert_eq!(
-        CohortObservation::<&str>::ty(),
-        CohortObservation::<String>::ty()
-    );
     let observed = CohortObservation {
         cohort: "watchdog",
         scheduler_instruction_total: u128::from(u64::MAX) + 1,
         work_instruction_total: u128::MAX,
         ..CohortObservation::default()
     };
-    let encoded = encode_args((&observed,)).expect("encode borrowed cohort observation");
-    let (decoded,) = decode_args::<(CohortObservation<String>,)>(&encoded, LIMITS)
-        .expect("decode owned cohort observation");
+    let encoded = encode_response(Method::Observe as u64, &observed, RESPONSE_LIMITS)
+        .expect("encode borrowed cohort observation");
+    let decoded = decode_response::<CohortObservation<String>>(
+        Method::Observe as u64,
+        &encoded,
+        RESPONSE_LIMITS,
+    )
+    .expect("decode owned cohort observation");
     assert_eq!(decoded.cohort, "watchdog");
     assert_eq!(
         decoded.scheduler_instruction_total,
@@ -77,9 +66,61 @@ fn snapshot_round_trip_preserves_wide_totals_and_optional_memory() {
         }),
         ..ProbeSnapshot::default()
     };
-    let encoded = encode_args((&observed,)).expect("encode wide probe snapshot");
+    let encoded = encode_response(Method::Snapshot as u64, &observed, RESPONSE_LIMITS)
+        .expect("encode wide probe snapshot");
     assert_eq!(
-        decode_args::<(ProbeSnapshot,)>(&encoded, LIMITS).unwrap().0,
+        decode_response::<ProbeSnapshot>(Method::Snapshot as u64, &encoded, RESPONSE_LIMITS)
+            .unwrap(),
         observed
+    );
+}
+
+#[test]
+fn wire_admission_rejects_wrong_identity_direction_trailing_and_resource_excess() {
+    let id = Method::Snapshot as u64;
+    let frame = encode_response(id, &ProbeSnapshot::default(), RESPONSE_LIMITS).unwrap();
+    assert_eq!(
+        decode_response::<ProbeSnapshot>(Method::Observe as u64, &frame, RESPONSE_LIMITS),
+        Err(ic_wire::Error::Identity)
+    );
+    assert!(ic_wire::native::decode_request::<ProbeSnapshot>(id, &frame, RESPONSE_LIMITS).is_err());
+    for len in 0..frame.len() {
+        assert!(decode_response::<ProbeSnapshot>(id, &frame[..len], RESPONSE_LIMITS).is_err());
+    }
+    let mut trailing = frame.clone();
+    trailing.push(0);
+    assert!(decode_response::<ProbeSnapshot>(id, &trailing, RESPONSE_LIMITS).is_err());
+    for limits in [
+        ic_wire::Limits {
+            bytes: frame.len() - 1,
+            ..RESPONSE_LIMITS
+        },
+        ic_wire::Limits {
+            allocation: RESPONSE_LIMITS.bytes,
+            ..RESPONSE_LIMITS
+        },
+        ic_wire::Limits {
+            nodes: 1,
+            ..RESPONSE_LIMITS
+        },
+        ic_wire::Limits {
+            depth: 1,
+            ..RESPONSE_LIMITS
+        },
+    ] {
+        assert!(decode_response::<ProbeSnapshot>(id, &frame, limits).is_err());
+    }
+    // Current checkpoints retain both flags and wide values through one format.
+    let state = (true, false, u64::MAX, 7_u64);
+    let checkpoint =
+        ic_wire::native::encode_request(super::rpc::CHECKPOINT_ID, &state, REQUEST_LIMITS).unwrap();
+    assert_eq!(
+        ic_wire::native::decode_request::<(bool, bool, u64, u64)>(
+            super::rpc::CHECKPOINT_ID,
+            &checkpoint,
+            REQUEST_LIMITS
+        )
+        .unwrap(),
+        state
     );
 }
