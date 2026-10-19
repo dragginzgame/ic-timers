@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.29.1]
+## [0.29.1] - 2026-10-19
 
 - Align the PocketIC harness with the Host Process 0.27 family exposed by
   IC Build 0.19, fixing the injected-spawner type error in `testing-check` and
