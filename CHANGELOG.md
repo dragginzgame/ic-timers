@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.29.3]
+## [0.29.3] - 2026-10-19
 
 - Adopt published IC Platform 0.2 for Candid-free probe entrypoints, raw calls
   and protected spawning, removing full CDK from the workspace graph. Keep Wire
