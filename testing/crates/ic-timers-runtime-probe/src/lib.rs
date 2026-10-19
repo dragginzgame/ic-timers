@@ -4,7 +4,7 @@ use ic_timers::{
     WatchdogRegistration, WatchdogRunResult, initialize_runtime, register_watchdog,
     timer_inventory, timer_snapshot,
 };
-use ic_timers_test_protocol::{ProbeMemorySummary, ProbeSnapshot};
+use ic_timers_test_protocol::{CounterObservation, ProbeMemorySummary, ProbeSnapshot};
 use std::cell::{Cell, RefCell};
 
 const CADENCE_NS: u64 = 1_000_000_000;
@@ -340,14 +340,14 @@ fn snapshot() -> ProbeSnapshot {
         immediate_scheduling: snapshot.scheduling_mode() == TimerSchedulingMode::Continuation,
         latest_requested_delay_ns: snapshot.latest_requested_delay_ns(),
         latest_armed_delay_ns: snapshot.latest_armed_delay_ns(),
-        schedule_requests: counters.schedule_requests(),
-        scheduler_started: counters.scheduler_started(),
-        wakeups_armed: counters.wakeups_armed(),
-        work_dispatched: counters.work_dispatched(),
-        work_started: counters.work_started(),
-        work_completed: counters.work_completed(),
-        coalesced: counters.coalesced(),
-        unacknowledged: counters.unacknowledged(),
+        schedule_requests: counter_observation(counters.schedule_requests()),
+        scheduler_started: counter_observation(counters.scheduler_started()),
+        wakeups_armed: counter_observation(counters.wakeups_armed()),
+        work_dispatched: counter_observation(counters.work_dispatched()),
+        work_started: counter_observation(counters.work_started()),
+        work_completed: counter_observation(counters.work_completed()),
+        coalesced: counter_observation(counters.coalesced()),
+        unacknowledged: counter_observation(counters.unacknowledged()),
         last_unacknowledged: snapshot.observability().outcomes().last_outcome()
             == Some(TimerLastOutcome::Unacknowledged),
         scheduler_instruction_samples: performance.scheduler_instructions().aggregate().samples(),
@@ -420,4 +420,11 @@ async fn fixture_dispatch_payload(payload: Vec<u8>) -> bool {
     .take_raw_args(payload)
     .await
     .is_ok()
+}
+
+fn counter_observation(counter: ic_timers::MeasurementCounter) -> CounterObservation {
+    CounterObservation {
+        total: counter.total(),
+        total_overflowed: counter.total_overflowed(),
+    }
 }

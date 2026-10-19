@@ -1,201 +1,205 @@
-//! Saturating registration-local counters and bounded callback measurements.
+//! Registration-local Metrics counters and bounded callback measurements.
 
 use super::{TimerCompletion, TimerCompletionOutcome, TimerOutcomeSnapshot};
-use ic_metrics::MeasurementSummary;
+use ic_metrics::{MeasurementCounter, MeasurementSummary};
 
 /// Registration-local timer event counters.
 ///
-/// Fields are private so mutation preserves saturation. Completed work is
-/// derived from its classified outcomes; the registry is the sole writer.
-/// A value equal to `u64::MAX` is conservatively saturated: do not derive an
-/// exact interval delta from that field. Compare registration identities before
-/// subtracting counters; runtime epoch equality alone does not prove continuity.
+/// Metrics owns arithmetic and actual-overflow tracking; the registry is the
+/// sole writer of these named events. Completed work merges its four classified
+/// outcomes. Getters return inert copies, not mutation authority.
+///
+/// Check the parent snapshot's full registration identity before using
+/// [`MeasurementCounter::delta_since`]; epoch equality alone does not prove
+/// continuity. Use checked counter operations rather than inferring overflow
+/// from a numeric cap: an exact `u128::MAX` remains distinguishable from overflow.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct TimerCounters {
-    schedule_requests: u64,
-    wakeups_armed: u64,
-    work_dispatched: u64,
-    scheduler_started: u64,
-    work_started: u64,
-    succeeded: u64,
-    no_work: u64,
-    retryable_failure: u64,
-    invariant_failure: u64,
-    cancelled: u64,
-    stale_wakeups: u64,
-    stale_work: u64,
-    coalesced: u64,
-    unacknowledged: u64,
+    schedule_requests: MeasurementCounter,
+    wakeups_armed: MeasurementCounter,
+    work_dispatched: MeasurementCounter,
+    scheduler_started: MeasurementCounter,
+    work_started: MeasurementCounter,
+    succeeded: MeasurementCounter,
+    no_work: MeasurementCounter,
+    retryable_failure: MeasurementCounter,
+    invariant_failure: MeasurementCounter,
+    cancelled: MeasurementCounter,
+    stale_wakeups: MeasurementCounter,
+    stale_work: MeasurementCounter,
+    coalesced: MeasurementCounter,
+    unacknowledged: MeasurementCounter,
 }
 
 impl TimerCounters {
     const EMPTY: Self = Self {
-        schedule_requests: 0,
-        wakeups_armed: 0,
-        work_dispatched: 0,
-        scheduler_started: 0,
-        work_started: 0,
-        succeeded: 0,
-        no_work: 0,
-        retryable_failure: 0,
-        invariant_failure: 0,
-        cancelled: 0,
-        stale_wakeups: 0,
-        stale_work: 0,
-        coalesced: 0,
-        unacknowledged: 0,
+        schedule_requests: MeasurementCounter::ZERO,
+        wakeups_armed: MeasurementCounter::ZERO,
+        work_dispatched: MeasurementCounter::ZERO,
+        scheduler_started: MeasurementCounter::ZERO,
+        work_started: MeasurementCounter::ZERO,
+        succeeded: MeasurementCounter::ZERO,
+        no_work: MeasurementCounter::ZERO,
+        retryable_failure: MeasurementCounter::ZERO,
+        invariant_failure: MeasurementCounter::ZERO,
+        cancelled: MeasurementCounter::ZERO,
+        stale_wakeups: MeasurementCounter::ZERO,
+        stale_work: MeasurementCounter::ZERO,
+        coalesced: MeasurementCounter::ZERO,
+        unacknowledged: MeasurementCounter::ZERO,
     };
 
     pub(crate) const fn record_schedule_request(&mut self) {
-        self.schedule_requests = self.schedule_requests.saturating_add(1);
+        self.schedule_requests.add(1);
     }
 
     pub(crate) const fn record_wakeup_armed(&mut self) {
-        self.wakeups_armed = self.wakeups_armed.saturating_add(1);
+        self.wakeups_armed.add(1);
     }
 
     pub(crate) const fn record_work_dispatched(&mut self) {
-        self.work_dispatched = self.work_dispatched.saturating_add(1);
+        self.work_dispatched.add(1);
     }
 
     pub(crate) const fn record_scheduler_started(&mut self) {
-        self.scheduler_started = self.scheduler_started.saturating_add(1);
+        self.scheduler_started.add(1);
     }
 
     pub(crate) const fn record_work_started(&mut self) {
-        self.work_started = self.work_started.saturating_add(1);
+        self.work_started.add(1);
     }
 
     pub(crate) const fn record_completion(&mut self, outcome: TimerCompletionOutcome) {
         match outcome {
             TimerCompletionOutcome::Success => {
-                self.succeeded = self.succeeded.saturating_add(1);
+                self.succeeded.add(1);
             }
             TimerCompletionOutcome::NoWork => {
-                self.no_work = self.no_work.saturating_add(1);
+                self.no_work.add(1);
             }
             TimerCompletionOutcome::RetryableFailure => {
-                self.retryable_failure = self.retryable_failure.saturating_add(1);
+                self.retryable_failure.add(1);
             }
             TimerCompletionOutcome::InvariantFailure => {
-                self.invariant_failure = self.invariant_failure.saturating_add(1);
+                self.invariant_failure.add(1);
             }
         }
     }
 
     pub(crate) const fn record_cancellation(&mut self) {
-        self.cancelled = self.cancelled.saturating_add(1);
+        self.cancelled.add(1);
     }
 
     pub(crate) const fn record_stale_wakeup(&mut self) {
-        self.stale_wakeups = self.stale_wakeups.saturating_add(1);
+        self.stale_wakeups.add(1);
     }
 
     pub(crate) const fn record_stale_work(&mut self) {
-        self.stale_work = self.stale_work.saturating_add(1);
+        self.stale_work.add(1);
     }
 
     pub(crate) const fn record_coalesced(&mut self) {
-        self.coalesced = self.coalesced.saturating_add(1);
+        self.coalesced.add(1);
     }
 
     pub(crate) const fn record_unacknowledged(&mut self) {
-        self.unacknowledged = self.unacknowledged.saturating_add(1);
+        self.unacknowledged.add(1);
     }
 
     /// Return validated activation and reconciliation requests.
     #[must_use]
-    pub const fn schedule_requests(self) -> u64 {
+    pub const fn schedule_requests(self) -> MeasurementCounter {
         self.schedule_requests
     }
 
     /// Return ordinary or scheduler provider one-shots armed.
     #[must_use]
-    pub const fn wakeups_armed(self) -> u64 {
+    pub const fn wakeups_armed(self) -> MeasurementCounter {
         self.wakeups_armed
     }
 
     /// Return immediate watchdog work one-shots dispatched.
     #[must_use]
-    pub const fn work_dispatched(self) -> u64 {
+    pub const fn work_dispatched(self) -> MeasurementCounter {
         self.work_dispatched
     }
 
     /// Return accepted watchdog scheduler callbacks.
     #[must_use]
-    pub const fn scheduler_started(self) -> u64 {
+    pub const fn scheduler_started(self) -> MeasurementCounter {
         self.scheduler_started
     }
 
     /// Return accepted consumer-work callbacks.
     #[must_use]
-    pub const fn work_started(self) -> u64 {
+    pub const fn work_started(self) -> MeasurementCounter {
         self.work_started
     }
 
     /// Return consumer work whose completion accounting committed.
     ///
-    /// This is the saturating sum of the four classified completion counters.
+    /// Merge the four classified counters, preserving actual-overflow quality.
     #[must_use]
-    pub const fn work_completed(self) -> u64 {
-        self.succeeded
-            .saturating_add(self.no_work)
-            .saturating_add(self.retryable_failure)
-            .saturating_add(self.invariant_failure)
+    pub const fn work_completed(self) -> MeasurementCounter {
+        let mut completed = self.succeeded;
+        completed.merge(self.no_work);
+        completed.merge(self.retryable_failure);
+        completed.merge(self.invariant_failure);
+        completed
     }
 
     /// Return successful-work completions.
     #[must_use]
-    pub const fn succeeded(self) -> u64 {
+    pub const fn succeeded(self) -> MeasurementCounter {
         self.succeeded
     }
 
     /// Return valid no-work completions.
     #[must_use]
-    pub const fn no_work(self) -> u64 {
+    pub const fn no_work(self) -> MeasurementCounter {
         self.no_work
     }
 
     /// Return retryable expected-failure completions.
     #[must_use]
-    pub const fn retryable_failure(self) -> u64 {
+    pub const fn retryable_failure(self) -> MeasurementCounter {
         self.retryable_failure
     }
 
     /// Return invariant or terminal-failure completions.
     #[must_use]
-    pub const fn invariant_failure(self) -> u64 {
+    pub const fn invariant_failure(self) -> MeasurementCounter {
         self.invariant_failure
     }
 
     /// Return logical cancellations that changed authoritative state.
     #[must_use]
-    pub const fn cancelled(self) -> u64 {
+    pub const fn cancelled(self) -> MeasurementCounter {
         self.cancelled
     }
 
     /// Return rejected ordinary or scheduler callback generations.
     #[must_use]
-    pub const fn stale_wakeups(self) -> u64 {
+    pub const fn stale_wakeups(self) -> MeasurementCounter {
         self.stale_wakeups
     }
 
     /// Return rejected watchdog work generations.
     #[must_use]
-    pub const fn stale_work(self) -> u64 {
+    pub const fn stale_work(self) -> MeasurementCounter {
         self.stale_work
     }
 
     /// Return scheduling demand satisfied without another logical arm.
     #[must_use]
-    pub const fn coalesced(self) -> u64 {
+    pub const fn coalesced(self) -> MeasurementCounter {
         self.coalesced
     }
 
     /// Return confirmed ordinary deliveries dropped without completion and
     /// committed Watchdog dispatches retired by their successor without completion.
     #[must_use]
-    pub const fn unacknowledged(self) -> u64 {
+    pub const fn unacknowledged(self) -> MeasurementCounter {
         self.unacknowledged
     }
 }
@@ -361,8 +365,8 @@ const fn max_u64(left: u64, right: u64) -> u64 {
 /// Totals and integer means are `u128`; individual samples and counts are `u64`.
 /// Totals above `u64::MAX` remain exact. Use the summary's checked `mean()` or
 /// aggregate saturation flags rather than inferring overflow from its numeric
-/// cap. Event counters and page-sample counts remain conservatively saturated
-/// at their numeric cap.
+/// cap. Event counters also track actual overflow through Metrics; page-sample
+/// counts remain conservatively saturated at their numeric cap.
 ///
 /// A terminal [`DeclarationLifetime::RemoveWhenStopped`](crate::DeclarationLifetime::RemoveWhenStopped)
 /// callback can remove its declaration before this final record is retained;
@@ -495,23 +499,24 @@ mod tests {
 
     #[test]
     fn all_counters_saturate() {
+        let exact_cap = MeasurementCounter::from_parts(u128::MAX, false).unwrap();
         let mut counters = TimerCounters {
-            schedule_requests: u64::MAX,
-            wakeups_armed: u64::MAX,
-            work_dispatched: u64::MAX,
-            scheduler_started: u64::MAX,
-            work_started: u64::MAX,
-            succeeded: u64::MAX,
-            no_work: u64::MAX,
-            retryable_failure: u64::MAX,
-            invariant_failure: u64::MAX,
-            cancelled: u64::MAX,
-            stale_wakeups: u64::MAX,
-            stale_work: u64::MAX,
-            coalesced: u64::MAX,
-            unacknowledged: u64::MAX,
+            schedule_requests: exact_cap,
+            wakeups_armed: exact_cap,
+            work_dispatched: exact_cap,
+            scheduler_started: exact_cap,
+            work_started: exact_cap,
+            succeeded: exact_cap,
+            no_work: exact_cap,
+            retryable_failure: exact_cap,
+            invariant_failure: exact_cap,
+            cancelled: exact_cap,
+            stale_wakeups: exact_cap,
+            stale_work: exact_cap,
+            coalesced: exact_cap,
+            unacknowledged: exact_cap,
         };
-
+        assert!(!counters.schedule_requests().total_overflowed());
         counters.record_schedule_request();
         counters.record_wakeup_armed();
         counters.record_work_dispatched();
@@ -531,25 +536,54 @@ mod tests {
         counters.record_coalesced();
         counters.record_unacknowledged();
 
-        assert_eq!(counters.schedule_requests(), u64::MAX);
-        assert_eq!(counters.wakeups_armed(), u64::MAX);
-        assert_eq!(counters.work_dispatched(), u64::MAX);
-        assert_eq!(counters.work_completed(), u64::MAX);
-        assert_eq!(counters.succeeded(), u64::MAX);
-        assert_eq!(counters.no_work(), u64::MAX);
-        assert_eq!(counters.retryable_failure(), u64::MAX);
-        assert_eq!(counters.invariant_failure(), u64::MAX);
-        assert_eq!(counters.cancelled(), u64::MAX);
-        assert_eq!(counters.stale_wakeups(), u64::MAX);
-        assert_eq!(counters.stale_work(), u64::MAX);
-        assert_eq!(counters.coalesced(), u64::MAX);
-        assert_eq!(counters.unacknowledged(), u64::MAX);
+        assert_eq!(counters.schedule_requests().total(), u128::MAX);
+        assert!(counters.schedule_requests().total_overflowed());
+        assert!(counters.schedule_requests().exact_total().is_err());
+        assert_eq!(counters.wakeups_armed().total(), u128::MAX);
+        assert!(counters.wakeups_armed().total_overflowed());
+        assert!(counters.wakeups_armed().exact_total().is_err());
+        assert_eq!(counters.work_dispatched().total(), u128::MAX);
+        assert!(counters.work_dispatched().total_overflowed());
+        assert!(counters.work_dispatched().exact_total().is_err());
+        assert_eq!(counters.scheduler_started().total(), u128::MAX);
+        assert!(counters.scheduler_started().total_overflowed());
+        assert!(counters.scheduler_started().exact_total().is_err());
+        assert_eq!(counters.work_started().total(), u128::MAX);
+        assert!(counters.work_started().total_overflowed());
+        assert!(counters.work_started().exact_total().is_err());
+        assert_eq!(counters.succeeded().total(), u128::MAX);
+        assert!(counters.succeeded().total_overflowed());
+        assert!(counters.succeeded().exact_total().is_err());
+        assert_eq!(counters.no_work().total(), u128::MAX);
+        assert!(counters.no_work().total_overflowed());
+        assert!(counters.no_work().exact_total().is_err());
+        assert_eq!(counters.retryable_failure().total(), u128::MAX);
+        assert!(counters.retryable_failure().total_overflowed());
+        assert!(counters.retryable_failure().exact_total().is_err());
+        assert_eq!(counters.invariant_failure().total(), u128::MAX);
+        assert!(counters.invariant_failure().total_overflowed());
+        assert!(counters.invariant_failure().exact_total().is_err());
+        assert_eq!(counters.cancelled().total(), u128::MAX);
+        assert!(counters.cancelled().total_overflowed());
+        assert!(counters.cancelled().exact_total().is_err());
+        assert_eq!(counters.stale_wakeups().total(), u128::MAX);
+        assert!(counters.stale_wakeups().total_overflowed());
+        assert!(counters.stale_wakeups().exact_total().is_err());
+        assert_eq!(counters.stale_work().total(), u128::MAX);
+        assert!(counters.stale_work().total_overflowed());
+        assert!(counters.stale_work().exact_total().is_err());
+        assert_eq!(counters.coalesced().total(), u128::MAX);
+        assert!(counters.coalesced().total_overflowed());
+        assert!(counters.coalesced().exact_total().is_err());
+        assert_eq!(counters.unacknowledged().total(), u128::MAX);
+        assert!(counters.unacknowledged().total_overflowed());
+        assert!(counters.unacknowledged().exact_total().is_err());
     }
 
     #[test]
     fn completion_totals_follow_classifications_and_saturate_across_outcomes() {
         let mut counters = TimerCounters::EMPTY;
-        assert_eq!(counters.work_completed(), 0);
+        assert_eq!(counters.work_completed().exact_total(), Ok(0));
         for (outcome, total) in [
             (TimerCompletionOutcome::Success, 1),
             (TimerCompletionOutcome::NoWork, 2),
@@ -557,29 +591,49 @@ mod tests {
             (TimerCompletionOutcome::InvariantFailure, 4),
         ] {
             counters.record_completion(outcome);
-            assert_eq!(counters.work_completed(), total);
+            assert_eq!(counters.work_completed().exact_total(), Ok(total));
         }
-        assert_eq!(counters.succeeded(), 1);
-        assert_eq!(counters.no_work(), 1);
-        assert_eq!(counters.retryable_failure(), 1);
-        assert_eq!(counters.invariant_failure(), 1);
-        assert_eq!(counters.work_started(), 0);
+        assert_eq!(counters.succeeded().exact_total(), Ok(1));
+        assert_eq!(counters.no_work().exact_total(), Ok(1));
+        assert_eq!(counters.retryable_failure().exact_total(), Ok(1));
+        assert_eq!(counters.invariant_failure().exact_total(), Ok(1));
+        assert_eq!(counters.work_started().exact_total(), Ok(0));
 
         let mut counters = TimerCounters {
-            succeeded: u64::MAX - 2,
+            succeeded: MeasurementCounter::from_parts(u128::MAX - 2, false).unwrap(),
             ..TimerCounters::EMPTY
         };
         counters.record_completion(TimerCompletionOutcome::NoWork);
-        assert_eq!(counters.work_completed(), u64::MAX - 1);
+        assert_eq!(counters.work_completed().exact_total(), Ok(u128::MAX - 1));
         counters.record_completion(TimerCompletionOutcome::RetryableFailure);
-        assert_eq!(counters.work_completed(), u64::MAX);
+        assert_eq!(counters.work_completed().exact_total(), Ok(u128::MAX));
         counters.record_completion(TimerCompletionOutcome::InvariantFailure);
-        counters.record_completion(TimerCompletionOutcome::Success);
-        assert_eq!(counters.work_completed(), u64::MAX);
-        assert_eq!(counters.succeeded(), u64::MAX - 1);
-        assert_eq!(counters.no_work(), 1);
-        assert_eq!(counters.retryable_failure(), 1);
-        assert_eq!(counters.invariant_failure(), 1);
+        assert!(counters.work_completed().exact_total().is_err());
+        // Merge must preserve a source's overflow, even without a new carry.
+        counters = TimerCounters {
+            succeeded: MeasurementCounter::from_parts(u128::MAX, true).unwrap(),
+            ..TimerCounters::EMPTY
+        };
+        assert!(counters.work_completed().total_overflowed());
+    }
+
+    #[test]
+    fn counter_copies_cross_the_old_cap_without_mutating_registration_state() {
+        let mut counters = TimerCounters {
+            schedule_requests: MeasurementCounter::from_parts(u128::from(u64::MAX), false).unwrap(),
+            ..TimerCounters::EMPTY
+        };
+        let previous = counters.schedule_requests();
+        counters.record_schedule_request();
+        assert_eq!(
+            counters.schedule_requests().exact_total(),
+            Ok(u128::from(u64::MAX) + 1)
+        );
+        assert_eq!(counters.schedule_requests().delta_since(previous), Ok(1));
+        assert!(previous.delta_since(counters.schedule_requests()).is_err());
+        let mut copied = counters.schedule_requests();
+        copied.add(10);
+        assert_eq!(counters.schedule_requests().delta_since(previous), Ok(1));
     }
 
     #[test]

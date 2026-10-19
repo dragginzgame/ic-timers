@@ -436,15 +436,47 @@ fn provider_roles_keep_paired_handles_distinct_and_reject_policy_mismatches() {
         if token.role() == CallbackRole::WatchdogScheduler {
             let staged = registry.snapshot(token.identity()).unwrap();
             assert_eq!(staged.latest_armed_delay_ns(), None);
-            assert_eq!(staged.observability().counters().wakeups_armed(), 0);
-            assert_eq!(staged.observability().counters().work_dispatched(), 0);
+            assert_eq!(
+                staged
+                    .observability()
+                    .counters()
+                    .wakeups_armed()
+                    .exact_total()
+                    .unwrap(),
+                0
+            );
+            assert_eq!(
+                staged
+                    .observability()
+                    .counters()
+                    .work_dispatched()
+                    .exact_total()
+                    .unwrap(),
+                0
+            );
         }
     }
     for (token, delay_ns, work) in [(&tokens[0], 10, 0), (&tokens[2], 5, 1)] {
         let committed = registry.snapshot(token.identity()).unwrap();
         assert_eq!(committed.latest_armed_delay_ns(), Some(delay_ns));
-        assert_eq!(committed.observability().counters().wakeups_armed(), 1);
-        assert_eq!(committed.observability().counters().work_dispatched(), work);
+        assert_eq!(
+            committed
+                .observability()
+                .counters()
+                .wakeups_armed()
+                .exact_total()
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            committed
+                .observability()
+                .counters()
+                .work_dispatched()
+                .exact_total()
+                .unwrap(),
+            work
+        );
         let before = registry.inventory();
         let (error, handle) = registry
             .install_provider_handle(
@@ -754,7 +786,9 @@ fn running_watchdog_unregistration_clears_its_committed_successor() {
             .unwrap()
             .observability()
             .counters()
-            .cancelled(),
+            .cancelled()
+            .exact_total()
+            .unwrap(),
         0,
         "pending cancellation must not count as an immediate stop"
     );
@@ -803,8 +837,8 @@ fn watchdog_dispatch_confirmation_rejects_stale_attempts() {
         .unwrap()
         .observability()
         .counters();
-    assert_eq!(counts.wakeups_armed(), 2);
-    assert_eq!(counts.work_dispatched(), 2);
+    assert_eq!(counts.wakeups_armed().exact_total().unwrap(), 2);
+    assert_eq!(counts.work_dispatched().exact_total().unwrap(), 2);
 }
 
 #[test]
@@ -826,7 +860,9 @@ fn once_coalesces_and_rotates_generations_while_nested_schedule_wins() {
             .expect("snapshot should exist")
             .observability()
             .counters()
-            .wakeups_armed(),
+            .wakeups_armed()
+            .exact_total()
+            .unwrap(),
         1
     );
     let (first, arm_kind) = arm(first_transition);
@@ -882,14 +918,14 @@ fn once_coalesces_and_rotates_generations_while_nested_schedule_wins() {
         }
     );
     let counters = snapshot.observability().counters();
-    assert_eq!(counters.schedule_requests(), 4);
-    assert_eq!(counters.wakeups_armed(), 2);
-    assert_eq!(counters.coalesced(), 3);
-    assert_eq!(counters.stale_wakeups(), 1);
-    assert_eq!(counters.work_started(), 2);
-    assert_eq!(counters.work_completed(), 2);
-    assert_eq!(counters.succeeded(), 1);
-    assert_eq!(counters.no_work(), 1);
+    assert_eq!(counters.schedule_requests().exact_total().unwrap(), 4);
+    assert_eq!(counters.wakeups_armed().exact_total().unwrap(), 2);
+    assert_eq!(counters.coalesced().exact_total().unwrap(), 3);
+    assert_eq!(counters.stale_wakeups().exact_total().unwrap(), 1);
+    assert_eq!(counters.work_started().exact_total().unwrap(), 2);
+    assert_eq!(counters.work_completed().exact_total().unwrap(), 2);
+    assert_eq!(counters.succeeded().exact_total().unwrap(), 1);
+    assert_eq!(counters.no_work().exact_total().unwrap(), 1);
 }
 
 #[test]
@@ -930,7 +966,15 @@ fn nested_cancel_and_ensure_use_latest_request_order() {
             reason: InactiveReason::Cancelled,
         }
     );
-    assert_eq!(cancelled_snapshot.observability().counters().cancelled(), 1);
+    assert_eq!(
+        cancelled_snapshot
+            .observability()
+            .counters()
+            .cancelled()
+            .exact_total()
+            .unwrap(),
+        1
+    );
 
     let (second, _) = arm(registry
         .ensure_once(&claim, 20, TimerSchedule::At(40))
@@ -957,7 +1001,9 @@ fn nested_cancel_and_ensure_use_latest_request_order() {
             .expect("later ensure should keep the retained timer")
             .observability()
             .counters()
-            .cancelled(),
+            .cancelled()
+            .exact_total()
+            .unwrap(),
         1,
         "a later ensure supersedes cancellation without counting another cancel"
     );
@@ -1010,8 +1056,24 @@ fn exact_ordinary_reconciliation_discards_invalid_callback_proposals() {
                     deadline_ns: u64::MAX
                 })
             );
-            assert_eq!(snapshot.observability().counters().succeeded(), 1);
-            assert_eq!(snapshot.observability().counters().invariant_failure(), 0);
+            assert_eq!(
+                snapshot
+                    .observability()
+                    .counters()
+                    .succeeded()
+                    .exact_total()
+                    .unwrap(),
+                1
+            );
+            assert_eq!(
+                snapshot
+                    .observability()
+                    .counters()
+                    .invariant_failure()
+                    .exact_total()
+                    .unwrap(),
+                0
+            );
         }
     }
 }
@@ -1363,9 +1425,33 @@ fn recurring_duplicate_ensure_is_idempotent_without_deadline_recalculation() {
             snapshot.latest_armed_delay_ns(),
             before.latest_armed_delay_ns()
         );
-        assert_eq!(snapshot.observability().counters().schedule_requests(), 2);
-        assert_eq!(snapshot.observability().counters().wakeups_armed(), 1);
-        assert_eq!(snapshot.observability().counters().coalesced(), 1);
+        assert_eq!(
+            snapshot
+                .observability()
+                .counters()
+                .schedule_requests()
+                .exact_total()
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            snapshot
+                .observability()
+                .counters()
+                .wakeups_armed()
+                .exact_total()
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            snapshot
+                .observability()
+                .counters()
+                .coalesced()
+                .exact_total()
+                .unwrap(),
+            1
+        );
         let (token, _) = arm(initial);
         assert_eq!(token.callback_generation(), u64::MAX);
         assert!(registry.begin_ordinary(&token).is_some());
@@ -1440,9 +1526,9 @@ fn erased_policy_mismatch_and_invariant_result_stop_truthfully() {
             Some(TimerDirectiveSnapshot::Stop)
         );
         let counters = snapshot.observability().counters();
-        assert_eq!(counters.work_completed(), 1);
-        assert_eq!(counters.invariant_failure(), 1);
-        assert_eq!(counters.cancelled(), 0);
+        assert_eq!(counters.work_completed().exact_total().unwrap(), 1);
+        assert_eq!(counters.invariant_failure().exact_total().unwrap(), 1);
+        assert_eq!(counters.cancelled().exact_total().unwrap(), 0);
         let outcomes = snapshot.observability().outcomes();
         assert_eq!(
             outcomes.last_outcome(),
@@ -1528,10 +1614,10 @@ fn watchdog_dispatches_successor_first_and_retires_unacknowledged_attempt() {
 
     let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
     let counters = snapshot.observability().counters();
-    assert_eq!(counters.scheduler_started(), 3);
-    assert_eq!(counters.work_dispatched(), 3);
-    assert_eq!(counters.unacknowledged(), 1);
-    assert_eq!(counters.stale_work(), 1);
+    assert_eq!(counters.scheduler_started().exact_total().unwrap(), 3);
+    assert_eq!(counters.work_dispatched().exact_total().unwrap(), 3);
+    assert_eq!(counters.unacknowledged().exact_total().unwrap(), 1);
+    assert_eq!(counters.stale_work().exact_total().unwrap(), 1);
     assert_eq!(
         snapshot.observability().outcomes().last_outcome(),
         Some(TimerLastOutcome::Unacknowledged)
@@ -1582,8 +1668,24 @@ fn watchdog_requests_preserve_dispatch_authority_until_completion_replaces_the_p
         let pending = registry.snapshot(&timer).unwrap();
         assert_eq!(pending.state(), before.state());
         assert_eq!(pending.scheduling_mode(), before.scheduling_mode());
-        assert_eq!(pending.observability().counters().schedule_requests(), 5);
-        assert_eq!(pending.observability().counters().coalesced(), 3);
+        assert_eq!(
+            pending
+                .observability()
+                .counters()
+                .schedule_requests()
+                .exact_total()
+                .unwrap(),
+            5
+        );
+        assert_eq!(
+            pending
+                .observability()
+                .counters()
+                .coalesced()
+                .exact_total()
+                .unwrap(),
+            3
+        );
         assert!(registry.begin_watchdog_work(&successor).is_none());
         assert_eq!(
             registry.begin_watchdog_scheduler(&work, 15).effect(),
@@ -1649,6 +1751,7 @@ fn watchdog_immediate_initial_and_replacement_requests_coalesce_without_duplicat
         let snapshot = registry
             .snapshot(&immediate_timer)
             .expect("snapshot should exist");
+        let counters = snapshot.observability().counters();
         assert_eq!(snapshot.next_deadline_ns(), Some(10));
         assert_eq!(
             snapshot.scheduling_mode(),
@@ -1656,9 +1759,9 @@ fn watchdog_immediate_initial_and_replacement_requests_coalesce_without_duplicat
         );
         assert_eq!(snapshot.latest_requested_delay_ns(), Some(0));
         assert_eq!(snapshot.latest_armed_delay_ns(), Some(0));
-        assert_eq!(snapshot.observability().counters().schedule_requests(), 2);
-        assert_eq!(snapshot.observability().counters().wakeups_armed(), 1);
-        assert_eq!(snapshot.observability().counters().coalesced(), 1);
+        assert_eq!(counters.schedule_requests().exact_total().unwrap(), 2);
+        assert_eq!(counters.wakeups_armed().exact_total().unwrap(), 1);
+        assert_eq!(counters.coalesced().exact_total().unwrap(), 1);
 
         let replacement_timer = identity("watchdog-immediate-replacement");
         let replacement_claim = registry
@@ -1699,6 +1802,7 @@ fn watchdog_immediate_initial_and_replacement_requests_coalesce_without_duplicat
         let snapshot = registry
             .snapshot(&replacement_timer)
             .expect("replacement snapshot should exist");
+        let counters = snapshot.observability().counters();
         assert_eq!(snapshot.next_deadline_ns(), Some(12));
         assert_eq!(
             snapshot.generation(),
@@ -1706,11 +1810,10 @@ fn watchdog_immediate_initial_and_replacement_requests_coalesce_without_duplicat
         );
         assert_eq!(snapshot.latest_requested_delay_ns(), Some(0));
         assert_eq!(snapshot.latest_armed_delay_ns(), Some(0));
-        let counters = snapshot.observability().counters();
-        assert_eq!(counters.schedule_requests(), 4);
-        assert_eq!(counters.wakeups_armed(), 2);
-        assert_eq!(counters.coalesced(), 2);
-        assert_eq!(counters.stale_wakeups(), 1);
+        assert_eq!(counters.schedule_requests().exact_total().unwrap(), 4);
+        assert_eq!(counters.wakeups_armed().exact_total().unwrap(), 2);
+        assert_eq!(counters.coalesced().exact_total().unwrap(), 2);
+        assert_eq!(counters.stale_wakeups().exact_total().unwrap(), 1);
     }
 }
 
@@ -1788,11 +1891,11 @@ fn watchdog_running_immediate_request_replaces_exact_successor_and_beats_cadence
     assert_eq!(snapshot.latest_requested_delay_ns(), Some(0));
     assert_eq!(snapshot.latest_armed_delay_ns(), Some(0));
     let counters = snapshot.observability().counters();
-    assert_eq!(counters.schedule_requests(), 4);
-    assert_eq!(counters.wakeups_armed(), 3);
-    assert_eq!(counters.work_dispatched(), 1);
-    assert_eq!(counters.coalesced(), 3);
-    assert_eq!(counters.stale_wakeups(), 1);
+    assert_eq!(counters.schedule_requests().exact_total().unwrap(), 4);
+    assert_eq!(counters.wakeups_armed().exact_total().unwrap(), 3);
+    assert_eq!(counters.work_dispatched().exact_total().unwrap(), 1);
+    assert_eq!(counters.coalesced().exact_total().unwrap(), 3);
+    assert_eq!(counters.stale_wakeups().exact_total().unwrap(), 1);
 }
 
 #[test]
@@ -1972,9 +2075,33 @@ fn watchdog_terminal_cancellation_makes_queued_callbacks_stale() {
         snapshot.registration_status(),
         TimerRegistrationStatus::Unregistered
     );
-    assert_eq!(snapshot.observability().counters().cancelled(), 1);
-    assert_eq!(snapshot.observability().counters().stale_work(), 1);
-    assert_eq!(snapshot.observability().counters().stale_wakeups(), 1);
+    assert_eq!(
+        snapshot
+            .observability()
+            .counters()
+            .cancelled()
+            .exact_total()
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        snapshot
+            .observability()
+            .counters()
+            .stale_work()
+            .exact_total()
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        snapshot
+            .observability()
+            .counters()
+            .stale_wakeups()
+            .exact_total()
+            .unwrap(),
+        1
+    );
 
     let (rearmed, _) = arm(registry.ensure_recurring(&claim, 20).unwrap());
     assert_eq!(
@@ -2070,15 +2197,16 @@ fn watchdog_result_matrix_tracks_retry_stop_and_invariant_failure() {
         )
         .expect("invariant failure should stop");
     let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
+    let counters = snapshot.observability().counters();
     assert_eq!(
         snapshot.state(),
         TimerRuntimeStateSnapshot::Inactive {
             reason: InactiveReason::InvariantFailure,
         }
     );
-    assert_eq!(snapshot.observability().counters().retryable_failure(), 1);
-    assert_eq!(snapshot.observability().counters().no_work(), 1);
-    assert_eq!(snapshot.observability().counters().invariant_failure(), 1);
+    assert_eq!(counters.retryable_failure().exact_total().unwrap(), 1);
+    assert_eq!(counters.no_work().exact_total().unwrap(), 1);
+    assert_eq!(counters.invariant_failure().exact_total().unwrap(), 1);
 }
 
 #[test]
@@ -2112,7 +2240,15 @@ fn watchdog_nested_cancel_then_ensure_retains_committed_successor() {
         snapshot.state(),
         TimerRuntimeStateSnapshot::Watchdog(WatchdogRuntimeStateSnapshot::Scheduled { .. })
     ));
-    assert_eq!(snapshot.observability().counters().cancelled(), 0);
+    assert_eq!(
+        snapshot
+            .observability()
+            .counters()
+            .cancelled()
+            .exact_total()
+            .unwrap(),
+        0
+    );
 }
 
 #[test]
@@ -2290,8 +2426,24 @@ fn ordinary_cancellation_at_maximum_generation_preserves_lifetime_and_rejects_de
                         reason: InactiveReason::Cancelled,
                     }
                 );
-                assert_eq!(snapshot.observability().counters().cancelled(), 1);
-                assert_eq!(snapshot.observability().counters().work_started(), 0);
+                assert_eq!(
+                    snapshot
+                        .observability()
+                        .counters()
+                        .cancelled()
+                        .exact_total()
+                        .unwrap(),
+                    1
+                );
+                assert_eq!(
+                    snapshot
+                        .observability()
+                        .counters()
+                        .work_started()
+                        .exact_total()
+                        .unwrap(),
+                    0
+                );
                 assert_eq!(
                     registry
                         .reconcile_ordinary(&claim, 10, Some(TimerSchedule::At(20)))
@@ -2375,8 +2527,24 @@ fn watchdog_cancellation_at_maximum_generation_clears_the_selected_callbacks() {
                         reason: InactiveReason::Cancelled,
                     }
                 );
-                assert_eq!(snapshot.observability().counters().cancelled(), 1);
-                assert_eq!(snapshot.observability().counters().work_started(), 0);
+                assert_eq!(
+                    snapshot
+                        .observability()
+                        .counters()
+                        .cancelled()
+                        .exact_total()
+                        .unwrap(),
+                    1
+                );
+                assert_eq!(
+                    snapshot
+                        .observability()
+                        .counters()
+                        .work_started()
+                        .exact_total()
+                        .unwrap(),
+                    0
+                );
                 assert_eq!(
                     registry.ensure_recurring(&claim, 2).unwrap().failure(),
                     Some(TimerControlFailure::GenerationExhausted)
@@ -2488,9 +2656,9 @@ fn ordinary_terminal_failures_respect_declaration_lifetime() {
                     );
                     if completing {
                         let counters = snapshot.observability().counters();
-                        assert_eq!(counters.work_completed(), 1);
-                        assert_eq!(counters.succeeded(), 0);
-                        assert_eq!(counters.invariant_failure(), 1);
+                        assert_eq!(counters.work_completed().exact_total().unwrap(), 1);
+                        assert_eq!(counters.succeeded().exact_total().unwrap(), 0);
+                        assert_eq!(counters.invariant_failure().exact_total().unwrap(), 1);
                         let outcomes = snapshot.observability().outcomes();
                         assert_eq!(outcomes.last_work_count(), Some(3));
                         assert_eq!(
@@ -2619,15 +2787,23 @@ fn watchdog_terminal_failures_respect_declaration_lifetime() {
                     assert_eq!(snapshot.latest_requested_delay_ns(), Some(0));
                 }
                 let counters = snapshot.observability().counters();
-                assert_eq!(counters.cancelled(), 0);
-                assert_eq!(counters.coalesced(), 0, "{subject}");
+                assert_eq!(counters.cancelled().exact_total().unwrap(), 0);
+                assert_eq!(counters.coalesced().exact_total().unwrap(), 0, "{subject}");
                 assert_eq!(
-                    counters.work_completed(),
-                    u64::from(subject.starts_with("completion-")),
+                    counters.work_completed().exact_total().unwrap(),
+                    u128::from(subject.starts_with("completion-")),
                     "{subject}"
                 );
-                assert_eq!(counters.succeeded(), counters.work_completed(), "{subject}");
-                assert_eq!(counters.invariant_failure(), 0, "{subject}");
+                assert_eq!(
+                    counters.succeeded().exact_total().unwrap(),
+                    counters.work_completed().exact_total().unwrap(),
+                    "{subject}"
+                );
+                assert_eq!(
+                    counters.invariant_failure().exact_total().unwrap(),
+                    0,
+                    "{subject}"
+                );
                 if subject.starts_with("completion-") {
                     let outcomes = snapshot.observability().outcomes();
                     assert_eq!(
@@ -2723,7 +2899,9 @@ fn transient_watchdog_completion_keeps_retained_or_replaced_successors() {
                 .unwrap()
                 .observability()
                 .counters()
-                .work_completed(),
+                .work_completed()
+                .exact_total()
+                .unwrap(),
             1
         );
     }
@@ -2854,9 +3032,15 @@ fn watchdog_exact_pending_order_preserves_terminal_and_immediate_precedence() {
             };
             assert_eq!(snapshot.next_deadline_ns(), expected, "scenario {scenario}");
             let counters = snapshot.observability().counters();
-            assert_eq!(counters.work_completed(), 1);
-            assert_eq!(counters.cancelled(), u64::from(scenario == 0));
-            assert_eq!(counters.invariant_failure(), u64::from(scenario >= 6));
+            assert_eq!(counters.work_completed().exact_total().unwrap(), 1);
+            assert_eq!(
+                counters.cancelled().exact_total().unwrap(),
+                u128::from(scenario == 0)
+            );
+            assert_eq!(
+                counters.invariant_failure().exact_total().unwrap(),
+                u128::from(scenario >= 6)
+            );
             if matches!(scenario, 0 | 6..=7) {
                 let reason = if scenario == 0 {
                     InactiveReason::Cancelled

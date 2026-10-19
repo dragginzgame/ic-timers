@@ -1,4 +1,4 @@
-use super::{CohortObservation, ProbeMemorySummary, ProbeSnapshot};
+use super::{CohortObservation, CounterObservation, ProbeMemorySummary, ProbeSnapshot};
 use ic_platform::candid::{
     DecodeLimits,
     contract::{CandidType, encode_args},
@@ -42,6 +42,18 @@ fn snapshot_round_trip_preserves_wide_totals_and_optional_memory() {
     let observed = ProbeSnapshot {
         registration_id: Some((7, 11, 13)),
         registered: true,
+        schedule_requests: CounterObservation {
+            total: u128::from(u64::MAX) + 1,
+            total_overflowed: false,
+        },
+        work_started: CounterObservation {
+            total: u128::MAX,
+            total_overflowed: false,
+        },
+        work_completed: CounterObservation {
+            total: u128::MAX,
+            total_overflowed: true,
+        },
         next_deadline_ns: Some(u64::MAX),
         scheduler_instruction_total: u128::from(u64::MAX) + 1,
         work_instruction_total: u128::MAX,

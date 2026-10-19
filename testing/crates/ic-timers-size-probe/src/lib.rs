@@ -1,5 +1,7 @@
 use ic_timers::{TimerIdentity, initialize_runtime, timer_inventory, timer_snapshot};
-use ic_timers_test_protocol::{CohortObservation, MemorySamplingMeasurement, OperationMeasurement};
+use ic_timers_test_protocol::{
+    CohortObservation, CounterObservation, MemorySamplingMeasurement, OperationMeasurement,
+};
 use std::cell::Cell;
 
 #[cfg(not(feature = "baseline"))]
@@ -144,13 +146,13 @@ fn observe() -> CohortObservation<&'static str> {
     let performance = snapshot.observability().performance();
     CohortObservation {
         next_deadline_ns: snapshot.next_deadline_ns(),
-        schedule_requests: counters.schedule_requests(),
-        wakeups_armed: counters.wakeups_armed(),
-        work_dispatched: counters.work_dispatched(),
-        scheduler_started: counters.scheduler_started(),
-        work_started: counters.work_started(),
-        work_completed: counters.work_completed(),
-        coalesced: counters.coalesced(),
+        schedule_requests: counter_observation(counters.schedule_requests()),
+        wakeups_armed: counter_observation(counters.wakeups_armed()),
+        work_dispatched: counter_observation(counters.work_dispatched()),
+        scheduler_started: counter_observation(counters.scheduler_started()),
+        work_started: counter_observation(counters.work_started()),
+        work_completed: counter_observation(counters.work_completed()),
+        coalesced: counter_observation(counters.coalesced()),
         scheduler_instruction_samples: performance.scheduler_instructions().aggregate().samples(),
         scheduler_instruction_total: performance.scheduler_instructions().aggregate().total(),
         work_instruction_samples: performance.work_instructions().aggregate().samples(),
@@ -374,4 +376,11 @@ const fn cohort_name() -> &'static str {
 #[cfg(feature = "watchdog")]
 const fn cohort_name() -> &'static str {
     "watchdog"
+}
+
+fn counter_observation(counter: ic_timers::MeasurementCounter) -> CounterObservation {
+    CounterObservation {
+        total: counter.total(),
+        total_overflowed: counter.total_overflowed(),
+    }
 }

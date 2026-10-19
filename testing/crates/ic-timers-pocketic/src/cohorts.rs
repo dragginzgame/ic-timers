@@ -36,12 +36,12 @@ fn run_cohort(cohort: &str) {
     let scheduled = observe(pic, canister_id);
     if cohort == "baseline" {
         assert!(!scheduled.registered);
-        assert_eq!(scheduled.schedule_requests, 0);
+        assert_eq!(scheduled.schedule_requests.total, 0);
     } else {
         assert!(scheduled.registered);
-        assert_eq!(scheduled.schedule_requests, 2);
-        assert_eq!(scheduled.wakeups_armed, 1);
-        assert_eq!(scheduled.coalesced, 1);
+        assert_eq!(scheduled.schedule_requests.total, 2);
+        assert_eq!(scheduled.wakeups_armed.total, 1);
+        assert_eq!(scheduled.coalesced.total, 1);
         assert!(scheduled.next_deadline_ns.is_some());
     }
 
@@ -53,28 +53,28 @@ fn run_cohort(cohort: &str) {
     match cohort {
         "baseline" => {
             assert_eq!(completed.callbacks, 0);
-            assert_eq!(completed.work_started, 0);
+            assert_eq!(completed.work_started.total, 0);
         }
         "once" => {
             assert_eq!(completed.callbacks, 1);
-            assert_eq!(completed.work_started, 1);
-            assert_eq!(completed.work_completed, 1);
+            assert_eq!(completed.work_started.total, 1);
+            assert_eq!(completed.work_completed.total, 1);
             assert_eq!(completed.next_deadline_ns, None);
             assert_eq!(completed.work_instruction_samples, 1);
         }
         "after-completion" => {
             assert_eq!(completed.callbacks, 1);
-            assert_eq!(completed.work_started, 1);
-            assert_eq!(completed.work_completed, 1);
+            assert_eq!(completed.work_started.total, 1);
+            assert_eq!(completed.work_completed.total, 1);
             assert!(completed.next_deadline_ns.is_some());
             assert_eq!(completed.work_instruction_samples, 1);
         }
         "watchdog" => {
             assert_eq!(completed.callbacks, 1);
-            assert_eq!(completed.scheduler_started, 1);
-            assert_eq!(completed.work_dispatched, 1);
-            assert_eq!(completed.work_started, 1);
-            assert_eq!(completed.work_completed, 1);
+            assert_eq!(completed.scheduler_started.total, 1);
+            assert_eq!(completed.work_dispatched.total, 1);
+            assert_eq!(completed.work_started.total, 1);
+            assert_eq!(completed.work_completed.total, 1);
             assert!(completed.next_deadline_ns.is_some());
             assert_eq!(completed.scheduler_instruction_samples, 1);
             assert_eq!(completed.work_instruction_samples, 1);
@@ -157,7 +157,7 @@ fn run_watchdog_calibration(profile: &str, representative_work: bool) -> u128 {
     let completed = observe(pic, canister_id);
     assert_eq!(completed.scheduler_instruction_samples, 1);
     assert_eq!(completed.work_instruction_samples, 1);
-    assert_eq!(completed.work_completed, 1);
+    assert_eq!(completed.work_completed.total, 1);
 
     println!(
         "ic_timers_watchdog_calibration profile={} total_message_instructions=unavailable scheduler={} work={} unaccounted_instructions=unavailable dispatch_cycles={}",
@@ -198,7 +198,7 @@ fn update_measurement(
 }
 
 fn observe(pic: &PocketIc, canister_id: Principal) -> CohortObservation {
-    query_candid_args(
+    let observed: CohortObservation = query_candid_args(
         pic,
         canister_id,
         Principal::anonymous(),
@@ -207,5 +207,13 @@ fn observe(pic: &PocketIc, canister_id: Principal) -> CohortObservation {
         REPLY_LIMITS,
     )
     .map(|(value,)| value)
-    .expect("probe query succeeds")
+    .expect("probe query succeeds");
+    assert!(!observed.schedule_requests.total_overflowed);
+    assert!(!observed.scheduler_started.total_overflowed);
+    assert!(!observed.wakeups_armed.total_overflowed);
+    assert!(!observed.work_dispatched.total_overflowed);
+    assert!(!observed.work_started.total_overflowed);
+    assert!(!observed.work_completed.total_overflowed);
+    assert!(!observed.coalesced.total_overflowed);
+    observed
 }

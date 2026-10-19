@@ -6,6 +6,15 @@ use ic_platform::candid::contract::{CandidType, serde::Deserialize};
 #[cfg(test)]
 mod tests;
 
+/// Lossless wire projection of a diagnostic counter; arithmetic stays in Metrics.
+#[derive(CandidType, Clone, Copy, Debug, Default, Deserialize, Eq, PartialEq)]
+#[candid_path("ic_platform::candid::contract")]
+#[serde(crate = "ic_platform::candid::contract::serde")]
+pub struct CounterObservation {
+    pub total: u128,
+    pub total_overflowed: bool,
+}
+
 /// Flattened callback memory-page observations.
 #[derive(CandidType, Debug, Deserialize, Eq, PartialEq)]
 #[candid_path("ic_platform::candid::contract")]
@@ -32,14 +41,14 @@ pub struct ProbeSnapshot {
     pub immediate_scheduling: bool,
     pub latest_requested_delay_ns: Option<u64>,
     pub latest_armed_delay_ns: Option<u64>,
-    pub schedule_requests: u64,
-    pub scheduler_started: u64,
-    pub wakeups_armed: u64,
-    pub work_dispatched: u64,
-    pub work_started: u64,
-    pub work_completed: u64,
-    pub coalesced: u64,
-    pub unacknowledged: u64,
+    pub schedule_requests: CounterObservation,
+    pub scheduler_started: CounterObservation,
+    pub wakeups_armed: CounterObservation,
+    pub work_dispatched: CounterObservation,
+    pub work_started: CounterObservation,
+    pub work_completed: CounterObservation,
+    pub coalesced: CounterObservation,
+    pub unacknowledged: CounterObservation,
     pub last_unacknowledged: bool,
     pub scheduler_instruction_samples: u64,
     pub scheduler_instruction_total: u128,
@@ -65,10 +74,10 @@ pub struct OrdinaryObservation {
     pub completed: u64,
     pub completed_at_ns: Option<u64>,
     pub next_deadline_ns: Option<u64>,
-    pub work_completed: u64,
+    pub work_completed: CounterObservation,
     pub abandoned: bool,
     pub armed: bool,
-    pub unacknowledged: u64,
+    pub unacknowledged: CounterObservation,
     pub instruction_samples: u64,
     pub captures_dropped: u64,
     pub capture_registry_accessible: bool,
@@ -113,13 +122,13 @@ pub struct CohortObservation<Label = String> {
     pub registered: bool,
     pub callbacks: u64,
     pub next_deadline_ns: Option<u64>,
-    pub schedule_requests: u64,
-    pub wakeups_armed: u64,
-    pub work_dispatched: u64,
-    pub scheduler_started: u64,
-    pub work_started: u64,
-    pub work_completed: u64,
-    pub coalesced: u64,
+    pub schedule_requests: CounterObservation,
+    pub wakeups_armed: CounterObservation,
+    pub work_dispatched: CounterObservation,
+    pub scheduler_started: CounterObservation,
+    pub work_started: CounterObservation,
+    pub work_completed: CounterObservation,
+    pub coalesced: CounterObservation,
     pub scheduler_instruction_samples: u64,
     pub scheduler_instruction_total: u128,
     pub work_instruction_samples: u64,

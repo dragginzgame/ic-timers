@@ -36,7 +36,7 @@ fn typed_entrypoints_reject_invalid_candid_before_mutating_timer_state() {
             "invalid typed arguments must reject before registration"
         );
         assert!(!ordinary_observation(pic, canister_id).declared);
-        assert_eq!(snapshot(pic, canister_id).scheduler_started, 0);
+        assert_eq!(snapshot(pic, canister_id).scheduler_started.total, 0);
     }
     // Preserve the existing generator's bounded skipping and one-unit reply.
     let reply = pic
@@ -71,14 +71,14 @@ fn self_call_queue_pressure_defers_timer_submission_without_losing_work() {
     assert!(failed > 0);
     assert!(replies >= 500);
     assert!(pic.cycle_balance(canister_id) > INIT_CYCLES / 2);
-    assert_eq!(snapshot(pic, canister_id).scheduler_started, 0);
+    assert_eq!(snapshot(pic, canister_id).scheduler_started.total, 0);
     update_unit(pic, canister_id, "release_pressure");
     advance_and_tick(pic, Duration::ZERO, 16);
-    assert_eq!(snapshot(pic, canister_id).scheduler_started, 0);
+    assert_eq!(snapshot(pic, canister_id).scheduler_started.total, 0);
     pic.advance_time(Duration::from_secs(1));
     advance_and_tick(pic, Duration::ZERO, 16);
     let completed = snapshot(pic, canister_id);
-    assert_eq!(completed.scheduler_started, 1);
+    assert_eq!(completed.scheduler_started.total, 1);
     assert_eq!(completed.completed_work, 1);
     advance_and_tick(pic, Duration::ZERO, 8);
     assert_eq!(snapshot(pic, canister_id).completed_work, 1);
@@ -93,7 +93,7 @@ fn deferred_submission_cancellation_and_replacement_do_not_revive_old_work() {
         update_unit(pic, canister_id, "pressure_and_start");
         advance_and_tick(pic, Duration::ZERO, 8);
         let original = snapshot(pic, canister_id);
-        assert_eq!(original.scheduler_started, 0);
+        assert_eq!(original.scheduler_started.total, 0);
         assert!(pic.cycle_balance(canister_id) > INIT_CYCLES / 2);
         update_unit(
             pic,
@@ -130,7 +130,7 @@ fn deferred_submission_cancellation_and_replacement_do_not_revive_old_work() {
         advance_and_tick(pic, Duration::ZERO, 16);
         let recovered = snapshot(pic, canister_id);
         assert_eq!(recovered.completed_work, u64::from(replace));
-        assert_eq!(recovered.scheduler_started, u64::from(replace));
+        assert_eq!(recovered.scheduler_started.total, u128::from(replace));
         if !replace {
             update_candid_args::<(), _>(
                 pic,
@@ -162,15 +162,15 @@ fn immediate_initial_watchdog_runs_without_advancing_cadence_time() {
     assert!(!initial.immediate_scheduling);
     assert_eq!(initial.latest_requested_delay_ns, Some(0));
     assert_eq!(initial.latest_armed_delay_ns, Some(0));
-    assert_eq!(initial.schedule_requests, 1);
-    assert_eq!(initial.wakeups_armed, 1);
+    assert_eq!(initial.schedule_requests.total, 1);
+    assert_eq!(initial.wakeups_armed.total, 1);
 
     advance_and_tick(pic, Duration::ZERO, 16);
     let completed = snapshot(pic, canister_id);
     assert_eq!(completed.completed_work, 1);
-    assert_eq!(completed.scheduler_started, 1);
-    assert_eq!(completed.work_dispatched, 1);
-    assert_eq!(completed.work_completed, 1);
+    assert_eq!(completed.scheduler_started.total, 1);
+    assert_eq!(completed.work_dispatched.total, 1);
+    assert_eq!(completed.work_completed.total, 1);
     assert!(completed.next_deadline_ns.is_some());
 }
 
@@ -193,21 +193,21 @@ fn successful_immediate_continuation_runs_again_without_waiting_for_cadence() {
     assert!(immediate.immediate_scheduling);
     assert_eq!(immediate.latest_requested_delay_ns, Some(0));
     assert_eq!(immediate.latest_armed_delay_ns, Some(0));
-    assert_eq!(immediate.schedule_requests, 1);
-    assert_eq!(immediate.wakeups_armed, 3);
-    assert_eq!(immediate.work_dispatched, 1);
+    assert_eq!(immediate.schedule_requests.total, 1);
+    assert_eq!(immediate.wakeups_armed.total, 3);
+    assert_eq!(immediate.work_dispatched.total, 1);
     let first_dispatch_cycles = cycles_before_first.saturating_sub(pic.cycle_balance(canister_id));
 
     let cycles_before_second = pic.cycle_balance(canister_id);
     advance_and_tick(pic, Duration::ZERO, 16);
     let continued = snapshot(pic, canister_id);
     assert_eq!(continued.completed_work, 2);
-    assert_eq!(continued.scheduler_started, 2);
-    assert_eq!(continued.work_dispatched, 2);
-    assert_eq!(continued.work_completed, 2);
-    assert_eq!(continued.wakeups_armed, 4);
-    assert_eq!(continued.schedule_requests, 1);
-    assert_eq!(continued.coalesced, 0);
+    assert_eq!(continued.scheduler_started.total, 2);
+    assert_eq!(continued.work_dispatched.total, 2);
+    assert_eq!(continued.work_completed.total, 2);
+    assert_eq!(continued.wakeups_armed.total, 4);
+    assert_eq!(continued.schedule_requests.total, 1);
+    assert_eq!(continued.coalesced.total, 0);
     let second_dispatch_cycles =
         cycles_before_second.saturating_sub(pic.cycle_balance(canister_id));
     println!(
@@ -257,9 +257,9 @@ fn trapped_work_keeps_committed_successor_and_executor_is_private() {
     assert_eq!(trapped.registration_id, before_external.registration_id);
     assert_eq!(trapped.completed_work, 0);
     assert_eq!(trapped.secondary_completed_work, 1);
-    assert_eq!(trapped.scheduler_started, 1);
-    assert_eq!(trapped.work_dispatched, 1);
-    assert_eq!(trapped.work_completed, 0);
+    assert_eq!(trapped.scheduler_started.total, 1);
+    assert_eq!(trapped.work_dispatched.total, 1);
+    assert_eq!(trapped.work_completed.total, 0);
     assert_eq!(trapped.scheduler_instruction_samples, 1);
     assert!(trapped.scheduler_instruction_total > 0);
     assert_eq!(trapped.work_instruction_samples, 0);
@@ -278,10 +278,10 @@ fn trapped_work_keeps_committed_successor_and_executor_is_private() {
     assert_eq!(recovered.registration_id, trapped.registration_id);
     assert_eq!(recovered.completed_work, 1);
     assert_eq!(recovered.secondary_completed_work, 2);
-    assert_eq!(recovered.scheduler_started, 2);
-    assert_eq!(recovered.work_dispatched, 2);
-    assert_eq!(recovered.work_completed, 1);
-    assert_eq!(recovered.unacknowledged, 1);
+    assert_eq!(recovered.scheduler_started.total, 2);
+    assert_eq!(recovered.work_dispatched.total, 2);
+    assert_eq!(recovered.work_completed.total, 1);
+    assert_eq!(recovered.unacknowledged.total, 1);
     assert!(!recovered.last_unacknowledged);
     assert_eq!(recovered.scheduler_instruction_samples, 2);
     assert!(recovered.scheduler_instruction_total > trapped.scheduler_instruction_total);
@@ -322,8 +322,8 @@ fn trapped_work_keeps_committed_successor_and_executor_is_private() {
         upgraded.secondary_completed_work,
         recovered.secondary_completed_work
     );
-    assert_eq!(upgraded.scheduler_started, 0);
-    assert_eq!(upgraded.wakeups_armed, 1);
+    assert_eq!(upgraded.scheduler_started.total, 0);
+    assert_eq!(upgraded.wakeups_armed.total, 1);
     assert!(upgraded.next_deadline_ns.is_some());
 
     pic.advance_time(Duration::from_secs(1));
@@ -340,7 +340,7 @@ fn trapped_work_keeps_committed_successor_and_executor_is_private() {
         recovered.scheduler_instruction_total,
         recovered.work_instruction_samples,
         recovered.work_instruction_total,
-        recovered.unacknowledged,
+        recovered.unacknowledged.total,
     );
 }
 
@@ -373,9 +373,9 @@ fn instruction_exhaustion_leaves_successor_for_later_progress() {
     advance_and_tick(pic, Duration::ZERO, 30);
     let exhausted = snapshot(pic, canister_id);
     assert_eq!(exhausted.completed_work, 0);
-    assert_eq!(exhausted.scheduler_started, 1);
-    assert_eq!(exhausted.work_dispatched, 1);
-    assert_eq!(exhausted.work_completed, 0);
+    assert_eq!(exhausted.scheduler_started.total, 1);
+    assert_eq!(exhausted.work_dispatched.total, 1);
+    assert_eq!(exhausted.work_completed.total, 0);
     assert_eq!(exhausted.work_instruction_samples, 0);
     let exhausted_scheduler_memory = exhausted
         .scheduler_memory
@@ -390,9 +390,9 @@ fn instruction_exhaustion_leaves_successor_for_later_progress() {
     advance_and_tick(pic, Duration::ZERO, 16);
     let recovered = snapshot(pic, canister_id);
     assert_eq!(recovered.completed_work, 1);
-    assert_eq!(recovered.scheduler_started, 2);
-    assert_eq!(recovered.work_completed, 1);
-    assert_eq!(recovered.unacknowledged, 1);
+    assert_eq!(recovered.scheduler_started.total, 2);
+    assert_eq!(recovered.work_completed.total, 1);
+    assert_eq!(recovered.unacknowledged.total, 1);
     assert_eq!(recovered.work_instruction_samples, 1);
     let recovered_scheduler_memory = recovered
         .scheduler_memory
@@ -421,9 +421,12 @@ fn commit_window_ensure_stop_resume_and_large_overdue_time_remain_bounded() {
     assert!(!update_bool(pic, canister_id, "ensure_from_returned_error"));
     let ensured = snapshot(pic, canister_id);
     assert!(ensured.next_deadline_ns.is_some());
-    let arms_after_ensure = ensured.wakeups_armed;
+    let arms_after_ensure = ensured.wakeups_armed.total;
     assert!(!update_bool(pic, canister_id, "ensure_from_returned_error"));
-    assert_eq!(snapshot(pic, canister_id).wakeups_armed, arms_after_ensure);
+    assert_eq!(
+        snapshot(pic, canister_id).wakeups_armed.total,
+        arms_after_ensure
+    );
 
     pic.stop_canister(canister_id, None)
         .expect("canister stop should succeed");
@@ -434,10 +437,10 @@ fn commit_window_ensure_stop_resume_and_large_overdue_time_remain_bounded() {
     advance_and_tick(pic, Duration::ZERO, 16);
     let resumed = snapshot(pic, canister_id);
     assert_eq!(resumed.completed_work, 1);
-    assert_eq!(resumed.scheduler_started, 1);
-    assert_eq!(resumed.work_dispatched, 1);
-    assert_eq!(resumed.work_started, 1);
-    assert_eq!(resumed.work_completed, 1);
+    assert_eq!(resumed.scheduler_started.total, 1);
+    assert_eq!(resumed.work_dispatched.total, 1);
+    assert_eq!(resumed.work_started.total, 1);
+    assert_eq!(resumed.work_completed.total, 1);
     assert!(resumed.next_deadline_ns.is_some());
 
     update_unit(pic, canister_id, "stop_on_next_work");
@@ -472,16 +475,16 @@ fn insufficient_cycles_defer_due_work_until_top_up() {
     advance_and_tick(pic, Duration::ZERO, 8);
     let deferred = snapshot(pic, canister_id);
     assert_eq!(deferred.completed_work, 0);
-    assert_eq!(deferred.scheduler_started, 0);
+    assert_eq!(deferred.scheduler_started.total, 0);
 
     pic.add_cycles(canister_id, INIT_CYCLES);
     advance_and_tick(pic, Duration::ZERO, 4);
-    assert_eq!(snapshot(pic, canister_id).scheduler_started, 0);
+    assert_eq!(snapshot(pic, canister_id).scheduler_started.total, 0);
     pic.advance_time(Duration::from_secs(1));
     advance_and_tick(pic, Duration::ZERO, 16);
     let progressed = snapshot(pic, canister_id);
     assert_eq!(progressed.completed_work, 1);
-    assert_eq!(progressed.scheduler_started, 1);
+    assert_eq!(progressed.scheduler_started.total, 1);
 }
 
 #[test]
@@ -521,7 +524,7 @@ fn cancellation_between_scheduler_and_work_makes_late_provider_delivery_harmless
         pic,
         12,
         |pic| snapshot(pic, canister_id),
-        |current| current.work_dispatched == 1 && current.work_started == 0,
+        |current| current.work_dispatched.total == 1 && current.work_started.total == 0,
     );
     assert_eq!(dispatched.completed_work, 0);
     assert!(dispatched.next_deadline_ns.is_some());
@@ -530,8 +533,8 @@ fn cancellation_between_scheduler_and_work_makes_late_provider_delivery_harmless
     advance_and_tick(pic, Duration::ZERO, 12);
     let cancelled = snapshot(pic, canister_id);
     assert_eq!(cancelled.completed_work, 0);
-    assert_eq!(cancelled.work_started, 0);
-    assert_eq!(cancelled.work_completed, 0);
+    assert_eq!(cancelled.work_started.total, 0);
+    assert_eq!(cancelled.work_completed.total, 0);
     assert_eq!(cancelled.next_deadline_ns, None);
 }
 
@@ -569,7 +572,7 @@ fn update_u64(pic: &PocketIc, canister_id: Principal, method: &str) -> u64 {
 }
 
 fn snapshot(pic: &PocketIc, canister_id: Principal) -> ProbeSnapshot {
-    query_candid_args(
+    let observed: ProbeSnapshot = query_candid_args(
         pic,
         canister_id,
         Principal::anonymous(),
@@ -578,7 +581,16 @@ fn snapshot(pic: &PocketIc, canister_id: Principal) -> ProbeSnapshot {
         REPLY_LIMITS,
     )
     .map(|(value,)| value)
-    .expect("probe query succeeds")
+    .expect("probe query succeeds");
+    assert!(!observed.schedule_requests.total_overflowed);
+    assert!(!observed.scheduler_started.total_overflowed);
+    assert!(!observed.wakeups_armed.total_overflowed);
+    assert!(!observed.work_dispatched.total_overflowed);
+    assert!(!observed.work_started.total_overflowed);
+    assert!(!observed.work_completed.total_overflowed);
+    assert!(!observed.coalesced.total_overflowed);
+    assert!(!observed.unacknowledged.total_overflowed);
+    observed
 }
 
 #[test]
@@ -596,9 +608,9 @@ fn exact_deadline_sleeps_and_registration_replacement_marks_counter_regrowth() {
     advance_and_tick(pic, Duration::ZERO, 16);
     let sleeping = snapshot(pic, canister_id);
     assert_eq!(sleeping.completed_work, 0);
-    assert_eq!(sleeping.scheduler_started, 0);
+    assert_eq!(sleeping.scheduler_started.total, 0);
     assert_eq!(sleeping.next_deadline_ns, Some(later));
-    assert_eq!(sleeping.wakeups_armed, 2);
+    assert_eq!(sleeping.wakeups_armed.total, 2);
     assert_eq!(sleeping.registration_id, initial.registration_id);
 
     let continuation = later + 10_000_000_000;
@@ -624,7 +636,7 @@ fn exact_deadline_sleeps_and_registration_replacement_marks_counter_regrowth() {
     );
     update_unit(pic, canister_id, "replace_registration");
     let replaced = snapshot(pic, canister_id);
-    assert_eq!(replaced.work_completed, 0);
+    assert_eq!(replaced.work_completed.total, 0);
     assert_ne!(replaced.registration_id, completed.registration_id);
     let old_id = completed.registration_id.expect("old id");
     let new_id = replaced.registration_id.expect("new id");
@@ -635,7 +647,7 @@ fn exact_deadline_sleeps_and_registration_replacement_marks_counter_regrowth() {
         advance_and_tick(pic, Duration::ZERO, 16);
     }
     let regrown = snapshot(pic, canister_id);
-    assert!(regrown.work_completed > completed.work_completed);
+    assert!(regrown.work_completed.total > completed.work_completed.total);
     assert!(regrown.scheduler_instruction_total > completed.scheduler_instruction_total);
     assert_eq!(regrown.registration_id, replaced.registration_id);
 }
@@ -653,7 +665,7 @@ fn update_deadline(pic: &PocketIc, canister_id: Principal, method: &str, deadlin
 }
 
 fn ordinary_observation(pic: &PocketIc, canister_id: Principal) -> OrdinaryObservation {
-    query_candid_args(
+    let observed: OrdinaryObservation = query_candid_args(
         pic,
         canister_id,
         Principal::anonymous(),
@@ -662,7 +674,10 @@ fn ordinary_observation(pic: &PocketIc, canister_id: Principal) -> OrdinaryObser
         REPLY_LIMITS,
     )
     .map(|(value,)| value)
-    .expect("probe query succeeds")
+    .expect("probe query succeeds");
+    assert!(!observed.work_completed.total_overflowed);
+    assert!(!observed.unacknowledged.total_overflowed);
+    observed
 }
 
 #[test]
@@ -705,7 +720,7 @@ fn ordinary_await_allows_ingress_and_other_timers_before_completion() {
             assert!(waiting.waiting);
             assert_eq!(waiting.gate_error, None);
             assert_eq!(waiting.completed, 0);
-            assert_eq!(waiting.work_completed, 0);
+            assert_eq!(waiting.work_completed.total, 0);
             let exact_deadline =
                 snapshot(pic, canister_id).next_deadline_ns.unwrap() + 60_000_000_000;
             match command {
@@ -734,7 +749,7 @@ fn ordinary_await_allows_ingress_and_other_timers_before_completion() {
                 assert_eq!(completed.next_deadline_ns, None);
             } else {
                 assert!(completed.declared);
-                assert_eq!(completed.work_completed, 1);
+                assert_eq!(completed.work_completed.total, 1);
                 let expected = if command == "reconcile" {
                     exact_deadline
                 } else {
@@ -785,9 +800,9 @@ fn assert_ordinary_abandonment(observed: &OrdinaryObservation, removed: bool) {
     assert_eq!(observed.abandoned, !removed);
     assert_eq!(observed.next_deadline_ns, None);
     assert_eq!(observed.completed, 0);
-    assert_eq!(observed.work_completed, 0);
+    assert_eq!(observed.work_completed.total, 0);
     assert_eq!(observed.instruction_samples, 0);
-    assert_eq!(observed.unacknowledged, u64::from(!removed));
+    assert_eq!(observed.unacknowledged.total, u128::from(!removed));
     assert_eq!(observed.captures_dropped, u64::from(removed));
     assert!(observed.capture_registry_accessible);
     assert_eq!(observed.inventory_len, u64::from(!removed));
@@ -933,9 +948,9 @@ fn ordinary_continuation_trap_retires_running_work_and_releases_expired_authorit
                 advance_and_tick(pic, Duration::ZERO, 16);
                 let completed = ordinary_observation(pic, canister_id);
                 assert_eq!(completed.completed, 1);
-                assert_eq!(completed.work_completed, 1);
+                assert_eq!(completed.work_completed.total, 1);
                 assert_eq!(completed.instruction_samples, 1);
-                assert_eq!(completed.unacknowledged, u64::from(!removed));
+                assert_eq!(completed.unacknowledged.total, u128::from(!removed));
                 update_unit(pic, canister_id, "unregister_ordinary");
                 assert_eq!(
                     ordinary_observation(pic, canister_id).captures_dropped,

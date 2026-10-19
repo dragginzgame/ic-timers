@@ -281,7 +281,10 @@ fn ordinary_observation() -> OrdinaryObservation {
         next_deadline_ns: snapshot.as_ref().and_then(|value| value.next_deadline_ns()),
         work_completed: snapshot
             .as_ref()
-            .map_or(0, |value| value.observability().counters().work_completed()),
+            .map(|value| {
+                super::counter_observation(value.observability().counters().work_completed())
+            })
+            .unwrap_or_default(),
         abandoned: snapshot.as_ref().is_some_and(|value| {
             value.state()
                 == TimerRuntimeStateSnapshot::Inactive {
@@ -291,7 +294,10 @@ fn ordinary_observation() -> OrdinaryObservation {
         armed,
         unacknowledged: snapshot
             .as_ref()
-            .map_or(0, |value| value.observability().counters().unacknowledged()),
+            .map(|value| {
+                super::counter_observation(value.observability().counters().unacknowledged())
+            })
+            .unwrap_or_default(),
         instruction_samples: snapshot.as_ref().map_or(0, |value| {
             value
                 .observability()

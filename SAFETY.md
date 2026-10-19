@@ -169,10 +169,11 @@ bounded and nontrapping; a destructor's independent registration is not part of
 the failed creation. See the [construction decision](docs/design/0.18-atomic-registration.md).
 
 - Compare registration identities within one canister history before deriving
-  counter deltas; require advancing source times and unsaturated endpoints.
+  counter deltas; require advancing source times and exact endpoints.
   A runtime epoch or callback generation alone does not prove continuity.
-  `u64::MAX` is conservatively saturated, and reinstalls or restored/forked
-  histories require a fresh observation baseline. Identity supplies neither
+  Diagnostic counters use Metrics' checked deltas and actual-overflow flags;
+  an exact numeric cap is not overflow. Reinstalls or restored/forked histories
+  require a fresh observation baseline. Identity supplies neither
   complete-message cost accounting nor balance-transfer attribution.
 - Exact deadline requests for already dispatched/running Watchdog work select
   its successor on normal completion. They do not postpone queued work or alter
@@ -307,9 +308,12 @@ committed completion when a later scheduler retires it. It cannot infer a trap,
 instruction exhaustion, delay, or interruption from that fact alone.
 
 All hot-path observation counters and aggregates saturate rather than trap.
-Saturation protects timer execution; it does not make a saturated metric exact.
-The runtime epoch identifies the reset scope so operators can distinguish a
-reset from a genuine lifetime zero.
+Metrics owns diagnostic event arithmetic and its actual-overflow flag; consumers
+must retain that flag when projecting a total. Numeric saturation alone does not
+make a metric exact. Page-sample counts retain their conservative cap rule.
+Returned counters are inert copies and cannot control timers. The full
+registration identity identifies the reset scope, including replacement within
+one runtime epoch. Functional failure streaks retain their existing `u64` policy.
 
 ## Evidence maintenance
 

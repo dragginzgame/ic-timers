@@ -217,15 +217,15 @@ fn canonical_registry_snapshot_keeps_state_and_measurements_coherent() {
     assert_eq!(outcomes.last_work_count(), Some(2));
     assert_eq!(outcomes.last_failure_at_ns(), Some(200));
     assert_eq!(outcomes.consecutive_expected_failures(), 1);
-    assert_eq!(counters.wakeups_armed(), 2);
-    assert_eq!(counters.work_started(), 1);
-    assert_eq!(counters.work_completed(), 1);
-    assert_eq!(counters.succeeded(), 0);
-    assert_eq!(counters.no_work(), 0);
-    assert_eq!(counters.retryable_failure(), 1);
-    assert_eq!(counters.invariant_failure(), 0);
-    assert_eq!(counters.stale_wakeups(), 0);
-    assert_eq!(counters.stale_work(), 0);
+    assert_eq!(counters.wakeups_armed().exact_total().unwrap(), 2);
+    assert_eq!(counters.work_started().exact_total().unwrap(), 1);
+    assert_eq!(counters.work_completed().exact_total().unwrap(), 1);
+    assert_eq!(counters.succeeded().exact_total().unwrap(), 0);
+    assert_eq!(counters.no_work().exact_total().unwrap(), 0);
+    assert_eq!(counters.retryable_failure().exact_total().unwrap(), 1);
+    assert_eq!(counters.invariant_failure().exact_total().unwrap(), 0);
+    assert_eq!(counters.stale_wakeups().exact_total().unwrap(), 0);
+    assert_eq!(counters.stale_work().exact_total().unwrap(), 0);
     assert_eq!(
         observations
             .performance()
@@ -291,13 +291,13 @@ fn completed_and_stale_observations_retain_wide_measurements() {
     let snapshot = registry.snapshot(&timer).expect("snapshot should exist");
     let observations = snapshot.observability();
     let counters = observations.counters();
-    assert_eq!(counters.wakeups_armed(), 2);
-    assert_eq!(counters.work_started(), 2);
-    assert_eq!(counters.work_completed(), 2);
-    assert_eq!(counters.succeeded(), 1);
-    assert_eq!(counters.no_work(), 1);
-    assert_eq!(counters.stale_wakeups(), 1);
-    assert_eq!(counters.stale_work(), 0);
+    assert_eq!(counters.wakeups_armed().exact_total().unwrap(), 2);
+    assert_eq!(counters.work_started().exact_total().unwrap(), 2);
+    assert_eq!(counters.work_completed().exact_total().unwrap(), 2);
+    assert_eq!(counters.succeeded().exact_total().unwrap(), 1);
+    assert_eq!(counters.no_work().exact_total().unwrap(), 1);
+    assert_eq!(counters.stale_wakeups().exact_total().unwrap(), 1);
+    assert_eq!(counters.stale_work().exact_total().unwrap(), 0);
     assert_eq!(snapshot.latest_armed_delay_ns(), Some(0));
     assert_eq!(snapshot.generation(), None);
     assert_eq!(

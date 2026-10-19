@@ -162,9 +162,13 @@ fn dropped_ordinary_deliveries_retire_confirmed_scheduled_and_running_work() {
                     assert_eq!(snapshot.next_deadline_ns(), None);
                     assert!(!has_armed_wakeup_claim(&claim).unwrap());
                     let observations = snapshot.observability();
-                    assert_eq!(observations.counters().unacknowledged(), 1);
-                    assert_eq!(observations.counters().work_started(), u64::from(started));
-                    assert_eq!(observations.counters().work_completed(), 0);
+                    let counters = observations.counters();
+                    assert_eq!(counters.unacknowledged().exact_total().unwrap(), 1);
+                    assert_eq!(
+                        counters.work_started().exact_total().unwrap(),
+                        u128::from(started)
+                    );
+                    assert_eq!(counters.work_completed().exact_total().unwrap(), 0);
                     assert_eq!(
                         observations
                             .performance()
@@ -189,8 +193,9 @@ fn dropped_ordinary_deliveries_retire_confirmed_scheduled_and_running_work() {
                     set_time(30);
                     assert!(run_next_due());
                     let completed = timer_snapshot(&timer).unwrap().unwrap();
-                    assert_eq!(completed.observability().counters().work_completed(), 1);
-                    assert_eq!(completed.observability().counters().unacknowledged(), 1);
+                    let counters = completed.observability().counters();
+                    assert_eq!(counters.work_completed().exact_total().unwrap(), 1);
+                    assert_eq!(counters.unacknowledged().exact_total().unwrap(), 1);
                     unregister_claim(&claim).unwrap();
                 } else {
                     assert!(timer_snapshot(&timer).unwrap().is_none());
@@ -259,7 +264,15 @@ fn abandoned_running_work_discards_scheduling_commands_and_finishes_unregistrati
                         }
                     );
                     assert_eq!(snapshot.next_deadline_ns(), None);
-                    assert_eq!(snapshot.observability().counters().work_completed(), 0);
+                    assert_eq!(
+                        snapshot
+                            .observability()
+                            .counters()
+                            .work_completed()
+                            .exact_total()
+                            .unwrap(),
+                        0
+                    );
                     unregister_claim(&claim).unwrap();
                 }
                 let token = context.borrow();
@@ -401,7 +414,15 @@ fn unconfirmed_ordinary_delivery_drop_preserves_binding_failure_accounting() {
                 reason: InactiveReason::ControlFailure(TimerControlFailure::ProviderBindingFailed),
             }
         );
-        assert_eq!(snapshot.observability().counters().unacknowledged(), 0);
+        assert_eq!(
+            snapshot
+                .observability()
+                .counters()
+                .unacknowledged()
+                .exact_total()
+                .unwrap(),
+            0
+        );
         assert_eq!(snapshot.observability().outcomes().last_outcome(), None);
         assert_eq!(timer_count(), 0);
         unregister_claim(&claim).unwrap();
@@ -483,11 +504,10 @@ fn suspended_once_work_allows_other_timers_and_arbitrates_external_commands() {
             match command {
                 "reconcile" | "ensure" => {
                     let snapshot = observed.unwrap();
-                    assert_eq!(
-                        snapshot.next_deadline_ns(),
-                        Some(if command == "ensure" { 40 } else { 50 })
-                    );
-                    assert_eq!(snapshot.observability().counters().work_completed(), 1);
+                    let counters = snapshot.observability().counters();
+                    let expected_deadline = if command == "ensure" { 40 } else { 50 };
+                    assert_eq!(snapshot.next_deadline_ns(), Some(expected_deadline));
+                    assert_eq!(counters.work_completed().exact_total().unwrap(), 1);
                     assert_eq!(timer_count(), 1);
                 }
                 "cancel" if lifetime == DeclarationLifetime::Retained => {
@@ -822,15 +842,17 @@ fn rejected_watchdog_cadence_preserves_the_complete_snapshot() {
             .expect("armed declaration exists")
             .observability()
             .counters()
-            .schedule_requests(),
+            .schedule_requests()
+            .exact_total()
+            .unwrap(),
         1
     );
 }
 
 fn assert_retained_provider_binding_failure(
     timer: &TimerIdentity,
-    schedule_requests: u64,
-    wakeups_armed: u64,
+    schedule_requests: u128,
+    wakeups_armed: u128,
 ) {
     let failed = timer_snapshot(timer)
         .expect("snapshot lookup should succeed")
@@ -843,11 +865,21 @@ fn assert_retained_provider_binding_failure(
     );
     assert_eq!(failed.generation(), None);
     assert_eq!(
-        failed.observability().counters().schedule_requests(),
+        failed
+            .observability()
+            .counters()
+            .schedule_requests()
+            .exact_total()
+            .unwrap(),
         schedule_requests
     );
     assert_eq!(
-        failed.observability().counters().wakeups_armed(),
+        failed
+            .observability()
+            .counters()
+            .wakeups_armed()
+            .exact_total()
+            .unwrap(),
         wakeups_armed
     );
 }
@@ -1144,8 +1176,8 @@ fn immediate_watchdog_reconciliation_arms_one_zero_delay_scheduler() {
     assert_eq!(scheduled.latest_requested_delay_ns(), Some(0));
     assert_eq!(scheduled.latest_armed_delay_ns(), Some(0));
     let counters = scheduled.observability().counters();
-    assert_eq!(counters.schedule_requests(), 1);
-    assert_eq!(counters.wakeups_armed(), 1);
+    assert_eq!(counters.schedule_requests().exact_total().unwrap(), 1);
+    assert_eq!(counters.wakeups_armed().exact_total().unwrap(), 1);
 
     assert!(run_next_due(), "zero-delay scheduler should run later");
     assert_eq!(calls.get(), 0, "the scheduler must not invoke work inline");
@@ -1193,9 +1225,9 @@ fn immediate_watchdog_ensure_moves_cadence_earlier_and_repeats_idempotently() {
     assert_eq!(snapshot.latest_requested_delay_ns(), Some(0));
     assert_eq!(snapshot.latest_armed_delay_ns(), Some(0));
     let counters = snapshot.observability().counters();
-    assert_eq!(counters.schedule_requests(), 3);
-    assert_eq!(counters.wakeups_armed(), 2);
-    assert_eq!(counters.coalesced(), 1);
+    assert_eq!(counters.schedule_requests().exact_total().unwrap(), 3);
+    assert_eq!(counters.wakeups_armed().exact_total().unwrap(), 2);
+    assert_eq!(counters.coalesced().exact_total().unwrap(), 1);
 
     registration
         .cancel()
@@ -1232,9 +1264,9 @@ fn immediate_watchdog_ensure_coalesces_an_overdue_cadence_wakeup() {
     assert_eq!(snapshot.latest_requested_delay_ns(), Some(0));
     assert_eq!(snapshot.latest_armed_delay_ns(), Some(5));
     let counters = snapshot.observability().counters();
-    assert_eq!(counters.schedule_requests(), 2);
-    assert_eq!(counters.wakeups_armed(), 1);
-    assert_eq!(counters.coalesced(), 1);
+    assert_eq!(counters.schedule_requests().exact_total().unwrap(), 2);
+    assert_eq!(counters.wakeups_armed().exact_total().unwrap(), 1);
+    assert_eq!(counters.coalesced().exact_total().unwrap(), 1);
 
     registration
         .cancel()
@@ -1315,7 +1347,15 @@ fn once_owns_one_provider_handle_and_executes_without_registry_borrow() {
     let scheduled = timer_snapshot(&timer)
         .expect("snapshot lookup should succeed")
         .expect("snapshot should exist");
-    assert_eq!(scheduled.observability().counters().wakeups_armed(), 1);
+    assert_eq!(
+        scheduled
+            .observability()
+            .counters()
+            .wakeups_armed()
+            .exact_total()
+            .unwrap(),
+        1
+    );
     assert_eq!(scheduled.latest_armed_delay_ns(), Some(5));
 
     set_time(15);
@@ -1331,8 +1371,24 @@ fn once_owns_one_provider_handle_and_executes_without_registry_borrow() {
             reason: InactiveReason::Stopped,
         }
     );
-    assert_eq!(stopped.observability().counters().work_started(), 1);
-    assert_eq!(stopped.observability().counters().work_completed(), 1);
+    assert_eq!(
+        stopped
+            .observability()
+            .counters()
+            .work_started()
+            .exact_total()
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        stopped
+            .observability()
+            .counters()
+            .work_completed()
+            .exact_total()
+            .unwrap(),
+        1
+    );
     assert_eq!(
         stopped
             .observability()
@@ -1427,9 +1483,9 @@ fn ordinary_callback_borrow_failure_stops_without_invoking_or_measuring_work() {
                 }
             );
             let counters = snapshot.observability().counters();
-            assert_eq!(counters.work_started(), 1);
-            assert_eq!(counters.work_completed(), 1);
-            assert_eq!(counters.invariant_failure(), 1);
+            assert_eq!(counters.work_started().exact_total().unwrap(), 1);
+            assert_eq!(counters.work_completed().exact_total().unwrap(), 1);
+            assert_eq!(counters.invariant_failure().exact_total().unwrap(), 1);
             let performance = snapshot.observability().performance();
             assert_eq!(performance.work_instructions().aggregate().samples(), 0);
             assert_eq!(performance.work_memory_pages().samples(), 0);
@@ -1487,7 +1543,15 @@ fn after_completion_recurrence_follows_returned_completion_classification() {
             outcomes.consecutive_expected_failures(),
             u64::from(completion.outcome() == crate::TimerCompletionOutcome::RetryableFailure)
         );
-        assert_eq!(snapshot.observability().counters().work_completed(), 1);
+        assert_eq!(
+            snapshot
+                .observability()
+                .counters()
+                .work_completed()
+                .exact_total()
+                .unwrap(),
+            1
+        );
         assert_eq!(
             snapshot.latest_directive(),
             Some(if invariant {
@@ -1540,8 +1604,24 @@ fn after_completion_rearms_from_actual_completion_time() {
     let snapshot = timer_snapshot(&timer)
         .expect("snapshot lookup should succeed")
         .expect("retained snapshot should exist");
-    assert_eq!(snapshot.observability().counters().wakeups_armed(), 2);
-    assert_eq!(snapshot.observability().counters().work_completed(), 2);
+    assert_eq!(
+        snapshot
+            .observability()
+            .counters()
+            .wakeups_armed()
+            .exact_total()
+            .unwrap(),
+        2
+    );
+    assert_eq!(
+        snapshot
+            .observability()
+            .counters()
+            .work_completed()
+            .exact_total()
+            .unwrap(),
+        2
+    );
 }
 
 #[test]
@@ -1767,9 +1847,10 @@ fn stale_reused_identity_callback_cannot_change_handles_or_measurements() {
     // before taking a measurement and cannot reach this ownership check.
     stale_measurement.record(&old_token);
     let after = timer_snapshot(replacement.identity()).unwrap().unwrap();
+    let counters = after.observability().counters();
     assert_eq!(after.observability().performance(), before_performance);
-    assert_eq!(after.observability().counters().stale_wakeups(), 1);
-    assert_eq!(after.observability().counters().work_started(), 0);
+    assert_eq!(counters.stale_wakeups().exact_total().unwrap(), 1);
+    assert_eq!(counters.work_started().exact_total().unwrap(), 0);
     assert!(
         replacement
             .has_armed_wakeup()
@@ -1854,7 +1935,15 @@ fn replacement_and_cancellation_clear_actual_owned_handles() {
     let snapshot = timer_snapshot(&timer)
         .expect("snapshot lookup should succeed")
         .expect("retained snapshot should exist");
-    assert_eq!(snapshot.observability().counters().cancelled(), 1);
+    assert_eq!(
+        snapshot
+            .observability()
+            .counters()
+            .cancelled()
+            .exact_total()
+            .unwrap(),
+        1
+    );
 
     registration
         .ensure_scheduled(TimerSchedule::At(150))
@@ -1974,9 +2063,33 @@ fn watchdog_scheduler_prearms_successor_before_synchronous_work() {
         dispatched.state(),
         TimerRuntimeStateSnapshot::Watchdog(WatchdogRuntimeStateSnapshot::AwaitingWork { .. })
     ));
-    assert_eq!(dispatched.observability().counters().scheduler_started(), 1);
-    assert_eq!(dispatched.observability().counters().wakeups_armed(), 2);
-    assert_eq!(dispatched.observability().counters().work_dispatched(), 1);
+    assert_eq!(
+        dispatched
+            .observability()
+            .counters()
+            .scheduler_started()
+            .exact_total()
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        dispatched
+            .observability()
+            .counters()
+            .wakeups_armed()
+            .exact_total()
+            .unwrap(),
+        2
+    );
+    assert_eq!(
+        dispatched
+            .observability()
+            .counters()
+            .work_dispatched()
+            .exact_total()
+            .unwrap(),
+        1
+    );
 
     assert!(run_next_due());
     assert_eq!(calls.get(), 1);
@@ -2039,8 +2152,8 @@ fn watchdog_immediate_decision_replaces_successor_without_synchronous_recursion(
     assert_eq!(immediate.latest_requested_delay_ns(), Some(0));
     assert_eq!(immediate.latest_armed_delay_ns(), Some(0));
     let counters = immediate.observability().counters();
-    assert_eq!(counters.wakeups_armed(), 3);
-    assert_eq!(counters.work_dispatched(), 1);
+    assert_eq!(counters.wakeups_armed().exact_total().unwrap(), 3);
+    assert_eq!(counters.work_dispatched().exact_total().unwrap(), 1);
 
     assert!(
         run_next_due(),
@@ -2092,8 +2205,24 @@ fn watchdog_running_immediate_context_targets_that_attempts_successor() {
         snapshot.scheduling_mode(),
         TimerSchedulingMode::Continuation
     );
-    assert_eq!(snapshot.observability().counters().schedule_requests(), 3);
-    assert_eq!(snapshot.observability().counters().coalesced(), 2);
+    assert_eq!(
+        snapshot
+            .observability()
+            .counters()
+            .schedule_requests()
+            .exact_total()
+            .unwrap(),
+        3
+    );
+    assert_eq!(
+        snapshot
+            .observability()
+            .counters()
+            .coalesced()
+            .exact_total()
+            .unwrap(),
+        2
+    );
 
     registration
         .cancel()
@@ -2137,7 +2266,15 @@ fn watchdog_cancellation_clears_successor_and_queued_work() {
     let snapshot = timer_snapshot(&timer)
         .expect("snapshot lookup should succeed")
         .expect("retained watchdog should remain declared");
-    assert_eq!(snapshot.observability().counters().cancelled(), 1);
+    assert_eq!(
+        snapshot
+            .observability()
+            .counters()
+            .cancelled()
+            .exact_total()
+            .unwrap(),
+        1
+    );
 
     registration.ensure_scheduled().unwrap();
     assert_eq!(
@@ -2198,9 +2335,9 @@ fn watchdog_invariant_failure_overrides_nested_cancellation_and_clears_handles()
                 }
             );
             let counters = snapshot.observability().counters();
-            assert_eq!(counters.work_completed(), 1);
-            assert_eq!(counters.invariant_failure(), 1);
-            assert_eq!(counters.cancelled(), 0);
+            assert_eq!(counters.work_completed().exact_total().unwrap(), 1);
+            assert_eq!(counters.invariant_failure().exact_total().unwrap(), 1);
+            assert_eq!(counters.cancelled().exact_total().unwrap(), 0);
         } else {
             assert!(snapshot.is_none());
             assert!(matches!(
@@ -2355,8 +2492,24 @@ fn watchdog_successor_retires_an_unacknowledged_dispatched_attempt() {
     let snapshot = timer_snapshot(&timer)
         .expect("snapshot lookup should succeed")
         .expect("watchdog snapshot should exist");
-    assert_eq!(snapshot.observability().counters().unacknowledged(), 1);
-    assert_eq!(snapshot.observability().counters().work_started(), 0);
+    assert_eq!(
+        snapshot
+            .observability()
+            .counters()
+            .unacknowledged()
+            .exact_total()
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        snapshot
+            .observability()
+            .counters()
+            .work_started()
+            .exact_total()
+            .unwrap(),
+        0
+    );
     assert_eq!(
         snapshot.observability().outcomes().last_outcome(),
         Some(TimerLastOutcome::Unacknowledged)
@@ -2371,8 +2524,24 @@ fn watchdog_successor_retires_an_unacknowledged_dispatched_attempt() {
         },
         "the retired attempt's reconciliation must not override the successor's Stop"
     );
-    assert_eq!(completed.observability().counters().unacknowledged(), 1);
-    assert_eq!(completed.observability().counters().work_completed(), 1);
+    assert_eq!(
+        completed
+            .observability()
+            .counters()
+            .unacknowledged()
+            .exact_total()
+            .unwrap(),
+        1
+    );
+    assert_eq!(
+        completed
+            .observability()
+            .counters()
+            .work_completed()
+            .exact_total()
+            .unwrap(),
+        1
+    );
     assert_eq!(timer_count(), 0);
 }
 
@@ -2412,8 +2581,8 @@ fn immediate_watchdog_completion_fault_traps_and_leaves_cadence_successor_armed(
         .expect("snapshot lookup should succeed")
         .expect("retained watchdog should remain declared");
     let counters = snapshot.observability().counters();
-    assert_eq!(counters.work_started(), 1);
-    assert_eq!(counters.work_completed(), 0);
+    assert_eq!(counters.work_started().exact_total().unwrap(), 1);
+    assert_eq!(counters.work_completed().exact_total().unwrap(), 0);
     let performance = snapshot.observability().performance();
     assert_eq!(performance.scheduler_memory_pages().samples(), 1);
     assert_eq!(performance.work_memory_pages().samples(), 0);
@@ -2689,7 +2858,15 @@ fn rejected_and_coalesced_requests_preserve_bound_handles_without_reinstallation
     let after = timer_snapshot(&timer).unwrap().unwrap();
     assert_eq!(after.generation(), before.generation());
     assert_eq!(after.next_deadline_ns(), before.next_deadline_ns());
-    assert_eq!(after.observability().counters().coalesced(), 1);
+    assert_eq!(
+        after
+            .observability()
+            .counters()
+            .coalesced()
+            .exact_total()
+            .unwrap(),
+        1
+    );
 
     // A real replacement must still encounter the unconsumed installation fault.
     assert!(matches!(
@@ -2843,10 +3020,10 @@ fn watchdog_failed_dispatch_clears_handles_without_confirming_work() {
                 assert!(!registration.has_armed_wakeup().unwrap());
                 let snapshot = timer_snapshot(&timer).unwrap().unwrap();
                 let counters = snapshot.observability().counters();
-                assert_eq!(counters.scheduler_started(), 1);
-                assert_eq!(counters.work_dispatched(), 0);
-                assert_eq!(counters.work_started(), 0);
-                assert_eq!(counters.work_completed(), 0);
+                assert_eq!(counters.scheduler_started().exact_total().unwrap(), 1);
+                assert_eq!(counters.work_dispatched().exact_total().unwrap(), 0);
+                assert_eq!(counters.work_started().exact_total().unwrap(), 0);
+                assert_eq!(counters.work_completed().exact_total().unwrap(), 0);
             } else {
                 assert!(timer_snapshot(&timer).unwrap().is_none());
                 assert!(matches!(
@@ -2911,8 +3088,8 @@ fn stale_watchdog_dispatch_clears_partial_arms_without_confirming_work() {
         .unwrap()
         .observability()
         .counters();
-    assert_eq!(counts.wakeups_armed(), 2);
-    assert_eq!(counts.work_dispatched(), 1);
+    assert_eq!(counts.wakeups_armed().exact_total().unwrap(), 2);
+    assert_eq!(counts.work_dispatched().exact_total().unwrap(), 1);
 }
 
 #[test]
@@ -3136,8 +3313,11 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         TimerRuntimeStateSnapshot::Watchdog(WatchdogRuntimeStateSnapshot::Scheduled { .. })
     ));
     let retrying_counters = retrying.observability().counters();
-    assert_eq!(retrying_counters.work_completed(), 2);
-    assert_eq!(retrying_counters.retryable_failure(), 1);
+    assert_eq!(retrying_counters.work_completed().exact_total().unwrap(), 2);
+    assert_eq!(
+        retrying_counters.retryable_failure().exact_total().unwrap(),
+        1
+    );
 
     readiness.set(StartupReadiness::Ready);
     run_icydb_watchdog_round(25);
@@ -3174,11 +3354,17 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         }
     );
     let terminal_counters = terminal.observability().counters();
-    assert_eq!(terminal_counters.work_completed(), 4);
-    assert_eq!(terminal_counters.invariant_failure(), 1);
-    assert_eq!(terminal_counters.succeeded(), 1);
-    assert_eq!(terminal_counters.no_work(), 1);
-    assert_eq!(terminal_counters.retryable_failure(), 1);
+    assert_eq!(terminal_counters.work_completed().exact_total().unwrap(), 4);
+    assert_eq!(
+        terminal_counters.invariant_failure().exact_total().unwrap(),
+        1
+    );
+    assert_eq!(terminal_counters.succeeded().exact_total().unwrap(), 1);
+    assert_eq!(terminal_counters.no_work().exact_total().unwrap(), 1);
+    assert_eq!(
+        terminal_counters.retryable_failure().exact_total().unwrap(),
+        1
+    );
 
     readiness.set(StartupReadiness::Recovering);
     reconcile_watchdog(
@@ -3645,8 +3831,18 @@ fn registration_identity_survives_control_but_changes_on_replacement_and_restart
     }
     let regrown = snapshot();
     assert!(
-        regrown.observability().counters().work_completed()
-            > before.observability().counters().work_completed()
+        regrown
+            .observability()
+            .counters()
+            .work_completed()
+            .exact_total()
+            .unwrap()
+            > before
+                .observability()
+                .counters()
+                .work_completed()
+                .exact_total()
+                .unwrap()
     );
     assert_ne!(regrown.registration_id(), before.registration_id());
     let regrown_work = regrown.observability().performance().work_instructions();
@@ -3703,8 +3899,24 @@ fn watchdog_exact_deadline_reconstruction_moves_both_directions_and_sleeps() {
         assert_eq!(timer_count(), 1);
     }
     let scheduled = timer_snapshot(&timer).unwrap().unwrap();
-    assert_eq!(scheduled.observability().counters().wakeups_armed(), 3);
-    assert_eq!(scheduled.observability().counters().coalesced(), 1);
+    assert_eq!(
+        scheduled
+            .observability()
+            .counters()
+            .wakeups_armed()
+            .exact_total()
+            .unwrap(),
+        3
+    );
+    assert_eq!(
+        scheduled
+            .observability()
+            .counters()
+            .coalesced()
+            .exact_total()
+            .unwrap(),
+        1
+    );
     assert!(!run_next_due());
     registration.reconcile_schedule(None).unwrap();
     assert_eq!(timer_count(), 0);
@@ -3921,7 +4133,15 @@ fn recovery_retires_an_interrupted_attempts_exact_deadline_proposal() {
     assert!(run_next_due());
     let recovered = timer_snapshot(&timer).unwrap().unwrap();
     assert_eq!(recovered.next_deadline_ns(), Some(20));
-    assert_eq!(recovered.observability().counters().unacknowledged(), 1);
+    assert_eq!(
+        recovered
+            .observability()
+            .counters()
+            .unacknowledged()
+            .exact_total()
+            .unwrap(),
+        1
+    );
     assert_eq!(recovered.registration_id(), before.registration_id());
     assert_eq!(timer_count(), 1);
 }
@@ -4565,8 +4785,24 @@ fn initial_registration_confirms_exact_wakeup_before_returning_authority() {
             assert_eq!(timer_count(), 1);
             let snapshot = timer_snapshot(&timer).unwrap().unwrap();
             assert_eq!(snapshot.next_deadline_ns(), Some(20));
-            assert_eq!(snapshot.observability().counters().schedule_requests(), 1);
-            assert_eq!(snapshot.observability().counters().wakeups_armed(), 1);
+            assert_eq!(
+                snapshot
+                    .observability()
+                    .counters()
+                    .schedule_requests()
+                    .exact_total()
+                    .unwrap(),
+                1
+            );
+            assert_eq!(
+                snapshot
+                    .observability()
+                    .counters()
+                    .wakeups_armed()
+                    .exact_total()
+                    .unwrap(),
+                1
+            );
             assert!(!run_next_due());
             unregister_claim(&claim).unwrap();
             assert!(dropped.get());

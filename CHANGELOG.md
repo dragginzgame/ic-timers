@@ -2,6 +2,21 @@
 
 All notable changes to this project are recorded here.
 
+## [0.29.0]
+
+### Breaking
+
+- Delegate diagnostic event arithmetic to IC Metrics. All `TimerCounters`
+  getters now return the reexported `MeasurementCounter`, carrying a `u128`
+  total and actual-overflow flag. `work_completed()` merges its classified
+  counters without losing overflow provenance. Timer events, registration
+  resets and scheduling policy retain their meanings.
+- Consumers must replace integer arithmetic and cap inference with Metrics'
+  checked totals, merges and deltas, and preserve wide totals and overflow flags
+  in serialization. Compare full registration identities before interval
+  calculations. There are no legacy integer getters. See the
+  [counter contract](docs/design/observability.md#counter-semantics).
+
 ## [0.28.2] - 2026-10-18
 
 - Add real-Wasm qualification for a full timer batch under queue pressure and

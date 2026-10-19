@@ -113,8 +113,9 @@ upgrade changes the epoch. Callback `generation()` is not a continuity key.
 Consumers may project the inert epoch/sequence fields, but cannot use them as
 control authority. For interval arithmetic, require the same canister and
 registration identity, advancing source times, compatible windows, nondecreasing
-values, and neither endpoint at `u64::MAX`. Saturation makes an exact delta
-unavailable. Matching identities alone do not prove freshness, complete-message
+values, and exact counter endpoints. Metrics' `delta_since` rejects actual
+overflow or decreasing totals; an exact numeric cap is admissible. Matching
+identities alone do not prove freshness, complete-message
 accounting, transfer coverage or cycle cost. Reinstalls and restored/forked
 histories are separate observation histories.
 
@@ -137,7 +138,7 @@ canonical observation without adding authority or information.
 ## Counter semantics
 
 The counter contract distinguishes requests made to the wrapper from effects
-performed against `ic-cdk-timers` and from callbacks that actually execute.
+performed by the private platform backend and from callbacks that actually execute.
 
 | Counter | Required meaning |
 | --- | --- |
@@ -171,10 +172,22 @@ counter saturation:
 work_completed = succeeded + no_work + retryable_failure + invariant_failure
 ```
 
-The classified counters are authoritative. `work_completed()` projects their
-saturating sum instead of storing a second total. This preserves the completed
-count at saturation too: each committed completion increments exactly one class,
-and the projected total remains `u64::MAX` once their sum reaches that limit.
+The classified counters are authoritative. Each getter returns the published
+Metrics `MeasurementCounter`, reexported by Timers: a `u128` total and a sticky
+actual-overflow flag. Timers owns the event names and recording sites; Metrics
+owns increment, merge, checked totals and checked delta arithmetic.
+`work_completed()` merges the four classifications rather than storing a second
+total. A merge preserves overflow from any source as well as overflow of the
+sum. Exact `u128::MAX` and an overflowed total are distinct observations.
+
+The 0.29 hard cut removes integer getters. Use `exact_total()` when exactness is
+required, or carry both `total()` and `total_overflowed()` through consumer
+codecs. Combine event classes with `merge()`, not integer saturating addition.
+Check the full registration identity and source continuity before calling
+`delta_since(previous)`; its numeric checks cannot establish timer identity.
+Changing a returned counter copy grants no runtime mutation authority. The
+unpublished probe protocol carries a plain total/overflow record, without
+implementing arithmetic or importing the timer runtime into the wire package.
 
 `work_started` and `work_completed` must never be collapsed into one execution
 count.
@@ -303,10 +316,12 @@ provide feedback as the pre-1.0 API evolves:
   its committed dispatch. Neither observation fabricates a completion, work count
   or measurement. They have no arithmetic invariant with
   `work_started`, because a trapping work-message start mutation rolls back.
-- Counts, work, instructions, page extents, and nanosecond values use `u64`.
-  Hot-path counters, streaks, sample counts, and instruction totals saturate;
-  latest and maximum measurements continue to update after count or total
-  saturation. Absolute memory extents have no total.
+- Diagnostic events use Metrics counters with `u128` totals and actual-overflow
+  tracking. Instruction summaries likewise retain wide tracked totals. Functional
+  failure streaks, sample counts, work units, page extents and nanoseconds remain
+  `u64`; failure streaks and page-sample counts retain their saturating policy.
+  Latest and maximum measurements continue after observation overflow.
+  Absolute memory extents have no total.
 - The crate exposes provider-neutral Rust values and stable enum labels but no
   Candid or Serde contract. Consumers own serialization adapters. Public API
   evolution follows crate SemVer rather than a consumer's wire format.
@@ -334,10 +349,10 @@ The recorded field projection is:
 | --- | --- |
 | schedules | `wakeups_armed` |
 | executions | `work_started` |
-| successes | saturating `succeeded + no_work` |
+| successes | Metrics merge of `succeeded` and `no_work`, preserving overflow |
 | expected failures | `retryable_failure` |
 | invariant failures | `invariant_failure` |
-| stale callbacks | saturating `stale_wakeups + stale_work` |
+| stale callbacks | Metrics merge of `stale_wakeups` and `stale_work`, preserving overflow |
 | latest delay | `latest_armed_delay_ns` converted to milliseconds |
 | generation | `TimerSnapshot::generation()` as `Option<u64>` |
 | completed instruction count | work-instruction sample count |

@@ -313,8 +313,15 @@ ID alongside copied observability values; `registration_id().epoch()` supplies
 the runtime reset boundary. Observability values contain only registration-local
 measurements.
 
-Event counters and memory sample counts conservatively treat `u64::MAX` as
-saturated. Instruction measurements use the selected Metrics ordered
+Every `TimerCounters` getter returns the shared Metrics `MeasurementCounter`:
+`total()` is `u128`, `total_overflowed()` records actual overflow, and
+`exact_total()` rejects an overflowed observation. An exact `u128::MAX` is still
+exact. After establishing registration continuity, use `delta_since(previous)`
+for checked intervals and `merge()` for classified totals. These are inert copies;
+changing a returned counter cannot change the runtime. Memory sample counts
+still conservatively treat `u64::MAX` as saturated.
+
+Instruction measurements use the selected Metrics ordered
 `MeasurementSummary` values with `u128` totals and integer means, and `u64`
 samples and counts. Totals
 above `u64::MAX` remain exact. An exactly reached cap remains exact, while actual
@@ -335,8 +342,8 @@ It distinguishes empty from measured zero and returns `SampleCountOverflow` on
 actual count overflow even when scale is zero. An exact count bounds the scaled
 result within `u128`; there is no separate projection-error case.
 
-Use `ic_timers::MeasurementSummary` or the same Metrics package when exchanging
-these values with other libraries. The [root dependency catalog](Cargo.toml) and
+Use `ic_timers::{MeasurementCounter, MeasurementSummary}` or the same Metrics
+package when exchanging these values with other libraries. The [root dependency catalog](Cargo.toml) and
 lockfile select that package identity; different Metrics lines have distinct Rust
 types. Preserve wide totals in reports/codecs, or use checked conversions when
 a narrower consumer field is required. The

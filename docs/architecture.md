@@ -34,7 +34,7 @@ canister graphs must still exclude older providers that lack that key.
 | --- | --- | --- |
 | Volatile scheduling, claim/generation authority, policy arbitration and timer observations | `crates/ic-timers/src/{runtime,registry,control,schedule,snapshot}` | Public crate facade |
 | One-shot dispatch, pending queue and authenticated IC callbacks | Private `crates/ic-timers/src/platform`; `ic-platform` exposes the shared CDK executor for future polling and call-context cleanup | Only `platform/ffi.rs` owns unsafe exports/callback registration |
-| Measurement arithmetic | `ic-metrics` | Timer-specific sample boundaries, counters and memory extents in `snapshot/metrics.rs` |
+| Measurement arithmetic | `ic-metrics` | Timer-specific event names, recording/sample boundaries and memory extents in `snapshot/metrics.rs` |
 | Durable jobs, readiness, lifecycle order and operator-health labels | Consuming application/framework | Registration claims and snapshots; no durable task database or application lifecycle exports here |
 | Wasm compilation and artifact-cache custody | `ic-build`, with explicit child custody from `ic-host-process` | `testing/crates/ic-timers-pocketic/src/build/mod.rs` selects packages, profile, features and artifact lifetime |
 | PocketIC server selection, admission, lifecycle and call transport | `ic-testkit` | `scripts/dev/testkit-server.sh` selects the root-lock CLI; the native harness supplies instance configuration |
@@ -51,9 +51,10 @@ remain separate evidence selections in the [release guide](releasing.md).
 
 ## Candid and CDK dependency boundary
 
-The registry-published `ic-platform` **0.1.12** is the selected boundary. Its
-archive (VCS `338b14baf97690abdfc0e386d6d5261b309a3ac8`) exports upstream
-identities, not a second codec or executor. The root catalog disables default
+Registry-published `ic-platform` is the selected boundary; the current lock and
+source-qualified receipts are recorded in [current status](status/current.md).
+The initial 0.1.12 adoption (VCS `338b14baf97690abdfc0e386d6d5261b309a3ac8`)
+established upstream identities, not a second codec or executor. The root catalog disables default
 features; the library selects `executor` and `ic0`, while probe DTOs and the native
 harness select `candid`. The two canister probes select `cdk` for Platform-owned
 entrypoint generation, exact upstream calls and protected spawning. Its published
@@ -67,8 +68,10 @@ qualify those IC paths. Executor/system-only Platform remains Candid-free, but i
 unconditional Principal export brings `ic_principal` and Serde transitively.
 
 Probe records use Platform's Candid/Serde derives with explicit crate paths.
-Their labels, optionality, integer widths and top-level argument structure stay
-unchanged. Host init/upgrade encoding uses `contract::encode_args(())`. There is
+Labels, optionality and top-level argument structure stay unchanged. The 0.29
+counter cut changes private diagnostic event fields to lossless total/overflow
+records; memory and instruction observations retain their existing widths.
+Host init/upgrade encoding uses `contract::encode_args(())`. There is
 no local generator or compatibility alias to retain. These existing Candid probe
 endpoints remain Candid; this does not change an application protocol owned by
 IC Wire or introduce a storage migration.
@@ -371,6 +374,14 @@ The runtime provides:
   and
 - portable snapshot DTOs so Canic, IcyDB, and standalone canisters can
   expose the same operator view.
+
+Diagnostic event storage and arithmetic use published Metrics `MeasurementCounter`
+values. Timers retains named events and registration/reset identity; it has no
+parallel integer counter arithmetic. Instruction observations already use Metrics
+summaries. The 0.29 getter cut requires downstream projections to preserve wide
+totals and actual-overflow quality, or use checked narrowing. Page extent sampling
+and functional failure streaks remain timer-specific. Probe wire records only
+project values; the protocol package depends on Platform Candid alone.
 
 Operator-health labels belong to consumers. Snapshots expose runtime state,
 scheduling mode and callback outcomes for a single consumer-owned projection.

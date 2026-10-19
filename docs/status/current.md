@@ -2,9 +2,71 @@
 
 # Current status
 
-Last updated: 2026-10-18
+Last updated: 2026-10-19
 
-## Runtime coverage expansion — pending 0.28.2
+## Metrics event delegation — pending 0.29.0
+
+Current source base: `8d69266` (`fix`), following released 0.28.2. The only
+incoming edit was Cargo.lock, selecting Platform/macros 0.1.15 alongside Metrics
+0.14.4, Testkit 0.54.1, Build 0.18.0 and Host 0.27.6. Its bytes and all manifests
+are preserved. Cargo package versions remain 0.28.2; the new undated 0.29.0
+changelog records the breaking getter contract. Version mutation and delivery
+remain maintainer-owned.
+
+Timers now stores its fourteen diagnostic events in published Metrics
+`MeasurementCounter` values and delegates increment/merge/checked arithmetic.
+All fifteen getters return the shared counter, reexported at the public facade;
+`work_completed()` merges four outcome classifications with overflow provenance.
+There are no legacy integer getters or parallel arithmetic. Timers retains event
+meaning, recording boundaries and full registration/reset identity. Functional
+failure streaks, scheduling, callback authority and memory-page observations are
+unchanged. The unpublished protocol carries total/overflow wire records only;
+it retains its Platform-Candid-only dependency and owns no arithmetic.
+
+Consumers must preserve the `u128` total and actual-overflow flag, or explicitly
+reject unrepresentable narrow projections. Compare full registration identities
+and source continuity before checked deltas. Canic's existing counter owner has
+[the adoption details](https://github.com/dragginzgame/canic/issues/535#issuecomment-6262598164),
+coordinated with its existing prepared metrics PR. IcyDB's two actual fixture
+projections and their wire/native callers are covered by
+[#386 — Adopt Timers 0.29 tracked event counters](https://github.com/dragginzgame/icydb/issues/386).
+Sibling files remain untouched. Incompatible timer minor lines cannot coexist
+through the global-timer links key: coordinate Canic/IcyDB/application selection
+when this version is published, rather than adding a parallel provider. Jobs'
+inspected maintained source has no diagnostic counter accessor use.
+
+Focused Linux qualification with actual Rust 1.91 passes 161 library tests, both
+protocol tests, the runtime-probe unit, all nine doctests, strict library and
+probe/driver/protocol Clippy (including four size features), library/runtime-probe
+Wasm Clippy and warning-denied library Rustdoc. All 27 real-Wasm runtime subjects
+and the four-artifact policy-cohort subject pass on Testkit-admitted PocketIC
+16.1.0. Provider, direct dependency boundaries, pin/inheritance, formatting and
+0.29 changelog checks pass. The unchanged selected lock is used throughout.
+Receipts are retained under `target/qualification/counter-delegation/`, with
+before-images under `/tmp/ic-timers-counter-delegation.iclso78v/before/`.
+One cohort acquisition correctly rejected an edit during input capture; the
+subsequent frozen-source run passes. No native macOS, live IC, sibling builds,
+hosted checks or complete maintainer release gate is claimed.
+
+Delegation has a measured cost, not a performance-saving claim. Native
+`size_of::<TimerCounters>()` rises from 112 to 448 bytes per registration
+(+336 bytes of counter value storage; excludes registry/allocator layout).
+Comparable before/after cohorts keep the same lock, Rust 1.91 profile and server:
+
+| Cohort | Loaded Wasm bytes before → after | Scheduler / work envelope instruction delta |
+| --- | --- | --- |
+| Baseline | 240,937 → 242,853 | 0 / 0 |
+| Once | 290,389 → 292,712 | 0 / +17 |
+| After-completion | 289,552 → 292,903 | 0 / +29 |
+| Watchdog | 290,788 → 293,978 | +36 / +17 |
+
+These artifacts include the necessary private wire projection changes. Snapshot
+and inventory costs also increase; full rows are in `cohorts-before.log` and
+`cohorts-after.log`. Envelope intervals and dispatch cycle observations are not
+complete-message accounting, arithmetic-only costs or installed-canister proof.
+Older receipts below qualify only their named historical sources/graphs.
+
+## Runtime coverage expansion — delivered 0.28.2
 
 This task starts at released 0.28.1 (`c9cc95c259cb46637aacccf6f1fbed6a8280aa39`).
 The incoming manifest selects Build 0.18 and the incoming lock selects Build
@@ -32,9 +94,9 @@ their historical pending/delivery statements do not qualify the current batch.
 
 ## Source and ownership
 
-The source base is released 0.28.1 (`c9cc95c259cb46637aacccf6f1fbed6a8280aa39`).
-The working tree prepares the undated 0.28.2 batch in `CHANGELOG.md`. The released
-0.28.0 batch includes Metrics 0.14's public `MeasurementSummary` identity change.
+The source base is `8d69266`, following released 0.28.2. The working tree prepares
+the undated 0.29.0 batch described above. The released 0.28.0 batch includes
+Metrics 0.14's public `MeasurementSummary` identity change.
 Cargo versions, staging, commits, pushes and releases remain user-owned.
 
 Timers owns volatile registration, scheduling, observation and private one-shot
@@ -47,9 +109,9 @@ historical version or a native platform substitute.
 One root workspace/catalog and lockfile select all five maintained packages.
 The root manifest uses the canonical production and test/tooling role groups;
 matching grouped sorting is active in Make, hooks and all release metadata
-checks. The current catalog still selects Metrics 0.14, Build 0.17,
-Testkit 0.54 and Host Process 0.27. Platform 0.1.12 is selected;
-the incoming Build/Host/Metrics selections are preserved.
+checks. The current catalog selects Metrics 0.14, Build 0.18,
+Testkit 0.54, Host Process 0.27 and Platform 0.1. The selected incoming lock,
+including Platform 0.1.15, is preserved.
 Shared 0.24.0 (`cab12cd3dfa4fdb34846b25397f0d72881bb9ae0`) now supplies 132
 canonical payloads. Generic installer/release-runner matrices now stay at Shared;
 their three entrypoint roots and unused cache-key companion are canonically retired.
@@ -60,7 +122,7 @@ Timers' actual CI workflow is preserved. Common Cargo setup selects two sorters;
 Candid extraction is not selected. Host/Cargo tools and Testkit remain the only
 selected setup; there is no IC executable bundle.
 
-## Published Platform adoption
+## Earlier published Platform adoption — 0.1.12
 
 The selected published facade is **0.1.12**, SHA-256
 `e0ab384614a5d8fe251bc2c27c508263d4001d776edf31382b5b985a1a4ced2d`,
