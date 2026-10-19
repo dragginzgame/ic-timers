@@ -2,6 +2,14 @@
 
 All notable changes to this project are recorded here.
 
+## [0.29.2]
+
+- Update the qualification harness to IC Build 0.21 and its matching Host
+  Process 0.29 spawner boundary, keeping build and process types aligned.
+- Refresh the selected IC Platform to 0.1.18 and IC Wire to 0.4.6.
+  The harness dependency changes are repository-only; the published timer API
+  and scheduling contracts are unchanged.
+
 ## [0.29.1] - 2026-10-19
 
 - Align the PocketIC harness with the Host Process 0.27 family exposed by

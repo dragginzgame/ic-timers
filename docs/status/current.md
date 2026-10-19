@@ -4,6 +4,22 @@
 
 Last updated: 2026-10-19
 
+## Dependency refresh notes — pending 0.29.2
+
+The maintainer's incoming catalog and lock select Build 0.21.0 with Host Process
+0.29.0, Platform/macros 0.1.18 and Wire/derive 0.4.6. Build's published manifest
+requires Host Process `^0.29`, matching the native harness declaration. Testkit
+still resolves its separate Host Process 0.27.6; no type crosses that boundary
+in the harness's Build spawner call. These incoming files are preserved.
+
+The new undated 0.29.2 changelog records this batch. No timer source or public
+contract changes; the tooling refresh is repository-only and normally bundles
+with a code-bearing release. The maintainer explicitly selected this patch.
+Changelog admission and whitespace checks pass. No build or runtime qualification
+of the refreshed graph is claimed here; earlier receipts below qualify their
+named dependency selections. Cargo versions remain 0.29.1. Version mutation,
+the complete release gate, staging, commits and push remain maintainer-owned.
+
 ## Harness Host alignment — pending 0.29.1
 
 The reported `testing-check` E0271 is fixed by selecting Host Process `^0.27.3`,
