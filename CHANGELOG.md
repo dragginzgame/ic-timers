@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.29.2]
+## [0.29.2] - 2026-10-19
 
 - Update the qualification harness to IC Build 0.21 and its matching Host
   Process 0.29 spawner boundary, keeping build and process types aligned.
