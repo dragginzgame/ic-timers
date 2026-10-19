@@ -33,7 +33,6 @@ fn install_once(name: &str, seconds: u64, event: u8) {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartSchedulingTrace as u64 }>",
     encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::StartSchedulingTrace as u64 }>"
@@ -88,7 +87,6 @@ fn start_scheduling_trace() {
 }
 
 #[ic_platform::cdk::query(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::SchedulingTrace as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::SchedulingTrace as u64 }>"

@@ -173,7 +173,7 @@ for item in TimerHandle set_timer; do
     expect_failure "${item}" "${consumer_rustc[@]}"
 done
 
-# The owner checker rejects both direct codecs and generator-default regressions.
+# The owner checker rejects Candid codecs and missing Wire admission hooks.
 probe_dir=testing/crates/ic-timers-runtime-probe/src
 mkdir -p "$probe_dir"
 for codec in 'use ic_platform::candid::DecodeLimits;' 'use candid::CandidType;' \
@@ -182,6 +182,19 @@ for codec in 'use ic_platform::candid::DecodeLimits;' 'use candid::CandidType;' 
     expect_failure 'probe protocols must use Wire' bash scripts/ci/check-provider-boundary.sh
 done
 printf '%s\n' '#[ic_platform::cdk::update]' 'fn leaked() {}' > "$probe_dir/leak.rs"
+expect_failure 'admitted Wire hooks' bash scripts/ci/check-provider-boundary.sh
+# Platform 0.2 requires explicit codecs and has no implicit Candid registration;
+# the obsolete hidden flag is no longer necessary for valid Wire entrypoints.
+cat > "$probe_dir/leak.rs" <<'EOF'
+#[ic_platform::cdk::update(
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode",
+    encode_with = "crate::codec::encode"
+)]
+fn admitted() {}
+EOF
+bash scripts/ci/check-provider-boundary.sh >/dev/null
+perl -ni -e 'print unless /guard =/' "$probe_dir/leak.rs"
 expect_failure 'admitted Wire hooks' bash scripts/ci/check-provider-boundary.sh
 rm "$probe_dir/leak.rs"
 bash scripts/ci/check-provider-boundary.sh >/dev/null

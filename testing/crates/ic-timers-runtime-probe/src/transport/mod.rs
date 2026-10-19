@@ -9,7 +9,6 @@ thread_local! {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::PressureAndStart as u64 }>",
     encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::PressureAndStart as u64 }>"
@@ -58,7 +57,6 @@ fn send_pressure() {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ReleasePressure as u64 }>",
     encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::ReleasePressure as u64 }>"
@@ -68,7 +66,6 @@ fn release_pressure() {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::PressureReply as u64 }>",
     encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::PressureReply as u64 }>"
@@ -76,7 +73,6 @@ fn release_pressure() {
 fn pressure_reply() {}
 
 #[ic_platform::cdk::query(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::PressureObservation as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::PressureObservation as u64 }>"

@@ -4,6 +4,103 @@
 
 Last updated: 2026-10-19
 
+## Published Platform 0.2 adoption — pending 0.29.3
+
+Adopt registry Platform/macros 0.2.0, source
+`c7da516aef66d1f3623c85aa7cf304c17a5877d5`, MSRV 1.88. Both non-yanked archives
+match the registry and incoming lock: Platform SHA-256
+`5cbe790c3b8625663d14e6ffea5af3163db658d6bd5f4f351769080837062fc5`, generator
+`90184254814fb2e9038a27a6d2afcff560fab8385b420154bff76121e9d1f1b1`.
+The arriving catalog/lock already select Platform 0.2, Build 0.22, Host 0.30,
+Testkit 0.55.2, Wire 0.4.9 and Metrics 0.14.6. This pass preserves those files
+and completes source cleanup, integration and qualification. Own versions remain
+0.29.2; compatible notes join the existing undated 0.29.3 batch.
+
+The library and both probe normal/build Wasm graphs are Candid-free. Full CDK,
+its macros and the retired Testkit decoder are absent from the workspace lock.
+Platform's imported runtime selects the same registry executor 2.0.0 and IC0
+1.2.0; their exported modules are byte-identical to 0.1.18. No Platform runtime
+types cross Timers' public API. Native Candid and Platform 0.1.18 remain through
+Testkit/PocketIC's external IC transport. No native dependency is hidden behind
+a local replacement or an invented Wire management protocol.
+
+Remove all sixty obsolete `hidden` flags and the matching source-policy
+requirement. Platform requires explicit codecs; caller guards still admit byte
+size before copying. Method/direction IDs, decoder budgets, errors, Wire
+checkpoints, callbacks and authenticated eight-byte timer dispatch are unchanged.
+The two codec adapters remain necessary consumer policy, not a second runtime.
+The boundary fixture now prepares its disposable lock before testing Platform's
+independently optional Candid edge; checkout dependency selections stay untouched.
+
+Linux/Rust 1.91 passes strict library and all probe/driver/protocol checks,
+all four size features, 164 library tests, three protocol tests, nine doctests,
+library native/Wasm checks and runtime-probe Wasm lint. All 27 runtime PocketIC
+subjects and the four-artifact policy cohort pass with admitted server 16.1.0.
+Normal artifact acquisition uses published Build 0.22 and Host 0.30, resolving
+the initial spawner blocker below. Direct/library graph boundaries, real-Cargo
+negative fixtures, provider policy, formatting, pin/inheritance, ShellCheck and
+changelog admission pass. Probe transitive exclusions are inspected separately;
+the automated library gate does not qualify final deployment bytes.
+
+Before-images and receipts: `/tmp/ic-timers-platform-adoption.ze860l_4/`.
+No native macOS, live IC or complete release gate is claimed. All prior pending
+work is preserved; version mutation, staging, commits and delivery stay user-owned.
+
+## Host 0.30 initial adoption attempt — historical blocker
+
+Registry inspection confirms non-yanked Host Process/FS/Artifacts 0.30.0. The
+maintainer's incoming catalog/lock already select Host Process 0.30.0, alongside
+Build 0.21.0, Testkit 0.55.2, Wire 0.4.9 and Metrics 0.14.6. These files and all
+earlier pending work are preserved. Latest published Build 0.21.0 requires Host
+0.29; its pending producer selection of 0.30 is not a published consumer API.
+
+Actual Rust 1.91 all-target driver checking fails E0271 at the injected spawner:
+Build requires Host 0.29's `OwnedChild`, while the direct spawner returns Host
+0.30's distinct type. No conversion, old-family alias or path override is added.
+The verified blocker and required coordinated published Build release are on
+[#9 — Qualify consumers against the current exposed Host boundary](https://github.com/dragginzgame/ic-build/issues/9#issuecomment-6269214210).
+Adopt that release together with the requested Host generation, then rerun strict
+driver/probe checks and actual Wasm acquisition/runtime/cohort qualification.
+The current mixed candidate is not buildable or release-ready. Before-images
+and the compiler receipt are in `/tmp/ic-timers-host030.lxbfkbn7/`.
+
+## Dependency boundary and backend coverage — pending 0.29.3
+
+Starting source is released 0.29.2 (`41ebd6c`). The incoming lock selects Testkit
+0.55.2, Metrics 0.14.5 and initially Wire/derive 0.4.7; a concurrent maintainer
+update selects Wire/derive 0.4.8 during qualification. Both arrivals are retained
+under `/tmp/ic-timers-wire-hard-cut.7ng3__wz/`. The final lock and all manifests
+are preserved; own Cargo versions remain 0.29.2. The undated 0.29.3 notes cover
+compatible tests and enforcement, without a public API or runtime change.
+
+Authored probe RPCs, raw gates and fixture checkpoints already use Wire with no
+Candid fallback. Published Platform 0.1.18 still requires Candid through `cdk`
+and upstream CDK; Testkit/PocketIC host transport also legitimately uses Candid.
+The missing Candid-free raw/Wire entrypoint capability and repeated hook wiring
+are reported in
+[#31 — Support Candid-free raw and Wire canister entrypoints](https://github.com/dragginzgame/ic-platform/issues/31).
+No local runtime/generator substitute or protocol-package Platform edge is added.
+The existing two small adapters remain necessary pending a supplying release.
+
+The local library graph gate now runs in `actions-check`. It rejects prohibited
+transitive packages and Platform features for Wasm and the actual native host,
+and requires the qualified registry executor/IC0 identities. Real-Cargo fixtures
+reject Candid feature leakage, renamed target/build dependencies, same-version
+executor source substitution and failed producers, while allowing dev-only Wire.
+Three native regressions exercise every five-event trace over two pending tasks,
+stale events after replacement and all terminal orders for three flight slots.
+These inspect the actual Queue/Slots owners, not the platform substitute.
+
+Linux qualification passes nine platform tests, three protocol tests, strict
+Rust 1.91 library/probe/driver/protocol lint and all four size features, library
+Wasm compilation and all 27 runtime PocketIC subjects on admitted server 16.1.0.
+The runtime subjects pass again on final Wire 0.4.8 after the initial 0.4.7 run.
+Graph fixtures, provider/direct dependency/pin checks, formatting, source-following
+ShellCheck and changelog admission pass. Native ownership traces are not IC
+rollback proof; the maintained PocketIC subjects retain that separate scope.
+No policy-cohort rerun, native macOS, live IC or full release gate is claimed.
+Version mutation, staging, commits, pushes and release execution remain user-owned.
+
 ## Dependency refresh notes — pending 0.29.2
 
 The maintainer's incoming catalog and lock select Build 0.21.0 with Host Process

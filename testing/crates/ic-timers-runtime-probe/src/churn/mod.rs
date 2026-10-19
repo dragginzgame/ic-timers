@@ -17,7 +17,6 @@ thread_local! {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ReplaceDistantDeadlines as u64 }>",
     encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::ReplaceDistantDeadlines as u64 }>"
@@ -70,7 +69,6 @@ fn replace_distant_deadlines(count: u32) {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartImmediateChurn as u64 }>",
     encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::StartImmediateChurn as u64 }>"
@@ -85,7 +83,6 @@ fn start_immediate_churn() {
 }
 
 #[ic_platform::cdk::query(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ChurnObservation as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::ChurnObservation as u64 }>"

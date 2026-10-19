@@ -151,7 +151,7 @@ Configured recurrence can follow success, no work or a returned retryable
 failure. A trap or instruction exhaustion prevents ordinary completion from
 scheduling it; recovery-critical work needs Watchdog.
 
-When the provider or CDK drops a confirmed ordinary delivery without normal
+When the provider or Platform runtime drops a confirmed ordinary delivery without normal
 completion, its guard retires the exact generation. A retained declaration becomes
 inactive with `InactiveReason::Abandoned` and an Unacknowledged
 observation. Its owner can explicitly rearm it. Transient declarations and pending
@@ -163,7 +163,7 @@ This abandonment path is covered by native drop and real-await PocketIC fixtures
 The 0.13.2 hosted release gates passed those subjects on both supported macOS
 hosts; [qualification is bound to that source](docs/releasing.md#host-support). It does
 not recover application effects committed before an await or automatically retry
-work. Capture destructors must remain bounded, nontrapping and safe in CDK cleanup.
+work. Capture destructors must remain bounded, nontrapping and safe in executor cleanup.
 
 Completion classification records what happened; the supplied decision selects
 what to schedule. A retryable failure paired with `Stop` does not automatically

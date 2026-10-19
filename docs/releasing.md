@@ -151,16 +151,20 @@ cargo tree --locked --offline -p ic-timers --all-features \
   --target wasm32-unknown-unknown --edges normal,build
 ```
 
-The 0.24 adoption also inspected the Linux graph and found no test/tooling-only
-catalog dependency in either graph. Executor remains an intentional production
-dependency. Pin/inheritance and source-provider checks do not automatically
-reject transitive test/tooling dependencies. The direct-boundary checker now
-enforces the [named package exceptions](../ci/cargo-dependency-boundaries.json),
-including aliases and normal/build/dev/target declarations; it does not enforce
-unused catalog entries, unenumerated future family names or feature reachability. There is no final production canister artifact deployed by this library repository; its probe artifacts are
-qualification inputs. Deployment owners must enforce their own exclusions and
-bind successful builds to source, lockfile, target/features and final artifact
-digests. This manual library check is not an automated deployment admission gate.
+`actions-check` automatically runs the local library dependency check for Wasm
+and the actual native Rust host, with all features and normal/build edges. It
+rejects Candid, full CDK, qualification tooling and unsupported Platform features,
+and requires the qualified executor/IC0 identities. The separate Shared direct
+checker enforces [named package ownership](../ci/cargo-dependency-boundaries.json)
+across aliases and normal/build/dev/target declarations. Neither check validates
+role comments or classifies every future package. See the
+[enforcement scope](shared-tooling.md#deployment-dependency-exclusions).
+
+There is no final production canister artifact deployed by this library
+repository; its probe artifacts are qualification inputs. Deployment owners must
+enforce their own exclusions and bind successful builds to source, lockfile,
+target/features and final artifact digests. Library graph admission does not
+certify deployed bytes or prohibit an application's legitimate Candid service.
 
 ## Host support
 
@@ -218,7 +222,7 @@ shared-server reuse or recovery guarantees.
 ## Dependency pin exceptions
 
 The reviewed [exception list](../ci/dependency-pinning-exceptions.json) is empty.
-Platform 0.1.12 owns exact selections for CDK `=0.20.3`, executor `=2.0.0` and
+Platform 0.2 owns the runtime and exact selections for executor `=2.0.0` and
 IC0 `=1.2.0`; Timers declares none of these providers directly. The library
 selects only `executor` and `ic0`, while canister probes select `cdk`. The root
 lockfile resolves one qualified identity for each provider. Any Platform update

@@ -35,10 +35,12 @@ actual use through `workspace = true`.
 The published `ic-timers` library uses Metrics, Thiserror and Platform
 (executor and raw IC system bindings). Serde is already production-transitive
 through Platform's Principal; only probes directly inherit its catalog entry.
-Wire, the full CDK, Build, Host Process, Testkit and the probe protocol serve
+Wire, Platform's canister runtime, Build, Host Process, Testkit and the probe protocol serve
 qualification packages here.
-Candid remains transitive through Platform CDK and PocketIC/Testkit; local probe
-protocols use Wire. There is no separate Testkit Candid adapter dependency.
+Candid remains transitive only in the native driver through PocketIC/Testkit's
+Platform 0.1 selection. Local probe protocols use Wire; Platform 0.2's `cdk`
+feature and both canister graphs are Candid-free. Full CDK/macros and the retired
+Testkit Candid adapter are absent from the workspace graph.
 The catalog's
 local `ic-timers` entry is the probes' dependency on the production library.
 
@@ -79,25 +81,31 @@ Unselected IC stores and failed diagnostics remain eligible for retention.
 The selected Shared 0.24 checker `check-cargo-dependency-boundaries.sh` is now
 included in `actions-check`. The local policy forbids direct Candid/CDK-family,
 Platform macro-helper, retired Testkit decoder, IC0 and executor declarations in
-every member. Platform 0.1.12 owns generator/runtime paths, stable helpers and
+every member. Platform 0.2 owns generator/runtime paths, stable helpers and
 exact upstream selections. There are no consumer exceptions. See the
 [published boundary](architecture.md#candid-and-cdk-dependency-boundary).
 The checker resolves aliases through Cargo metadata and
 checks all normal/build/dev/target declarations. The root has one workspace;
 there are no maintained independent Cargo fixtures or manifests.
 
-Locked all-feature normal/build graphs for the library were inspected for
-`wasm32-unknown-unknown` and `x86_64-unknown-linux-gnu`. All test/tooling-only
-catalog dependencies are absent, excluding the selected root package itself.
-Rust 1.91 library Wasm compilation passes. This is library-graph evidence, not
-qualification of an application's final linked canister.
+The consumer-owned `scripts/ci/check-library-dependency-boundary.sh` now runs in
+`actions-check`. It inspects the library alone with all features and normal/build
+edges for Wasm and the actual Rust host. It rejects the direct policy's prohibited
+packages transitively except for the intentional executor/IC0 dependencies, plus
+Build, Host, Testkit, Wire and probe packages. Platform may enable only `executor`
+and `ic0`; the graph must resolve the qualified executor 2.0.0 and IC0 1.2.0
+identities. Its fixture checks real Cargo feature leakage, renamed target-specific
+build dependencies, permitted dev-only dependencies, same-version executor source
+substitution and failed-producer refusal.
+Shared still owns the generic direct-dependency checker; the new local check
+owns only Timers' library policy, not a second general dependency framework.
 
-**Missing enforcement:** pin/inheritance and direct-boundary checks do not validate
-role comments, unused catalog boundary entries, unenumerated future family names,
-feature reachability or transitive exclusions; the provider check validates
-source ownership. Platform's default features are disabled in the catalog;
-member features are inspected separately. Its unconditional Principal/Serde
-support is production-transitive even though Candid remains qualification-only.
+**Remaining limits:** role comments and unused catalog boundary entries are not
+validated. The named package/family rules are not a universal classifier of future
+dependencies. Probe features and intentional upstream Candid are outside the
+library-only check; the provider check validates authored source ownership.
+Platform's defaults remain disabled. Its unconditional Principal/Serde support
+is production-transitive even though Candid remains qualification-only.
 No existing automated gate binds this exclusion policy to deployed artifact
 bytes. The consuming canister's build/deployment owner must enforce its own
 exclusions with the exact source, lockfile, target/features and artifact digest.

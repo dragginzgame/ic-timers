@@ -46,7 +46,6 @@ for my $probe (qw(ic-timers-runtime-probe ic-timers-size-probe ic-timers-test-pr
             my $attributes = $1;
             $attributes =~ /decode_with\s*=/ && $attributes =~ /encode_with\s*=/
                 && $attributes =~ /guard\s*=\s*"crate::codec::admit_request"/
-                && $attributes =~ /hidden\s*=\s*true/
                 or die "probe entrypoints require admitted Wire hooks: $file\n";
         }
     }}, $probe_root);

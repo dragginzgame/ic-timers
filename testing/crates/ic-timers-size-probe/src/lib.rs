@@ -57,7 +57,7 @@ thread_local! {
     static REPRESENTATIVE_WATCHDOG_WORK: Cell<bool> = const { Cell::new(false) };
 }
 
-#[ic_platform::cdk::init(hidden = true)]
+#[ic_platform::cdk::init]
 fn init() {
     if initialize_runtime().is_err() {
         ic_platform::cdk::api::trap("size-probe runtime initialization failed");
@@ -65,7 +65,6 @@ fn init() {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::CohortStart as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::CohortStart as u64 }>"
@@ -79,7 +78,6 @@ fn cohort_start() -> OperationMeasurement {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::EnsureAgain as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::EnsureAgain as u64 }>"
@@ -93,7 +91,6 @@ fn ensure_again() -> OperationMeasurement {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::Cancel as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::Cancel as u64 }>"
@@ -110,7 +107,6 @@ fn cancel() -> OperationMeasurement {
 /// normally completed callback. This probe-only endpoint does not alter the
 /// runtime's callback instruction aggregate.
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::MemorySamplingOverhead as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::MemorySamplingOverhead as u64 }>"
@@ -134,7 +130,6 @@ fn memory_sampling_overhead() -> MemorySamplingMeasurement {
 /// registration. This endpoint exists only in the Watchdog test canister.
 #[cfg(feature = "watchdog")]
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::UseRepresentativeWatchdogWork as u64 }>",
     encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::UseRepresentativeWatchdogWork as u64 }>"
@@ -144,7 +139,6 @@ fn use_representative_watchdog_work() {
 }
 
 #[ic_platform::cdk::query(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::Observe as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::Observe as u64 }>"

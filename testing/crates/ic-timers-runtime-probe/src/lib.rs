@@ -33,7 +33,7 @@ thread_local! {
     static POST_UPGRADE_RECONSTRUCTED: Cell<bool> = const { Cell::new(false) };
 }
 
-#[ic_platform::cdk::init(hidden = true)]
+#[ic_platform::cdk::init]
 fn init() {
     if initialize_runtime().is_err() {
         ic_platform::cdk::api::trap("ic-timers runtime initialization failed");
@@ -81,7 +81,6 @@ fn post_upgrade() {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::Start as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::Start as u64 }>"
@@ -92,7 +91,6 @@ fn start() -> bool {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartImmediately as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::StartImmediately as u64 }>"
@@ -152,7 +150,6 @@ fn take_work_decision() -> WatchdogDecision {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ContinueImmediatelyOnNextWork as u64 }>",
     encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::ContinueImmediatelyOnNextWork as u64 }>"
@@ -162,7 +159,6 @@ fn continue_immediately_on_next_work() {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ScheduleAt as u64 }>",
     encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::ScheduleAt as u64 }>"
@@ -182,7 +178,6 @@ fn schedule_at(deadline_ns: u64) {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ScheduleAtOnNextWork as u64 }>",
     encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::ScheduleAtOnNextWork as u64 }>"
@@ -192,7 +187,6 @@ fn schedule_at_on_next_work(deadline_ns: u64) {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ReplaceRegistration as u64 }>",
     encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::ReplaceRegistration as u64 }>"
@@ -211,7 +205,6 @@ fn replace_registration() {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartSecondary as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::StartSecondary as u64 }>"
@@ -233,7 +226,6 @@ fn install_secondary_watchdog() -> bool {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ArmTrap as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::ArmTrap as u64 }>"
@@ -245,7 +237,6 @@ fn arm_trap() -> u64 {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::ArmExhaustion as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::ArmExhaustion as u64 }>"
@@ -267,7 +258,6 @@ fn failure_window() -> (u64, u64) {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StopOnNextWork as u64 }>",
     encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::StopOnNextWork as u64 }>"
@@ -277,7 +267,6 @@ fn stop_on_next_work() {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::Stop as u64 }>",
     encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::Stop as u64 }>"
@@ -294,7 +283,6 @@ fn stop() {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::EnsureFromReturnedError as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::EnsureFromReturnedError as u64 }>"
@@ -313,7 +301,6 @@ fn ensure_from_returned_error() -> bool {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::BurnToBelowTimerCallCost as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::BurnToBelowTimerCallCost as u64 }>"
@@ -328,7 +315,6 @@ fn burn_to_below_timer_call_cost() -> (u128, u128) {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::FillInventory as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::FillInventory as u64 }>"
@@ -359,7 +345,6 @@ fn fill_inventory() -> u64 {
 }
 
 #[ic_platform::cdk::query(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::InventoryMeasurement as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::InventoryMeasurement as u64 }>"
@@ -384,7 +369,6 @@ fn exhaust_message_instructions() -> ! {
 }
 
 #[ic_platform::cdk::query(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::Snapshot as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::Snapshot as u64 }>"
@@ -491,7 +475,6 @@ mod tests {
 
 // Unpublished fixture: exercise the authenticated backend payload boundary.
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::FixtureDispatchPayload as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::FixtureDispatchPayload as u64 }>"

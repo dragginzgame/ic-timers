@@ -53,9 +53,9 @@ remain separate evidence selections in the [release guide](releasing.md).
 
 Registry-published `ic-platform` is the selected boundary; the current lock and
 source-qualified receipts are recorded in [current status](status/current.md).
-The initial 0.1.12 adoption (VCS `338b14baf97690abdfc0e386d6d5261b309a3ac8`)
-established upstream identities, not a second codec or executor. The root catalog
-disables default Platform features. The library selects only
+Published Platform 0.2.0 owns the maintained non-cryptographic runtime and
+explicit-codec generator. It selects no full CDK package and copies no executor.
+The root catalog disables default Platform features. The library selects only
 `executor` and `ic0`; the two canister probes select `cdk` for entrypoint contexts,
 protected calls/spawning, traps, cycle burning and stable byte I/O. The native
 harness selects no Platform features and the protocol package has no Platform
@@ -63,11 +63,11 @@ edge. Parser, Agent, certification and ledger capabilities remain unselected.
 
 The private platform uses `ic_platform::ic0` for its existing system calls,
 retaining context placement, method handles, protected spawning and callback/trap cleanup. The lockfile still
-resolves one `ic-cdk-executor` 2.0.0 shared with CDK. Native substitutes cannot
+resolves one `ic-cdk-executor` 2.0.0 shared with Platform's runtime. Native substitutes cannot
 qualify those IC paths. Executor/system-only Platform remains Candid-free, but its
 unconditional Principal export brings `ic_principal` and Serde transitively.
 
-Probe records use Serde and published Wire 0.4.4's native codec. The shared
+Probe records use Serde and published Wire's native codec. The shared
 `test-protocol::rpc` roster owns explicit method IDs; both endpoint hooks and
 native callers bind to those identities. Request limits admit at most 1 KiB,
 16 KiB allocation charge, 1,024 nodes and depth 16; replies retain a 64 KiB byte
@@ -77,8 +77,8 @@ Platform copies arguments. Decode failure prevents the handler; reply encoding
 failure traps rather than committing a partial response. Empty RPCs still carry
 a method-bound frame. Init and upgrade hooks take raw empty arguments.
 
-Platform's published custom-codec/hidden entrypoint hooks retain its original
-query/update contexts and async protected spawning. The two private canister
+Platform's explicit-codec entrypoints retain query/update contexts and protected
+spawning; redundant `hidden` flags are removed. The two private canister
 adapters translate codec rejection to traps; they own no serialization arithmetic
 or timer authority. Real self-call gates and queue pressure use raw Wire frames,
 retaining their IC suspension and call-failure behavior. The production dispatch
@@ -86,7 +86,7 @@ remains its authenticated eight-byte payload, without a Wire envelope.
 
 Platform owns the exact `ic-cdk-executor = "=2.0.0"` and `ic0 = "=1.2.0"`
 constraints. Their direct declarations and local pin exceptions are removed.
-The published exports preserve upstream identities and safe/unsafe signatures;
+The executor/IC0 exports preserve upstream identities and safe/unsafe signatures;
 all callback registration remains in the private FFI owner. This completes the
 published boundaries requested in [Platform #7](https://github.com/dragginzgame/ic-platform/issues/7)
 and [#8](https://github.com/dragginzgame/ic-platform/issues/8) without a local facade.
@@ -96,15 +96,16 @@ bounded Wire frame with a checked little-endian length prefix in its existing
 stable-memory fixture page. Both upgrade participants use this one format;
 there is no Candid reader or cross-release probe migration. Database/application
 storage is outside this fixture. Stable byte I/O and cycle burning remain
-Platform's exact upstream helpers, adopted under
+Platform's maintained runtime adapters, originally adopted under
 [Platform #19 — Timers stable-helper and cycle-burn boundary](https://github.com/dragginzgame/ic-platform/issues/19).
 
 No workspace member declares Candid or any CDK-family package directly.
-Candid, upstream CDK/macros, Platform's generator and the shared
-executor remain transitive dependencies of the qualification canisters. Their
-presence does not change the library's executor/IC0-only feature selection or
-make the qualification Wasm Candid-free. Raw counter/page observations use
-Platform's exact IC0 exports; CDK spawning keeps its unfinished-task drop policy.
+The library and both qualification canisters have no Candid or full CDK/macros
+in their normal/build graphs. Probe graphs retain Platform's generator and the
+shared executor; only the canisters select `cdk`. Raw counter/page observations
+use Platform's exact IC0 exports. Its maintained spawning adapter preserves the
+unfinished-task drop policy. Call/error/stable-error types now belong to Platform;
+no such runtime types cross the published timer API or the probe wire boundary.
 
 The native driver retains published Testkit for server admission, lifecycle and
 bounded progress. Probe RPCs use PocketIC's raw query/update APIs plus the shared
@@ -113,11 +114,19 @@ implementation details. The retired `ic-testkit-candid` package remains absent.
 The local provider check also rejects Candid codec paths and default-codec
 query/update attributes in maintained probe source.
 
+Platform 0.2.0 supplies the Candid-free runtime requested in
+[#31 — Support Candid-free raw and Wire canister entrypoints](https://github.com/dragginzgame/ic-platform/issues/31).
+The two small adapters still translate consumer-owned Wire limits/errors into
+Platform hooks. No first-class Wire adapter replaces them in this release, and
+the protocol package must not acquire a Platform dependency to hide them.
+
 The [dependency policy](../ci/cargo-dependency-boundaries.json) is enforced through
 Shared's canonical checker in `actions-check`, alongside pin/inheritance checks.
 It forbids these direct upstream declarations in every member. Metadata covers aliases and all
 normal/build/dev and target declarations; enabled features and transitive
-reachability require separate graph inspection. See
+reachability for the published library are enforced by its local all-feature
+normal/build graph check for Wasm and the actual native host. Probe graph
+qualification remains separate. See
 [deployment exclusions](shared-tooling.md#deployment-dependency-exclusions).
 
 ## Current runtime

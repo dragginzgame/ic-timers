@@ -2,6 +2,21 @@
 
 All notable changes to this project are recorded here.
 
+## [0.29.3]
+
+- Adopt published IC Platform 0.2 for Candid-free probe entrypoints, raw calls
+  and protected spawning, removing full CDK from the workspace graph. Keep Wire
+  formats and executor/IC0 identities; remove obsolete hidden-entrypoint flags
+  ([#31 — Support Candid-free raw and Wire canister entrypoints](https://github.com/dragginzgame/ic-platform/issues/31)).
+- Align the qualification harness with published IC Build 0.22 and Host Process
+  0.30, resolving the injected-spawner mismatch without a compatibility adapter.
+- Enforce the library's resolved dependency and Platform-feature boundary for
+  Wasm and the native host, rejecting Candid, full CDK and qualification tooling
+  while retaining the qualified executor and IC0 identities.
+- Extend backend ownership coverage across submission, retry, cancellation,
+  terminal delivery and callback-slot reuse. Timer APIs and runtime behavior
+  are unchanged.
+
 ## [0.29.2] - 2026-10-19
 
 - Update the qualification harness to IC Build 0.21 and its matching Host

@@ -126,6 +126,7 @@ actions-check: host-tools-check
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/check-dependency-pins.sh \
 		--consumer "$(CURDIR)" --cargo-inheritance
 	bash scripts/ci/check-cargo-dependency-boundaries.sh --consumer "$(CURDIR)"
+	bash scripts/ci/check-library-dependency-boundary.sh
 
 shell-check:
 	@set -e; for script in .githooks/pre-commit scripts/ci/*.sh scripts/dev/*.sh scripts/release/*.sh; do \
@@ -163,6 +164,7 @@ release-check:
 	bash scripts/ci/test-testkit-server.sh
 	bash scripts/ci/test-git-hook.sh
 	bash scripts/ci/test-repository-checks.sh
+	bash scripts/ci/test-library-dependency-boundary.sh
 
 provider-check:
 	bash scripts/ci/check-provider-boundary.sh

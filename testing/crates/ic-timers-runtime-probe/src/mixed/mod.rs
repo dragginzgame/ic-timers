@@ -59,7 +59,6 @@ fn record_callback(
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartupTimerProbeStart as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::StartupTimerProbeStart as u64 }>"
@@ -130,7 +129,6 @@ fn startup_timer_probe_start() -> bool {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartupTimerProbeStop as u64 }>",
     encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::StartupTimerProbeStop as u64 }>"
@@ -153,7 +151,6 @@ fn startup_timer_probe_stop() {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartupTimerProbeArmTrap as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::StartupTimerProbeArmTrap as u64 }>"
@@ -165,7 +162,6 @@ fn startup_timer_probe_arm_trap() -> u64 {
 }
 
 #[ic_platform::cdk::update(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartupTimerProbeArmExhaustion as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::StartupTimerProbeArmExhaustion as u64 }>"
@@ -177,7 +173,6 @@ fn startup_timer_probe_arm_exhaustion() -> u64 {
 }
 
 #[ic_platform::cdk::query(
-    hidden = true,
     guard = "crate::codec::admit_request",
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartupTimerProbeSnapshot as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::StartupTimerProbeSnapshot as u64 }>"
