@@ -8,15 +8,28 @@ use std::{env, fs, path::PathBuf, time::Duration};
 
 #[test]
 fn comparable_policy_cohorts_report_size_and_instruction_subjects() {
+    let mut report: crate::report::Report = serde_json::from_str(
+        &env::var("IC_TIMERS_COHORT_CONTEXT").expect("run the qualification driver"),
+    )
+    .expect("driver context");
     for cohort in ["baseline", "once", "after-completion", "watchdog"] {
-        run_cohort(cohort);
+        report
+            .measurements
+            .insert(cohort.into(), run_cohort(cohort));
     }
-    let minimal_work = run_watchdog_calibration("minimal", false);
-    let representative_work = run_watchdog_calibration("representative", true);
-    assert!(representative_work > minimal_work);
+    let minimal = run_watchdog_calibration("minimal", false);
+    let representative = run_watchdog_calibration("representative", true);
+    assert!(representative["work_instructions"] > minimal["work_instructions"]);
+    report
+        .measurements
+        .insert("watchdog-calibration-minimal".into(), minimal);
+    report
+        .measurements
+        .insert("watchdog-calibration-representative".into(), representative);
+    report.publish().expect("retain cohort receipt");
 }
 
-fn run_cohort(cohort: &str) {
+fn run_cohort(cohort: &str) -> std::collections::BTreeMap<String, u128> {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
     let wasm = cohort_wasm(cohort);
@@ -137,9 +150,44 @@ fn run_cohort(cohort: &str) {
         dispatch_cycles,
         wasm_bytes,
     );
+    [
+        ("start_instructions", u128::from(start.instructions)),
+        ("duplicate_instructions", u128::from(duplicate.instructions)),
+        ("cancel_instructions", u128::from(cancellation.instructions)),
+        (
+            "snapshot_instructions",
+            u128::from(completed.snapshot_instructions),
+        ),
+        (
+            "inventory_instructions",
+            u128::from(completed.inventory_instructions),
+        ),
+        (
+            "scheduler_instructions",
+            completed.scheduler_instruction_total,
+        ),
+        ("work_instructions", completed.work_instruction_total),
+        ("memory_sampling_empty", u128::from(memory_sampling_empty)),
+        (
+            "memory_sampling_sampled",
+            u128::from(memory_sampling_sampled),
+        ),
+        (
+            "memory_sampling_overhead",
+            u128::from(memory_sampling_overhead),
+        ),
+        ("dispatch_cycles", dispatch_cycles),
+        ("wasm_bytes", wasm_bytes as u128),
+    ]
+    .into_iter()
+    .map(|(key, value)| (key.into(), value))
+    .collect()
 }
 
-fn run_watchdog_calibration(profile: &str, representative_work: bool) -> u128 {
+fn run_watchdog_calibration(
+    profile: &str,
+    representative_work: bool,
+) -> std::collections::BTreeMap<String, u128> {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
     let canister_id = install_probe(pic, cohort_wasm("watchdog"));
@@ -165,7 +213,14 @@ fn run_watchdog_calibration(profile: &str, representative_work: bool) -> u128 {
         completed.work_instruction_total,
         dispatch_cycles,
     );
-    completed.work_instruction_total
+    std::collections::BTreeMap::from([
+        (
+            "scheduler_instructions".into(),
+            completed.scheduler_instruction_total,
+        ),
+        ("work_instructions".into(), completed.work_instruction_total),
+        ("dispatch_cycles".into(), dispatch_cycles),
+    ])
 }
 
 fn cohort_wasm(cohort: &str) -> Vec<u8> {
@@ -176,7 +231,12 @@ fn cohort_wasm(cohort: &str) -> Vec<u8> {
     let path = env::var_os(variable)
         .map(PathBuf::from)
         .unwrap_or_else(|| panic!("{variable} must name the resolved cohort Wasm artifact"));
-    fs::read(&path).unwrap_or_else(|error| panic!("read {}: {error}", path.display()))
+    let wasm = fs::read(&path).unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
+    let report: crate::report::Report =
+        serde_json::from_str(&env::var("IC_TIMERS_COHORT_CONTEXT").expect("driver context"))
+            .expect("valid context");
+    report.verify_artifact(cohort, &wasm);
+    wasm
 }
 
 fn update_measurement(

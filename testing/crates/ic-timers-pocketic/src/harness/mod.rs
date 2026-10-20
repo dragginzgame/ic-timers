@@ -47,8 +47,8 @@ pub fn install_probe(pic: &PocketIc, wasm: Vec<u8>) -> ExternalPrincipal {
 }
 
 /// Testkit retains the server and drops the instance before stopping it.
-/// One deadline covers both startup phases; synchronous instance deletion on
-/// Drop remains unbounded.
+/// Startup has its own deadline. A five-minute hard TTL also covers each server
+/// while the driver bounds the worker, including synchronous instance deletion.
 pub fn fresh_pocket_ic() -> PocketIcInstance<PocketIc> {
     let binary = env::var_os("POCKET_IC_BIN")
         .filter(|path| !path.is_empty())
@@ -57,7 +57,7 @@ pub fn fresh_pocket_ic() -> PocketIcInstance<PocketIc> {
     PocketIcStartupConfig::Spawn {
         server_binary: binary,
         timeout: STARTUP_TIMEOUT,
-        server_hard_ttl: None,
+        server_hard_ttl: Some(Duration::from_secs(5 * 60)),
         server_idle_ttl: None,
         server_output_files: None,
     }

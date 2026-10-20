@@ -2,6 +2,21 @@
 
 All notable changes to this project are recorded here.
 
+## [0.29.6]
+
+- Correct the safety guide's stale pending-backend description and distinguish
+  retired-provider receipts from current source-bound qualification and host gaps.
+- Bound the qualification build/test worker through Host process-group ownership
+  and give each Testkit server a hard TTL, covering stalled builds, test calls
+  and synchronous instance deletion. Preserve typed timeout and exit evidence.
+- Exercise 7,776 generated command traces across all timer policies and declaration
+  lifetimes, checking replacement/stale authority, isolation and handle cleanup.
+  These native checks supplement the maintained PocketIC recovery subjects.
+- Retain structured cohort costs with compiler, server, lockfile, profile and exact
+  artifact identities. Add explicit baseline comparisons that reject incompatible
+  contexts and report deltas without silently updating baselines or setting budgets.
+  Receipt/hashing dependencies are confined to the unpublished host driver.
+
 ## [0.29.5] - 2026-10-20
 
 - Adopt published IC Platform 0.4.0. Use its explicit external Principal in the

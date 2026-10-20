@@ -34,11 +34,13 @@ that every scheduled task will be delivered.
 
 ![The application, IC Timers, and the platform provider each own a different part of timer safety](https://raw.githubusercontent.com/dragginzgame/shared-assets/main/ic-timers/ic-timers-safety-responsibilities.svg)
 
-The pending 0.26 implementation owns timer dispatch and uses the CDK executor
-for async polling and call-context cleanup. Its unsafe boundary is confined to
-IC entrypoints and callback registration; callback environments are bounded
-indices, not raw pointers. See the [design](docs/design/0.26-owned-timer-backend.md)
-for required evidence and remaining qualification.
+The current runtime owns timer dispatch and uses the CDK executor through IC
+Platform for async polling and call-context cleanup. Its unsafe boundary is
+confined to IC entrypoints and callback registration; callback environments are
+bounded indices, not raw pointers. The [backend design](docs/design/0.26-owned-timer-backend.md)
+records the implementation requirements; [current status](docs/status/current.md)
+and the [host matrix](docs/releasing.md#host-support) identify qualified evidence
+and remaining host gaps.
 
 ## Current guarantees
 
@@ -245,14 +247,13 @@ the failed creation. See the [construction decision](docs/design/0.18-atomic-reg
   captures, running work, executor allocations and canister memory are not
   globally bounded by these limits. Older provider-heap churn receipts describe
   the old implementation and do not qualify the replacement.
-- Recorded recovery evidence uses PocketIC 15.0.0 and `ic-cdk-timers` 1.0.0.
-  The 0.13.2 host harness used `ic-testkit` 0.17.3 with pinned PocketIC 16.0.0;
-  its complete release gate passed on native macOS 15 Intel and Apple Silicon.
-  The released 0.14.20 harness selects Testkit 0.25.2 and audited PocketIC 16.1.0
-  artifact bytes. Complete native qualification of that pair is pending;
-  artifact integrity alone does not establish recovery behavior. Source-bound
-  qualification is recorded in the release guide; pending changes need fresh evidence. A provider or evidence-binary change requires a renewed source and
-  recovery audit; older receipts do not qualify the new harness.
+- Historical `ic-cdk-timers` and earlier Testkit/PocketIC receipts do not qualify
+  the current owned backend or newer harness selections. Source-bound Linux
+  qualification is recorded in [current status](docs/status/current.md); complete
+  native-host acceptance and historical receipts belong to the
+  [release guide](docs/releasing.md#host-support). Artifact integrity alone does
+  not establish recovery behavior. A provider or evidence-binary change requires
+  renewed source and recovery evidence; Linux results do not qualify macOS.
 - The recorded IcyDB and Canic adoption subjects independently supply exact-0.5.0
   shared-registry evidence, recorded separately from this library's
   owner-local proof. Canic's schema-3 adapter exports timer, instruction, and

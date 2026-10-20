@@ -819,9 +819,9 @@ checksum = "9e4f17cdb7df1431acb988aba21d90b3b3b7136b1fdb59d6946ff81f3436bf06"
 dependencies = [
  "cargo_metadata",
  "clap",
- "ic-host-artifacts 0.31.1",
- "ic-host-fs 0.31.1",
- "ic-host-process 0.31.1",
+ "ic-host-artifacts",
+ "ic-host-fs",
+ "ic-host-process",
  "rustix",
  "serde",
  "serde_json",
@@ -856,32 +856,12 @@ dependencies = [
 
 [[package]]
 name = "ic-host-artifacts"
-version = "0.30.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05253e4f12a18fa5012bc46be46901259cae264ec5da5bbe71662728bbdb87f9"
-dependencies = [
- "flate2",
- "sha2",
-]
-
-[[package]]
-name = "ic-host-artifacts"
 version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f4417f092a4bc5bc1b55fb6a59a43b2d41703dfe1be7943117dbbf31b84211b6"
 dependencies = [
+ "flate2",
  "sha2",
-]
-
-[[package]]
-name = "ic-host-fs"
-version = "0.30.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93a88de3f33e927fcb4c50491b88de82a3be89ec4c903f5eedd103b676d64729"
-dependencies = [
- "ic-host-artifacts 0.30.1",
- "rustix",
- "thiserror 2.0.18",
 ]
 
 [[package]]
@@ -890,22 +870,9 @@ version = "0.31.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1cd9bad40d94a862ab47615f998e7f3b8eb9ba9ca5821188488713adf78c5bc"
 dependencies = [
- "ic-host-artifacts 0.31.1",
+ "ic-host-artifacts",
  "rustix",
  "thiserror 2.0.18",
-]
-
-[[package]]
-name = "ic-host-process"
-version = "0.30.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e17da14b6f4936cafe412b82454c76582a5e47cc6e9ced0c132b950b0be5928"
-dependencies = [
- "command-fds",
- "ic-host-artifacts 0.30.1",
- "ic-host-fs 0.30.1",
- "libc",
- "rustix",
 ]
 
 [[package]]
@@ -915,8 +882,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3f67820c240d86e86e0310edb8265aebb8c82cf9c97ed31cf59c25aa0404f6ff"
 dependencies = [
  "command-fds",
- "ic-host-artifacts 0.31.1",
- "ic-host-fs 0.31.1",
+ "ic-host-artifacts",
+ "ic-host-fs",
  "libc",
  "rustix",
 ]
@@ -934,29 +901,17 @@ dependencies = [
 
 [[package]]
 name = "ic-metrics"
-version = "0.14.8"
+version = "0.14.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55d2ecdbe8dd28bf1677d6451dc759a0aaed31ee457a04a3813aa2c54c8c40aa"
+checksum = "9fda7a261ecf7f0353b139e06340ee21e6cd8ed2ca91a59eff481e906342a1d1"
 
 [[package]]
 name = "ic-platform"
-version = "0.2.2"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b083e911eb9799daf15f501a883d50a76e709d300a51b25fb0c31cd0be0377bd"
+checksum = "b18d164492c33ea09395d97ef4f7858678af7565e457b35cafff59a6fc9869fd"
 dependencies = [
  "candid",
- "ic0",
- "ic_principal",
- "pocket-ic",
- "serde",
-]
-
-[[package]]
-name = "ic-platform"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3baf34ec6f65d10d78271159d1edc0feb61940816cc95af51bfce3f8dcfa4355"
-dependencies = [
  "crc32fast",
  "data-encoding",
  "ic-cdk-executor",
@@ -964,15 +919,16 @@ dependencies = [
  "ic0",
  "ic_principal",
  "pin-project-lite",
+ "pocket-ic",
  "serde",
  "thiserror 2.0.18",
 ]
 
 [[package]]
 name = "ic-platform-macros"
-version = "0.4.0"
+version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d79bbfb24edb3bb0862035cea7f48e3f1dadfb073d6f398aeeb382ce6195a97f"
+checksum = "e2e0f9df722c5c67459b6f37a03f2ded46d1b58f4946e98950e99571734a7e44"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -982,15 +938,16 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit"
-version = "0.57.0"
+version = "0.59.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9834c00995ca544baaeb6a3e7f8c981efc90d59fb4f5e07787fc91a68a653f4f"
+checksum = "3d93551ce7aa9bfde1e4d38a7d082f570ecfa45198630103670ebc3f00d1069e"
 dependencies = [
- "ic-host-artifacts 0.30.1",
- "ic-host-fs 0.30.1",
- "ic-host-process 0.30.1",
+ "clap",
+ "ic-host-artifacts",
+ "ic-host-fs",
+ "ic-host-process",
  "ic-metrics",
- "ic-platform 0.2.2",
+ "ic-platform",
  "libc",
  "thiserror 2.0.18",
  "tokio",
@@ -1001,7 +958,7 @@ name = "ic-timers"
 version = "0.29.5"
 dependencies = [
  "ic-metrics",
- "ic-platform 0.4.0",
+ "ic-platform",
  "thiserror 2.0.18",
 ]
 
@@ -1011,19 +968,21 @@ version = "0.29.5"
 dependencies = [
  "clap",
  "ic-build",
- "ic-host-process 0.31.1",
- "ic-platform 0.4.0",
+ "ic-host-artifacts",
+ "ic-host-process",
+ "ic-platform",
  "ic-testkit",
  "ic-timers-test-protocol",
  "ic-wire",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
 name = "ic-timers-runtime-probe"
 version = "0.29.5"
 dependencies = [
- "ic-platform 0.4.0",
+ "ic-platform",
  "ic-timers",
  "ic-timers-test-protocol",
  "ic-wire",
@@ -1034,7 +993,7 @@ dependencies = [
 name = "ic-timers-size-probe"
 version = "0.29.5"
 dependencies = [
- "ic-platform 0.4.0",
+ "ic-platform",
  "ic-timers",
  "ic-timers-test-protocol",
  "ic-wire",

@@ -4960,3 +4960,5 @@ fn initial_capacity_rejection_preserves_existing_declarations_and_releases_facto
         registration.unregister().unwrap();
     }
 }
+
+mod sequences;

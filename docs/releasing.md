@@ -124,6 +124,47 @@ best-effort seven-day/512 MiB retention; active records remain protected, so
 these are retention targets rather than hard disk bounds. Testkit's offline server admission
 still precedes the driver. A build failure stops before any PocketIC test runs.
 
+The driver supervises one build/test worker in a Host-owned process group with
+an elapsed-time budget of 30 minutes, a two-second TERM grace and a five-second
+reap budget. This covers build/cache waits, Cargo tests and synchronous PocketIC
+instance deletion after the driver starts; the initial `cargo run` compilation
+and Testkit admission remain outside it. Every separately owned Testkit server
+also has a five-minute hard TTL; startup retains its 60-second timeout. These
+are qualification resource limits, not timer recovery guarantees. Host preserves
+inherited streaming output and typed timeout/nonzero-exit failures. OS spawn,
+signal and reap syscalls can exceed elapsed-time budgets; group signalling does
+not prove every descendant has exited. Native macOS timing remains unqualified.
+
+`pocketic-cohorts` writes `testing/target/cohorts.json` only after its subjects
+pass. The report contains instruction brackets, dispatch cycles and Wasm bytes,
+plus Build's compiler/Cargo identities, target/profile, per-cohort feature,
+source/build fingerprints and artifact SHA-256. It also records the root lockfile
+and admitted server SHA-256 and native host. Installed bytes are checked against
+the receipt, and Build input observations, lock and server are rechecked after
+measurement. Accept a receipt only with a successful driver exit; retain failed
+outputs as diagnostics, not qualified baselines. No environment values or
+credentials are serialized.
+
+To compare a reviewed prior report, keep it outside the default output and run:
+
+```sh
+POCKET_IC_BIN="$(bash scripts/dev/testkit-server.sh check)" \
+  RUSTUP_TOOLCHAIN=1.91.0 cargo run -p ic-timers-pocketic --locked -- \
+  cohorts --baseline /absolute/path/to/reviewed-cohorts.json
+```
+
+Use `--report PATH` for a separate candidate output. The driver rejects the baseline’s canonical path as its output. Comparisons require matching schema,
+compiler/Cargo, target/profile, lockfile, server, host and measurement subjects.
+Source and artifact identities may change: they attribute the candidate bytes
+rather than prohibit code comparisons. Changed dependencies or tools require an
+explicitly reviewed new baseline; there is no automatic rewrite or cross-context
+comparison. Deltas are review evidence, not an arbitrary performance pass/fail
+budget. Whole-message and unaccounted instruction totals remain unavailable;
+cycle costs are not converted to instructions. Use identical ambient Cargo/Rust
+configuration for comparisons: the recorded context checks do not normalize it. Minimal and representative work
+calibrations remain separate from scheduler/work instruction brackets.
+
+
 The native protocol tests belong to `make test`. Native runtime tests use a
 substitute platform and cannot establish IC rollback, trap recovery or upgrade
 behavior. Real PocketIC gates retain their own assertions and admitted server;
