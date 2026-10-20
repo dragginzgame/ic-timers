@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.29.4]
+## [0.29.4] - 2026-10-20
 
 - Delegate dependency graph checking to Shared Tooling 0.25.2 while retaining
   Timers' runtime identity and feature policy. Cover both probe canisters and
