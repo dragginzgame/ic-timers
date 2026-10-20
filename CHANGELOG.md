@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.29.7]
+## [0.29.7] - 2026-10-20
 
 - Adopt published Build 0.24.0 and Host Artifacts/Process 0.32.0 for native
   qualification, resolving the injected-spawner type mismatch without a shim.
