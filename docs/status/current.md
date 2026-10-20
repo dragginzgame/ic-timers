@@ -6,68 +6,90 @@ Last updated: 2026-10-20
 
 ## Source and accepted work
 
-Released base: **0.29.5**, `ccebb61`; package versions remain unchanged.
-The undated **0.29.6** draft contains the qualification improvements below.
-These change repository qualification and native tests, not the published timer
-API or production behavior. Release execution remains maintainer-owned.
-Preserve the incoming catalog/lock update to Testkit **0.59.0**. The selected
-Platform **0.4.1**, Build **0.22.1**, Host **0.31.1**, Wire **0.5.0** and unrelated
-resolved versions are unchanged from the incoming worktree. Shared Tooling remains
-**0.25.4**, `db555ab6cf4a93af9a183f18d921d3b0ee97c725`, with 138 payloads.
+Released base: **0.29.6**, `50c8450`; package versions remain unchanged.
+The undated **0.29.7** draft contains Platform, Host and Shared adoption together.
+Preserve the incoming Platform **0.5.0**, Build **0.24.0**, Host **0.32.0**,
+Metrics **0.14.11**, Testkit **0.60.0** and Wire **0.5.2** catalog/lock selections.
+Package versions and the published timer API are unchanged. Incoming staged and
+unstaged work is preserved; this dependency qualification adds only documentation.
 
-## Qualification improvements
+## Published Platform adoption
 
-The native driver supervises its build/test worker through Host process-group
-ownership: 30-minute elapsed-time budget, two-second TERM grace, five-second reap
-budget. This covers cache/build waits, tests and synchronous PocketIC deletion
-once the driver starts. Initial Cargo compilation and Testkit admission remain
-outside it; OS calls can overrun budgets. Each separately grouped Testkit server
-has a five-minute hard TTL and retains its 60-second startup timeout. Host owns
-process mechanics; Testkit still owns server admission and lifecycle. No timer
-recovery guarantees or required release subjects were weakened.
+Adopt registry Platform/macros **0.5.0**, non-yanked, with Platform MSRV 1.88.
+The official registry indexes confirm both archive checksums. All 61 facade and
+nine macro package files in the compiled cache match those archives. Both record
+source `b840423928f0ca7f14d7fc860508730c87356640`. Published features, APIs and
+migration guidance were reviewed against actual consumers, not sibling drafts.
 
-A bounded exhaustive native test covers 7,776 four-command words across all three
-policies and both declaration lifetimes. Commands include ensure, reconcile,
-cancel, replacement, delivery and discard. Assertions check stale authority,
-independent-timer isolation, bounded handles and final cleanup. Stale-wakeup
-accounting can legitimately change on rejected delivery. Native fake evidence
-still cannot establish IC rollback, traps or recovery.
+The library retains only executor/IC0 features. Probe entrypoints keep `cdk`,
+which now includes `runtime`; policy admits that feature only for probes and
+adds a negative library-leak case. Executor **2.0.0**, IC0 **1.2.0**, their export
+modules and the maintained future-context modules remain unchanged. No source
+consumer uses the removed timeout setter, hidden option, storage helpers or
+Candid service generation. No shim, storage migration or codec rewrite is added.
 
-Cohorts retain structured costs in `testing/target/cohorts.json`, bound to Build
-compiler/Cargo observations, target/profile, cohort features, source/build
-fingerprints, exact installed artifact hashes, root lock, server hash and host.
-Inputs and lock/server identities are rechecked after measurement. The explicit
-`cohorts --baseline PATH [--report PATH]` comparison rejects incompatible
-contexts/subjects and prints cost deltas; it never silently rewrites a baseline
-or invents a performance budget. Accept reports only after successful driver
-exit. Whole-message/unaccounted instruction totals remain unavailable. See
-[release qualification](../releasing.md#deployment-validation) for commands.
-Host artifact hashing and JSON serialization are existing resolved capabilities
-now directly selected by the unpublished host driver; canister/protocol graphs
-retain their deployment boundaries.
+Testkit 0.60 and the native driver now share Platform **0.5.0**, removing the
+older 0.4.1 package. The same registry external Principal/PocketIC identities,
+Wire frames and explicit limits remain. Independent library and probe-canister
+graphs remain Candid/full-CDK-free; Candid stays native through Testkit/PocketIC.
 
-## Ownership and evidence
+## Published tooling adoption
 
-Timers owns volatile scheduling, claims, observations and private IC dispatch.
-Applications own durable intent and lifecycle/health policy. Platform owns IC
-bindings, Wire application codecs, Testkit simulator admission/lifecycle, and
-Build/Host artifact and process mechanics. Testkit's native simulator subtree
-still includes Candid; published library and probe-canister graphs remain
-Candid/full-CDK-free. The protocol retains only Wire/Serde. See
-[architecture](../architecture.md#capability-ownership) and [SAFETY.md](../../SAFETY.md).
+Official registry indexes confirm latest non-yanked Build **0.24.0**, Testkit
+**0.60.0**, Host **0.32.0** and Wire **0.5.2**. Metrics 0.14.11 and Platform 0.5.0
+remain latest. Prepared archives and cached sources match official checksums.
+Build records source `c84c64e42a6bbbf06eba4490cf1cf6988caf5866`, Testkit
+`65c99c9a05108b5e473f538ec72917d7a7304deb`; both support Rust 1.91.
 
-Focused Linux Rust 1.91 checks cover the generated traces, deadline/nonzero-exit
-and baseline rejection fixtures, strict library/probe lint, Wasm library build,
-all 27 maintained real-Wasm watchdog subjects and four-policy cohorts with both
-calibrations. The comparison CLI reproduces all 54 cost fields with zero deltas under the
-same recorded context. Shared declaration/inheritance and native/Wasm graph
-checks pass.
-The admitted Testkit 0.59 CLI/server is prepared through the existing owner.
-Evidence and incoming before-images: `/tmp/ic-timers-qualification.q8nqf412/`.
-Native macOS, installed-IC evidence and the complete user-operated release gate
-remain separate; none is qualified by these Linux runs.
+Build 0.24 exchanges Host 0.32 `OwnedChild` values, resolving the prior E0271
+without a shim, alias, conversion or unpublished override. Testkit 0.60 retains
+Host 0.31.2 internally; no exchanged value crosses that boundary. Its sibling's
+0.61 adoption notes are unpublished and are not a consumer dependency. Host
+provider mechanics stay native; all five members retain the one root catalog.
+Timers selects no optional Shared IC executable bundle. Testkit alone selects,
+installs and admits PocketIC; do not activate unrelated tools to update this graph.
 
-Earlier adoption evidence remains in
-`/tmp/ic-timers-platform-host-shared.kc_mnr7r/`. Historical design and release
-notes remain evidence, not authority to restore retired dependencies or paths.
-Version bumps, staging, commits, pushes, tags and publication remain user-owned.
+Selected Build editor and Testkit CLI/server preparation and offline admission
+pass through the canonical installers. Rust 1.91 probe/driver/protocol Clippy,
+all four size feature sets, three host fixtures, Cargo metadata fixtures and
+grouped formatting pass. Dependency-role/inheritance and native/Wasm graph
+checks pass. Fresh watchdog qualification passes all 27 product subjects plus
+three host fixtures; all four cohorts and both calibrations pass with a refreshed
+`testing/target/cohorts.json` bound to the selected lock. No new blocker was found.
+Evidence and incoming before-images: `/tmp/ic-timers-deps.ftdt0lxm/`.
+Earlier Host qualification remains at `/tmp/ic-timers-host-032._9e1zaz1/`.
+
+## Focused qualification
+
+Earlier Platform Linux checks pass for strict library lint, probe/protocol lint
+and all four size features on Rust 1.91, native/Wasm MSRV library builds, 7,776
+generated native traces, graph/feature admission and negative boundary fixtures. Fresh
+Platform-0.5 Wasm passes all 27 maintained watchdog subjects plus three host
+fixtures, including awaits, traps, cancellation, pressure and upgrades. All four
+policy cohorts and both calibrations passed at that earlier lock. Current
+dependency qualification is recorded above. New source/lock
+identities require explicit baseline review, not cross-context speed/size claims.
+Evidence and incoming before-images: `/tmp/ic-timers-platform-05.snizl9v_/`.
+Native macOS, installed IC and the complete maintainer-operated release gate
+remain separate. No missing Platform API or adoption issue was encountered.
+
+## Shared Tooling and ownership
+
+Reviewed Shared **0.25.7**, `d39e8a84bf4fd7e42776d2bb8e589ad09aacb02b`, retains
+113 entrypoints and 138 payloads. CI lints before compilation, tests and packages;
+publication serializes source/tag admission, Clippy, packaging and external
+publication. Parallel `-j4` failure fixtures retain the complete lint scope and
+remaining release/probe gates. Shared's failed Cargo metadata evidence reaches
+the existing CI archive. Earlier source-bound qualification is at
+`/tmp/ic-timers-shared-0257.tf16fmhr/` and `/tmp/ic-timers-shared-0256.pnwelhot/`.
+
+Timers owns volatile scheduling, claims, observations and private IC dispatch;
+applications own durable intent and lifecycle policy. Platform owns IC bindings,
+Wire application codecs, Testkit simulator admission/lifecycle, and Build/Host
+artifact/process mechanics. Protocol records select only Wire/Serde. See
+[architecture](../architecture.md#capability-ownership),
+[Shared adoption](../shared-tooling.md) and [SAFETY.md](../../SAFETY.md).
+
+Historical evidence does not qualify changed providers or authorize restoring
+retired paths. Version bumps, staging, commits, pushes, tags and publication
+remain maintainer-owned. No sibling checkout is modified.

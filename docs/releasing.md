@@ -96,22 +96,26 @@ manual recovery. External dependency selections are preserved.
 
 Protected commands reject Make flags that would skip execution, ignore errors
 or pretend success. `publish` requires a clean checkout, the exact annotated
-version tag at HEAD and a verified package before publishing `ic-timers` to
-crates.io. Cleanup is separate; release commands never erase evidence.
+version tag at HEAD, the existing Clippy gate and a verified package before
+publishing `ic-timers` to crates.io. These stages run sequentially even with
+parallel Make; a failed admission, lint or package check stops publication.
+Cleanup is separate; release commands never erase evidence.
 
 ## Deployment validation
 
 The maintainer-operated `make release-verify` retains this fail-fast order:
 
 1. `fetch` for the locked root workspace.
-2. `install-testkit-server` for explicit selected CLI/server setup.
-3. `pocketic-check` for offline admission.
-4. `ci`: Actions/pins, shell syntax, provider boundary, formatting, library
-   compilation/lint, release fixtures, public docs, tests and Wasm/package checks.
-5. `msrv`: native/test-target and Wasm library compilation plus doctests on 1.91.
-6. `testing-check`: probe/protocol lint and each of the four exclusive cohorts.
-7. `pocketic-watchdog`: the maintained real-canister runtime/recovery subjects.
-8. `pocketic-cohorts`: baseline/Once/AfterCompletion/Watchdog Wasm and instruction
+2. `install-release-editor` for the root-lock-selected metadata renderer.
+3. `install-testkit-server` for explicit selected CLI/server setup.
+4. `pocketic-check` for offline admission.
+5. `ci`: Actions/pins, shell syntax, provider boundary, formatting, then the
+   existing library Clippy gate before compilation, release fixtures, public
+   docs, tests and Wasm/package checks.
+6. `msrv`: native/test-target and Wasm library compilation plus doctests on 1.91.
+7. `testing-check`: probe/protocol lint and each of the four exclusive cohorts.
+8. `pocketic-watchdog`: the maintained real-canister runtime/recovery subjects.
+9. `pocketic-cohorts`: baseline/Once/AfterCompletion/Watchdog Wasm and instruction
    measurements using the exact artifacts installed into PocketIC.
 
 Both PocketIC targets run the native harness build driver on the selected
@@ -134,6 +138,13 @@ are qualification resource limits, not timer recovery guarantees. Host preserves
 inherited streaming output and typed timeout/nonzero-exit failures. OS spawn,
 signal and reap syscalls can exceed elapsed-time budgets; group signalling does
 not prove every descendant has exited. Native macOS timing remains unqualified.
+
+The receipt reader and injected build spawner use published Host 0.32.0 with
+Build 0.24.0, whose artifact engine accepts the same `OwnedChild` identity.
+Update these together when exchanging Host values; metadata/tree observation's
+command/byte boundary does not cover this build API. Testkit 0.60.0 retains Host
+0.31.2 internally without exchanging those types with the driver. No aliases or
+local child conversions are needed. Both driver and Testkit select Platform 0.5.
 
 `pocketic-cohorts` writes `testing/target/cohorts.json` only after its subjects
 pass. The report contains instruction brackets, dispatch cycles and Wasm bytes,
@@ -273,9 +284,10 @@ shared-server reuse or recovery guarantees.
 ## Dependency pin exceptions
 
 The reviewed [exception list](../ci/dependency-pinning-exceptions.json) is empty.
-Platform 0.4 owns the runtime and exact selections for executor `=2.0.0` and
+Platform 0.5 owns the runtime and exact selections for executor `=2.0.0` and
 IC0 `=1.2.0`; Timers declares none of these providers directly. The library
-selects only `executor` and `ic0`, while canister probes select `cdk`. The root
+selects only `executor` and `ic0`, while canister probes select `cdk` and its
+included `runtime` feature. The root
 lockfile resolves one qualified identity for each provider. Any Platform update
 changing those identities requires renewed callback/trap/cancellation/upgrade
 evidence. See the [Candid/CDK boundary](architecture.md#candid-and-cdk-dependency-boundary).

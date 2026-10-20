@@ -2,6 +2,29 @@
 
 All notable changes to this project are recorded here.
 
+## [0.29.7]
+
+- Adopt published Build 0.24.0 and Host Artifacts/Process 0.32.0 for native
+  qualification, resolving the injected-spawner type mismatch without a shim.
+  Adopt Testkit 0.60.0 so the native driver shares Platform 0.5.0; Testkit retains
+  Host 0.31.2 internally. Keep Wire 0.5.2 and the existing probe protocols.
+  Prepare and admit the root-lock-selected release editor and Testkit CLI/server
+  through their canonical installers; runtime dependencies and APIs are unchanged.
+
+- Adopt published IC Platform/macros 0.5.0, preserving executor 2.0.0, IC0 1.2.0,
+  explicit Wire codecs and timer callback semantics. Allow its `runtime` feature
+  for probe entrypoints while retaining the library's executor/IC0-only boundary.
+  Candid remains native-only through Testkit/PocketIC.
+
+- Adopt reviewed Shared Tooling 0.25.7. Retain failed Cargo metadata output,
+  root inputs and independent command/logger statuses without retries; qualify
+  their inclusion in Timers' existing CI failure archive.
+- Run the existing library Clippy gate before CI compilation and package checks.
+  Order publication admission, Clippy, packaging and publication sequentially;
+  failure stops later stages under parallel Make without changing lint scope.
+- Use Shared's grouped formatter defaults directly and refresh its fixture
+  dependency discovery. Product tool selections and runtime guarantees are unchanged.
+
 ## [0.29.6] - 2026-10-20
 
 - Correct the safety guide's stale pending-backend description and distinguish

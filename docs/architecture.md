@@ -53,10 +53,11 @@ remain separate evidence selections in the [release guide](releasing.md).
 
 Registry-published `ic-platform` is the selected boundary; the current lock and
 source-qualified receipts are recorded in [current status](status/current.md).
-Published Platform 0.4.0 owns the maintained non-cryptographic runtime and
+Published Platform 0.5.0 owns the maintained non-cryptographic runtime and
 explicit-codec generator. It selects no full CDK package and copies no executor.
 The root catalog disables default Platform features. The library selects only
-`executor` and `ic0`; the two canister probes select `cdk` for entrypoint contexts,
+`executor` and `ic0`; the two canister probes select `cdk` (including its new
+`runtime` feature) for entrypoint contexts,
 protected calls/spawning, traps, cycle burning and stable byte I/O. The native
 harness selects no Platform features and uses `principal::ExternalPrincipal`
 for PocketIC's external API identity. The protocol package has no Platform edge.
@@ -114,9 +115,12 @@ The native driver retains published Testkit for server admission, lifecycle and
 bounded progress. Probe RPCs use PocketIC's raw query/update APIs plus the shared
 Wire identities/limits. Candid and management types remain upstream transport
 implementation details. The retired `ic-testkit-candid` package remains absent.
-Testkit 0.57 retains registry Platform 0.2.2 in the native graph; it shares the
-original external Principal identity with Platform 0.4. No adapter or second
-runtime owner is needed, and the canister graphs select only Platform 0.4.
+Testkit 0.60 and the driver share Platform 0.5.0, retiring the older native
+Platform identity without a conversion adapter or parallel executor. Independent
+library and canister graphs also select only Platform 0.5.0. Build 0.24 and the
+driver exchange Host 0.32 process values; Testkit retains Host 0.31 internally.
+These host-only providers do not enter deployed graphs. There is no unpublished
+patch or source override here.
 The local provider check also rejects Candid codec paths and default-codec
 query/update attributes in maintained probe source.
 

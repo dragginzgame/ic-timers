@@ -39,6 +39,15 @@ fi
 cp library-original.toml crates/ic-timers/Cargo.toml
 cp "$root/Cargo.lock" Cargo.lock
 
+# Runtime APIs belong only to entrypoint-owning probes; the published library
+# must keep its executor/IC0-only boundary even when runtime adds no new macro.
+perl -pi -e 's/"executor", "ic0"/"executor", "ic0", "runtime"/' crates/ic-timers/Cargo.toml
+if bash "$checker" > runtime-failure.log 2>&1; then
+    echo 'error: library admitted Platform runtime APIs' >&2; exit 1
+fi
+grep -q 'forbidden dependency feature edge: ic-platform/runtime' runtime-failure.log
+cp library-original.toml crates/ic-timers/Cargo.toml
+
 # Empty Platform defaults still violate the library feature allowlist, even
 # without introducing another package. Probe and protocol policies are separate.
 perl -pi -e 's/"executor", "ic0"/"executor", "ic0", "default"/' crates/ic-timers/Cargo.toml

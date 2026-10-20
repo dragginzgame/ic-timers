@@ -175,6 +175,32 @@ printf 'formatter stdout details\nformatter stderr details\n' > "$fixture/expect
 cmp "$fixture/expected-format-log" "$format_log"
 printf 'Details: %q\n' "$format_log" > "$fixture/expected-format-path"
 grep -Fxf "$fixture/expected-format-path" "$fixture/formatting-output.log"
+# The actual metadata owner retains a failed Cargo observation under CI's
+# declared fixture root. Prove those new diagnostics reach our existing archive;
+# Shared owns the Cargo/logger failure permutations and selected-source matrix.
+mkdir -p "$fixture/metadata-bin" "$fixture/metadata-workspace"
+cp "$root/Cargo.toml" "$root/Cargo.lock" "$fixture/metadata-workspace/"
+cat > "$fixture/metadata-bin/cargo" <<'CARGO'
+#!/usr/bin/env bash
+[[ "$1" != locate-project ]] || exit 0
+[[ "$1" == metadata ]] || exit 2
+printf 'injected offline Cargo metadata failure\n' >&2
+exit 37
+CARGO
+chmod +x "$fixture/metadata-bin/cargo"
+metadata_status=0
+(cd "$fixture/metadata-workspace" && PATH="$fixture/metadata-bin:$root/.tools/host/bin:$PATH" \
+    TMPDIR="$RUNNER_TEMP/ic-timers-fixtures" \
+    bash "$root/scripts/ci/cargo-release-metadata.sh" check-graph ic-timers) \
+    > "$fixture/metadata-failure.log" 2>&1 || metadata_status=$?
+test "$metadata_status" -eq 37
+metadata_attempts=("$RUNNER_TEMP/ic-timers-fixtures"/cargo-release-check.*)
+test "${#metadata_attempts[@]}" -eq 1
+metadata_attempt="${metadata_attempts[0]}"
+test -f "$metadata_attempt/metadata.json" && test ! -s "$metadata_attempt/metadata.json"
+grep -Fxq 'injected offline Cargo metadata failure' "$metadata_attempt/metadata.stderr"
+test "$(cat "$metadata_attempt/cargo-status")" = 37
+test "$(cat "$metadata_attempt/log-status")" = 0
 bash "$root/scripts/ci/collect-failure-evidence.sh" > "$fixture/collection.log" 2>&1
 archive_bytes="$(wc -c < "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz")"
 archive_bytes="${archive_bytes//[[:space:]]/}"
@@ -182,6 +208,9 @@ grep -Eq "^CI failure evidence measurements: archive_bytes=${archive_bytes} arch
     "$fixture/collection.log"
 mkdir "$fixture/extracted"
 tar -xzpf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" -C "$fixture/extracted"
+for path in metadata.json metadata.stderr cargo-status log-status root inputs/Cargo.toml inputs/Cargo.lock; do
+    cmp "$metadata_attempt/$path" "$fixture/extracted/${metadata_attempt#"$RUNNER_TEMP/"}/$path"
+done
 cmp "$format_log" "$fixture/extracted/${format_log##*/}"
 perl -e 'my @a=stat $ARGV[0]; my @b=stat $ARGV[1];
     @a && @b && ($a[2]&07777)==($b[2]&07777) or die "archive lost formatter log mode\n";' \

@@ -14,12 +14,9 @@ override SHARED_TOOLING_ROOT := $(CURDIR)
 override RELEASE_DELIVERY_POLICY := $(CURDIR)/ci/release-delivery.txt
 RELEASE_DELIVERY ?= direct
 export RELEASE_DELIVERY
-# Preserve dependency-role groups with the existing sorter.
-FORMAT_WRITE_COMMAND = bash -ec '"$$1" sort --workspace --grouped; "$$1" fmt --all' -- "$(FORMAT_CARGO)"
-FORMAT_CHECK_COMMAND = bash -ec '"$$1" sort --workspace --grouped --check; "$$1" fmt --all -- --check' -- "$(FORMAT_CARGO)"
 include make/consumer.mk
 
-CI_TARGETS := actions-check shell-check provider-check fmt-check check clippy release-check docs-check test wasm-check package
+CI_TARGETS := actions-check shell-check provider-check fmt-check clippy check release-check docs-check test wasm-check package
 RELEASE_TARGETS := fetch install-release-editor install-testkit-server pocketic-check ci msrv testing-check pocketic-watchdog pocketic-cohorts
 REPOSITORY_TARGETS := actions-check shell-check release-check provider-check fmt-check
 
@@ -238,7 +235,12 @@ release-tag-check:
 		commit="$$(git rev-parse HEAD)"; \
 		bash scripts/ci/check-release-tag.sh "$$commit" "$$version"
 
-publish: ensure-clean release-tag-check package
+# Sequential recursive calls retain admission and lint ordering under -j.
+publish:
+	+$(MAKE) --no-print-directory ensure-clean
+	+$(MAKE) --no-print-directory release-tag-check
+	+$(MAKE) --no-print-directory clippy
+	+$(MAKE) --no-print-directory package
 	+cargo publish --locked --registry crates-io -p ic-timers
 
 # These consumer entrypoints use the reviewed root snapshot. Preserve their

@@ -64,6 +64,10 @@ cat > bin/cargo <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 printf '%s\n' "$*" >> "${FIXTURE_CARGO_LOG:-fetch-events}"
+if [[ "$1" == publish ]]; then
+    printf 'publish\n' >> checks-ran
+    if [[ "${FAIL_TARGET:-}" == publish ]]; then exit 101; fi
+fi
 if [[ -n "${FIXTURE_TOOLCHAIN_LOG:-}" ]]; then
     printf '%s\n' "${RUSTUP_TOOLCHAIN:-unset}" >> "$FIXTURE_TOOLCHAIN_LOG"
 fi
@@ -277,7 +281,7 @@ cat > overrides.mk <<'EOF'
 # Keep this orchestration fixture independent of prepared formatter tools.
 format-tools-check:
 	@:
-fetch install-release-editor install-testkit-server host-tools-check actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package pocketic-check msrv testing-check pocketic-watchdog pocketic-cohorts:
+ensure-clean release-tag-check fetch install-release-editor install-testkit-server host-tools-check actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package pocketic-check msrv testing-check pocketic-watchdog pocketic-cohorts:
 	@printf '%s\n' '$@' >> checks-ran
 	@if [ '$@' = '$(FAIL_TARGET)' ]; then echo 'failed $@' >&2; exit 1; fi
 EOF
@@ -286,16 +290,20 @@ fixture_make=(make --no-print-directory -f Makefile
     'MAKE=make --no-print-directory -f Makefile')
 # actions-check retains its real host-tools-check prerequisite when its recipe
 # is overridden. Record that admission before the action/dependency leaf.
-ci_targets=(host-tools-check actions-check shell-check provider-check fmt-check check clippy release-check docs-check test wasm-check package)
+ci_targets=(host-tools-check actions-check shell-check provider-check fmt-check clippy check release-check docs-check test wasm-check package)
 release_targets=(fetch install-release-editor install-testkit-server pocketic-check "${ci_targets[@]}" msrv testing-check
     pocketic-check pocketic-watchdog pocketic-check pocketic-cohorts)
-for gate in ci release-verify pocketic-watchdog pocketic-cohorts; do
+# Every leaf, including lint and publication, is substituted. Parallel Make must
+# still stop at each failed admission/lint before packaging or external effects.
+export PATH="$fixture_root/bin:$PATH"
+for gate in ci release-verify publish pocketic-watchdog pocketic-cohorts; do
     case "${gate}" in
         ci) expected=("${ci_targets[@]}") ;;
         release-verify) expected=("${release_targets[@]}") ;;
+        publish) expected=(ensure-clean release-tag-check clippy package publish) ;;
         *) expected=(pocketic-check "${gate}") ;;
     esac
-    if ! "${fixture_make[@]}" "${gate}" > "$gate-output" 2>&1; then
+    if ! "${fixture_make[@]}" -j4 "${gate}" > "$gate-output" 2>&1; then
         cat "$gate-output" >&2
         echo "error: ${gate} rejected recorded check success" >&2
         exit 1
@@ -308,7 +316,7 @@ for gate in ci release-verify pocketic-watchdog pocketic-cohorts; do
     fi
     rm checks-ran
     for target in "${expected[@]}"; do
-        if "${fixture_make[@]}" "${gate}" "FAIL_TARGET=${target}" > "$gate-$target-output" 2>&1; then
+        if "${fixture_make[@]}" -j4 "${gate}" "FAIL_TARGET=${target}" > "$gate-$target-output" 2>&1; then
             echo "error: ${gate} ignored failed ${target}" >&2
             exit 1
         fi
