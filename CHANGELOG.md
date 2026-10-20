@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.29.6]
+## [0.29.6] - 2026-10-20
 
 - Correct the safety guide's stale pending-backend description and distinguish
   retired-provider receipts from current source-bound qualification and host gaps.
