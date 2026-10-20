@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.29.5]
+## [0.29.5] - 2026-10-20
 
 - Adopt published IC Platform 0.4.0. Use its explicit external Principal in the
   PocketIC harness, preserving simulator API identities, Wire payloads and the

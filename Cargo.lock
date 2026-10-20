@@ -998,7 +998,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers"
-version = "0.29.4"
+version = "0.29.5"
 dependencies = [
  "ic-metrics",
  "ic-platform 0.4.0",
@@ -1007,7 +1007,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers-pocketic"
-version = "0.29.4"
+version = "0.29.5"
 dependencies = [
  "clap",
  "ic-build",
@@ -1021,7 +1021,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers-runtime-probe"
-version = "0.29.4"
+version = "0.29.5"
 dependencies = [
  "ic-platform 0.4.0",
  "ic-timers",
@@ -1032,7 +1032,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers-size-probe"
-version = "0.29.4"
+version = "0.29.5"
 dependencies = [
  "ic-platform 0.4.0",
  "ic-timers",
@@ -1043,7 +1043,7 @@ dependencies = [
 
 [[package]]
 name = "ic-timers-test-protocol"
-version = "0.29.4"
+version = "0.29.5"
 dependencies = [
  "ic-wire",
  "serde",
