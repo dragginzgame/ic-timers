@@ -2,6 +2,7 @@ use super::harness::{fresh_pocket_ic, install_probe, update_unit};
 use super::harness::{query_wire, update_wire};
 use ic_platform::Principal;
 use ic_testkit::pic::{PocketIc, advance_and_tick};
+use ic_timers_test_protocol::rpc::Method;
 use ic_timers_test_protocol::{CohortObservation, MemorySamplingMeasurement, OperationMeasurement};
 use std::{env, fs, path::PathBuf, time::Duration};
 
@@ -28,8 +29,8 @@ fn run_cohort(cohort: &str) {
     assert_eq!(initial.callbacks, 0);
     assert_eq!(initial.inventory_len, 0);
 
-    let start = update_measurement(pic, canister_id, "cohort_start");
-    let duplicate = update_measurement(pic, canister_id, "ensure_again");
+    let start = update_measurement(pic, canister_id, Method::CohortStart);
+    let duplicate = update_measurement(pic, canister_id, Method::EnsureAgain);
     assert_eq!(start.changed, cohort != "baseline");
     assert!(!duplicate.changed);
 
@@ -82,13 +83,13 @@ fn run_cohort(cohort: &str) {
         _ => unreachable!("fixed cohort list"),
     }
 
-    let cancellation = update_measurement(pic, canister_id, "cancel");
+    let cancellation = update_measurement(pic, canister_id, Method::Cancel);
     assert_eq!(
         cancellation.changed,
         matches!(cohort, "after-completion" | "watchdog")
     );
     assert_eq!(observe(pic, canister_id).next_deadline_ns, None);
-    assert!(!update_measurement(pic, canister_id, "cancel").changed);
+    assert!(!update_measurement(pic, canister_id, Method::Cancel).changed);
     pic.advance_time(Duration::from_secs(1));
     advance_and_tick(pic, Duration::ZERO, 16);
     let cancelled = observe(pic, canister_id);
@@ -100,7 +101,7 @@ fn run_cohort(cohort: &str) {
             pic,
             canister_id,
             Principal::anonymous(),
-            "memory_sampling_overhead",
+            Method::MemorySamplingOverhead,
             (),
         )
         .expect("probe update succeeds");
@@ -143,9 +144,9 @@ fn run_watchdog_calibration(profile: &str, representative_work: bool) -> u128 {
     let pic = &owned.instance;
     let canister_id = install_probe(pic, cohort_wasm("watchdog"));
     if representative_work {
-        update_unit(pic, canister_id, "use_representative_watchdog_work");
+        update_unit(pic, canister_id, Method::UseRepresentativeWatchdogWork);
     }
-    let start = update_measurement(pic, canister_id, "cohort_start");
+    let start = update_measurement(pic, canister_id, Method::CohortStart);
     assert!(start.changed);
 
     let cycles_before_dispatch = pic.cycle_balance(canister_id);
@@ -181,16 +182,21 @@ fn cohort_wasm(cohort: &str) -> Vec<u8> {
 fn update_measurement(
     pic: &PocketIc,
     canister_id: Principal,
-    method: &str,
+    method: Method,
 ) -> OperationMeasurement {
     update_wire(pic, canister_id, Principal::anonymous(), method, ())
         .expect("probe update succeeds")
 }
 
 fn observe(pic: &PocketIc, canister_id: Principal) -> CohortObservation {
-    let observed: CohortObservation =
-        query_wire(pic, canister_id, Principal::anonymous(), "observe", ())
-            .expect("probe query succeeds");
+    let observed: CohortObservation = query_wire(
+        pic,
+        canister_id,
+        Principal::anonymous(),
+        Method::Observe,
+        (),
+    )
+    .expect("probe query succeeds");
     assert!(!observed.schedule_requests.total_overflowed);
     assert!(!observed.scheduler_started.total_overflowed);
     assert!(!observed.wakeups_armed.total_overflowed);

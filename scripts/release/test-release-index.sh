@@ -57,6 +57,7 @@ printf '#!%s\n' "$real_bash" > "$fixture/bin/make"
 cat >> "$fixture/bin/make" <<'STUB'
 set -euo pipefail
 case "$*" in
+    '--no-print-directory install-release-editor') phase=editor ;;
     '--no-print-directory install-testkit-server') phase=setup ;;
     '--no-print-directory pocketic-check') phase=check ;;
     *) exec "$RELEASE_INDEX_REAL_MAKE" "$@" ;;
@@ -247,7 +248,7 @@ export RELEASE_VERSION
 printf '# Changelog\n\n## [%s]\n\n- Cache preparation fixture.\n\n## [%s] - %s\n\n- Prior fixture.\n' \
     "$RELEASE_VERSION" "$RELEASE_PREVIOUS" "$RELEASE_DATE" > CHANGELOG.md
 cp CHANGELOG.md "$fixture/pending-changelog"
-for failed_phase in '' fetch setup check; do
+for failed_phase in '' fetch editor setup check; do
     : > "$FETCH_EVENTS"
     : > "$PREPARATION_EVENTS"
     export FAIL_FETCH_MANIFEST='' FAIL_TOOL_PHASE=''
@@ -266,7 +267,7 @@ for failed_phase in '' fetch setup check; do
     printf '%s\n' 'fetch --manifest-path Cargo.toml --locked' > "$fixture/expected-fetch"
     cmp "$fixture/expected-fetch" "$FETCH_EVENTS"
     : > "$fixture/expected-preparation"
-    for phase in fetch setup check; do
+    for phase in fetch editor setup check; do
         printf '%s\n' "$phase" >> "$fixture/expected-preparation"
         [[ "$phase" != "$failed_phase" ]] || break
     done
@@ -282,7 +283,7 @@ unset FAIL_FETCH_MANIFEST FAIL_TOOL_PHASE
 # Neither fetch nor the selected setup may override explicit offline policy.
 : > "$PREPARATION_EVENTS"
 CARGO_NET_OFFLINE=true bash "$root/scripts/release/adapter.sh" preflight > "$fixture/output" 2>&1
-printf 'fetch\nsetup\ncheck\n' > "$fixture/expected-preparation"
+printf 'fetch\neditor\nsetup\ncheck\n' > "$fixture/expected-preparation"
 cmp "$fixture/expected-preparation" "$PREPARATION_EVENTS"
 [[ "$(cat "$PREPARATION_EVENTS.offline")" == true ]] || exit 1
 [[ "$(cat "$FETCH_EVENTS.offline")" == true ]] || exit 1

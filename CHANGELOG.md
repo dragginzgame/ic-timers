@@ -2,6 +2,21 @@
 
 All notable changes to this project are recorded here.
 
+## [0.29.4]
+
+- Delegate dependency graph checking to Shared Tooling 0.25.2 while retaining
+  Timers' runtime identity and feature policy. Cover both probe canisters and
+  the protocol package alongside the library.
+- Select probe RPCs through the existing method enum, keeping names and frame
+  IDs together and removing string lookup failures without changing Wire bytes.
+- Adopt IC Build's published release editor for Shared's metadata contract;
+  prepare it with `make install-release-editor` before standalone version
+  preparation, and include it in standalone release validation's ordered setup.
+  Keep release execution maintainer-owned. Use Clap for the native
+  qualification driver's existing mode selection.
+- Archive completed handoff narratives and keep current source, pending work
+  and qualification limits together in the compact status document.
+
 ## [0.29.3] - 2026-10-19
 
 - Adopt published IC Platform 0.2 for Candid-free probe entrypoints, raw calls

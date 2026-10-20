@@ -10,7 +10,7 @@ fixture_complete=false
 trap 'fixture_finish "$?" "$fixture" "Failed Testkit adapter fixture retained"' EXIT
 consumer="$fixture/consumer with spaces"
 mkdir -p "$consumer/scripts/dev" "$consumer/.tools/host/bin"
-cp "$root/scripts/dev/testkit-server.sh" "$consumer/scripts/dev/"
+cp "$root/scripts/dev/testkit-server.sh" "$root/scripts/dev/release-editor.sh" "$consumer/scripts/dev/"
 export TESTKIT_ADAPTER_FIXTURE="$fixture"
 cat > "$fixture/lock" <<'EOF'
 version = 4
@@ -90,9 +90,24 @@ cmp "$fixture/expected-installer" "$fixture/installer-arguments"
 cmp "$fixture/expected-path" "$fixture/path"
 cmp "$fixture/next-lock" "$consumer/Cargo.lock"
 
+# The metadata editor is admitted through the same root lock but never executed
+# by setup/check. Shared owns selected-package parsing and executable receipts.
+for mode in setup check; do
+    rm -f "$fixture/owner-arguments"
+    bash "$consumer/scripts/dev/release-editor.sh" "$mode" > "$fixture/path"
+    printf '%s\n' "$fixture/owner" > "$fixture/expected-editor-path"
+    cmp "$fixture/expected-editor-path" "$fixture/path"
+    printf '%s\n' --consumer "$consumer" --package ic-build --lockfile "$consumer/Cargo.lock" \
+        --bin ic-build-release-metadata --profile release > "$fixture/expected-installer"
+    [[ "$mode" != check ]] || printf '%s\n' --check >> "$fixture/expected-installer"
+    cmp "$fixture/expected-installer" "$fixture/installer-arguments"
+    test ! -e "$fixture/owner-arguments"
+    cmp "$fixture/next-lock" "$consumer/Cargo.lock"
+done
+
 # Exercise this consumer's actual aggregate wiring with substitute common tools
 # and owner effects. Upstream tests own tool downloads/receipts; this proves the
-# local Testkit extension runs after common setup/check even under parallel Make.
+# local editor/Testkit extensions run after common setup/check even under parallel Make.
 unset MAKEFLAGS MFLAGS MAKEOVERRIDES GNUMAKEFLAGS MAKEFILES
 bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$consumer" Makefile make/consumer.mk
 cp "$fixture/next-lock" "$consumer/Cargo.lock"
@@ -102,10 +117,14 @@ cat > "$fixture/common-installer" <<'EOF'
 set -euo pipefail
 phase=setup
 selected=false
+package=''
+previous=''
 for argument in "$@"; do
+    [[ "$previous" != --package ]] || package="$argument"
     [[ "$argument" != --check ]] || phase=check
     [[ "$argument" != --preflight ]] || phase=preflight
     [[ "$argument" != --package ]] || selected=true
+    previous="$argument"
 done
 if [[ "$selected" == true ]]; then
     [[ "${MAKEFLAGS:-}" =~ --jobserver-(auth|fds)=([0-9]+),([0-9]+) ]] || exit 1
@@ -115,7 +134,14 @@ if [[ "$selected" == true ]]; then
 fi
 case "${0##*/}" in
     install-host-tools.sh) step=host ;;
-    install-rust-tools.sh) step=rust; [[ "$selected" != true ]] || step=cli ;;
+    install-rust-tools.sh)
+        case "$package" in
+            '') step=rust ;;
+            ic-build) step=editor ;;
+            ic-testkit) step=cli ;;
+            *) exit 1 ;;
+        esac
+        ;;
 esac
 step="$step-$phase"
 printf '%s\n' "$step" >> "$TESTKIT_AGGREGATE_LOG"
@@ -138,7 +164,7 @@ parallel=(-j4)
 if make --help | grep -q -- --jobserver-style; then parallel+=(--jobserver-style=pipe); fi
 for target in install-tools tools-check; do
     phase=setup; [[ "$target" != tools-check ]] || phase=check
-    steps=("host-$phase" "rust-$phase" "cli-$phase" "server-$phase")
+    steps=("host-$phase" "rust-$phase" "editor-$phase" "cli-$phase" "server-$phase")
     if [[ "$target" == install-tools ]]; then
         steps=(rust-preflight "${steps[@]}")
     fi
@@ -161,4 +187,4 @@ for target in install-tools tools-check; do
     done
 done
 fixture_complete=true
-echo 'Testkit adapter admission and ordered consumer setup/check failure propagation passed'
+echo 'Testkit adapter admission and ordered editor/Testkit setup/check failure propagation passed'

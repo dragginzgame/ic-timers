@@ -2,26 +2,27 @@
 
 ## Current authority
 
-One [snapshot](../.shared-tooling.snapshot) records **132** canonical payloads
-from committed Shared 0.24.0,
-`cab12cd3dfa4fdb34846b25397f0d72881bb9ae0`. Canonical preview and refresh use
-that clean committed source, excluding the sibling's pending 0.24.1 edits.
-The canonical uploader remains exact 7.0.2 source
-`cf430e030ddbb5b0abf93d22962f4752f3646cd9`.
+One [snapshot](../.shared-tooling.snapshot) records **138** canonical payloads
+from reviewed Shared Tooling **0.25.2**, revision
+`546d32e48be5a5d4e360299f6a94901df6acc577`. The supplier checkout is clean and
+matches its published default branch. Canonical preview/apply retired the three
+old Perl editor/test roots and selected the graph, source-symlink and license
+checkers. Exported files remain byte-for-byte supplier-owned.
 
-Generic host/Cargo installer and release-runner regression roots are retired;
-Shared owns their matrices. Timers retains its actual tool admission, release
-integration, failure evidence and product qualification. The earlier retired
-roots are the Make-only fixture copier and generic preparation fixture. The
-latter now requires Shared's own CI workflow; keeping
-that supplier test here would cross Timers' workflow boundary. Its canonical
-owner retains the test. Timers' CI workflow is unchanged. The snapshot adds the
-required host-platform observer; no exported payload is patched locally.
+Shared owns generic graph observation, fixture matrices, tool admission, evidence
+transport and metadata transactions. Timers owns package/feature exclusions,
+qualified runtime identities, release/source policy and actual integration tests.
+IC Build supplies the published metadata editor selected by the root lock; the
+consumer's positive document budget is in `ci/release-editor.env`. Prepare it
+explicitly with `make install-release-editor`; check it offline with
+`make release-editor-check`. Fresh release preflight installs it only after
+source admission; standalone preparation requires an already admitted executable.
 
-The [baseline](../DRAGGINZGAME.md), [local overlay](../AGENTS.md) and
-[0.24 adoption checklist](consuming-snapshots.md#dependency-role-adoption-in-0240)
-govern this adoption. Earlier selections and qualification receipts remain
-historical in the [handoff archive](status/archive-2026-10-18.md) and
+The [baseline](../DRAGGINZGAME.md) and [local overlay](../AGENTS.md) retain
+maintainer-owned commits/releases, direct delivery, Testkit server ownership and
+separate macOS qualification. This adoption does not activate optional audits or
+schedules. Historical selections and receipts remain in the
+[handoff archive](status/archive-2026-10-20.md) and
 [adoption evidence](evidence/shared-tooling-history.md).
 
 ## Dependency roles and formatting
@@ -37,8 +38,7 @@ The published `ic-timers` library uses Metrics, Thiserror and Platform
 through Platform's Principal; only probes directly inherit its catalog entry.
 Wire, Platform's canister runtime, Build, Host Process, Testkit and the probe protocol serve
 qualification packages here.
-Candid remains transitive only in the native driver through PocketIC/Testkit's
-Platform 0.1 selection. Local probe protocols use Wire; Platform 0.2's `cdk`
+Candid remains transitive only in the native driver through PocketIC/Testkit. Local probe protocols use Wire; Platform 0.2's `cdk`
 feature and both canister graphs are Candid-free. Full CDK/macros and the retired
 Testkit Candid adapter are absent from the workspace graph.
 The catalog's
@@ -49,9 +49,8 @@ and adds `--check` for independent checks. Hooks use the same `make fmt` policy
 inside their exact index export. All current, commit-preparation and
 committed-source release checks select `--manifest-order-grouped`. Those release
 checks are read-only, operate on their selected source, and never globally
-reorder the two dependency groups. No Rust source formatting or manifest write
-was run against the normal checkout during this adoption; write behavior was
-qualified in a disposable fixture.
+reorder the two dependency groups. Manifest write behavior is qualified in a
+disposable fixture; normal checkout checks retain the authored dependency groups.
 
 ## Consumer boundaries
 
@@ -78,7 +77,7 @@ Unselected IC stores and failed diagnostics remain eligible for retention.
 
 ## Deployment dependency exclusions
 
-The selected Shared 0.24 checker `check-cargo-dependency-boundaries.sh` is now
+The selected Shared direct-dependency checker `check-cargo-dependency-boundaries.sh` is now
 included in `actions-check`. The local policy forbids direct Candid/CDK-family,
 Platform macro-helper, retired Testkit decoder, IC0 and executor declarations in
 every member. Platform 0.2 owns generator/runtime paths, stable helpers and
@@ -88,38 +87,36 @@ The checker resolves aliases through Cargo metadata and
 checks all normal/build/dev/target declarations. The root has one workspace;
 there are no maintained independent Cargo fixtures or manifests.
 
-The consumer-owned `scripts/ci/check-library-dependency-boundary.sh` now runs in
-`actions-check`. It inspects the library alone with all features and normal/build
-edges for Wasm and the actual Rust host. It rejects the direct policy's prohibited
-packages transitively except for the intentional executor/IC0 dependencies, plus
-Build, Host, Testkit, Wire and probe packages. Platform may enable only `executor`
-and `ic0`; the graph must resolve the qualified executor 2.0.0 and IC0 1.2.0
-identities. Its fixture checks real Cargo feature leakage, renamed target-specific
-build dependencies, permitted dev-only dependencies, same-version executor source
-substitution and failed-producer refusal.
-Shared still owns the generic direct-dependency checker; the new local check
-owns only Timers' library policy, not a second general dependency framework.
+`scripts/ci/check-library-dependency-boundary.sh` owns Timers' policy and calls
+Shared's `check-cargo-graph.pl` for the library, both canister probes and the
+protocol package, independently for Wasm and the actual Rust host. Library and
+probe graphs exclude Candid, full CDK and host tooling. The library additionally
+excludes Wire/probe packages. The protocol excludes Platform and timer authority.
+Platform may select only executor/IC0 for the library, plus `cdk` for probes.
+The checker derives forbidden feature names from the selected Platform catalog
+and delegates dependency-feature-edge refusal to Shared. It retains local
+successful-metadata admission of one registry executor 2.0.0 and IC0 1.2.0.
+Shared identity counts supplement rather than replace those source/version checks.
 
-**Remaining limits:** role comments and unused catalog boundary entries are not
-validated. The named package/family rules are not a universal classifier of future
-dependencies. Probe features and intentional upstream Candid are outside the
-library-only check; the provider check validates authored source ownership.
-Platform's defaults remain disabled. Its unconditional Principal/Serde support
-is production-transitive even though Candid remains qualification-only.
-No existing automated gate binds this exclusion policy to deployed artifact
-bytes. The consuming canister's build/deployment owner must enforce its own
-exclusions with the exact source, lockfile, target/features and artifact digest.
-A consumer may legitimately use CDK/Candid for its application even though those
-are qualification-only dependencies of this workspace. See the
-[release boundary](releasing.md#dependency-role-boundary).
+Real-Cargo consumer fixtures cover Candid/default feature leakage, renamed target
+and build dependencies, protocol authority exclusion, permitted dev-only Wire and
+same-version executor source replacement. Shared owns generic parser and failed-
+producer fixtures; those are no longer repeated here. Source symlink checks run
+in `actions-check`; package verification admits the prepared archive's license.
+
+**Remaining limits:** role comments and unused catalog entries are not validated.
+Feature-edge inspection is not a universal inventory of arbitrary root features;
+Platform is a dependency of each selected runtime root here. Graph evidence is
+not final deployment admission. Consumers must bind their own target/features,
+source/lock, successful builds and final artifact digests. Native simulator Candid
+transport remains intentional and outside the deployed-canister policy.
 
 ## Qualification and refresh
 
-Focused receipts, graph selections, canonical preview/apply and before-image
-identity are retained in `target/qualification/shared024/`; the task arrival is
-`/tmp/ic-timers-shared024-arrival.0djwogzx`. Current results belong in the
-[handoff](status/current.md). Linux caller checks do not qualify native macOS,
-hosted upload/download or the complete release gate.
+Current preview/apply, before-images and focused qualification receipts are in
+`/tmp/ic-timers-three-improvements.7qqc7zen/`. The
+[handoff](status/current.md) records the tested current scope. Linux evidence does
+not qualify native macOS or the complete maintainer-operated release gate.
 
 Future refreshes use the reviewed source's canonical exporter: preview first,
 then apply the same explicit root selection. Retain directly used helpers and

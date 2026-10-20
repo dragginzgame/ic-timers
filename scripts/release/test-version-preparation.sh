@@ -14,20 +14,18 @@ trap 'fixture_finish "$?" "$temporary_root" "Failed version-preparation fixture 
 git init -q "${temporary_root}"
 mkdir -p "${temporary_root}"/{scripts/release,scripts/ci,docs/status,docs/changelog,crates/ic-timers/src,testing/probe/src}
 cp "${repository_root}/scripts/release/bump-version.sh" "${temporary_root}/scripts/release/"
-cp "${repository_root}/scripts/ci/next-release-version.sh" \
-    "${repository_root}/scripts/ci/validate-release-inputs.pl" \
-    "${repository_root}/scripts/ci/check-make-execution.sh" \
-    "${repository_root}/scripts/ci/run-formatting.sh" \
-    "${repository_root}/scripts/ci/finalize-release-changelog.awk" \
-    "${repository_root}/scripts/ci/check-release-changelog.sh" "${temporary_root}/scripts/ci/"
-cp "${repository_root}/scripts/ci/read-cargo-workspace-version.sh" \
-    "${repository_root}/scripts/ci/render-cargo-workspace-version.pl" \
-    "${repository_root}/scripts/ci/cargo-release-metadata.sh" \
-    "${repository_root}/scripts/ci/cargo-workspace-members.jq" \
-    "${repository_root}/scripts/ci/compare-stable-versions.pl" \
-    "${repository_root}/scripts/ci/StableVersion.pm" \
-    "${repository_root}/scripts/ci/rewrite-local-lock-versions.pl" \
-    "${temporary_root}/scripts/ci/"
+bash "$repository_root/scripts/ci/prepare-script-fixture.sh" "$repository_root" "$temporary_root" \
+    scripts/ci/next-release-version.sh scripts/ci/validate-release-inputs.pl \
+    scripts/ci/check-make-execution.sh scripts/ci/run-formatting.sh \
+    scripts/ci/check-release-changelog.sh scripts/ci/cargo-release-metadata.sh
+mkdir -p "$temporary_root/ci" "$temporary_root/scripts/dev"
+cp "$repository_root/ci/release-editor.env" "$temporary_root/ci/"
+FIXTURE_RELEASE_EDITOR="$(bash "$repository_root/scripts/dev/release-editor.sh" check)"
+export FIXTURE_RELEASE_EDITOR
+cat > "$temporary_root/scripts/dev/release-editor.sh" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$FIXTURE_RELEASE_EDITOR"
+EOF
 # Classification is an isolated fixture input; preparation must not run tests.
 cat > "${temporary_root}/scripts/release/classify-release-impact.sh" <<'EOF'
 #!/usr/bin/env bash
@@ -301,7 +299,7 @@ for stage in root-metadata interrupt; do
     output="$(PATH="${temporary_root}/bin:${PATH}" FIXTURE_FAIL_STAGE="${stage}" \
         bash scripts/release/bump-version.sh patch 2>&1)" || status=$?
     case "$stage" in root-metadata) expected=23 ;; interrupt) expected=143 ;; esac
-    [[ "$status" == "$expected" && "$output" == *'restoring release metadata'* ]] || exit 1
+    [[ "$status" == "$expected" && "$output" == *'Failed preparation; originals retained:'* ]] || exit 1
     assert_metadata_unchanged original-files
 done
 
@@ -316,7 +314,7 @@ for operation in check prepare; do
         exit 1
     fi
     if [[ "${output}" == *'injected root-metadata failure'* ||
-        "${output}" == *'restoring release metadata'* ]]; then
+        "${output}" == *'Failed preparation; originals retained:'* ]]; then
         echo "error: missing-changelog refusal occurred after mutation: ${output}" >&2
         exit 1
     fi

@@ -15,6 +15,7 @@ case "${1:-}" in
         # Prepare only the admitted graph's existing owners, in order. Fetching
         # sources alone does not install the root-lock-selected executable.
         make --no-print-directory fetch
+        make --no-print-directory install-release-editor
         make --no-print-directory install-testkit-server
         make --no-print-directory pocketic-check
         ;;

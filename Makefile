@@ -7,8 +7,8 @@
 
 MSRV ?= 1.91.0
 VERSION ?=
-LOCAL_TOOL_INSTALL_TARGETS := install-testkit-server
-LOCAL_TOOL_CHECK_TARGETS := pocketic-check
+LOCAL_TOOL_INSTALL_TARGETS := install-release-editor install-testkit-server
+LOCAL_TOOL_CHECK_TARGETS := release-editor-check pocketic-check
 override SHARED_TOOLING_ROOT := $(CURDIR)
 # Keep one consumer-owned declaration for Make and standalone adapters.
 override RELEASE_DELIVERY_POLICY := $(CURDIR)/ci/release-delivery.txt
@@ -20,7 +20,7 @@ FORMAT_CHECK_COMMAND = bash -ec '"$$1" sort --workspace --grouped --check; "$$1"
 include make/consumer.mk
 
 CI_TARGETS := actions-check shell-check provider-check fmt-check check clippy release-check docs-check test wasm-check package
-RELEASE_TARGETS := fetch install-testkit-server pocketic-check ci msrv testing-check pocketic-watchdog pocketic-cohorts
+RELEASE_TARGETS := fetch install-release-editor install-testkit-server pocketic-check ci msrv testing-check pocketic-watchdog pocketic-cohorts
 REPOSITORY_TARGETS := actions-check shell-check release-check provider-check fmt-check
 
 help:
@@ -46,7 +46,7 @@ help:
 	@echo "  install-host-tools  Install pinned jq/yq/ripgrep/cloc host tools"
 	@echo "  host-tools-check    Verify the complete host bundle offline"
 	@echo "  install-testkit-server  Prepare the locked Testkit CLI and its admitted server"
-	@echo "  install-tools / tools-check  Prepare or verify host/Cargo tools, then Testkit"
+	@echo "  install-tools / tools-check  Prepare or verify host/Cargo tools, editor and Testkit"
 	@echo "  shared-tooling-check  Verify the reviewed root snapshot offline"
 	@echo "  install-hooks       Activate the reviewed repository-local formatting hook"
 	@echo "  cloc                Report root-workspace Rust LOC and test counts"
@@ -103,9 +103,19 @@ testing-check:
 
 package:
 	+cargo package --locked --offline --allow-dirty -p ic-timers
+	@version="$$(bash scripts/ci/read-cargo-workspace-version.sh --stable Cargo.toml)"; \
+		perl scripts/ci/check-license.pl --kind mit --file crates/ic-timers/LICENSE \
+		--archive "target/package/ic-timers-$$version.crate" --member "ic-timers-$$version/LICENSE"
 
 install-testkit-server:
 	+bash scripts/dev/testkit-server.sh setup
+
+.PHONY: install-release-editor release-editor-check
+install-release-editor:
+	+bash scripts/dev/release-editor.sh setup
+
+release-editor-check:
+	+bash scripts/dev/release-editor.sh check
 
 pocketic-check:
 	+@bash scripts/dev/testkit-server.sh check
@@ -123,6 +133,7 @@ pocketic-cohorts: pocketic-check
 # Keep the established gate entry point; the shared owner also checks Cargo
 # declarations and the tracked root lockfile for all maintained members.
 actions-check: host-tools-check
+	perl scripts/ci/check-no-symlinks.pl --consumer "$(CURDIR)"
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/check-dependency-pins.sh \
 		--consumer "$(CURDIR)" --cargo-inheritance
 	bash scripts/ci/check-cargo-dependency-boundaries.sh --consumer "$(CURDIR)"
@@ -147,7 +158,6 @@ release-check:
 	bash scripts/ci/test-evidence-checksums.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/test-dependency-pins.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/test-cargo-metadata.sh
-	perl scripts/ci/test-local-lock-versions.pl
 	bash scripts/ci/check-release-commands.sh "$(CURDIR)" \
 		ci/tool-versions.env ci/release-delivery.txt make/consumer.mk make/tools.mk make/rust-format.mk make/release.mk \
 		scripts/ci/check-release-delivery.sh \

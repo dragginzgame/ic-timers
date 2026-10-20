@@ -30,11 +30,12 @@ macro_rules! methods {
             $(#[doc = $name] $variant = $id,)*
         }
 
-        /// Resolve an owned endpoint name without inventing an unknown identity.
-        pub fn method_id(name: &str) -> Option<u64> {
-            match name {
-                $($name => Some(Method::$variant as u64),)*
-                _ => None,
+        impl Method {
+            /// Endpoint name paired with this method's frame identity.
+            pub const fn name(self) -> &'static str {
+                match self {
+                    $(Self::$variant => $name,)*
+                }
             }
         }
     };

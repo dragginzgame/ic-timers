@@ -277,7 +277,7 @@ cat > overrides.mk <<'EOF'
 # Keep this orchestration fixture independent of prepared formatter tools.
 format-tools-check:
 	@:
-fetch install-testkit-server host-tools-check actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package pocketic-check msrv testing-check pocketic-watchdog pocketic-cohorts:
+fetch install-release-editor install-testkit-server host-tools-check actions-check shell-check release-check provider-check fmt-check check clippy docs-check test wasm-check package pocketic-check msrv testing-check pocketic-watchdog pocketic-cohorts:
 	@printf '%s\n' '$@' >> checks-ran
 	@if [ '$@' = '$(FAIL_TARGET)' ]; then echo 'failed $@' >&2; exit 1; fi
 EOF
@@ -287,7 +287,7 @@ fixture_make=(make --no-print-directory -f Makefile
 # actions-check retains its real host-tools-check prerequisite when its recipe
 # is overridden. Record that admission before the action/dependency leaf.
 ci_targets=(host-tools-check actions-check shell-check provider-check fmt-check check clippy release-check docs-check test wasm-check package)
-release_targets=(fetch install-testkit-server pocketic-check "${ci_targets[@]}" msrv testing-check
+release_targets=(fetch install-release-editor install-testkit-server pocketic-check "${ci_targets[@]}" msrv testing-check
     pocketic-check pocketic-watchdog pocketic-check pocketic-cohorts)
 for gate in ci release-verify pocketic-watchdog pocketic-cohorts; do
     case "${gate}" in

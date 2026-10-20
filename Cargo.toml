@@ -34,12 +34,13 @@ serde = { version = "1.0", features = ["derive"] }
 thiserror = "2.0"
 
 # Tests and tooling only
+clap = { version = "4.6", default-features = false, features = ["std", "help", "usage", "error-context"] }
 ic-build = "0.22"
 ic-host-process = "0.30"
-ic-testkit = "0.55"
+ic-testkit = "0.57"
 ic-timers = { path = "crates/ic-timers" }
 ic-timers-test-protocol = { path = "testing/crates/ic-timers-test-protocol" }
-ic-wire = "0.4.4"
+ic-wire = "0.5"
 
 [workspace.lints.rust]
 missing_docs = "warn"

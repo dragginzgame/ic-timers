@@ -5,7 +5,7 @@ use ic_testkit::pic::{
     CanisterInstallExt, InstallSpec, PocketIc, PocketIcBuilder, PocketIcInstance,
     PocketIcStartupConfig, tick_until,
 };
-use ic_timers_test_protocol::rpc::{REQUEST_LIMITS, RESPONSE_LIMITS, method_id};
+use ic_timers_test_protocol::rpc::{Method, REQUEST_LIMITS, RESPONSE_LIMITS};
 use serde::{Serialize, de::DeserializeOwned};
 use std::{convert::Infallible, env, fmt::Debug, path::PathBuf, task::Poll, time::Duration};
 
@@ -66,7 +66,7 @@ pub fn fresh_pocket_ic() -> PocketIcInstance<PocketIc> {
 }
 
 /// Invoke an anonymous update with no arguments or return values.
-pub fn update_unit(pic: &PocketIc, canister_id: Principal, method: &str) {
+pub fn update_unit(pic: &PocketIc, canister_id: Principal, method: Method) {
     update_wire::<(), _>(pic, canister_id, Principal::anonymous(), method, ())
         .expect("probe update succeeds");
 }
@@ -76,14 +76,14 @@ pub fn update_wire<T: Serialize + DeserializeOwned, A: Serialize>(
     pic: &PocketIc,
     canister_id: Principal,
     caller: Principal,
-    method: &str,
+    method: Method,
     args: A,
 ) -> Result<T, Box<dyn std::error::Error>> {
-    let id = method_id(method).ok_or("unknown probe method")?;
+    let id = method as u64;
     let request = ic_wire::native::encode_request(id, &args, REQUEST_LIMITS)?;
     let response = pic
-        .update_call(canister_id, caller, method, request)
-        .map_err(|error| format!("{method}: {error:?}"))?;
+        .update_call(canister_id, caller, method.name(), request)
+        .map_err(|error| format!("{}: {error:?}", method.name()))?;
     Ok(ic_wire::native::decode_response(
         id,
         &response,
@@ -96,14 +96,14 @@ pub fn query_wire<T: Serialize + DeserializeOwned, A: Serialize>(
     pic: &PocketIc,
     canister_id: Principal,
     caller: Principal,
-    method: &str,
+    method: Method,
     args: A,
 ) -> Result<T, Box<dyn std::error::Error>> {
-    let id = method_id(method).ok_or("unknown probe method")?;
+    let id = method as u64;
     let request = ic_wire::native::encode_request(id, &args, REQUEST_LIMITS)?;
     let response = pic
-        .query_call(canister_id, caller, method, request)
-        .map_err(|error| format!("{method}: {error:?}"))?;
+        .query_call(canister_id, caller, method.name(), request)
+        .map_err(|error| format!("{}: {error:?}", method.name()))?;
     Ok(ic_wire::native::decode_response(
         id,
         &response,

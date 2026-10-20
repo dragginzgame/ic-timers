@@ -1,13 +1,15 @@
 mod build;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<_> = std::env::args().skip(1).collect();
-    match args.as_slice() {
-        [mode] if mode == "watchdog" || mode == "cohorts" => build::run(mode),
-        _ => Err(
-            "usage: ic-timers-pocketic watchdog|cohorts (use the corresponding Make target)".into(),
-        ),
-    }
+    let args = clap::Command::new("ic-timers-pocketic")
+        .about("Build and run timer qualification through the corresponding Make target")
+        .arg(
+            clap::Arg::new("mode")
+                .required(true)
+                .value_parser(["watchdog", "cohorts"]),
+        )
+        .get_matches();
+    build::run(args.get_one::<String>("mode").expect("required mode"))
 }
 
 #[cfg(test)]

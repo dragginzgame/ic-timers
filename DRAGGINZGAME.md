@@ -117,6 +117,76 @@ Consumer choices described in those guides remain subject to this baseline.
 - Dependencies own their established contracts; do not reproduce them downstream.
   Libraries must not silently claim consumer endpoints or lifecycle ownership.
 
+## Repository files: no symlinks
+
+- **Do not create or commit symlinks for maintained repository files or
+  directories.** This includes source, manifests, documentation, scripts, shared
+  snapshots, license files and shipped package assets. Generated source and
+  package outputs follow the same rule; fix their generator when necessary.
+- Use explicit dependency/configuration paths or the canonical package interface.
+  When packaging needs a local file, use a regular copy and verify it against
+  its owner. In particular, package-local `LICENSE` files must be regular files
+  containing the applicable complete terms and notices, never symlinks.
+- The permitted repository-tooling uses are generated selection pointers owned
+  and admitted by Shared Tooling's verified executable store, and deliberately
+  created symlinks in isolated rejection/security fixtures. Keep these outside
+  maintained source and shipped package assets; they do not authorize general
+  file aliases, package-license links or links into sibling checkouts.
+- Operating-system/toolchain layouts and directory aliases outside the maintained
+  repository tree remain external inputs, subject to each tool's path admission.
+  This rule does not authorize deleting existing installations, evidence or link
+  targets. Replace an obsolete repository link without modifying its target.
+- Review tracked Git modes, working-tree paths and actual package file lists
+  when adopting the rule. A clean index alone does not prove generated or packaged
+  files comply. Any other repository-owned use needs a scoped maintainer-approved
+  exception under the baseline's local-authority rules.
+
+## CLI applications
+
+- **Use Clap for Rust CLI applications**, including developer tools and maintained
+  utility binaries. Use its derive or builder API rather than handwritten
+  `std::env::args` loops, custom flag/subcommand dispatch or a parallel parser.
+- Let Clap own argument/value parsing, typed values, defaults, required arguments,
+  allowed values, argument groups/conflicts/dependencies, help, version, usage and
+  parse-error diagnostics. Before adding custom CLI logic, check whether Clap
+  already provides the behavior and use that capability.
+- Prefer Clap's extension points when application-specific parsing is needed.
+  Keep custom validation limited to domain constraints Clap cannot express;
+  document that gap and keep domain semantics with their existing owner. Do not
+  reimplement generic CLI mechanics behind wrappers or duplicate manual checks
+  that Clap already enforces.
+
+## IC application encoding
+
+- **Use `ic-wire` for all application endpoints we own**, including public
+  endpoints called by third parties, owned canister RPC and frontend/client
+  payloads. Caller location or endpoint visibility does not select the codec.
+  Reuse Wire's encoding, decoding and generated bindings.
+- Candid adapts independently defined interfaces that require it, such as
+  management/system canisters, NNS/SNS and ledger protocols. A third-party caller
+  of our application is not itself an external Candid protocol. Record the
+  required interface; existing derives or a Candid-first example are not reasons
+  to retain it. Required external Candid dependencies still follow the
+  [IC Platform boundary](rules/cargo-dependencies.md#external-ic-dependency-boundary).
+- A missing released Wire capability requires an owning issue and qualification
+  before adoption, or an expressly approved scoped exception. Do not introduce
+  a local codec or a Candid fallback to bypass that work.
+- Remove Candid derives, conversions and codec helpers from internal types when
+  no remaining Candid contract needs them. Do not wrap an unchanged Candid payload
+  in Wire merely to claim adoption. Storage layouts and canonical hash inputs
+  retain their owning contracts. Existing persisted Candid checkpoint bytes are
+  a compatibility obligation, not permission for new Candid storage formats.
+- IC Wire owns codecs, resource admission and codec generation. Consumers retain
+  endpoint exports, transport, authentication, method identities, semantic
+  validation, rollback and retry policy. Qualify the selected released APIs and
+  both ends of the actual integration, including zero-argument RPCs and lifecycle
+  argument decoding. Explicit codec hooks alone do not prove Wire framing or
+  binding conformance, endpoint behavior or instruction/size savings.
+- Changing existing message bytes requires an explicit consumer migration with
+  affected callers, generated bindings and retained retry bytes accounted for.
+  Follow the [pre-1.0 contract rules](#pre-10-contracts); do not silently change a
+  public interface or introduce parallel codecs/fallback readers for adoption.
+
 ## Complete, reviewable changes
 
 - Ordinary continuation resumes the accepted coherent in-repository batch through
@@ -275,6 +345,12 @@ Consumer choices described in those guides remain subject to this baseline.
   default; PR delivery prepares a review branch and validates the admitted merged
   commit afresh before tagging. Never select another policy to bypass a rejected
   push or branch protection.
+- Standard release entrypoints must select their required prepared executables
+  through the consumer's offline admission interface; do not require maintainers
+  to export tool paths in each shell. Fresh preflight prepares missing selections
+  only after source/recovery admission. Recovery admits the saved source's
+  selection without installing or resolving partially prepared live metadata.
+  Low-level helpers may require explicit paths supplied by their calling adapter.
 - These one-shot commands are user-operated by default. An agent needs explicit
   delegation to run the selected release for the selected repository and
   destination. That request authorizes the
@@ -412,6 +488,10 @@ Consumer choices described in those guides remain subject to this baseline.
   verified tool downloads, and explicitly qualified sibling or moving inputs.
   Run the declaration checker in CI and release gates; consumers own the chosen
   versions, approved exceptions and runtime qualification evidence.
+- Follow the [upstream maintenance and recovery rules](rules/dependency-pinning.md#maintaining-upstream-code)
+  for imported runtime and cryptographic implementations. Preserve provenance,
+  review applicable fixes, and distinguish source availability from demonstrated
+  recovery. Product-specific pins, fixtures and recovery procedures stay local.
 - Use the [standard Rust workspace layout](rules/rust-workspaces.md): a virtual
   repository-root workspace, including single-package repositories. Maintained
   packages use `crates/<package-name>/` or application-owned `apps/<app-name>/`
@@ -432,6 +512,12 @@ Consumer choices described in those guides remain subject to this baseline.
   development toolchain. CI must explicitly check each advertised floor;
   documented package groups may have different floors. Do not upgrade a toolchain
   or raise MSRV without an established need and appropriate validation.
+- Consume every externally maintained IC-specific dependency through `ic-platform`,
+  including DFINITY packages. Apply the
+  [external IC dependency boundary](rules/cargo-dependencies.md#external-ic-dependency-boundary)
+  to production, build, test and tooling code, optional features and all targets.
+  Missing Platform support requires an upstream capability issue, not a new direct
+  dependency or a local replacement facade.
 - Follow the [Rust hygiene baseline](docs/principles/rust-code-hygiene.md): narrow
   visibility, documented APIs/invariants, ordinary module discovery, bounded
   fallible decoding, typed errors and `std` paths in code that requires `std`,
@@ -441,7 +527,7 @@ Consumer choices described in those guides remain subject to this baseline.
 - Rust repositories adopt the [standard formatting hook](rules/git-hooks.md):
   `make install-hooks` enables a reviewed repository-local pre-commit hook that
   auto-formats and refreshes only selected files, rejects partial staging and
-  preserves unrelated working edits. Formatting includes `cargo sort --workspace`
+  preserves unrelated working edits. Formatting includes `cargo sort --workspace --grouped`
   for root and child manifests before Rust formatting. Keep matching `fmt-check`
   sorting and Rust checks in CI and release gates;
   hook activation and independent formatting qualification are separate checks.

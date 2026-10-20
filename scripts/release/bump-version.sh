@@ -77,6 +77,11 @@ fi
 
 # Shared owns the byte-preserving transaction and coordinated graph checks.
 # Local impact, tag, changelog preflight and advisory policy remain above.
+# shellcheck source=ci/release-editor.env
+source ci/release-editor.env
+CARGO_RELEASE_METADATA_EDITOR="$(bash scripts/dev/release-editor.sh check)"
+export CARGO_RELEASE_METADATA_EDITOR
+export CARGO_RELEASE_METADATA_MAX_BYTES="$IC_TIMERS_RELEASE_EDITOR_MAX_BYTES"
 RELEASE_PREVIOUS="$previous_version" RELEASE_VERSION="$new_version" RELEASE_DATE="$release_date" \
     bash "$(dirname "${BASH_SOURCE[0]}")/../../scripts/ci/cargo-release-metadata.sh" \
     prepare ic-timers

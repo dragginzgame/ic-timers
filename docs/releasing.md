@@ -76,9 +76,15 @@ with current helpers and never execute scripts from the exported tree.
 Preflight admits only `Cargo.toml`, `Cargo.lock` and `CHANGELOG.md` as mutable
 release outputs. Other staged, unstaged or untracked changes must be resolved by
 the maintainer. It checks version/tag/impact/notes, then runs `fetch`,
-`install-testkit-server` and `pocketic-check` sequentially before validation or
-version preparation. Locked fetch prepares the selected graph; it cannot repair
+`install-release-editor`, `install-testkit-server` and `pocketic-check`
+sequentially before validation or version preparation. Locked fetch prepares the selected graph; it cannot repair
 a stale lockfile after dependency edits. No helper stages unrelated changes.
+
+Shared 0.25 delegates candidate rendering to the published root-lock-selected
+IC Build editor. Prepare it with `make install-release-editor`; standalone
+metadata commands admit it offline through `make release-editor-check`. Its
+positive per-document limit is maintained in `ci/release-editor.env`. Common CI
+setup prepares the same executable. No local Perl rendering fallback remains.
 
 Metadata-only `make patch`, `make minor`, `make major` and
 `make bump-x VERSION=x.y.z` support preparation from a dirty worktree. They do
@@ -151,9 +157,11 @@ cargo tree --locked --offline -p ic-timers --all-features \
   --target wasm32-unknown-unknown --edges normal,build
 ```
 
-`actions-check` automatically runs the local library dependency check for Wasm
-and the actual native Rust host, with all features and normal/build edges. It
-rejects Candid, full CDK, qualification tooling and unsupported Platform features,
+`actions-check` runs the dependency policy for the library, both probes and the
+protocol on Wasm and the actual native Rust host, with all features and
+normal/build edges. It rejects Candid, full CDK, host tooling and unsupported Platform features in
+runtime roots; the library excludes probe/Wire packages and the protocol excludes
+runtime authority. It delegates graph mechanics to Shared,
 and requires the qualified executor/IC0 identities. The separate Shared direct
 checker enforces [named package ownership](../ci/cargo-dependency-boundaries.json)
 across aliases and normal/build/dev/target declarations. Neither check validates
@@ -177,8 +185,8 @@ to close a host gap.
 The last recorded complete all-host acceptance here is released 0.23.1 at
 `2d54724bc836ca09308d6742bf95c3f1ddecc3f4`; its exact run/jobs and graph are in
 [the receipt](evidence/release-history.md#completed-0231-native-acceptance).
-It does not qualify later source, the incoming Testkit 0.45 graph or this pending
-0.24 cut. New hosted evidence must bind to its exact source and selections.
+It does not qualify later source, newer dependency selections or the current
+worktree. New hosted evidence must bind to its exact source and selections.
 
 ## Formatter prerequisites
 
@@ -199,7 +207,9 @@ no global tool or stale-generation fallback is admitted. See
 
 ## Common tools and Testkit setup
 
-`make install-tools` prepares common host/Cargo tools, then Testkit.
+`make install-tools` prepares common host/Cargo tools, then the release editor
+and Testkit. Standalone `release-verify` prepares the release editor after locked
+fetch and before Testkit, matching fresh release preflight.
 `make tools-check` verifies them offline in the same order. CI and Rust formatting
 hooks publish common host/Cargo paths. Timers selects no IC executable bundle:
 maintained probe builds use Cargo through IC Build and do not invoke Binaryen,

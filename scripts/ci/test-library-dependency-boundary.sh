@@ -32,18 +32,49 @@ if bash "$checker" > feature-failure.log 2>&1; then
     echo 'error: library admitted accidental Platform Candid feature' >&2
     exit 1
 fi
-if ! grep -q 'forbidden Platform feature: candid' feature-failure.log; then
+if ! grep -q 'forbidden candid' feature-failure.log; then
     cat feature-failure.log >&2
     exit 1
 fi
 cp library-original.toml crates/ic-timers/Cargo.toml
 cp "$root/Cargo.lock" Cargo.lock
 
+# Empty Platform defaults still violate the library feature allowlist, even
+# without introducing another package. Probe and protocol policies are separate.
+perl -pi -e 's/"executor", "ic0"/"executor", "ic0", "default"/' crates/ic-timers/Cargo.toml
+if bash "$checker" > default-failure.log 2>&1; then
+    echo 'error: library admitted Platform default features' >&2; exit 1
+fi
+grep -q 'forbidden dependency feature edge: ic-platform/default' default-failure.log
+cp library-original.toml crates/ic-timers/Cargo.toml
+cp testing/crates/ic-timers-runtime-probe/Cargo.toml probe-original.toml
+perl -pi -e 's/\["cdk"\]/["cdk", "candid"]/' testing/crates/ic-timers-runtime-probe/Cargo.toml
+RUSTUP_AUTO_INSTALL=0 cargo tree --offline -p ic-timers-runtime-probe --target wasm32-unknown-unknown > /dev/null
+if bash "$checker" > probe-failure.log 2>&1; then
+    echo 'error: canister probe admitted Candid' >&2; exit 1
+fi
+grep -q 'forbidden candid' probe-failure.log
+cp probe-original.toml testing/crates/ic-timers-runtime-probe/Cargo.toml
+cp "$root/Cargo.lock" Cargo.lock
+cp testing/crates/ic-timers-test-protocol/Cargo.toml protocol-original.toml
+cat >> testing/crates/ic-timers-test-protocol/Cargo.toml <<'EOF'
+
+[build-dependencies]
+ic-platform = { workspace = true, features = ["executor"] }
+EOF
+RUSTUP_AUTO_INSTALL=0 cargo tree --offline -p ic-timers-test-protocol --target wasm32-unknown-unknown > /dev/null
+if bash "$checker" > protocol-failure.log 2>&1; then
+    echo 'error: protocol admitted Platform authority' >&2; exit 1
+fi
+grep -q 'forbidden ic-platform' protocol-failure.log
+cp protocol-original.toml testing/crates/ic-timers-test-protocol/Cargo.toml
+cp "$root/Cargo.lock" Cargo.lock
+
 # A renamed target-specific build dependency must be checked by package name;
 # the same package used only in dev-dependencies is outside this library graph.
 # Lock preparation is confined to this disposable fixture, never the checkout.
 cp Cargo.toml catalog-original.toml
-perl -pi -e 's/^ic-wire = /leaked-wire = { package = "ic-wire", version = "0.4.4" }\nic-wire = /' Cargo.toml
+perl -pi -e 's/^ic-wire = /leaked-wire = { package = "ic-wire", version = "0.5" }\nic-wire = /' Cargo.toml
 for table in "target.'cfg(target_arch = \"wasm32\")'.dependencies" "target.'cfg(unix)'.build-dependencies"; do
     cp library-original.toml crates/ic-timers/Cargo.toml
     # Build-dependency cfgs describe the host; normal dependencies describe the
@@ -54,7 +85,7 @@ for table in "target.'cfg(target_arch = \"wasm32\")'.dependencies" "target.'cfg(
         echo "error: library admitted a renamed target-specific Wire dependency: $table" >&2
         exit 1
     fi
-    grep -q 'forbidden production dependency: ic-wire' build-failure.log
+    grep -q 'forbidden pattern matches ic-wire' build-failure.log
 done
 cp library-original.toml crates/ic-timers/Cargo.toml
 cp catalog-original.toml Cargo.toml
@@ -89,26 +120,10 @@ if bash "$checker" > identity-failure.log 2>&1; then
     echo 'error: library admitted an unqualified executor source at the same version' >&2
     exit 1
 fi
-grep -q 'expected one ic-cdk-executor 2.0.0' identity-failure.log
+grep -q 'expected one qualified registry ic-cdk-executor 2.0.0' identity-failure.log
 cp catalog-original.toml Cargo.toml
 cp "$root/Cargo.lock" Cargo.lock
 
-# A producer may emit an otherwise acceptable complete graph and then fail.
-# Never treat those bytes as successful dependency evidence.
-mkdir bin
-cat > bin/cargo <<'EOF'
-#!/usr/bin/env bash
-"$BOUNDARY_REAL_CARGO" "$@" || exit
-exit 37
-EOF
-chmod +x bin/cargo
-BOUNDARY_REAL_CARGO="$(command -v cargo)"
-export BOUNDARY_REAL_CARGO
-if PATH="$fixture/bin:$PATH" bash "$checker" > producer-failure.log 2>&1; then
-    echo 'error: library admitted failed Cargo evidence' >&2
-    exit 1
-fi
-grep -q 'library Cargo tree failed' producer-failure.log
 cmp "$root/Cargo.lock" Cargo.lock
 fixture_complete=true
-echo 'Library graph admission, accidental Candid and failed-producer checks passed'
+echo 'Library, probe and protocol dependency policy checks passed'
