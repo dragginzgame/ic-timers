@@ -813,15 +813,15 @@ dependencies = [
 
 [[package]]
 name = "ic-build"
-version = "0.22.0"
+version = "0.22.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1fb079aff07eee2c8f1af7ad263628f14146a8858ea0011c1062a3be3ef66e9"
+checksum = "9e4f17cdb7df1431acb988aba21d90b3b3b7136b1fdb59d6946ff81f3436bf06"
 dependencies = [
  "cargo_metadata",
  "clap",
- "ic-host-artifacts",
- "ic-host-fs",
- "ic-host-process",
+ "ic-host-artifacts 0.31.1",
+ "ic-host-fs 0.31.1",
+ "ic-host-process 0.31.1",
  "rustix",
  "serde",
  "serde_json",
@@ -855,17 +855,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ic-error-types"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bbeeb3d91aa179d6496d7293becdacedfc413c825cac79fd54ea1906f003ee55"
-dependencies = [
- "serde",
- "strum",
- "strum_macros",
-]
-
-[[package]]
 name = "ic-host-artifacts"
 version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -876,12 +865,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "ic-host-artifacts"
+version = "0.31.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4417f092a4bc5bc1b55fb6a59a43b2d41703dfe1be7943117dbbf31b84211b6"
+dependencies = [
+ "sha2",
+]
+
+[[package]]
 name = "ic-host-fs"
 version = "0.30.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "93a88de3f33e927fcb4c50491b88de82a3be89ec4c903f5eedd103b676d64729"
 dependencies = [
- "ic-host-artifacts",
+ "ic-host-artifacts 0.30.1",
+ "rustix",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "ic-host-fs"
+version = "0.31.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f1cd9bad40d94a862ab47615f998e7f3b8eb9ba9ca5821188488713adf78c5bc"
+dependencies = [
+ "ic-host-artifacts 0.31.1",
  "rustix",
  "thiserror 2.0.18",
 ]
@@ -893,8 +902,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e17da14b6f4936cafe412b82454c76582a5e47cc6e9ced0c132b950b0be5928"
 dependencies = [
  "command-fds",
- "ic-host-artifacts",
- "ic-host-fs",
+ "ic-host-artifacts 0.30.1",
+ "ic-host-fs 0.30.1",
+ "libc",
+ "rustix",
+]
+
+[[package]]
+name = "ic-host-process"
+version = "0.31.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f67820c240d86e86e0310edb8265aebb8c82cf9c97ed31cf59c25aa0404f6ff"
+dependencies = [
+ "command-fds",
+ "ic-host-artifacts 0.31.1",
+ "ic-host-fs 0.31.1",
  "libc",
  "rustix",
 ]
@@ -923,22 +945,34 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b083e911eb9799daf15f501a883d50a76e709d300a51b25fb0c31cd0be0377bd"
 dependencies = [
  "candid",
+ "ic0",
+ "ic_principal",
+ "pocket-ic",
+ "serde",
+]
+
+[[package]]
+name = "ic-platform"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3baf34ec6f65d10d78271159d1edc0feb61940816cc95af51bfce3f8dcfa4355"
+dependencies = [
+ "crc32fast",
+ "data-encoding",
  "ic-cdk-executor",
- "ic-error-types",
  "ic-platform-macros",
  "ic0",
  "ic_principal",
  "pin-project-lite",
- "pocket-ic",
  "serde",
  "thiserror 2.0.18",
 ]
 
 [[package]]
 name = "ic-platform-macros"
-version = "0.2.2"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32f4e533d81990b3c8b92ce161a12afe6d2e083cc3e3be466603c198a589b894"
+checksum = "d79bbfb24edb3bb0862035cea7f48e3f1dadfb073d6f398aeeb382ce6195a97f"
 dependencies = [
  "darling",
  "proc-macro2",
@@ -952,11 +986,11 @@ version = "0.57.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9834c00995ca544baaeb6a3e7f8c981efc90d59fb4f5e07787fc91a68a653f4f"
 dependencies = [
- "ic-host-artifacts",
- "ic-host-fs",
- "ic-host-process",
+ "ic-host-artifacts 0.30.1",
+ "ic-host-fs 0.30.1",
+ "ic-host-process 0.30.1",
  "ic-metrics",
- "ic-platform",
+ "ic-platform 0.2.2",
  "libc",
  "thiserror 2.0.18",
  "tokio",
@@ -967,7 +1001,7 @@ name = "ic-timers"
 version = "0.29.4"
 dependencies = [
  "ic-metrics",
- "ic-platform",
+ "ic-platform 0.4.0",
  "thiserror 2.0.18",
 ]
 
@@ -977,8 +1011,8 @@ version = "0.29.4"
 dependencies = [
  "clap",
  "ic-build",
- "ic-host-process",
- "ic-platform",
+ "ic-host-process 0.31.1",
+ "ic-platform 0.4.0",
  "ic-testkit",
  "ic-timers-test-protocol",
  "ic-wire",
@@ -989,7 +1023,7 @@ dependencies = [
 name = "ic-timers-runtime-probe"
 version = "0.29.4"
 dependencies = [
- "ic-platform",
+ "ic-platform 0.4.0",
  "ic-timers",
  "ic-timers-test-protocol",
  "ic-wire",
@@ -1000,7 +1034,7 @@ dependencies = [
 name = "ic-timers-size-probe"
 version = "0.29.4"
 dependencies = [
- "ic-platform",
+ "ic-platform 0.4.0",
  "ic-timers",
  "ic-timers-test-protocol",
  "ic-wire",
@@ -1866,9 +1900,9 @@ checksum = "eec689c0bc40ff2458a5977b6619cb718087084a18e02a131c599b62d05e1a5f"
 
 [[package]]
 name = "rustls-webpki"
-version = "0.103.15"
+version = "0.103.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f3c3cf1d8b1e7d4927e2d154c3fcb02979afb9939629c62cd9048d4f07b60ac2"
+checksum = "4443b1b6d39d7c663139942cc4558262562d2c84123bb6282ef177009ca8b281"
 dependencies = [
  "aws-lc-rs",
  "ring",

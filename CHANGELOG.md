@@ -2,6 +2,20 @@
 
 All notable changes to this project are recorded here.
 
+## [0.29.5]
+
+- Adopt published IC Platform 0.4.0. Use its explicit external Principal in the
+  PocketIC harness, preserving simulator API identities, Wire payloads and the
+  qualified executor/IC0 selections. The published timer API is unchanged.
+- Adopt Shared Tooling 0.25.4 for explicit Cargo-tool feature selection and
+  receipt admission. Refresh prepared tools under the updated build policy;
+  retain Timers' existing featureless editor/Testkit selections and release gates.
+- Align the qualification driver with published Host Process 0.31.1 and Build
+  0.22.1, requiring the Build patch that exposes the matching process identity.
+- Retain redirected evidence-parent links and independent failure logs without
+  traversing their children; report partial collection instead of losing the
+  archive or claiming completion.
+
 ## [0.29.4] - 2026-10-20
 
 - Delegate dependency graph checking to Shared Tooling 0.25.2 while retaining

@@ -25,7 +25,7 @@ checker=scripts/ci/check-library-dependency-boundary.sh
 bash "$checker"
 cp crates/ic-timers/Cargo.toml library-original.toml
 perl -pi -e 's/"executor", "ic0"/"executor", "ic0", "candid"/' crates/ic-timers/Cargo.toml
-# An independently optional codec adds a dependency edge to Platform 0.2 even
+# An independently optional codec adds a dependency edge to Platform even
 # when another package already resolves Candid. Prepare only the fixture lock.
 RUSTUP_AUTO_INSTALL=0 cargo tree --offline -p ic-timers --target wasm32-unknown-unknown > /dev/null
 if bash "$checker" > feature-failure.log 2>&1; then

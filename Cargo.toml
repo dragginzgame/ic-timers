@@ -28,15 +28,16 @@ categories = ["asynchronous", "wasm"]
 [workspace.dependencies]
 # Production dependencies
 ic-metrics = "0.14"
-ic-platform = { version = "0.2", default-features = false }
+ic-platform = { version = "0.4", default-features = false }
 # Already production-transitive through Platform's Principal; probes inherit this entry.
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "2.0"
 
 # Tests and tooling only
 clap = { version = "4.6", default-features = false, features = ["std", "help", "usage", "error-context"] }
-ic-build = "0.22"
-ic-host-process = "0.30"
+# Build 0.22.1 exposes Host 0.31's OwnedChild; keep the spawner identity aligned.
+ic-build = "0.22.1"
+ic-host-process = "0.31"
 ic-testkit = "0.57"
 ic-timers = { path = "crates/ic-timers" }
 ic-timers-test-protocol = { path = "testing/crates/ic-timers-test-protocol" }

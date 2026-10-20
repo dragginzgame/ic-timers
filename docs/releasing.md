@@ -232,7 +232,7 @@ shared-server reuse or recovery guarantees.
 ## Dependency pin exceptions
 
 The reviewed [exception list](../ci/dependency-pinning-exceptions.json) is empty.
-Platform 0.2 owns the runtime and exact selections for executor `=2.0.0` and
+Platform 0.4 owns the runtime and exact selections for executor `=2.0.0` and
 IC0 `=1.2.0`; Timers declares none of these providers directly. The library
 selects only `executor` and `ic0`, while canister probes select `cdk`. The root
 lockfile resolves one qualified identity for each provider. Any Platform update
@@ -249,6 +249,10 @@ The validation runner retains raw and combined logs under
 `.git/release-state/validation-failures/`, including `latest.log` and
 `latest-combined.log` convenience copies. Later attempts retain earlier logs;
 retention failure reports its owned scratch path. Preserve these before retrying.
+
+If `target` or `.tools` is redirected, the collector retains the parent link,
+independent logs and a diagnostic without traversing its children. Collection
+remains incomplete even if Shared's tool selector succeeds.
 
 The local collector retains product/run/source identity and delegates tool
 selection plus safe partial archive collection to Shared. CI captures its original

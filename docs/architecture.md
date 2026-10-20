@@ -53,19 +53,22 @@ remain separate evidence selections in the [release guide](releasing.md).
 
 Registry-published `ic-platform` is the selected boundary; the current lock and
 source-qualified receipts are recorded in [current status](status/current.md).
-Published Platform 0.2.0 owns the maintained non-cryptographic runtime and
+Published Platform 0.4.0 owns the maintained non-cryptographic runtime and
 explicit-codec generator. It selects no full CDK package and copies no executor.
 The root catalog disables default Platform features. The library selects only
 `executor` and `ic0`; the two canister probes select `cdk` for entrypoint contexts,
 protected calls/spawning, traps, cycle burning and stable byte I/O. The native
-harness selects no Platform features and the protocol package has no Platform
-edge. Parser, Agent, certification and ledger capabilities remain unselected.
+harness selects no Platform features and uses `principal::ExternalPrincipal`
+for PocketIC's external API identity. The protocol package has no Platform edge.
+Parser, Agent, certification and ledger capabilities remain unselected.
 
 The private platform uses `ic_platform::ic0` for its existing system calls,
 retaining context placement, method handles, protected spawning and callback/trap cleanup. The lockfile still
 resolves one `ic-cdk-executor` 2.0.0 shared with Platform's runtime. Native substitutes cannot
 qualify those IC paths. Executor/system-only Platform remains Candid-free, but its
-unconditional Principal export brings `ic_principal` and Serde transitively.
+unconditional owned Principal/Account exports retain `ic_principal` and Serde
+transitively. None of these identities cross the published timer API or probe
+wire records; this adoption changes no stored data or codec representation.
 
 Probe records use Serde and published Wire's native codec. The shared
 `test-protocol::rpc` roster owns explicit method IDs; both endpoint hooks and
@@ -111,10 +114,13 @@ The native driver retains published Testkit for server admission, lifecycle and
 bounded progress. Probe RPCs use PocketIC's raw query/update APIs plus the shared
 Wire identities/limits. Candid and management types remain upstream transport
 implementation details. The retired `ic-testkit-candid` package remains absent.
+Testkit 0.57 retains registry Platform 0.2.2 in the native graph; it shares the
+original external Principal identity with Platform 0.4. No adapter or second
+runtime owner is needed, and the canister graphs select only Platform 0.4.
 The local provider check also rejects Candid codec paths and default-codec
 query/update attributes in maintained probe source.
 
-Platform 0.2.0 supplies the Candid-free runtime requested in
+The Candid-free runtime introduced in Platform 0.2.0 was requested in
 [#31 — Support Candid-free raw and Wire canister entrypoints](https://github.com/dragginzgame/ic-platform/issues/31).
 The two small adapters still translate consumer-owned Wire limits/errors into
 Platform hooks. No first-class Wire adapter replaces them in this release, and

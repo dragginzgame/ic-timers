@@ -1,6 +1,6 @@
 //! Fresh, caller-owned testkit servers and IC instances from the verified binary.
 
-use ic_platform::Principal;
+use ic_platform::principal::ExternalPrincipal;
 use ic_testkit::pic::{
     CanisterInstallExt, InstallSpec, PocketIc, PocketIcBuilder, PocketIcInstance,
     PocketIcStartupConfig, tick_until,
@@ -35,7 +35,7 @@ pub fn wait_for_probe<T: Debug>(
 }
 
 /// Install one probe with the fixtures' explicit funding and empty init payload.
-pub fn install_probe(pic: &PocketIc, wasm: Vec<u8>) -> Principal {
+pub fn install_probe(pic: &PocketIc, wasm: Vec<u8>) -> ExternalPrincipal {
     pic.try_create_and_install(InstallSpec {
         wasm,
         init_bytes: Vec::new(),
@@ -66,16 +66,16 @@ pub fn fresh_pocket_ic() -> PocketIcInstance<PocketIc> {
 }
 
 /// Invoke an anonymous update with no arguments or return values.
-pub fn update_unit(pic: &PocketIc, canister_id: Principal, method: Method) {
-    update_wire::<(), _>(pic, canister_id, Principal::anonymous(), method, ())
+pub fn update_unit(pic: &PocketIc, canister_id: ExternalPrincipal, method: Method) {
+    update_wire::<(), _>(pic, canister_id, ExternalPrincipal::anonymous(), method, ())
         .expect("probe update succeeds");
 }
 
 /// Send one method-bound Wire request through the maintained raw PocketIC API.
 pub fn update_wire<T: Serialize + DeserializeOwned, A: Serialize>(
     pic: &PocketIc,
-    canister_id: Principal,
-    caller: Principal,
+    canister_id: ExternalPrincipal,
+    caller: ExternalPrincipal,
     method: Method,
     args: A,
 ) -> Result<T, Box<dyn std::error::Error>> {
@@ -94,8 +94,8 @@ pub fn update_wire<T: Serialize + DeserializeOwned, A: Serialize>(
 /// Decode a bounded Wire query reply without changing its caller or timing.
 pub fn query_wire<T: Serialize + DeserializeOwned, A: Serialize>(
     pic: &PocketIc,
-    canister_id: Principal,
-    caller: Principal,
+    canister_id: ExternalPrincipal,
+    caller: ExternalPrincipal,
     method: Method,
     args: A,
 ) -> Result<T, Box<dyn std::error::Error>> {

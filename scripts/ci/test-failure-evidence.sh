@@ -463,13 +463,45 @@ for layout in physical no-tools redirected; do
         test "$(readlink "$extracted/.tools/$selected")" = "$(readlink "$GITHUB_WORKSPACE/.tools/$selected")"
         cmp "$GITHUB_WORKSPACE/.tools/ic-set.active/tool" "$extracted/.tools/ic-set.active/tool"
     else
-        test ! -e "$extracted/.tools"
-        if [[ "$layout" == redirected ]]; then rm "$GITHUB_WORKSPACE/.tools"; fi
+        if [[ "$layout" == redirected ]]; then
+            test -L "$extracted/.tools"
+            test "$(readlink "$extracted/.tools")" = "$(readlink "$GITHUB_WORKSPACE/.tools")"
+            rm "$GITHUB_WORKSPACE/.tools"
+        else
+            test ! -e "$extracted/.tools"
+        fi
         mv "$fixture/retained-tools" "$GITHUB_WORKSPACE/.tools"
     fi
     tar -tzf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" > "$fixture/rejected-store-$layout-paths"
     if grep -Eq '/not-selected|^\./(host|ic|rust)-[[:xdigit:]]{64}/' "$fixture/rejected-store-$layout-paths"; then exit 1; fi
     mv "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" "$fixture/rejected-store-$layout-evidence.tar.gz"
+done
+
+# Redirected product parents retain the link and independent logs, never children.
+# The shared selector may succeed: local path refusal still makes collection partial.
+for parent in target .tools; do
+    held="$fixture/held-$parent"
+    mv "$GITHUB_WORKSPACE/$parent" "$held"
+    ln -s "$held" "$GITHUB_WORKSPACE/$parent"
+    printf 'must not traverse redirected parent\n' > "$held/escape-canary"
+    collection_status=0
+    "$BASH" "$root/scripts/ci/collect-failure-evidence.sh" \
+        > "$fixture/redirected-parent-$parent.log" 2>&1 || collection_status=$?
+    test "$collection_status" -eq 1
+    extracted="$fixture/redirected-parent-$parent-extracted"
+    mkdir "$extracted"
+    tar -xzpf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" -C "$extracted"
+    test -L "$extracted/$parent"
+    test "$(readlink "$extracted/$parent")" = "$held"
+    cmp "$scratch/scenario.log" "$extracted/ic-timers-fixtures/failed case/scenario.log"
+    cmp "$GITHUB_WORKSPACE/.git/release-state/validation-failures/raw.log" "$extracted/validation-failures/raw.log"
+    grep -Fq "redirected evidence parent: $parent" "$extracted/product-selection.log"
+    tar -tzf "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" > "$fixture/redirected-parent-paths"
+    if grep -Fq "./$parent/" "$fixture/redirected-parent-paths"; then exit 1; fi
+    if grep -Fq 'CI failure evidence measurements:' "$fixture/redirected-parent-$parent.log"; then exit 1; fi
+    mv "$RUNNER_TEMP/ic-timers-failure-evidence.tar.gz" "$fixture/redirected-parent-$parent.tar.gz"
+    rm "$GITHUB_WORKSPACE/$parent" "$held/escape-canary"
+    mv "$held" "$GITHUB_WORKSPACE/$parent"
 done
 
 # Collection errors must remain failures and leave the diagnostic inputs intact.

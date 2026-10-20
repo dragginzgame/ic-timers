@@ -1,6 +1,6 @@
 use super::harness::{fresh_pocket_ic, install_probe, update_unit};
 use super::harness::{query_wire, update_wire};
-use ic_platform::Principal;
+use ic_platform::principal::ExternalPrincipal;
 use ic_testkit::pic::{PocketIc, advance_and_tick};
 use ic_timers_test_protocol::rpc::Method;
 use ic_timers_test_protocol::{CohortObservation, MemorySamplingMeasurement, OperationMeasurement};
@@ -100,7 +100,7 @@ fn run_cohort(cohort: &str) {
         let measurement: MemorySamplingMeasurement = update_wire(
             pic,
             canister_id,
-            Principal::anonymous(),
+            ExternalPrincipal::anonymous(),
             Method::MemorySamplingOverhead,
             (),
         )
@@ -181,18 +181,18 @@ fn cohort_wasm(cohort: &str) -> Vec<u8> {
 
 fn update_measurement(
     pic: &PocketIc,
-    canister_id: Principal,
+    canister_id: ExternalPrincipal,
     method: Method,
 ) -> OperationMeasurement {
-    update_wire(pic, canister_id, Principal::anonymous(), method, ())
+    update_wire(pic, canister_id, ExternalPrincipal::anonymous(), method, ())
         .expect("probe update succeeds")
 }
 
-fn observe(pic: &PocketIc, canister_id: Principal) -> CohortObservation {
+fn observe(pic: &PocketIc, canister_id: ExternalPrincipal) -> CohortObservation {
     let observed: CohortObservation = query_wire(
         pic,
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         Method::Observe,
         (),
     )

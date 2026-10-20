@@ -39,6 +39,21 @@ printf 'checkout_sha=%s\nevent_sha=%s\njob=%s\nhost=%s/%s\nrun=%s\nattempt=%s\n'
     "${GITHUB_RUN_ID:-unknown}" "${GITHUB_RUN_ATTEMPT:-unknown}" > "$metadata/identity.txt"
 archive="$temporary/ic-timers-failure-evidence.tar.gz"
 selections=("$metadata" identity.txt)
+product_selection_status=0
+
+# Retain redirected product parents themselves, never select paths through them.
+# Shared's tool selector cannot infer these caller-owned evidence omissions.
+for parent in target .tools; do
+    if [[ -L "$root/$parent" ]]; then
+        selections+=("$root" "$parent")
+        printf 'redirected evidence parent: %s; children not collected\n' "$parent" >> "$metadata/product-selection.log"
+        product_selection_status=1
+    fi
+done
+if [[ "$product_selection_status" != 0 ]]; then
+    selections+=("$metadata" product-selection.log)
+    cat "$metadata/product-selection.log" >&2
+fi
 
 if [[ -d "$temporary/ic-timers-fixtures" ]]; then
     selections+=("$temporary" ic-timers-fixtures)
@@ -53,7 +68,7 @@ done
 if [[ -d "$root/.git/release-state/validation-failures" ]]; then
     selections+=("$root/.git/release-state" validation-failures)
 fi
-if [[ -d "$root/target/validation-failures" ]]; then
+if [[ ! -L "$root/target" && -d "$root/target/validation-failures" ]]; then
     selections+=("$root" target/validation-failures)
 fi
 # Preserve Testkit provisioning attempts, never its admitted server bundles.
@@ -90,6 +105,10 @@ if [[ "$selection_status" != 0 ]]; then
     printf 'Partial CI failure evidence archived at: %s; shared collection incomplete (exit %s)\n' \
         "$archive" "$selection_status" >&2
     exit "$selection_status"
+fi
+if [[ "$product_selection_status" != 0 ]]; then
+    printf 'Partial CI failure evidence archived at: %s; product collection incomplete\n' "$archive" >&2
+    exit "$product_selection_status"
 fi
 printf 'CI failure evidence measurements: archive_bytes=%s archive_seconds=%s\n' \
     "$archive_bytes" "$archive_seconds"

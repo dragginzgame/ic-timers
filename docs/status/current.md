@@ -4,63 +4,66 @@
 
 Last updated: 2026-10-20
 
-## Source and pending work
+## Source and accepted work
 
-Released base: **0.29.3**, `94f41a4`. Package versions remain 0.29.3. The
-maintainer's incoming catalog selects Testkit 0.57 and Wire 0.5; the incoming
-lock selects Platform 0.2.2, Build 0.22.0 and Host Process 0.30.1. Those dependency
-updates are retained. This batch adds the native driver's direct Clap edge using
-the already selected package; release metadata/version changes remain user-owned.
-Compatible repository/tooling notes are collected under undated **0.29.4**.
+Released base: **0.29.4**, `b03ce58`; own package versions remain unchanged.
+The existing undated **0.29.5** draft contains the complete pending batch.
+Adopt published Platform/macros **0.4.0** and reviewed Shared Tooling **0.25.4**,
+`db555ab6cf4a93af9a183f18d921d3b0ee97c725`, with the same 138 payloads.
+The incoming Platform 0.4 selection is preserved. Adopt Host Process 0.31.1 with
+Build 0.22.1. Testkit 0.57.0, Wire 0.5.0 and unrelated pending Rust work remain.
+The concurrent rustls-webpki 0.103.16 lock selection is preserved.
 
-- Adopt reviewed Shared Tooling 0.25.2 revision
-  `546d32e48be5a5d4e360299f6a94901df6acc577` through the canonical exporter.
-  Shared owns Cargo graph observation and release candidate rendering; Timers
-  retains selected roots, feature exclusions and exact runtime source identities.
-- Check the library, both canister probes and the protocol independently for Wasm
-  and the actual native host. Probe graphs must remain Candid-free; the protocol
-  must remain free of Platform and timer runtime authority. Native Testkit/PocketIC
-  Candid transport is intentional and outside those canister exclusions.
-- Probe callers select the existing `Method` enum, which supplies both endpoint
-  name and frame ID. The reverse lookup and unknown-name branch are removed.
-  IDs, Wire limits, DTOs and malformed-payload tests keep their existing contracts.
-- IC Build's root-lock-selected release editor replaces retired Shared Perl
-  renderers. Explicit setup is `make install-release-editor`; offline admission
-  is `make release-editor-check`. The per-document limit is in
-  `ci/release-editor.env`. Fresh release preflight prepares this tool after source
-  admission; standalone metadata preparation does not install it implicitly.
+Official registry indexes and cached archives confirm Platform source
+`26a07c510ab74413ec30779cd69af84db13cff11` and Host 0.31.1 source
+`950669df9d2c91497e99ae1e3f1c5a77f8f80ef8`. Migration guidance and published
+signatures were reviewed. Platform's new RejectCode ownership and transport-only
+calls require no changes to the existing raw Wire probes. Executor/IC0 exports
+remain unchanged at registry **2.0.0**/**1.2.0**; neither identity nor any Principal,
+Account or call type crosses the published timer API. Native PocketIC callers
+retain explicit `principal::ExternalPrincipal` without wrappers or aliases.
 
-## Ownership and validation
+Shared 0.25.4 changes evidence guidance, not installer policy or tool pins.
+The collector now retains redirected `target`/`.tools` links and diagnostics,
+skips their children and preserves independent logs with incomplete status.
+The existing failure-evidence fixture covers both parents and failed selectors.
+
+## Host and Build alignment
+
+Build **0.22.1** was published during adoption and now selects Host **0.31**.
+Its archive matches the registry and source
+`1d21935cd6779229a07db435691a1e86598691f2`. Require at least 0.22.1 in the catalog:
+Build 0.22.0 requires the distinct Host 0.30 `OwnedChild` and reproduces E0271 with
+the 0.31 spawner. This matching published pair needs no conversion, alias or
+unpublished override. The earlier [Build #9](https://github.com/dragginzgame/ic-build/issues/9)
+report is unnecessary; nothing was posted. Testkit retains its independent Host
+0.30 subtree, which does not cross the injected-spawner boundary.
+
+## Ownership and qualification
 
 Timers owns volatile scheduling, claims, observations and private IC dispatch.
-Applications own durable intent, lifecycle ordering and health policy. Platform
-owns the selected runtime/system boundary; Wire owns codecs; Testkit owns server
-admission/lifecycle; Build and Host own artifact/process mechanics. See
-[architecture](../architecture.md#capability-ownership) and [SAFETY.md](../../SAFETY.md).
-The protocol package carries Wire/Serde values only and has no runtime authority.
+Applications own durable intent and lifecycle/health policy. Platform owns runtime
+bindings, Wire codecs, Testkit server admission/lifecycle, and Build/Host artifact
+and process mechanics. Native Candid and Platform 0.2.2 remain through Testkit;
+library and canister graphs are Candid/full-CDK-free. The protocol retains only
+Wire/Serde. See [architecture](../architecture.md#capability-ownership),
+[Shared adoption](../shared-tooling.md) and [SAFETY.md](../../SAFETY.md).
 
-Focused qualification passes for this worktree and its incoming Testkit/Wire
-selections: all eight root/target graph checks and negative fixtures, strict Rust
-1.91 probe lint, three protocol tests, standalone library Wasm compilation,
-27 real-Wasm watchdog subjects and the four-policy cohort check. Packaging
-verifies the prepared archive's license. Release preparation/index/admission,
-formatting, hook and snapshot fixtures pass; these exercise disposable fixtures,
-not an actual release. Before-images and receipts are retained at
-`/tmp/ic-timers-three-improvements.7qqc7zen/`. Native macOS, live IC and the
-complete maintainer-operated release gate remain separate.
-Follow-through adds the editor to standalone release validation setup and covers
-editor/Testkit ordering and first-failure propagation under parallel Make in the
-existing adapter fixture. Focused receipts are in
-`/tmp/ic-timers-followthrough.72zdplyr/`. Real offline `make tools-check` passes
-after preparing the unchanged common tool versions for refreshed build inputs.
-Version bumps, staging, commits, pushes, tags and publication remain user-owned.
+Focused Linux qualification passes for the final pair: Rust 1.91 strict probe
+lint, native/Wasm library checks, three protocol tests, 27 real-Wasm watchdog
+subjects and the four-policy cohort check. Graph/source/feature admission and
+rejection fixtures, packaging/license, offline tool checks, version preparation,
+release-index, formatting and failure-evidence regressions pass. The Build 0.22.1
+release editor is prepared and admitted from the root lock. Before-images,
+registry/source checks, the superseded Host refusal and focused logs are at
+`/tmp/ic-timers-platform-host-shared.kc_mnr7r/`.
+Earlier Platform 0.3 and Shared 0.25.3 receipts remain at
+`/tmp/ic-timers-platform-03.pbk51_dm/` and `/tmp/ic-timers-shared-0253.kz5bdnmj/`;
+they do not qualify the changed Platform runtime. Native macOS, live IC and the
+complete maintainer-operated release gate remain separate. Version bumps, staging,
+commits, pushes, tags and publication remain user-owned.
 
-## Historical evidence
-
-The preceding handoff is preserved verbatim in
-[archive-2026-10-20.md](archive-2026-10-20.md), including the released Platform 0.2 /
-Build 0.22 adoption and earlier superseded blockers. Older receipts remain in the
+Historical evidence remains in [archive-2026-10-20.md](archive-2026-10-20.md), the
 [2026-10-18 archive](archive-2026-10-18.md), [Shared history](../evidence/shared-tooling-history.md)
-and [release history](../evidence/release-history.md). Their original pending and
-validation statements apply only to their named source/graph; they are not a
-current release queue or authority for restoring retired paths.
+and [release history](../evidence/release-history.md). Historical pending statements
+are not authority to restore retired paths.

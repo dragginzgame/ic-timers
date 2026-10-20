@@ -3,11 +3,11 @@
 ## Current authority
 
 One [snapshot](../.shared-tooling.snapshot) records **138** canonical payloads
-from reviewed Shared Tooling **0.25.2**, revision
-`546d32e48be5a5d4e360299f6a94901df6acc577`. The supplier checkout is clean and
-matches its published default branch. Canonical preview/apply retired the three
-old Perl editor/test roots and selected the graph, source-symlink and license
-checkers. Exported files remain byte-for-byte supplier-owned.
+from reviewed Shared Tooling **0.25.4**, revision
+`db555ab6cf4a93af9a183f18d921d3b0ee97c725`. The supplier checkout is clean and
+matches its published default branch. Canonical preview/apply updates the
+failure-evidence integration guidance. The 138-file
+closure is unchanged; exported files remain byte-for-byte supplier-owned.
 
 Shared owns generic graph observation, fixture matrices, tool admission, evidence
 transport and metadata transactions. Timers owns package/feature exclusions,
@@ -17,6 +17,14 @@ consumer's positive document budget is in `ci/release-editor.env`. Prepare it
 explicitly with `make install-release-editor`; check it offline with
 `make release-editor-check`. Fresh release preflight installs it only after
 source admission; standalone preparation requires an already admitted executable.
+
+The installer now accepts explicit Cargo features and binds the canonical set to
+its immutable selection and receipt. Timers' editor and Testkit CLI need no
+extra features; their existing arguments and package defaults remain unchanged.
+Run explicit `make install-tools` after this refresh for the new build-policy
+receipts, then `make tools-check` for offline admission. Checks never install or
+repair tools, and old installations and failed attempts remain retained. The
+0.25.4 documentation refresh does not change the 0.25.3 installer or receipts.
 
 The [baseline](../DRAGGINZGAME.md) and [local overlay](../AGENTS.md) retain
 maintainer-owned commits/releases, direct delivery, Testkit server ownership and
@@ -38,9 +46,12 @@ The published `ic-timers` library uses Metrics, Thiserror and Platform
 through Platform's Principal; only probes directly inherit its catalog entry.
 Wire, Platform's canister runtime, Build, Host Process, Testkit and the probe protocol serve
 qualification packages here.
-Candid remains transitive only in the native driver through PocketIC/Testkit. Local probe protocols use Wire; Platform 0.2's `cdk`
+Candid remains transitive only in the native driver through PocketIC/Testkit. Local probe protocols use Wire; Platform 0.4's `cdk`
 feature and both canister graphs are Candid-free. Full CDK/macros and the retired
 Testkit Candid adapter are absent from the workspace graph.
+Testkit 0.57 still selects Platform 0.2.2 for native transport. The driver uses
+Platform 0.4's explicit external Principal, preserving the same registry identity
+across that boundary; both canister graphs select only Platform 0.4.
 The catalog's
 local `ic-timers` entry is the probes' dependency on the production library.
 
@@ -74,13 +85,16 @@ Downloaded-evidence qualification now delegates host-only compact verification
 to Shared's selected-bundle interface. Timers retains source/run identity and
 product paths; it no longer implements a parallel host receipt verifier.
 Unselected IC stores and failed diagnostics remain eligible for retention.
+Redirected `target`/`.tools` parents are retained as links with local diagnostics;
+children are not selected. Independent logs remain eligible and the collector
+reports incomplete product collection even when tool selection succeeds.
 
 ## Deployment dependency exclusions
 
 The selected Shared direct-dependency checker `check-cargo-dependency-boundaries.sh` is now
 included in `actions-check`. The local policy forbids direct Candid/CDK-family,
 Platform macro-helper, retired Testkit decoder, IC0 and executor declarations in
-every member. Platform 0.2 owns generator/runtime paths, stable helpers and
+every member. Platform 0.4 owns generator/runtime paths, stable helpers and
 exact upstream selections. There are no consumer exceptions. See the
 [published boundary](architecture.md#candid-and-cdk-dependency-boundary).
 The checker resolves aliases through Cargo metadata and
@@ -114,7 +128,7 @@ transport remains intentional and outside the deployed-canister policy.
 ## Qualification and refresh
 
 Current preview/apply, before-images and focused qualification receipts are in
-`/tmp/ic-timers-three-improvements.7qqc7zen/`. The
+`/tmp/ic-timers-platform-host-shared.kc_mnr7r/`. The
 [handoff](status/current.md) records the tested current scope. Linux evidence does
 not qualify native macOS or the complete maintainer-operated release gate.
 

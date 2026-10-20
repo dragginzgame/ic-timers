@@ -1,6 +1,6 @@
 use super::harness::{INIT_CYCLES, fresh_pocket_ic, install_probe, update_unit, wait_for_probe};
 use super::harness::{query_wire, update_wire};
-use ic_platform::Principal;
+use ic_platform::principal::ExternalPrincipal;
 use ic_testkit::pic::{PocketIc, PocketIcInstance, advance_and_tick};
 use ic_timers_test_protocol::rpc::Method;
 use ic_timers_test_protocol::{
@@ -40,7 +40,7 @@ fn typed_entrypoints_reject_invalid_wire_before_mutating_timer_state() {
         assert!(
             pic.update_call(
                 canister_id,
-                Principal::anonymous(),
+                ExternalPrincipal::anonymous(),
                 Method::StartOrdinary.name(),
                 arguments
             )
@@ -53,7 +53,7 @@ fn typed_entrypoints_reject_invalid_wire_before_mutating_timer_state() {
     let reply = pic
         .update_call(
             canister_id,
-            Principal::anonymous(),
+            ExternalPrincipal::anonymous(),
             Method::StartOrdinary.name(),
             valid,
         )
@@ -72,7 +72,7 @@ fn self_call_queue_pressure_defers_timer_submission_without_losing_work() {
     let (failed, replies): (u64, u64) = query_wire(
         pic,
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         Method::PressureObservation,
         (),
     )
@@ -127,7 +127,7 @@ fn deferred_submission_cancellation_and_replacement_do_not_revive_old_work() {
         let stale_delivery: bool = update_wire(
             pic,
             canister_id,
-            Principal::anonymous(),
+            ExternalPrincipal::anonymous(),
             Method::FixtureDispatchPayload,
             (1_u64.to_le_bytes().to_vec(),),
         )
@@ -143,7 +143,7 @@ fn deferred_submission_cancellation_and_replacement_do_not_revive_old_work() {
             update_wire::<(), _>(
                 pic,
                 canister_id,
-                Principal::anonymous(),
+                ExternalPrincipal::anonymous(),
                 Method::ScheduleAt,
                 (0_u64,),
             )
@@ -247,7 +247,7 @@ fn trapped_work_keeps_committed_successor_and_executor_is_private() {
     let before_external = snapshot(pic, canister_id);
     let external = pic.update_call(
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         TIMER_EXECUTOR_METHOD,
         0_u64.to_be_bytes().to_vec(),
     );
@@ -473,7 +473,7 @@ fn insufficient_cycles_defer_due_work_until_top_up() {
     let (_burned, call_cost): (u128, u128) = update_wire(
         pic,
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         Method::BurnToBelowTimerCallCost,
         (),
     )
@@ -509,7 +509,7 @@ fn full_inventory_is_bounded_deterministic_and_measured() {
     let (len, instructions, ordered): (u64, u64, bool) = query_wire(
         pic,
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         Method::InventoryMeasurement,
         (),
     )
@@ -553,21 +553,21 @@ fn probe_wasm() -> Vec<u8> {
     fs::read(&path).unwrap_or_else(|error| panic!("read {}: {error}", path.display()))
 }
 
-fn update_bool(pic: &PocketIc, canister_id: Principal, method: Method) -> bool {
-    update_wire(pic, canister_id, Principal::anonymous(), method, ())
+fn update_bool(pic: &PocketIc, canister_id: ExternalPrincipal, method: Method) -> bool {
+    update_wire(pic, canister_id, ExternalPrincipal::anonymous(), method, ())
         .expect("probe update succeeds")
 }
 
-fn update_u64(pic: &PocketIc, canister_id: Principal, method: Method) -> u64 {
-    update_wire(pic, canister_id, Principal::anonymous(), method, ())
+fn update_u64(pic: &PocketIc, canister_id: ExternalPrincipal, method: Method) -> u64 {
+    update_wire(pic, canister_id, ExternalPrincipal::anonymous(), method, ())
         .expect("probe update succeeds")
 }
 
-fn snapshot(pic: &PocketIc, canister_id: Principal) -> ProbeSnapshot {
+fn snapshot(pic: &PocketIc, canister_id: ExternalPrincipal) -> ProbeSnapshot {
     let observed: ProbeSnapshot = query_wire(
         pic,
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         Method::Snapshot,
         (),
     )
@@ -642,22 +642,22 @@ fn exact_deadline_sleeps_and_registration_replacement_marks_counter_regrowth() {
     assert_eq!(regrown.registration_id, replaced.registration_id);
 }
 
-fn update_deadline(pic: &PocketIc, canister_id: Principal, method: Method, deadline: u64) {
+fn update_deadline(pic: &PocketIc, canister_id: ExternalPrincipal, method: Method, deadline: u64) {
     update_wire::<(), _>(
         pic,
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         method,
         (deadline,),
     )
     .expect("probe update succeeds");
 }
 
-fn ordinary_observation(pic: &PocketIc, canister_id: Principal) -> OrdinaryObservation {
+fn ordinary_observation(pic: &PocketIc, canister_id: ExternalPrincipal) -> OrdinaryObservation {
     let observed: OrdinaryObservation = query_wire(
         pic,
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         Method::OrdinaryObservation,
         (),
     )
@@ -681,7 +681,7 @@ fn ordinary_await_allows_ingress_and_other_timers_before_completion() {
             update_wire::<(), _>(
                 pic,
                 canister_id,
-                Principal::anonymous(),
+                ExternalPrincipal::anonymous(),
                 Method::StartOrdinary,
                 (after_completion, transient),
             )
@@ -754,14 +754,14 @@ fn trapping_ordinary_probe(
     after_completion: bool,
     transient: bool,
     before_await: bool,
-) -> (PocketIcInstance<PocketIc>, Principal) {
+) -> (PocketIcInstance<PocketIc>, ExternalPrincipal) {
     let owned = fresh_pocket_ic();
     let pic = &owned.instance;
     let canister_id = install_probe(pic, probe_wasm());
     update_wire::<(), _>(
         pic,
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         Method::TrapOrdinaryWork,
         (before_await,),
     )
@@ -769,7 +769,7 @@ fn trapping_ordinary_probe(
     update_wire::<(), _>(
         pic,
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         Method::StartOrdinary,
         (after_completion, transient),
     )
@@ -804,7 +804,7 @@ fn dispatch_response_trap_cleanup_preserves_pending_work_for_retry() {
         update_wire::<(), _>(
             pic,
             canister_id,
-            Principal::anonymous(),
+            ExternalPrincipal::anonymous(),
             Method::TrapOrdinaryCaptureDrop,
             (true,),
         )
@@ -812,7 +812,7 @@ fn dispatch_response_trap_cleanup_preserves_pending_work_for_retry() {
         update_wire::<(), _>(
             pic,
             canister_id,
-            Principal::anonymous(),
+            ExternalPrincipal::anonymous(),
             Method::TrapOrdinaryWork,
             (true,),
         )
@@ -820,7 +820,7 @@ fn dispatch_response_trap_cleanup_preserves_pending_work_for_retry() {
         update_wire::<(), _>(
             pic,
             canister_id,
-            Principal::anonymous(),
+            ExternalPrincipal::anonymous(),
             Method::StartOrdinary,
             (after_completion, true),
         )
@@ -835,7 +835,7 @@ fn dispatch_response_trap_cleanup_preserves_pending_work_for_retry() {
         update_wire::<(), _>(
             pic,
             canister_id,
-            Principal::anonymous(),
+            ExternalPrincipal::anonymous(),
             Method::TrapOrdinaryCaptureDrop,
             (false,),
         )
@@ -918,7 +918,7 @@ fn ordinary_continuation_trap_retires_running_work_and_releases_expired_authorit
                     update_wire::<(), _>(
                         pic,
                         canister_id,
-                        Principal::anonymous(),
+                        ExternalPrincipal::anonymous(),
                         Method::StartOrdinary,
                         (after_completion, false),
                     )
@@ -947,11 +947,11 @@ fn ordinary_continuation_trap_retires_running_work_and_releases_expired_authorit
     }
 }
 
-fn churn_observation(pic: &PocketIc, canister_id: Principal) -> ChurnObservation {
+fn churn_observation(pic: &PocketIc, canister_id: ExternalPrincipal) -> ChurnObservation {
     query_wire(
         pic,
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         Method::ChurnObservation,
         (),
     )
@@ -967,7 +967,7 @@ fn provider_replacement_churn_preserves_cancellation_and_reports_memory() {
     update_wire::<(), _>(
         pic,
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         Method::ReplaceDistantDeadlines,
         (32_768_u32,),
     )
@@ -1016,7 +1016,7 @@ fn armed_callback_removal_releases_captures_with_registry_access() {
         update_wire::<(), _>(
             pic,
             canister_id,
-            Principal::anonymous(),
+            ExternalPrincipal::anonymous(),
             Method::RemoveArmedCallback,
             (policy,),
         )
@@ -1045,7 +1045,7 @@ fn rejected_initial_schedules_preserve_ic_inventory_and_release_captures() {
             let result: (bool, u64, bool) = update_wire(
                 pic,
                 canister_id,
-                Principal::anonymous(),
+                ExternalPrincipal::anonymous(),
                 Method::RejectInitialSchedule,
                 (policy, transient),
             )
@@ -1072,7 +1072,7 @@ fn rejected_initial_reconciliation_preserves_ic_inventory_and_releases_captures(
         let result: (bool, bool, u64, bool) = update_wire(
             pic,
             canister_id,
-            Principal::anonymous(),
+            ExternalPrincipal::anonymous(),
             Method::RejectInitialReconciliation,
             (policy,),
         )
@@ -1098,7 +1098,7 @@ fn backend_rejects_malformed_self_calls_and_ignores_unknown_deliveries() {
         let accepted: bool = update_wire(
             pic,
             canister_id,
-            Principal::anonymous(),
+            ExternalPrincipal::anonymous(),
             Method::FixtureDispatchPayload,
             (payload,),
         )
@@ -1109,7 +1109,7 @@ fn backend_rejects_malformed_self_calls_and_ignores_unknown_deliveries() {
         let accepted: bool = update_wire(
             pic,
             canister_id,
-            Principal::anonymous(),
+            ExternalPrincipal::anonymous(),
             Method::FixtureDispatchPayload,
             (0_u64.to_le_bytes().to_vec(),),
         )
@@ -1127,7 +1127,7 @@ fn accepted_ordinary_work_survives_dispatch_timeout_without_replay() {
     let (): () = update_wire(
         pic,
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         Method::StartOrdinary,
         (false, false),
     )
@@ -1144,7 +1144,7 @@ fn accepted_ordinary_work_survives_dispatch_timeout_without_replay() {
     let accepted: bool = update_wire(
         pic,
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         Method::FixtureDispatchPayload,
         (1_u64.to_le_bytes().to_vec(),),
     )
@@ -1168,11 +1168,11 @@ fn accepted_ordinary_work_survives_dispatch_timeout_without_replay() {
     assert_eq!(ordinary_observation(pic, canister_id).completed, 1);
 }
 
-fn mixed_snapshot(pic: &PocketIc, canister_id: Principal) -> TimerProbeSnapshot {
+fn mixed_snapshot(pic: &PocketIc, canister_id: ExternalPrincipal) -> TimerProbeSnapshot {
     query_wire(
         pic,
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         Method::StartupTimerProbeSnapshot,
         (),
     )
@@ -1228,7 +1228,7 @@ fn shared_watchdog_survives_trap_and_upgrade() {
     let before_external = mixed_snapshot(pic, canister_id);
     let external = pic.update_call(
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         TIMER_EXECUTOR_METHOD,
         0_u64.to_le_bytes().to_vec(),
     );
@@ -1305,11 +1305,14 @@ fn overdue_shared_timers_coalesce_to_bounded_work() {
     assert!(overdue.application_callbacks > 0);
 }
 
-fn dispatch_batch_observation(pic: &PocketIc, canister_id: Principal) -> DispatchBatchObservation {
+fn dispatch_batch_observation(
+    pic: &PocketIc,
+    canister_id: ExternalPrincipal,
+) -> DispatchBatchObservation {
     query_wire(
         pic,
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         Method::DispatchBatchObservation,
         (),
     )
@@ -1326,7 +1329,7 @@ fn maximum_capacity_dispatch_preserves_every_survivor_under_pressure_and_await()
     let (failures, replies): (u64, u64) = query_wire(
         pic,
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         Method::PressureObservation,
         (),
     )
@@ -1407,11 +1410,11 @@ fn maximum_capacity_dispatch_preserves_every_survivor_under_pressure_and_await()
     assert_eq!(dispatch_batch_observation(pic, canister_id), rearmed);
 }
 
-fn scheduling_trace(pic: &PocketIc, canister_id: Principal) -> Vec<u8> {
+fn scheduling_trace(pic: &PocketIc, canister_id: ExternalPrincipal) -> Vec<u8> {
     query_wire(
         pic,
         canister_id,
-        Principal::anonymous(),
+        ExternalPrincipal::anonymous(),
         Method::SchedulingTrace,
         (),
     )
