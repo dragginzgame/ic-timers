@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.30.1]
+## [0.30.1] - 2026-10-21
 
 - Adopt published Platform/macros 0.6.0. Keep only executor/IC0 features in the
   library, removing unused Principal, Serde, crypto and text dependencies from
