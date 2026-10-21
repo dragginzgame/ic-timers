@@ -4,10 +4,20 @@
 
 Last updated: 2026-10-21
 
-## Source and accepted work
+## Current tooling cleanup
 
-Released base: **0.30.0**, `41e1e2f`; package versions remain unchanged. The undated
-**0.30.1** draft combines the incoming Platform 0.6 adoption with IC Tooling 0.63.
+Based on delivered 0.30.1 (`6c3aa21`), pending compatible notes use 0.30.2.
+Four generic Shared implementation suites leave routine release validation;
+actual Timers wiring, recovery and host/product qualification remain. Canonical
+export narrows the existing 0.25.7 snapshot without changing surviving payloads.
+Focused setup, hook/index, repository, snapshot corruption and fixture-retention
+checks pass on Linux; logs are `/tmp/timers-cleanup-*.log`. Native macOS/full
+release acceptance remains separate. Package versions and locks are unchanged.
+
+## Retained 0.30.1 adoption
+
+Release **0.30.1** combined Platform 0.6 adoption with IC Tooling 0.63,
+from the preceding 0.30.0 base (`41e1e2f`). The following records that adoption.
 The root lock selects Build/Host/Testkit **0.63.0**, Platform/macros **0.6.0** and
 Wire/derive **0.5.6**. The Wire selection and all prior local work are preserved.
 Metrics advanced from 0.15.0 to **0.15.1** after initial Tooling resolution; preserve

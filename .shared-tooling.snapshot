@@ -31,8 +31,6 @@ revision	d39e8a84bf4fd7e42776d2bb8e589ad09aacb02b
 # entrypoint	scripts/ci/check-make-execution.sh
 # entrypoint	make/tools.mk
 # entrypoint	scripts/dev/cloc.sh
-# entrypoint	scripts/ci/test-cloc.sh
-# entrypoint	scripts/ci/test-tool-commands.sh
 # entrypoint	rules/contributions.md
 # entrypoint	scripts/ci/release-pr.sh
 # entrypoint	scripts/ci/archive-evidence.sh
@@ -54,13 +52,11 @@ revision	d39e8a84bf4fd7e42776d2bb8e589ad09aacb02b
 # entrypoint	make/release.mk
 # entrypoint	make/rust-format.mk
 # entrypoint	scripts/ci/check-format-tools.sh
-# entrypoint	scripts/ci/test-format-tools.sh
 # entrypoint	make/execution.mk
 # entrypoint	scripts/ci/run-formatting.sh
 # entrypoint	tasks/readme-freshness.md
 # entrypoint	make/consumer.mk
 # entrypoint	docs/make-interface.md
-# entrypoint	scripts/ci/test-make-consumer.sh
 # entrypoint	tasks/cargo-tool-versions.md
 # entrypoint	rules/change-reporting.md
 # entrypoint	scripts/ci/fixture-lifecycle.sh
@@ -144,8 +140,6 @@ file	b49655e8878d19e7232197faeebf6dfcdb001acd81b257aea135af629548ca56	-	rules/ru
 file	9e32385247296ce95d2b15b1290c64e6b6dff15716c1c139f21ab5e5128f4be3	x	scripts/ci/check-make-execution.sh
 file	73006393ac5e5185b4513f176893753368b18809bb257b04e09cf24babcd7755	-	make/tools.mk
 file	d68abbb5f4a7d03e89b4e5969a545f541c9a122dd2bd6429fc4a99e046f7871a	x	scripts/dev/cloc.sh
-file	109d6e538aed382a8eac822df06f2df33152c7e0859380f03205d1ff711c5b6f	x	scripts/ci/test-cloc.sh
-file	f4cc0c1447263b624c073eb106862204631493e08bfbdaee926d2cfeede34b19	x	scripts/ci/test-tool-commands.sh
 file	9893ae624c25321f5aa22328bf78fb80480444d2bbf2a01a5dedbd244df162e7	-	rules/contributions.md
 file	ec8948910a221713a967d62b7ae42775929cad5ead4de111cb1cacdb1dedcb56	-	scripts/ci/release-pr.sh
 file	5be336cb3e8045b2d2d536542a94944b376ee812b03f786a90b9d962ab697f13	x	scripts/ci/archive-evidence.sh
@@ -167,13 +161,11 @@ file	a3af7084956384262842be33100f91a22fdd82b0f91b6091a00e90f8726f67fe	x	scripts/
 file	cadaefaea8553889397ab2b87bb644afa8e9abbf7476c937df6f91099903dee6	-	make/release.mk
 file	3ac2683184d3ac5a7ee0d68a9c7ce7e03d34536207ae254efec05736a742b407	-	make/rust-format.mk
 file	a52db278800a9f02d85a6b8a780a9b1eed860c49d5442cef9db1f7f9d7ddee0a	x	scripts/ci/check-format-tools.sh
-file	9bce8995f4d534d2fe20a7f39e2c62b1d8d75190ac5a1f0e47a4982ec68e91b6	x	scripts/ci/test-format-tools.sh
 file	cebc0fa4ee9944550350a492a3bc1084e28820e2c915e20351c336d87ce0359f	-	make/execution.mk
 file	4ff0a961d5fb8639edf798d64bbe3abc0fcd83c6f703d7a6875c6f5174e76201	x	scripts/ci/run-formatting.sh
 file	227ce86878264ff60aa24a70bb20140b8ef3c8332be640186e96f93805ed1062	-	tasks/readme-freshness.md
 file	c385168599f833bbcd390eaf5ba2aa7507e5a9f05df0ec7264907c3a0de02289	-	make/consumer.mk
 file	b504048aee31664bb51cfeb14061a43d13fbc1cfff6d84aa6951f1809d424294	-	docs/make-interface.md
-file	fc5acbf3d35c73350b6c1ef00589cea765845e0d4b2dad69f7e61498081ff62f	x	scripts/ci/test-make-consumer.sh
 file	a9ed416a02f737d420723642935de94ffdd53cf92f75bb06ab4b0bc1c68430dc	-	tasks/cargo-tool-versions.md
 file	fa96fe86ee2ccf61002fbce2b09603298550fd239d28131cbdcf6449a8247923	-	rules/change-reporting.md
 file	523996a3e4eb9dbe87e8daa4285293a28c5e005223feaa84bd5383d430784b09	-	scripts/ci/fixture-lifecycle.sh
@@ -234,7 +226,6 @@ file	3824050479f26a6d8533dadc6a53826d365274e0840b11691c46dacceb191e00	-	docs/ci-
 file	7f8a58cc55f1cea0546b39bf97b64fee0a0a0e7fe2aaf31712c158cc43b6320c	-	docs/rust-toolchains.md
 file	d2670d079e6fe54ccb72f0f6fab328723bf1baf7829b852ba8157cc9ddebd27b	x	scripts/ci/validate-release-inputs.pl
 file	144b250a09234a2dcbd84aca066c550f809da2f0fe2c70a42ce28e246d772195	-	docs/cargo-graph-checks.md
-file	d866bd1ae0bf5c5d22120c3427857968eba86cbc2affa310951f76742e339116	x	scripts/ci/check-pipe-jobserver.pl
 file	2183e51b479f88cfc99cc1ae79204c5b1a653c3e379193afd65565a11632ebc7	-	docs/tool-catalog-bindings.md
 file	1b01f4b482fb85986d1ffab592626ccbfec187ac7a5133ab946b0acd51a18381	-	scripts/ci/check-release-delivery.sh
 file	9aa52699f4f7f8069cddd6b6ec295afc7a781e48b09bf104d2fff8f262a4720d	-	scripts/distribution/maintenance-files.txt

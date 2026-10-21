@@ -116,6 +116,19 @@ Redirected `target`/`.tools` parents are retained as links with local diagnostic
 children are not selected. Independent logs remain eligible and the collector
 reports incomplete product collection even when tool selection succeeds.
 
+## Consumer qualification selection
+
+Shared's portable suite owns the generic tool-command, formatter prerequisite,
+Make-interface and LOC regression matrices. They are no longer selected as roots
+or dispatched by Timers' routine release checks. The snapshot remains at the
+same reviewed 0.25.7 revision; the canonical exporter retires their unused payloads.
+
+Timers retains its actual hook/index preservation, ordered setup, repository
+orchestration, snapshot corruption, release recovery and evidence checks. Product
+MSRV, Wasm, watchdog and policy-cohort qualification is unchanged. Reconsider
+relevant upstream fixtures during a changed-contract adoption; do not restore the
+whole producer matrix as a routine consumer prerequisite.
+
 ## Deployment dependency exclusions
 
 The selected Shared direct-dependency checker `check-cargo-dependency-boundaries.sh` is now

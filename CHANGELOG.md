@@ -2,6 +2,12 @@
 
 All notable changes to this project are recorded here.
 
+## [0.30.2]
+
+- Keep generic Shared Tooling command, formatter, Make-interface and LOC tests
+  upstream. Retain Timers' actual hook, setup, release, recovery and host checks;
+  runtime behavior and public APIs are unchanged.
+
 ## [0.30.1] - 2026-10-21
 
 - Adopt published Platform/macros 0.6.0. Keep only executor/IC0 features in the
