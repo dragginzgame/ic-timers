@@ -5,6 +5,6 @@ set -euo pipefail
 }
 root="$(cd -P "${BASH_SOURCE[0]%/*}/../.." && pwd -P)"
 arguments=(--consumer "$root" --package ic-build --lockfile "$root/Cargo.lock"
-    --bin ic-build-release-metadata --profile release)
+    --bin ic-build-release-metadata --profile release --features cli)
 [[ "$1" != check ]] || arguments+=(--check)
 exec bash "$root/scripts/dev/install-rust-tools.sh" "${arguments[@]}"

@@ -38,9 +38,14 @@ explicitly with `make install-release-editor`; check it offline with
 source admission; standalone preparation requires an already admitted executable.
 
 Selected-tool installation supports explicit Cargo features and binds their
-canonical set to immutable selections and receipts. Timers' editor and Testkit
-CLI need no extra features. Shared 0.25.5–0.25.7 change neither tool pins nor the
-0.25.3 installer policy: this refresh does not invalidate existing receipts.
+canonical set to immutable selections and receipts. IC Tooling 0.63 requires
+`cli` for the editor and Testkit server binaries. Both local setup/check adapters
+pass `--features cli`; the workspace library dependencies do not enable it.
+Prepare these selections explicitly with `make install-release-editor
+install-testkit-server`. Shared 0.25.5–0.25.7 retain the 0.25.3 installer policy;
+the package/feature selection change requires new receipts. Featureless examples
+in the exported generic setup guide do not apply to these 0.63 binaries; use the
+local adapters or add `--features cli` to manual installer commands.
 Package-selection changes still require explicit setup for that selected tool;
 checks remain offline and never install or repair it. Old installations and
 failed attempts remain retained.
@@ -61,18 +66,19 @@ There is still one catalog and lockfile; member dependency tables determine
 actual use through `workspace = true`.
 
 The published `ic-timers` library uses Metrics, Thiserror and Platform
-(executor and raw IC system bindings). Serde is already production-transitive
-through Platform's Principal; only probes directly inherit its catalog entry.
+(executor and raw IC system bindings). Serde is qualification-only and belongs
+in the tests/tooling catalog group; the library's lean Platform graph excludes it.
 Wire, Platform's canister runtime, Build, Host Process, Testkit and the probe protocol serve
 qualification packages here.
-Candid remains transitive only in the native driver through PocketIC/Testkit. Local probe protocols use Wire; Platform 0.5's `cdk`
+Candid remains transitive only in the native driver through PocketIC/Testkit. Local probe protocols use Wire; Platform 0.6's `cdk`
 feature and both canister graphs are Candid-free. Full CDK/macros and the retired
 Testkit Candid adapter are absent from the workspace graph.
-The driver test binary and Testkit share one published Platform identity. Its
+The driver test binary and Testkit 0.63 share Platform 0.6; the driver selects
+`principal` explicitly and no Candid codec feature is enabled. Its
 normal coordinator excludes Platform, Testkit, Wire and the probe protocol;
 they are dev-dependencies used by the maintained integration tests. The library
 and canister graphs exclude native simulator features. Build, Host and Testkit
-share the 0.62 family, with no older parallel Host provider.
+share the 0.63 family, with no older parallel Host or Platform provider.
 The catalog's
 local `ic-timers` entry is the probes' dependency on the production library.
 
@@ -115,7 +121,7 @@ reports incomplete product collection even when tool selection succeeds.
 The selected Shared direct-dependency checker `check-cargo-dependency-boundaries.sh` is now
 included in `actions-check`. The local policy forbids direct Candid/CDK-family,
 Platform macro-helper, retired Testkit decoder, IC0 and executor declarations in
-every member. Platform 0.5 owns generator/runtime paths, raw stable passthroughs and
+every member. Platform 0.6 owns generator/runtime paths, raw stable passthroughs and
 exact upstream selections. There are no consumer exceptions. See the
 [published boundary](architecture.md#candid-and-cdk-dependency-boundary).
 The checker resolves aliases through Cargo metadata and
@@ -126,14 +132,15 @@ there are no maintained independent Cargo fixtures or manifests.
 Shared's `check-cargo-graph.pl` for the library, both canister probes and the
 protocol package, independently for Wasm and the actual Rust host. Library and
 probe graphs exclude Candid, full CDK and host tooling. The library additionally
-excludes Wire/probe packages. The protocol excludes Platform and timer authority.
-Platform may select only executor/IC0 for the library, plus `cdk`/`runtime` for probes.
+excludes Wire/probe packages, Principal, Serde, SHA-2/digest and text dependencies.
+The protocol excludes Platform and timer authority. Platform may select only
+executor/IC0 for the library, plus `cdk`/`runtime`/`principal` for probes.
 The checker derives forbidden feature names from the selected Platform catalog
 and delegates dependency-feature-edge refusal to Shared. It retains local
 successful-metadata admission of one registry executor 2.0.0 and IC0 1.2.0.
 Shared identity counts supplement rather than replace those source/version checks.
 
-Real-Cargo consumer fixtures cover Candid/default feature leakage, renamed target
+Real-Cargo consumer fixtures cover Principal/Candid/default feature leakage, renamed target
 and build dependencies, protocol authority exclusion, permitted dev-only Wire and
 same-version executor source replacement. Shared owns generic parser and failed-
 producer fixtures; those are no longer repeated here. Source symlink checks run

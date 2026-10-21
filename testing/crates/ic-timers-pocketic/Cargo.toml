@@ -15,7 +15,7 @@ serde.workspace = true
 serde_json.workspace = true
 
 [dev-dependencies]
-ic-platform.workspace = true
+ic-platform = { workspace = true, features = ["principal"] }
 ic-testkit.workspace = true
 ic-timers-test-protocol.workspace = true
 ic-wire.workspace = true

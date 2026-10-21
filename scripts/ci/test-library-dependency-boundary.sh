@@ -49,6 +49,15 @@ fi
 cp library-original.toml crates/ic-timers/Cargo.toml
 cp "$root/Cargo.lock" Cargo.lock
 
+# Principal support belongs to application/probe profiles, never the raw timer
+# provider. Refuse its transitive dependencies even when already in the lock.
+perl -pi -e 's/"executor", "ic0"/"executor", "ic0", "principal"/' crates/ic-timers/Cargo.toml
+if bash "$checker" > principal-failure.log 2>&1; then
+    echo 'error: library admitted Platform Principal support' >&2; exit 1
+fi
+grep -Eq 'forbidden (ic_principal|serde|serde_core|serde_derive|sha2|digest|crc32fast|data-encoding)' principal-failure.log
+cp library-original.toml crates/ic-timers/Cargo.toml
+
 # Runtime APIs belong only to entrypoint-owning probes; the published library
 # must keep its executor/IC0-only boundary even when runtime adds no new macro.
 perl -pi -e 's/"executor", "ic0"/"executor", "ic0", "runtime"/' crates/ic-timers/Cargo.toml

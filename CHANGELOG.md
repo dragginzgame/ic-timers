@@ -2,6 +2,22 @@
 
 All notable changes to this project are recorded here.
 
+## [0.30.1]
+
+- Adopt published Platform/macros 0.6.0. Keep only executor/IC0 features in the
+  library, removing unused Principal, Serde, crypto and text dependencies from
+  its graph while preserving executor 2.0.0 and IC0 1.2.0. Enforce that exclusion
+  with a negative Principal-leak fixture
+  ([#40 — Keep executor/IC0-only graphs free of Principal, Serde and crypto dependencies](https://github.com/dragginzgame/ic-platform/issues/40)).
+- Select Principal explicitly for native simulator IDs; canister probes retain
+  their runtime-implied Principal feature. Public timer APIs and Wire formats
+  are unchanged.
+- Adopt published IC Tooling 0.63.0 across Build, Host and Testkit, removing the
+  older native Platform identity and Testkit-owned Candid codec selection.
+  Prepare the release editor and Testkit server CLI with explicit `cli` features;
+  library dependencies remain CLI-free. Re-run `make install-release-editor
+  install-testkit-server` before offline checks. PocketIC retains transitive Candid.
+
 ## [0.30.0] - 2026-10-21
 
 - **Breaking dependency identity:** adopt Metrics 0.15 for the public

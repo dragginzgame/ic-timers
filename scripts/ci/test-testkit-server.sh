@@ -49,7 +49,7 @@ for mode in setup check; do
     printf '%s\n' "$fixture/admitted-server" > "$fixture/expected-path"
     cmp "$fixture/expected-path" "$fixture/path"
     printf '%s\n' --consumer "$consumer" --package ic-testkit --lockfile "$consumer/Cargo.lock" \
-        --bin ic-testkit-server --profile release > "$fixture/expected-installer"
+        --bin ic-testkit-server --profile release --features cli > "$fixture/expected-installer"
     [[ "$mode" != check ]] || printf '%s\n' --check >> "$fixture/expected-installer"
     cmp "$fixture/expected-installer" "$fixture/installer-arguments"
     printf '%s\n' "$mode" --directory "$consumer/.tools/testkit-server" > "$fixture/expected-owner"
@@ -85,7 +85,7 @@ sed 's/0.26.0/0.27.0/' "$fixture/lock" > "$consumer/Cargo.lock"
 cp "$consumer/Cargo.lock" "$fixture/next-lock"
 bash "$consumer/scripts/dev/testkit-server.sh" setup > "$fixture/path"
 printf '%s\n' --consumer "$consumer" --package ic-testkit --lockfile "$consumer/Cargo.lock" \
-    --bin ic-testkit-server --profile release > "$fixture/expected-installer"
+    --bin ic-testkit-server --profile release --features cli > "$fixture/expected-installer"
 cmp "$fixture/expected-installer" "$fixture/installer-arguments"
 cmp "$fixture/expected-path" "$fixture/path"
 cmp "$fixture/next-lock" "$consumer/Cargo.lock"
@@ -98,7 +98,7 @@ for mode in setup check; do
     printf '%s\n' "$fixture/owner" > "$fixture/expected-editor-path"
     cmp "$fixture/expected-editor-path" "$fixture/path"
     printf '%s\n' --consumer "$consumer" --package ic-build --lockfile "$consumer/Cargo.lock" \
-        --bin ic-build-release-metadata --profile release > "$fixture/expected-installer"
+        --bin ic-build-release-metadata --profile release --features cli > "$fixture/expected-installer"
     [[ "$mode" != check ]] || printf '%s\n' --check >> "$fixture/expected-installer"
     cmp "$fixture/expected-installer" "$fixture/installer-arguments"
     test ! -e "$fixture/owner-arguments"

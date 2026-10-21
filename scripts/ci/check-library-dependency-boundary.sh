@@ -47,12 +47,14 @@ for my $target ('wasm32-unknown-unknown', $host) {
         push @check, '--forbid-pattern', '^ic-(?:build(?:-|$)|host-|testkit(?:-|$))';
         if ($library) {
             push @check, '--forbid-pattern', '^ic-(?:wire(?:-|$)|timers-)';
+            push @check, map { ('--forbid', $_) }
+                qw(ic_principal serde serde_core serde_derive sha2 digest crc32fast data-encoding);
         }
         if ($protocol) {
             push @check, map { ('--forbid', $_) } qw(ic-platform ic-timers ic-cdk-executor ic0);
         } else {
             push @check, map { ('--require', "$_=1") } qw(ic-platform ic-cdk-executor ic0);
-            my %allowed = map { $_ => 1 } ($library ? qw(executor ic0) : qw(cdk runtime executor ic0));
+            my %allowed = map { $_ => 1 } ($library ? qw(executor ic0) : qw(cdk runtime principal executor ic0));
             push @check, map { ('--forbid-feature', "ic-platform/$_") }
                 grep { !$allowed{$_} } sort keys %features;
         }

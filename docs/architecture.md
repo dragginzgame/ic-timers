@@ -53,23 +53,24 @@ remain separate evidence selections in the [release guide](releasing.md).
 
 Registry-published `ic-platform` is the selected boundary; the current lock and
 source-qualified receipts are recorded in [current status](status/current.md).
-Published Platform 0.5.0 owns the maintained non-cryptographic runtime and
+Published Platform 0.6 owns the maintained non-cryptographic runtime and
 explicit-codec generator. It selects no full CDK package and copies no executor.
 The root catalog disables default Platform features. The library selects only
 `executor` and `ic0`; the two canister probes select `cdk` (including its new
 `runtime` feature) for entrypoint contexts,
 protected calls/spawning, traps, cycle burning and stable byte I/O. The native
-harness selects no Platform features and uses `principal::ExternalPrincipal`
+harness selects `principal` explicitly and uses `principal::ExternalPrincipal`
 for PocketIC's external API identity. The protocol package has no Platform edge.
 Parser, Agent, certification and ledger capabilities remain unselected.
 
 The private platform uses `ic_platform::ic0` for its existing system calls,
 retaining context placement, method handles, protected spawning and callback/trap cleanup. The lockfile still
 resolves one `ic-cdk-executor` 2.0.0 shared with Platform's runtime. Native substitutes cannot
-qualify those IC paths. Executor/system-only Platform remains Candid-free, but its
-unconditional owned Principal/Account exports retain `ic_principal` and Serde
-transitively. None of these identities cross the published timer API or probe
-wire records; this adoption changes no stored data or codec representation.
+qualify those IC paths. The library's executor/system-only graph excludes
+Principal/Account, Serde, SHA-2, text encoding and Candid. Probe entrypoint/runtime
+features imply `principal`, retaining their existing identities and behavior.
+None of those identities cross the published timer API or probe wire records;
+this adoption changes no stored data or codec representation.
 
 Probe records use Serde and published Wire's native codec. The shared
 `test-protocol::rpc` roster owns explicit method IDs; both endpoint hooks and
@@ -118,9 +119,13 @@ implementation details. The retired `ic-testkit-candid` package remains absent.
 The driver selects Platform, Testkit, Wire and the probe protocol only for its
 test binary. Its normal build coordinator uses Build and Host for artifacts and
 process custody, plus Clap/Serde/JSON for commands and receipts. It does not link
-the simulator or codecs. Build, Host and Testkit share the published 0.62 family;
-there is one Platform identity and no unpublished override. These host-only
-providers do not enter deployed graphs.
+the simulator or codecs. Build, Host and Testkit share the published 0.63 family;
+the driver and Testkit 0.63 select the same Platform 0.6 identity. Testkit no
+longer enables Platform's Candid codec feature; PocketIC still brings upstream
+Candid for its simulator protocols. Independent library and canister graphs
+remain Candid-free and select only Platform 0.6.
+These host-only providers do not enter deployed graphs; there is no unpublished
+override.
 The local provider check also rejects Candid codec paths and default-codec
 query/update attributes in maintained probe source.
 
@@ -135,12 +140,12 @@ adapters. The protocol package must not acquire a Platform dependency to hide th
 The published library retains three direct dependencies: Metrics owns counter
 arithmetic, Platform owns executor/system bindings, and Thiserror owns the
 maintained typed error implementations. Reimplementing those capabilities to
-remove their declarations would create competing owners. Platform's executor/IC0
-profile still unconditionally selects Principal, Serde and crypto support that
-Timers does not use. Removing that subtree requires an upstream feature boundary
-([#40 — Keep executor/IC0-only graphs free of Principal, Serde and crypto dependencies](https://github.com/dragginzgame/ic-platform/issues/40));
-it is not addressed by bypassing Platform or copying its bindings here. Graph
-reachability alone does not establish which routines survive Wasm linking.
+remove their declarations would create competing owners. Platform 0.6 supplies
+the lean executor/IC0 feature boundary requested in
+[#40 — Keep executor/IC0-only graphs free of Principal, Serde and crypto dependencies](https://github.com/dragginzgame/ic-platform/issues/40);
+Timers consumes it without bypassing Platform or copying bindings. Its library
+normal/build graph has 14 rather than 30 name/version identities including the
+root. That graph reduction is not a Wasm-size or runtime performance measurement.
 
 The [dependency policy](../ci/cargo-dependency-boundaries.json) is enforced through
 Shared's canonical checker in `actions-check`, alongside pin/inheritance checks.

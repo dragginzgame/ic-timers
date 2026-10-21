@@ -17,7 +17,7 @@ export RUSTUP_AUTO_INSTALL=0
 # The shared installer admits the root lock's published CLI selection and
 # rechecks it before activation/return. Testkit owns server pins and admission.
 arguments=(--consumer "$root" --package ic-testkit --lockfile "$root/Cargo.lock"
-    --bin ic-testkit-server --profile release)
+    --bin ic-testkit-server --profile release --features cli)
 [[ "$mode" != check ]] || arguments+=(--check)
 if executable="$(bash "$root/scripts/dev/install-rust-tools.sh" "${arguments[@]}")"; then
     :

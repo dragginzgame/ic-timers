@@ -139,13 +139,19 @@ inherited streaming output and typed timeout/nonzero-exit failures. OS spawn,
 signal and reap syscalls can exceed elapsed-time budgets; group signalling does
 not prove every descendant has exited. Native macOS timing remains unqualified.
 
-The receipt reader and injected build spawner use published Host and Build 0.62,
+The receipt reader and injected build spawner use published Host and Build 0.63,
 whose artifact engine accepts the same `OwnedChild` identity.
 Update these together when exchanging Host values; metadata/tree observation's
-command/byte boundary does not cover this build API. Testkit 0.62 selects the
+command/byte boundary does not cover this build API. Testkit 0.63 selects the
 same Host family. It and Platform/Wire/protocol are dev-dependencies of the driver;
 only the child test binary needs the simulator and codecs. No aliases or local
 child conversions are needed.
+
+The root-lock-selected Build editor and Testkit server executables require the
+`cli` feature. Their local setup/check adapters pass it to Shared's installer;
+normal library dependencies remain CLI-free. After updating the package/feature
+selection, run `make install-release-editor install-testkit-server` explicitly,
+then `make tools-check`. Tool checks remain offline and never repair selections.
 
 `pocketic-cohorts` writes `testing/target/cohorts.json` only after its subjects
 pass. The report contains instruction brackets, dispatch cycles and Wasm bytes,
@@ -287,7 +293,7 @@ shared-server reuse or recovery guarantees.
 ## Dependency pin exceptions
 
 The reviewed [exception list](../ci/dependency-pinning-exceptions.json) is empty.
-Platform 0.5 owns the runtime and exact selections for executor `=2.0.0` and
+Platform 0.6 owns the runtime and exact selections for executor `=2.0.0` and
 IC0 `=1.2.0`; Timers declares none of these providers directly. The library
 selects only `executor` and `ic0`, while canister probes select `cdk` and its
 included `runtime` feature. The root
