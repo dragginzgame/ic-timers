@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.30.0]
+## [0.30.0] - 2026-10-21
 
 - **Breaking dependency identity:** adopt Metrics 0.15 for the public
   `MeasurementCounter` and `MeasurementSummary` types. Consumers exchanging
