@@ -2,6 +2,17 @@
 
 All notable changes to this project are recorded here.
 
+## [0.30.0]
+
+- **Breaking dependency identity:** adopt Metrics 0.15 for the public
+  `MeasurementCounter` and `MeasurementSummary` types. Consumers exchanging
+  these values with a direct Metrics dependency must also select 0.15.
+  Timer scheduling, arithmetic behavior and probe Wire formats are unchanged.
+- Keep Platform, Testkit, Wire and the probe protocol in the native driver's
+  dev-dependencies. The normal build coordinator excludes the simulator and
+  codec stack; integration tests retain their existing dependencies. Enforce
+  that boundary in CI and reject accidental promotion into normal dependencies.
+
 ## [0.29.7] - 2026-10-20
 
 - Adopt published Build 0.24.0 and Host Artifacts/Process 0.32.0 for native

@@ -23,6 +23,16 @@ git init -q "$fixture"
 cd "$fixture"
 checker=scripts/ci/check-library-dependency-boundary.sh
 bash "$checker"
+# The test-only simulator graph is admitted, but promoting it into the native
+# build coordinator must fail even when the lock already contains every package.
+cp testing/crates/ic-timers-pocketic/Cargo.toml worker-original.toml
+perl -pi -e 's/^\[dependencies\]/[dependencies]\nic-testkit.workspace = true/' testing/crates/ic-timers-pocketic/Cargo.toml
+if bash "$checker" > worker-failure.log 2>&1; then
+    echo 'error: build coordinator admitted its test-only simulator dependency' >&2
+    exit 1
+fi
+grep -q 'forbidden ic-testkit' worker-failure.log
+cp worker-original.toml testing/crates/ic-timers-pocketic/Cargo.toml
 cp crates/ic-timers/Cargo.toml library-original.toml
 perl -pi -e 's/"executor", "ic0"/"executor", "ic0", "candid"/' crates/ic-timers/Cargo.toml
 # An independently optional codec adds a dependency edge to Platform even
@@ -135,4 +145,4 @@ cp "$root/Cargo.lock" Cargo.lock
 
 cmp "$root/Cargo.lock" Cargo.lock
 fixture_complete=true
-echo 'Library, probe and protocol dependency policy checks passed'
+echo 'Library, probe, protocol and build coordinator dependency policy checks passed'

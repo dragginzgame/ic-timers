@@ -59,4 +59,11 @@ for my $target ('wasm32-unknown-unknown', $host) {
         system(@check) == 0 or die "Timers dependency boundary failed: $root on $target\n";
     }
 }
+# Only the test binary owns simulator calls and probe codecs. The normal native
+# coordinator builds artifacts, supervises the worker and handles JSON receipts.
+my @worker = ('perl', 'scripts/ci/check-cargo-graph.pl', '--consumer', getcwd(),
+    '--package', 'ic-timers-pocketic', '--target', $host, '--all-features');
+push @worker, map { ('--forbid', $_) }
+    qw(ic-platform ic-cdk-executor ic0 ic-testkit pocket-ic candid ic-wire ic-timers ic-timers-test-protocol);
+system(@worker) == 0 or die "Timers build coordinator dependency boundary failed\n";
 PERL

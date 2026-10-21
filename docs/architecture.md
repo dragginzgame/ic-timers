@@ -115,20 +115,32 @@ The native driver retains published Testkit for server admission, lifecycle and
 bounded progress. Probe RPCs use PocketIC's raw query/update APIs plus the shared
 Wire identities/limits. Candid and management types remain upstream transport
 implementation details. The retired `ic-testkit-candid` package remains absent.
-Testkit 0.60 and the driver share Platform 0.5.0, retiring the older native
-Platform identity without a conversion adapter or parallel executor. Independent
-library and canister graphs also select only Platform 0.5.0. Build 0.24 and the
-driver exchange Host 0.32 process values; Testkit retains Host 0.31 internally.
-These host-only providers do not enter deployed graphs. There is no unpublished
-patch or source override here.
+The driver selects Platform, Testkit, Wire and the probe protocol only for its
+test binary. Its normal build coordinator uses Build and Host for artifacts and
+process custody, plus Clap/Serde/JSON for commands and receipts. It does not link
+the simulator or codecs. Build, Host and Testkit share the published 0.62 family;
+there is one Platform identity and no unpublished override. These host-only
+providers do not enter deployed graphs.
 The local provider check also rejects Candid codec paths and default-codec
 query/update attributes in maintained probe source.
 
 The Candid-free runtime introduced in Platform 0.2.0 was requested in
 [#31 — Support Candid-free raw and Wire canister entrypoints](https://github.com/dragginzgame/ic-platform/issues/31).
 The two small adapters still translate consumer-owned Wire limits/errors into
-Platform hooks. No first-class Wire adapter replaces them in this release, and
-the protocol package must not acquire a Platform dependency to hide them.
+Platform hooks. Testkit's typed Wire helpers require finite `Wire` contracts;
+the current probe records instead use bounded native Serde payloads. Switching
+to those helpers would require a protocol rewrite, not just removing these
+adapters. The protocol package must not acquire a Platform dependency to hide them.
+
+The published library retains three direct dependencies: Metrics owns counter
+arithmetic, Platform owns executor/system bindings, and Thiserror owns the
+maintained typed error implementations. Reimplementing those capabilities to
+remove their declarations would create competing owners. Platform's executor/IC0
+profile still unconditionally selects Principal, Serde and crypto support that
+Timers does not use. Removing that subtree requires an upstream feature boundary
+([#40 — Keep executor/IC0-only graphs free of Principal, Serde and crypto dependencies](https://github.com/dragginzgame/ic-platform/issues/40));
+it is not addressed by bypassing Platform or copying its bindings here. Graph
+reachability alone does not establish which routines survive Wasm linking.
 
 The [dependency policy](../ci/cargo-dependency-boundaries.json) is enforced through
 Shared's canonical checker in `actions-check`, alongside pin/inheritance checks.

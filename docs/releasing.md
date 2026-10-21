@@ -139,12 +139,13 @@ inherited streaming output and typed timeout/nonzero-exit failures. OS spawn,
 signal and reap syscalls can exceed elapsed-time budgets; group signalling does
 not prove every descendant has exited. Native macOS timing remains unqualified.
 
-The receipt reader and injected build spawner use published Host 0.32.0 with
-Build 0.24.0, whose artifact engine accepts the same `OwnedChild` identity.
+The receipt reader and injected build spawner use published Host and Build 0.62,
+whose artifact engine accepts the same `OwnedChild` identity.
 Update these together when exchanging Host values; metadata/tree observation's
-command/byte boundary does not cover this build API. Testkit 0.60.0 retains Host
-0.31.2 internally without exchanging those types with the driver. No aliases or
-local child conversions are needed. Both driver and Testkit select Platform 0.5.
+command/byte boundary does not cover this build API. Testkit 0.62 selects the
+same Host family. It and Platform/Wire/protocol are dev-dependencies of the driver;
+only the child test binary needs the simulator and codecs. No aliases or local
+child conversions are needed.
 
 `pocketic-cohorts` writes `testing/target/cohorts.json` only after its subjects
 pass. The report contains instruction brackets, dispatch cycles and Wasm bytes,
@@ -213,7 +214,9 @@ cargo tree --locked --offline -p ic-timers --all-features \
 protocol on Wasm and the actual native Rust host, with all features and
 normal/build edges. It rejects Candid, full CDK, host tooling and unsupported Platform features in
 runtime roots; the library excludes probe/Wire packages and the protocol excludes
-runtime authority. It delegates graph mechanics to Shared,
+runtime authority. A native coordinator check also rejects Platform, Testkit,
+PocketIC, Candid, Wire and runtime/protocol packages on its normal/build edges;
+their dev-only use remains admitted. It delegates graph mechanics to Shared,
 and requires the qualified executor/IC0 identities. The separate Shared direct
 checker enforces [named package ownership](../ci/cargo-dependency-boundaries.json)
 across aliases and normal/build/dev/target declarations. Neither check validates
