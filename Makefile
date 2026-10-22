@@ -141,17 +141,15 @@ shell-check:
 		bash -n "$$script"; \
 	done
 
+# Shared owns generic command, formatter, Make-interface and LOC matrices.
+# Retain Timers' actual wiring, release/recovery and host/product evidence.
 release-check:
 	bash scripts/ci/test-fixture-completion.sh
 	+$(MAKE) --no-print-directory shared-tooling-check
 	bash scripts/ci/test-snapshot-verifier.sh
 	bash scripts/ci/test-shared-snapshots.sh
-	bash scripts/ci/test-tool-commands.sh
 	bash scripts/ci/test-rust-preparation.sh
-	bash scripts/ci/test-cloc.sh
 	bash scripts/ci/test-failure-evidence.sh
-	bash scripts/ci/test-format-tools.sh
-	bash scripts/ci/test-make-consumer.sh
 	bash scripts/ci/test-evidence-checksums.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/test-dependency-pins.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/test-cargo-metadata.sh

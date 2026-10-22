@@ -2,13 +2,20 @@
 
 ## Current authority
 
-One [snapshot](../.shared-tooling.snapshot) records **138** canonical payloads
-from reviewed Shared Tooling **0.25.7**, revision
-`d39e8a84bf4fd7e42776d2bb8e589ad09aacb02b`. The clean supplier checkout matches
-published `main`; VERSION and the committed changelog identify 0.25.7.
-Canonical preview/apply retains the same 113 entrypoints and 138-file closure.
-This refresh updates the baseline, Rust hygiene guidance and release guidance;
-exported files remain byte-for-byte supplier-owned.
+One [snapshot](../.shared-tooling.snapshot) records **134** canonical payloads
+from reviewed Shared Tooling **0.26.6**, revision
+`4cb9bc907154225a3f7e4c33fd8d75fbeaa125c8`. The clean supplier checkout matches
+published `main`; VERSION and its committed changelog identify 0.26.6. Canonical
+preview/apply retires four unused generic test roots and their jobserver probe.
+The new CI/release integrity method is selected to resolve the shared audit
+catalog link; it adds no audit execution. Exported files remain byte-for-byte
+supplier-owned.
+
+This adoption includes explicit IC executable selection, corrected Cargo feature
+annotations and stronger retained validation/checksum evidence. Timers selects no
+IC executable bundle: its compact collector passes an empty IC selection and
+retains legacy IC installations in full. Testkit still owns PocketIC admission.
+No optional audit, schedule or generic producer test matrix is activated.
 
 The existing library Clippy gate now precedes compilation, tests and packaging
 in `ci`, including the `release-verify` path. The direct `publish` recipe runs
@@ -42,10 +49,9 @@ canonical set to immutable selections and receipts. IC Tooling 0.63 requires
 `cli` for the editor and Testkit server binaries. Both local setup/check adapters
 pass `--features cli`; the workspace library dependencies do not enable it.
 Prepare these selections explicitly with `make install-release-editor
-install-testkit-server`. Shared 0.25.5–0.25.7 retain the 0.25.3 installer policy;
-the package/feature selection change requires new receipts. Featureless examples
-in the exported generic setup guide do not apply to these 0.63 binaries; use the
-local adapters or add `--features cli` to manual installer commands.
+install-testkit-server`. Shared 0.26.6 retains selected-tool feature admission
+and corrects the generic Testkit setup example to pass `--features cli`. Use the local adapters for both
+binaries; a selected package/feature change requires a new receipt.
 Package-selection changes still require explicit setup for that selected tool;
 checks remain offline and never install or repair it. Old installations and
 failed attempts remain retained.
@@ -116,6 +122,21 @@ Redirected `target`/`.tools` parents are retained as links with local diagnostic
 children are not selected. Independent logs remain eligible and the collector
 reports incomplete product collection even when tool selection succeeds.
 
+## Consumer qualification selection
+
+Shared owns the generic tool-command, formatter prerequisite, Make-interface and
+LOC regression matrices. Timers no longer dispatches them in `release-check` or
+selects them as snapshot roots. This implements the local change prepared in
+[PR #73](https://github.com/dragginzgame/ic-timers/pull/73) for
+[#74](https://github.com/dragginzgame/ic-timers/issues/74); default-branch delivery
+remains required before issue closure.
+
+Timers retains actual tool setup/admission, hook/index preservation, repository
+orchestration, snapshot corruption, release recovery and failure-evidence checks.
+Product MSRV, Wasm, watchdog and cohort qualification is unchanged. Review relevant
+upstream fixtures when a contract changes; do not replay the producer's whole
+implementation matrix as a routine consumer prerequisite.
+
 ## Deployment dependency exclusions
 
 The selected Shared direct-dependency checker `check-cargo-dependency-boundaries.sh` is now
@@ -155,8 +176,8 @@ transport remains intentional and outside the deployed-canister policy.
 
 ## Qualification and refresh
 
-Current preview/apply, before-images and focused qualification receipts are in
-`/tmp/ic-timers-shared-0257.tf16fmhr/`. The
+Current preview/apply, incoming before-images, published archives and focused
+qualification receipts are in `/tmp/ic-timers-upstream-qloog2ew/`. The
 [handoff](status/current.md) records the tested current scope. Linux evidence does
 not qualify native macOS or the complete maintainer-operated release gate.
 

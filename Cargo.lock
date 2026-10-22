@@ -779,9 +779,9 @@ dependencies = [
 
 [[package]]
 name = "ic-build"
-version = "0.63.0"
+version = "0.63.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2036d85fbb9a1f2c6190801938a2574ff29eae5f43a31846a0bd9bbb180b8b3f"
+checksum = "4453d848c69ffc7ccdd27c815a6c8a53f369928cec613213bbb852419bf6e15b"
 dependencies = [
  "cargo_metadata",
  "ic-host-artifacts",
@@ -821,9 +821,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-artifacts"
-version = "0.63.0"
+version = "0.63.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "de90433bb0b6cbe86bb9088a0f271ab832bfb12600eac181e8c501b121be494f"
+checksum = "2c8ce578fc3c4dfe94dbf741d5eb5a03b603914bda77c996979a657a643cb17f"
 dependencies = [
  "flate2",
  "sha2",
@@ -831,9 +831,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-fs"
-version = "0.63.0"
+version = "0.63.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4978f9c0679229aa3f085b4d58a7a3ba12d997fa63d10e98d5ce1571a0908b14"
+checksum = "bc78645e00a114170bf5033d58ee2dd5ec8bbc216e94e680da5d776a3f704a74"
 dependencies = [
  "ic-host-artifacts",
  "rustix",
@@ -842,9 +842,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-process"
-version = "0.63.0"
+version = "0.63.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60fed85db6af51ddd5b204b04cd39753ccf31c22568b28d4b54fef0da4f168a1"
+checksum = "0169d4a845482899f3daa501dc0091b61a366909ee1be66d8c13964608392c08"
 dependencies = [
  "command-fds",
  "ic-host-artifacts",
@@ -866,15 +866,15 @@ dependencies = [
 
 [[package]]
 name = "ic-metrics"
-version = "0.15.1"
+version = "0.15.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "10d73e4784a14737d07f1c5401936f0e722570f84d43478fe4ccaf56b772cab0"
+checksum = "dd4d60bbe06d3c58d0d2a1e3fac4687469fb370e5f03ee1d4e60a4bdc4d24f8e"
 
 [[package]]
 name = "ic-platform"
-version = "0.6.0"
+version = "0.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cd4f84e9c700fb20a907aac00dd176918b9467b8ef909a4a38fc385ba690f3a7"
+checksum = "3d00a4644f878b644e1e20bec28af2ec419c2e296cb4268c34990071e73d1573"
 dependencies = [
  "crc32fast",
  "data-encoding",
@@ -890,9 +890,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform-macros"
-version = "0.6.0"
+version = "0.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b2bbecc9939639d6dbc4cd11c521e4470d5d3e901234bcd313a1936d492dbe29"
+checksum = "9d51b6d490d7c45181b231c3a36ae72832768b4f8459d75e4363527bed32e690"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -901,9 +901,9 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit"
-version = "0.63.0"
+version = "0.63.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fa19120a461f1ad2caf179e9a58246a484e42a61a276bb5c93cb6dd22cd5803a"
+checksum = "9b7c0784474fb3da5f84f5a8d29eb3c23d604b0d46b676a17af05af364815ac5"
 dependencies = [
  "ic-host-artifacts",
  "ic-host-fs",
@@ -989,9 +989,9 @@ dependencies = [
 
 [[package]]
 name = "ic-wire"
-version = "0.5.6"
+version = "0.5.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30729080e902d0dae20da36de9a1fac6c55988ab6eb3211ab0c6daa6ae78f21c"
+checksum = "b4a6497f23b86fe3a4b3a1f6718e57fd535d9067291a7ad1fb16931dcffb6f21"
 dependencies = [
  "ic-wire-derive",
  "postcard",
@@ -1000,9 +1000,9 @@ dependencies = [
 
 [[package]]
 name = "ic-wire-derive"
-version = "0.5.6"
+version = "0.5.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a130ab71f9de01c01a4eaca837ca0a03d4f064d5e9accd92191c175cf0456cf5"
+checksum = "14c0e0772a520b53a16169c33effaa018313c82bd154c27d074d062b72665a14"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2311,9 +2311,9 @@ checksum = "fd3ca314f692efd6c868f8408f53fe444634a845f96c028b97d35f6a1f79f0ee"
 
 [[package]]
 name = "tokio"
-version = "1.54.0"
+version = "1.54.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0c168a474b95bfecfe908a65d4bdffc523144b649a74c09c286afb35d53e0bc"
+checksum = "b52fd3255258d26fac7264ab5a76b53c13367136dc011d3d6ad4f8ed070396a3"
 dependencies = [
  "bytes",
  "libc",

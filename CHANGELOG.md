@@ -2,6 +2,19 @@
 
 All notable changes to this project are recorded here.
 
+## [0.30.2]
+
+- Qualify published Platform/macros 0.6.7, Metrics 0.15.4, Wire/derive 0.5.19
+  and IC Tooling 0.63.3. Preserve the incoming lockfile selections, runtime APIs,
+  executor identity and probe wire formats.
+- Adopt reviewed Shared Tooling 0.26.6, including graph-feature observation and
+  retained failure-evidence fixes. Pass an explicit empty IC executable selection
+  to host-only compact evidence collection; Testkit still owns PocketIC setup.
+- Keep Shared's generic command, formatter, Make-interface and LOC regression
+  suites upstream. Retain Timers' actual setup, hook/index, release/recovery and
+  product checks ([#74](https://github.com/dragginzgame/ic-timers/issues/74),
+  [prepared PR #73](https://github.com/dragginzgame/ic-timers/pull/73)).
+
 ## [0.30.1] - 2026-10-21
 
 - Adopt published Platform/macros 0.6.0. Keep only executor/IC0 features in the

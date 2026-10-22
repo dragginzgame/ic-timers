@@ -86,7 +86,7 @@ mkdir "$metadata/tool-evidence"
 archive_started=$SECONDS
 collector_status=0
 bash "$script_root/scripts/ci/collect-tool-evidence.sh" "$archive" "$root" \
-    "$metadata/tool-evidence" compact "$root/ci/tool-versions.env" "" \
+    "$metadata/tool-evidence" compact "$root/ci/tool-versions.env" "" "" \
     "${selections[@]}" > "$metadata/archive-path" || collector_status=$?
 case "$collector_status" in
     0|1) ;;
