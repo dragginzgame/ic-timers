@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.30.3]
+## [0.30.3] - 2026-10-22
 
 - Adopt published Wire/derive 0.5.20 and Metrics 0.15.5. Wire improves Wasm
   canonical-byte comparison and generated-name hygiene; Metrics arithmetic is
