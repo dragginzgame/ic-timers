@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.30.2]
+## [0.30.2] - 2026-10-22
 
 - Qualify published Platform/macros 0.6.7, Metrics 0.15.4, Wire/derive 0.5.19
   and IC Tooling 0.63.3. Preserve the incoming lockfile selections, runtime APIs,
