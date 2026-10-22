@@ -1,9 +1,9 @@
 //! Fresh, caller-owned testkit servers and IC instances from the verified binary.
 
+use ic_platform::pocket_ic::{PocketIc, PocketIcBuilder};
 use ic_platform::principal::ExternalPrincipal;
 use ic_testkit::pic::{
-    CanisterInstallExt, InstallSpec, PocketIc, PocketIcBuilder, PocketIcInstance,
-    PocketIcStartupConfig, tick_until,
+    CanisterInstallExt, InstallSpec, PocketIcInstance, PocketIcStartupConfig, tick_until,
 };
 use ic_timers_test_protocol::rpc::{Method, REQUEST_LIMITS, RESPONSE_LIMITS};
 use serde::{Serialize, de::DeserializeOwned};

@@ -6,72 +6,75 @@ Last updated: 2026-10-22
 
 ## Source and accepted work
 
-Released base: **0.30.1**, `6c3aa21`; package versions remain unchanged. The
-undated **0.30.2** draft covers compatible upstream adoption and repository
-qualification cleanup. Public timer types, protocols and lifecycle contracts are
-unchanged. There is one root catalog/lock and five maintained packages.
+Released base: **0.30.2**, `000a5e4`; package versions remain unchanged. The
+undated **0.30.3** draft combines incoming Wire/Metrics adoption with aligned
+Build/Host/Testkit **0.64.0**. This remains compatible at the published Timers
+boundary: only unpublished native qualification imports/features change.
+There is one root dependency catalog/lock and five maintained packages.
 
-Incoming lock selections are preserved byte-for-byte: Build/Host/Testkit
-**0.63.3**, Platform/macros **0.6.7**, Metrics **0.15.4**, Wire/derive **0.5.19**
-and Tokio **1.54.1**. Official registry indexes confirm the selected IC releases
-are latest non-yanked publications at inspection. All ten IC package archives
-match registry/lock checksums and the compiled-cache files. No unpublished sibling
-code is selected. Metrics arithmetic, executor/IC0 implementations and Platform's
-macro sources match the prior selections. New optional storage/Candid features
-remain unused; no memory/storage migration is included.
+Official registry indexes and checksum-verified published archives select Build,
+Host Artifacts/FS/Process and Testkit **0.64.0**, source
+`036da0cdf3d3b35297fbc26031e373f386a2f2de`. All compiled-cache files match those
+archives. Only these five package versions change from this task's incoming lock;
+Platform/macros **0.6.7**, Metrics **0.15.5**, Wire/derive **0.5.20**, Tokio
+**1.54.1**, executor **2.0.0** and IC0 **1.2.0** are preserved.
+Build and the three Host packages have unchanged Rust sources versus 0.63.3;
+matching package identities still matter at the injected `OwnedChild` boundary.
 
-## Shared ownership cleanup
+## Published 0.64 ownership migration
 
-Canonical preview/apply adopts reviewed Shared **0.26.6**,
-`4cb9bc907154225a3f7e4c33fd8d75fbeaa125c8`, with **134** payloads. Four generic
-command/formatter/Make-interface/LOC test roots and their unused jobserver probe
-retire. The new CI/release audit method resolves its catalog link without
-activating an audit. Surviving payloads remain supplier-owned and verified.
+Native tests import PocketIC clients directly from `ic_platform::pocket_ic`.
+Their existing dev-dependency now selects `pocket-ic`, including Principal support;
+`principal::ExternalPrincipal` retains PocketIC's external API identity. Testkit
+owns server admission/startup, instance lifetime, install extensions and progress
+helpers. Its removed PocketIC forwarding imports are gone from all three callers.
+The coordinator's normal dependencies remain simulator/codec-free.
 
-This implements the fix prepared in [PR #73](https://github.com/dragginzgame/ic-timers/pull/73)
-for [#74](https://github.com/dragginzgame/ic-timers/issues/74) locally. Neither is
-merged/closed here; default-branch delivery remains required. Timers retains
-actual setup/admission, hook/index, repository orchestration, snapshot corruption,
-release/recovery, evidence and product qualification. Shared's generic producer
-matrices are no longer routine Timers release prerequisites.
+Timers does not use Testkit's removed Fake/Performance wrappers, diagnostics batch
+error, or optional Wire calls. Its raw PocketIC calls and bounded native Wire
+codec retain method identities, limits, traps and error precedence. No compatibility
+facade or local replacement is added. The protocol remains Wire/Serde-only, and
+no storage/memory migration or full CDK dependency is introduced.
 
-Shared's compact collector now requires an explicit IC executable list. Timers
-passes an empty list, preserving host-only compaction and full legacy IC evidence.
-It selects no IC executable bundle; Testkit still owns PocketIC setup/admission.
-Build's editor and Testkit's server CLI retain explicit `cli` selections in the
-local adapters, without enabling CLI features in workspace library dependencies.
-Both 0.63.3 executables are explicitly prepared and pass offline admission.
+Build's editor and Testkit's server CLI retain explicit `cli` selections through
+the existing root-lock installers. New 0.64 selections require explicit setup;
+old installations and failure attempts are retained. Both CLIs are prepared.
+Initial Testkit setup refused a live shared-store lock owned by ic-jobs. After
+the owner completed and published its verified selection, canonical Timers setup
+succeeded. No foreign lock, candidate or source was modified.
 
-## Retained product boundaries
+## Shared and product boundaries
 
-Timers owns scheduling, claims and observations; Platform owns IC bindings,
-Wire codecs, Testkit simulator lifecycle, and Build/Host artifact/process machinery.
-Applications retain durable intent and lifecycle policy. The library selects only
-Platform executor/IC0, with one registry executor **2.0.0** and IC0 **1.2.0**.
-Its independent Wasm normal/build graph remains **14** package identities;
-the native build coordinator remains **53**. These are graph counts, not
-performance claims. Library/probe graphs exclude Candid/full CDK and host tools;
-the library also excludes Principal/Serde/crypto. Candid remains native-only
-through PocketIC. Protocol records select Wire/Serde only; simulator/codec
-integration stays dev-only in the coordinator.
+Shared **0.26.6**, `4cb9bc907154225a3f7e4c33fd8d75fbeaa125c8`, is still current
+on upstream main. Canonical preview reports only KEEP; the existing 134-payload
+snapshot verifies and is unchanged. No generic test suites, audit execution,
+optional IC executables or schedules are restored. Timers selects an empty IC
+list for compact evidence and leaves PocketIC setup/admission with Testkit.
+
+Timers owns scheduling, claims and observations; Metrics arithmetic, Platform IC
+bindings/client identities, Wire codecs, Testkit simulator lifecycle and Build/Host
+artifact/process machinery retain separate owners. Applications own durable intent
+and lifecycle policy. The library selects only Platform executor/IC0; canister
+probes retain raw explicit codecs. Candid remains native-only through PocketIC;
+production library/probe graphs reject it and full CDK. Protocol records carry no
+runtime authority. No timer-provider or executor implementation changes.
 
 ## Current qualification
 
-Focused Linux checks pass: library Clippy, Rust 1.91 probe/protocol/driver lint
-and all four size feature selections, grouped formatting, native/Wasm MSRV builds,
-declaration/feature/graph policies and negative boundary fixtures. Three protocol
-round-trip/admission tests, six Metrics projection tests and 7,776 generated native
-command traces pass. These native tests do not establish IC recovery guarantees.
+Focused Linux checks pass: locked metadata, declaration/feature/graph policies,
+library Clippy, Rust 1.91 probe/protocol/driver lint and all four size features,
+grouped formatting, native/Wasm library MSRV builds, two driver process/build
+tests, one report identity test, CLI adapter and metadata/version fixtures.
+Shared no-change preview, snapshot integrity and whitespace checks pass.
+Offline tool admission passes for both selected 0.64 CLIs and the existing
+PocketIC server. Live qualification passes 27 product subjects plus three host
+fixtures, all four policy cohorts and both calibrations. The new cohort receipt
+matches the final lock; no cross-context performance improvement is claimed.
+Library/coordinator normal/build graphs remain 14/53 package identities.
 
-Live PocketIC qualification passes 27 product subjects plus three host fixtures,
-all four policy cohorts and two calibrations. The generated cohort receipt matches
-the preserved root lock. No cross-context performance improvement is claimed.
-Tool setup/offline checks, snapshot corruption, fixture retention, failure evidence,
-repository/release ordering, hook/index preservation, metadata/version/changelog
-fixtures, checksum checks, ShellCheck and whitespace checks pass.
-
-Incoming before-images, preview/apply logs, published archives, source comparisons
-and qualification logs: `/tmp/ic-timers-upstream-qloog2ew/`. Native macOS,
-installed-IC qualification and the complete maintainer-operated release gate remain
-separate. No staging, commits, pushes, package version changes or releases were
-performed. Other repositories remain read-only.
+Incoming copies, official indexes/archives, source comparisons and logs:
+`/tmp/ic-timers-host-shared-vd2x90u6/`. The preceding Wire/Metrics codec tests and
+PocketIC receipt remain at `/tmp/ic-timers-wire-metrics-7ghjoy9w/`; that receipt
+has the old lock context. Native macOS, installed IC and the full maintainer-owned
+release gate remain separate. No package version changes, staging, commits,
+pushes or releases are performed; sibling repositories remain read-only.

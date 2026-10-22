@@ -1,7 +1,8 @@
 use super::harness::{fresh_pocket_ic, install_probe, update_unit};
 use super::harness::{query_wire, update_wire};
+use ic_platform::pocket_ic::PocketIc;
 use ic_platform::principal::ExternalPrincipal;
-use ic_testkit::pic::{PocketIc, advance_and_tick};
+use ic_testkit::pic::advance_and_tick;
 use ic_timers_test_protocol::rpc::Method;
 use ic_timers_test_protocol::{CohortObservation, MemorySamplingMeasurement, OperationMeasurement};
 use std::{env, fs, path::PathBuf, time::Duration};

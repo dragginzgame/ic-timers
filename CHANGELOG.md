@@ -2,6 +2,16 @@
 
 All notable changes to this project are recorded here.
 
+## [0.30.3]
+
+- Adopt published Wire/derive 0.5.20 and Metrics 0.15.5. Wire improves Wasm
+  canonical-byte comparison and generated-name hygiene; Metrics arithmetic is
+  unchanged. Timer APIs, probe wire formats and decoder limits remain unchanged.
+- Adopt aligned Build, Host and Testkit 0.64.0 for native qualification. Import
+  PocketIC clients directly from Platform while Testkit retains server lifecycle
+  and progress helpers. Re-run `make install-release-editor install-testkit-server`
+  to prepare the selected CLIs; the published timer API is unchanged.
+
 ## [0.30.2] - 2026-10-22
 
 - Qualify published Platform/macros 0.6.7, Metrics 0.15.4, Wire/derive 0.5.19

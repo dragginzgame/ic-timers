@@ -1,7 +1,8 @@
 use super::harness::{INIT_CYCLES, fresh_pocket_ic, install_probe, update_unit, wait_for_probe};
 use super::harness::{query_wire, update_wire};
+use ic_platform::pocket_ic::PocketIc;
 use ic_platform::principal::ExternalPrincipal;
-use ic_testkit::pic::{PocketIc, PocketIcInstance, advance_and_tick};
+use ic_testkit::pic::{PocketIcInstance, advance_and_tick};
 use ic_timers_test_protocol::rpc::Method;
 use ic_timers_test_protocol::{
     ChurnObservation, DispatchBatchObservation, OrdinaryObservation, ProbeMemorySummary,

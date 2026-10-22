@@ -45,7 +45,7 @@ explicitly with `make install-release-editor`; check it offline with
 source admission; standalone preparation requires an already admitted executable.
 
 Selected-tool installation supports explicit Cargo features and binds their
-canonical set to immutable selections and receipts. IC Tooling 0.63 requires
+canonical set to immutable selections and receipts. IC Tooling 0.64 requires
 `cli` for the editor and Testkit server binaries. Both local setup/check adapters
 pass `--features cli`; the workspace library dependencies do not enable it.
 Prepare these selections explicitly with `make install-release-editor
@@ -79,12 +79,13 @@ qualification packages here.
 Candid remains transitive only in the native driver through PocketIC/Testkit. Local probe protocols use Wire; Platform 0.6's `cdk`
 feature and both canister graphs are Candid-free. Full CDK/macros and the retired
 Testkit Candid adapter are absent from the workspace graph.
-The driver test binary and Testkit 0.63 share Platform 0.6; the driver selects
-`principal` explicitly and no Candid codec feature is enabled. Its
+The driver test binary and Testkit 0.64 share Platform 0.6; the driver selects
+`pocket-ic` explicitly for direct client imports, including Principal support;
+no Candid codec feature is enabled. Its
 normal coordinator excludes Platform, Testkit, Wire and the probe protocol;
 they are dev-dependencies used by the maintained integration tests. The library
 and canister graphs exclude native simulator features. Build, Host and Testkit
-share the 0.63 family, with no older parallel Host or Platform provider.
+share the 0.64 family, with no older parallel Host or Platform provider.
 The catalog's
 local `ic-timers` entry is the probes' dependency on the production library.
 
@@ -177,7 +178,9 @@ transport remains intentional and outside the deployed-canister policy.
 ## Qualification and refresh
 
 Current preview/apply, incoming before-images, published archives and focused
-qualification receipts are in `/tmp/ic-timers-upstream-qloog2ew/`. The
+qualification receipts are in `/tmp/ic-timers-upstream-qloog2ew/`. The latest
+no-change preview is in `/tmp/ic-timers-host-shared-vd2x90u6/`; upstream main still
+selects the same 0.26.6 revision. The
 [handoff](status/current.md) records the tested current scope. Linux evidence does
 not qualify native macOS or the complete maintainer-operated release gate.
 

@@ -37,7 +37,8 @@ canister graphs must still exclude older providers that lack that key.
 | Measurement arithmetic | `ic-metrics` | Timer-specific event names, recording/sample boundaries and memory extents in `snapshot/metrics.rs` |
 | Durable jobs, readiness, lifecycle order and operator-health labels | Consuming application/framework | Registration claims and snapshots; no durable task database or application lifecycle exports here |
 | Wasm compilation and artifact-cache custody | `ic-build`, with explicit child custody from `ic-host-process` | `testing/crates/ic-timers-pocketic/src/build/mod.rs` selects packages, profile, features and artifact lifetime |
-| PocketIC server selection, admission, lifecycle and call transport | `ic-testkit` | `scripts/dev/testkit-server.sh` selects the root-lock CLI; the native harness supplies instance configuration |
+| PocketIC client types and raw call transport | `ic-platform` | Native tests import `pocket_ic` directly and retain bounded Wire requests |
+| PocketIC server selection, admission, lifecycle and bounded progress | `ic-testkit` | `scripts/dev/testkit-server.sh` selects the root-lock CLI; the native harness supplies instance configuration |
 | Controlled probe codecs | Published `ic-wire::native` and Serde | The unpublished protocol owns method identities/limits; Platform hooks and the native harness own transport integration |
 | Common tools, fixture dependency closure, evidence transport and release mechanics | Reviewed Shared Tooling snapshot | Local Make selections, product release/source policy and evidence identity; see [adoption boundaries](shared-tooling.md) |
 
@@ -59,7 +60,8 @@ The root catalog disables default Platform features. The library selects only
 `executor` and `ic0`; the two canister probes select `cdk` (including its new
 `runtime` feature) for entrypoint contexts,
 protected calls/spawning, traps, cycle burning and stable byte I/O. The native
-harness selects `principal` explicitly and uses `principal::ExternalPrincipal`
+harness selects `pocket-ic` explicitly, including Principal support, and uses
+`principal::ExternalPrincipal`
 for PocketIC's external API identity. The protocol package has no Platform edge.
 Parser, Agent, certification and ledger capabilities remain unselected.
 
@@ -113,14 +115,15 @@ unfinished-task drop policy. Call/error/stable-error types now belong to Platfor
 no such runtime types cross the published timer API or the probe wire boundary.
 
 The native driver retains published Testkit for server admission, lifecycle and
-bounded progress. Probe RPCs use PocketIC's raw query/update APIs plus the shared
+bounded progress. PocketIC clients/DTOs are imported directly from Platform;
+Testkit no longer forwards them. Probe RPCs use raw query/update APIs plus the shared
 Wire identities/limits. Candid and management types remain upstream transport
 implementation details. The retired `ic-testkit-candid` package remains absent.
 The driver selects Platform, Testkit, Wire and the probe protocol only for its
 test binary. Its normal build coordinator uses Build and Host for artifacts and
 process custody, plus Clap/Serde/JSON for commands and receipts. It does not link
-the simulator or codecs. Build, Host and Testkit share the published 0.63 family;
-the driver and Testkit 0.63 select the same Platform 0.6 identity. Testkit no
+the simulator or codecs. Build, Host and Testkit share the published 0.64 family;
+the driver and Testkit 0.64 select the same Platform 0.6 identity. Testkit no
 longer enables Platform's Candid codec feature; PocketIC still brings upstream
 Candid for its simulator protocols. Independent library and canister graphs
 remain Candid-free and select only Platform 0.6.
