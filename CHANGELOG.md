@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.30.7]
+## [0.30.7] - 2026-10-23
 
 - Adopt published Platform/macros 0.6.10 and Metrics 0.15.7. Their Rust sources
   match the prior selections; retain the Rust 1.91 floor, executor/IC0 identities,
