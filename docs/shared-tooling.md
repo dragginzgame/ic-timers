@@ -3,13 +3,19 @@
 ## Current authority
 
 One [snapshot](../.shared-tooling.snapshot) records **134** canonical payloads
-from reviewed Shared Tooling **0.26.6**, revision
-`4cb9bc907154225a3f7e4c33fd8d75fbeaa125c8`. The clean supplier checkout matches
-published `main`; VERSION and its committed changelog identify 0.26.6. Canonical
-preview/apply retires four unused generic test roots and their jobserver probe.
-The new CI/release integrity method is selected to resolve the shared audit
-catalog link; it adds no audit execution. Exported files remain byte-for-byte
-supplier-owned.
+from reviewed Shared Tooling **0.26.7**, revision
+`3e8d7cd3e7e9b7b79a5e800c30daf0be2710dab0`. The clean supplier checkout matches
+published `main`; VERSION and its committed changelog identify 0.26.7. Canonical
+preview/apply retains the existing selection and changes only the selected-tool
+installer, its store helper and generic setup guide. Exported files remain
+byte-for-byte supplier-owned; retired generic suites stay upstream.
+
+Explicit selected Cargo-tool setup now waits up to 60 seconds for an admitted
+slot owner, then rechecks build, source, lock and receipt inputs before reuse.
+`SHARED_TOOLING_SETUP_WAIT_SECONDS` selects 0–300 seconds; zero refuses immediately.
+Checks/preflight, checkout and source-cache locks, and Host/IC setup remain
+immediate. Waiting neither removes foreign locks nor admits partial output. The
+build identity policy is unchanged; this refresh alone invalidates no binaries.
 
 This adoption includes explicit IC executable selection, corrected Cargo feature
 annotations and stronger retained validation/checksum evidence. Timers selects no
@@ -45,12 +51,13 @@ explicitly with `make install-release-editor`; check it offline with
 source admission; standalone preparation requires an already admitted executable.
 
 Selected-tool installation supports explicit Cargo features and binds their
-canonical set to immutable selections and receipts. IC Tooling 0.64 requires
+canonical set to immutable selections and receipts. IC Tooling 0.65 requires
 `cli` for the editor and Testkit server binaries. Both local setup/check adapters
 pass `--features cli`; the workspace library dependencies do not enable it.
 Prepare these selections explicitly with `make install-release-editor
-install-testkit-server`. Shared 0.26.6 retains selected-tool feature admission
-and corrects the generic Testkit setup example to pass `--features cli`. Use the local adapters for both
+install-testkit-server`. Shared 0.26.7 retains selected-tool feature admission
+and the generic Testkit setup example passes `--features cli`. Use the local
+adapters for both
 binaries; a selected package/feature change requires a new receipt.
 Package-selection changes still require explicit setup for that selected tool;
 checks remain offline and never install or repair it. Old installations and
@@ -79,14 +86,14 @@ qualification packages here.
 Candid remains transitive only in the native driver through PocketIC/Testkit. Local probe protocols use Wire; Platform 0.6's `cdk`
 feature and both canister graphs are Candid-free. Full CDK/macros and the retired
 Testkit Candid adapter are absent from the workspace graph.
-The driver test binary and Testkit 0.64 share Platform 0.6; the driver selects
+The driver test binary and Testkit 0.65 share Platform 0.6; the driver selects
 `pocket-ic` explicitly for direct client imports, including Principal support.
-Testkit 0.64.1's native provider fixtures also select Platform's Candid/management
+Testkit's native provider fixtures also select Platform's Candid/management
 support; those features remain excluded from deployed library and probe graphs. Its
 normal coordinator excludes Platform, Testkit, Wire and the probe protocol;
 they are dev-dependencies used by the maintained integration tests. The library
 and canister graphs exclude native simulator features. Build, Host and Testkit
-share the 0.64 family, with no older parallel Host or Platform provider.
+share the 0.65 family, with no older parallel Host or Platform provider.
 The catalog's
 local `ic-timers` entry is the probes' dependency on the production library.
 
@@ -178,12 +185,11 @@ transport remains intentional and outside the deployed-canister policy.
 
 ## Qualification and refresh
 
-Current preview/apply, incoming before-images, published archives and focused
-qualification receipts are in `/tmp/ic-timers-upstream-qloog2ew/`. The latest
-no-change preview is in `/tmp/ic-timers-host-shared-vd2x90u6/`; upstream main still
-selects the same 0.26.6 revision. The
-[handoff](status/current.md) records the tested current scope. Linux evidence does
-not qualify native macOS or the complete maintainer-operated release gate.
+Current preview/apply, incoming before-images, verified published archives and
+focused qualification logs are in `/tmp/ic-timers-upstream-refresh-zs_qs4gq/`.
+The [handoff](status/current.md) records tested scope and separate macOS/release
+qualification limits. A one-time isolated owner fixture checks the changed wait
+contract; no producer matrix is restored to routine Timers validation.
 
 Future refreshes use the reviewed source's canonical exporter: preview first,
 then apply the same explicit root selection. Retain directly used helpers and

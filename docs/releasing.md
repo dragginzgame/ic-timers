@@ -139,10 +139,10 @@ inherited streaming output and typed timeout/nonzero-exit failures. OS spawn,
 signal and reap syscalls can exceed elapsed-time budgets; group signalling does
 not prove every descendant has exited. Native macOS timing remains unqualified.
 
-The receipt reader and injected build spawner use published Host and Build 0.64,
+The receipt reader and injected build spawner use published Host and Build 0.65,
 whose artifact engine accepts the same `OwnedChild` identity.
 Update these together when exchanging Host values; metadata/tree observation's
-command/byte boundary does not cover this build API. Testkit 0.64 selects the
+command/byte boundary does not cover this build API. Testkit 0.65 selects the
 same Host family. It and Platform/Wire/protocol are dev-dependencies of the driver;
 only the child test binary needs the simulator and codecs. No aliases or local
 child conversions are needed.

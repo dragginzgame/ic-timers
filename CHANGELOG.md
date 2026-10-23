@@ -2,6 +2,17 @@
 
 All notable changes to this project are recorded here.
 
+## [0.30.5]
+
+- Adopt aligned Build, Host and Testkit 0.65.0 for native qualification. Keep
+  Timers' raw PocketIC/native Wire integration and public timer API unchanged.
+  Re-run `make install-release-editor install-testkit-server` for the selected CLIs.
+- Adopt published Wire/derive 0.6.5, preserving native frames and traversal
+  limits while using Wire's small-u64 serialization optimization.
+- Adopt reviewed Shared Tooling 0.26.7. Explicit Cargo-tool setup can wait
+  briefly for an admitted installer owner, then recheck and reuse its result;
+  offline checks remain immediate and foreign locks remain untouched.
+
 ## [0.30.4] - 2026-10-23
 
 - Adopt published Wire/derive 0.6.2. Timers already uses the retained native
