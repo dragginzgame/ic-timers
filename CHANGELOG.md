@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.30.8]
+## [0.30.8] - 2026-10-23
 
 - Adopt published Platform/macros 0.6.11 and Wire/derive 0.6.10, retaining
   Metrics 0.15.7 and Build/Host/Testkit 0.66.2. Keep existing native probe
