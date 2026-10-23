@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.30.5]
+## [0.30.5] - 2026-10-23
 
 - Adopt aligned Build, Host and Testkit 0.65.0 for native qualification. Keep
   Timers' raw PocketIC/native Wire integration and public timer API unchanged.
