@@ -123,9 +123,10 @@ The driver selects Platform, Testkit, Wire and the probe protocol only for its
 test binary. Its normal build coordinator uses Build and Host for artifacts and
 process custody, plus Clap/Serde/JSON for commands and receipts. It does not link
 the simulator or codecs. Build, Host and Testkit share the published 0.64 family;
-the driver and Testkit 0.64 select the same Platform 0.6 identity. Testkit no
-longer enables Platform's Candid codec feature; PocketIC still brings upstream
-Candid for its simulator protocols. Independent library and canister graphs
+the driver and Testkit 0.64 select the same Platform 0.6 identity. The incoming
+Testkit 0.64.1 also selects Platform's Candid/management support for native provider
+fixtures; PocketIC retains Candid for its simulator protocols. These are native
+qualification dependencies. Independent library and canister graphs
 remain Candid-free and select only Platform 0.6.
 These host-only providers do not enter deployed graphs; there is no unpublished
 override.
@@ -134,11 +135,13 @@ query/update attributes in maintained probe source.
 
 The Candid-free runtime introduced in Platform 0.2.0 was requested in
 [#31 — Support Candid-free raw and Wire canister entrypoints](https://github.com/dragginzgame/ic-platform/issues/31).
-The two small adapters still translate consumer-owned Wire limits/errors into
-Platform hooks. Testkit's typed Wire helpers require finite `Wire` contracts;
-the current probe records instead use bounded native Serde payloads. Switching
-to those helpers would require a protocol rewrite, not just removing these
-adapters. The protocol package must not acquire a Platform dependency to hide them.
+The two small adapters translate consumer-owned Wire limits/errors into Platform
+hooks. Wire 0.6 retains this native Serde codec and retires its finite API;
+the current probe records need no layout or limit changes. The selected Testkit's
+optional typed helpers still use the older finite API and are not enabled here.
+Keep the direct raw-call/native-codec integration; the protocol package must not
+acquire a Platform dependency to hide these adapters. Host metadata generation
+is not selected by probes or the protocol package.
 
 The published library retains three direct dependencies: Metrics owns counter
 arithmetic, Platform owns executor/system bindings, and Thiserror owns the

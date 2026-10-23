@@ -80,8 +80,9 @@ Candid remains transitive only in the native driver through PocketIC/Testkit. Lo
 feature and both canister graphs are Candid-free. Full CDK/macros and the retired
 Testkit Candid adapter are absent from the workspace graph.
 The driver test binary and Testkit 0.64 share Platform 0.6; the driver selects
-`pocket-ic` explicitly for direct client imports, including Principal support;
-no Candid codec feature is enabled. Its
+`pocket-ic` explicitly for direct client imports, including Principal support.
+Testkit 0.64.1's native provider fixtures also select Platform's Candid/management
+support; those features remain excluded from deployed library and probe graphs. Its
 normal coordinator excludes Platform, Testkit, Wire and the probe protocol;
 they are dev-dependencies used by the maintained integration tests. The library
 and canister graphs exclude native simulator features. Build, Host and Testkit

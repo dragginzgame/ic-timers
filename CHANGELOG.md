@@ -2,6 +2,13 @@
 
 All notable changes to this project are recorded here.
 
+## [0.30.4]
+
+- Adopt published Wire/derive 0.6.2. Timers already uses the retained native
+  Serde codec, so retiring Wire's finite API requires no probe protocol rewrite.
+  Preserve method identities, frame bytes, resource limits and decoder errors;
+  no public timer API changes.
+
 ## [0.30.3] - 2026-10-22
 
 - Adopt published Wire/derive 0.5.20 and Metrics 0.15.5. Wire improves Wasm
