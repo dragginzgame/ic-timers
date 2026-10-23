@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.30.4]
+## [0.30.4] - 2026-10-23
 
 - Adopt published Wire/derive 0.6.2. Timers already uses the retained native
   Serde codec, so retiring Wire's finite API requires no probe protocol rewrite.
