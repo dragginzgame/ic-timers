@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.26.8
+# version	0.26.9
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	0b07c2a3163a5a66328e100b553baf93afd8ed07
+revision	3657c044c0e91321effe8835989491a4cd0b5cba
 # entrypoint	DRAGGINZGAME.md
 # entrypoint	rules/changelogs.md
 # entrypoint	rules/cargo-dependencies.md
@@ -211,7 +211,7 @@ file	b46a945b4a4edda01fd73fcc0d84f5e126fd376ae7197c9a23c0c1ecfd6ac1e1	x	scripts/
 file	e2825c554ea3952515ecb2938f7ad592d6539ec5304c3b3107d32a1bfc6b4eda	-	scripts/ci/extract-workflow-step.sh
 file	d3cb9c741a2f9356e0d5c8d0a858ccdf99852e03a2cc99a26d6fd586afd13b56	-	scripts/ci/test-workflow-step.sh
 file	5a4f1abe764e1e46c472bcf1e2e38f7f998085c570f53976591c808eca884d65	-	scripts/ci/check-release-changelog.sh
-file	a555bd8831d050de88f3406115730c53c675d247cc979d70dbdddd06374b5484	-	scripts/ci/test-release-changelog.sh
+file	a3df182ddb655e5ab48c512f2989f0aac9ca8b1f54261afc385cdef139fdb112	-	scripts/ci/test-release-changelog.sh
 file	31c47b675fba90850681c6fac0d685def34b08a68e7e05bc55ae0403419fdf82	x	scripts/dev/prepare-rust-toolchain.sh
 file	8ff3f278317b01ca40bfb793d764ca4f4d04135a208d0a9ff2018e09ea7c0145	x	scripts/ci/test-snapshot-verifier.sh
 file	08678c24e6cc62f929c6247cf0d771e1b26894d5d06736450fd9562f832b9024	-	scripts/ci/test-failure-evidence.py

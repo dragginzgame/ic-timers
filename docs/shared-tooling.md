@@ -3,12 +3,12 @@
 ## Current authority
 
 One [snapshot](../.shared-tooling.snapshot) records **134** canonical payloads
-from reviewed Shared Tooling **0.26.8**, revision
-`0b07c2a3163a5a66328e100b553baf93afd8ed07`. The clean supplier checkout matches
-upstream `main`; VERSION and its committed changelog identify 0.26.8. Canonical
-preview/apply retains the existing selection, updating the store helper, Cargo
-build/source helper and generic setup guide. Exported files remain supplier-owned;
-retired generic suites stay upstream.
+from reviewed Shared Tooling **0.26.9**, revision
+`3657c044c0e91321effe8835989491a4cd0b5cba`. The clean supplier checkout matches
+upstream `main`; VERSION and its committed changelog identify 0.26.9. Canonical
+preview/apply retains the existing selection and changes only the selected
+changelog fixture for relative entrypoints and inherited CDPATH. Other producer
+fixture changes remain upstream; exported files stay byte-for-byte supplier-owned.
 
 Explicit selected Cargo-tool setup waits up to 60 seconds for an admitted slot
 owner. It tolerates record cleanup only for the same previously admitted physical
@@ -62,7 +62,7 @@ canonical set to immutable selections and receipts. IC Tooling 0.66 requires
 `cli` for the editor and Testkit server binaries. Both local setup/check adapters
 pass `--features cli`; the workspace library dependencies do not enable it.
 Prepare these selections explicitly with `make install-release-editor
-install-testkit-server`. Shared 0.26.8 retains selected-tool feature admission
+install-testkit-server`. Shared 0.26.9 retains selected-tool feature admission
 and the generic Testkit setup example passes `--features cli`. Use the local
 adapters for both
 binaries; a selected package/feature change requires a new receipt.
@@ -193,10 +193,10 @@ transport remains intentional and outside the deployed-canister policy.
 ## Qualification and refresh
 
 Current preview/apply, incoming before-images, verified published archives and
-focused qualification logs are in `/tmp/ic-timers-host-refresh-qlwtv9kw/`.
+focused qualification logs are in `/tmp/ic-timers-ic-refresh-m18eo8ed/`.
 The [handoff](status/current.md) records tested scope and separate macOS/release
-qualification limits. A one-time isolated owner fixture checks the changed wait
-contract; no producer matrix is restored to routine Timers validation.
+qualification limits. The changed changelog fixture is checked with relative invocation and inherited
+CDPATH; no producer matrix is restored to routine Timers validation.
 
 Future refreshes use the reviewed source's canonical exporter: preview first,
 then apply the same explicit root selection. Retain directly used helpers and

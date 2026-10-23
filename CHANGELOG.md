@@ -2,6 +2,19 @@
 
 All notable changes to this project are recorded here.
 
+## [0.30.8]
+
+- Adopt published Platform/macros 0.6.11 and Wire/derive 0.6.10, retaining
+  Metrics 0.15.7 and Build/Host/Testkit 0.66.2. Keep existing native probe
+  records, frame limits and public timer APIs unchanged. Host metadata stays
+  disabled, and probe records do not use packed fields.
+- Refresh the lock-selected Build/Testkit CLIs through the existing setup
+  targets. Native qualification retains client/server ownership and Host artifact/
+  process contracts; Thiserror remains simulator-constrained at 2.0.18.
+- Adopt reviewed Shared Tooling 0.26.9 for relative-path and inherited-CDPATH
+  fixture handling. Retain the current tool-build policy and qualified tool
+  selections; offline checks remain non-mutating.
+
 ## [0.30.7] - 2026-10-23
 
 - Adopt published Platform/macros 0.6.10 and Metrics 0.15.7. Their Rust sources
