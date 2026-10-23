@@ -2,6 +2,13 @@
 
 All notable changes to this project are recorded here.
 
+## [0.30.7]
+
+- Adopt published Platform/macros 0.6.10 and Metrics 0.15.7. Their Rust sources
+  match the prior selections; retain the Rust 1.91 floor, executor/IC0 identities,
+  native Wire protocols and public timer/measurement APIs. Platform's optional
+  host metadata feature remains unselected.
+
 ## [0.30.6] - 2026-10-23
 
 - Adopt aligned Build, Host and Testkit 0.66.0. Native qualification borrows
