@@ -6,81 +6,76 @@ Last updated: 2026-10-23
 
 ## Source and accepted work
 
-Released base: **0.30.4**, `9cf5f81`; package versions remain unchanged. The
-undated **0.30.5** draft adopts aligned Build/Host/Testkit **0.65.0**, qualifies
-incoming Wire/derive **0.6.5**, and refreshes Shared Tooling to **0.26.7**.
-Public timer APIs, native probe records, method IDs, codec budgets, callback/trap
-semantics and runtime ownership are unchanged. There is one catalog/lock and
-five maintained packages; no local Rust source or generator changes are needed.
+Released base: **0.30.5**, `de0e9a5`; package versions remain unchanged. The
+undated **0.30.6** draft adopts Build/Host/Testkit **0.66.0** and reviewed Shared
+Tooling **0.26.8**. This is compatible at the published Timers boundary: only
+unpublished native test access changes. Public timer types, probe records/IDs,
+codec limits, callback/trap semantics and timer ownership are unchanged.
+There is one root dependency catalog/lock and five maintained packages.
 
-Official registry indexes and checksum-verified published archives establish
-Build, Host Artifacts/FS/Process and Testkit 0.65.0, source
-`378ad71296db81436b38346b697960199bdb00e1`; Wire/derive 0.6.5 is source
-`e10196ee7a504984cc65152805ff0e030b0c6964`. All compiled-cache files match the
-seven archives. Only the five Tooling packages change from the incoming lock;
-Wire 0.6.5 and all other pending selections are preserved. Platform/macros remain
-**0.6.8**, Metrics **0.15.6**, executor **2.0.0**, IC0 **1.2.0**. No unpublished
-sibling source is selected. Host/Build exchange matching `OwnedChild` identities.
+Official registry indexes and checksum-verified archives establish all five
+Tooling packages at 0.66.0, source `d71f4690c7e8e3ffe99f72467bc35cbadce33042`.
+Every compiled-cache file matches its archive. Only these five packages change
+from the incoming lock; Wire/derive **0.6.7**, cc **1.10.0**, certificate roots
+**1.0.11** and all unrelated selections are preserved. Platform/macros remain
+**0.6.8**, Metrics **0.15.6**, executor **2.0.0**, IC0 **1.2.0**. Host and Build
+Rust sources match 0.65.0; matching package identities still matter at their
+injected `OwnedChild` boundary. No unpublished sibling implementation is selected.
 
-## Shared Tooling refresh
+## PocketIC ownership migration
 
-Canonical preview/apply retains all 134 payloads and roots at reviewed revision
-`3e8d7cd3e7e9b7b79a5e800c30daf0be2710dab0` (Shared 0.26.7). Only the selected
-Cargo installer, store helper and generic setup guide change. Exported files are
-supplier-owned and verify exactly; no generic test matrix or schedule is restored.
+Testkit makes client/server fields private. All 28 watchdog-test and two cohort
+accesses now use `owned.instance()`, returning the same shared client reference.
+Owner bindings and scopes remain unchanged, so each managed server is retained
+through client teardown. There are no direct field accesses, client extractions,
+borrowed-server constructions or ownership-transfer adapters to migrate elsewhere
+in this harness. No `into_parts` call, cloned owner or lifecycle shim is added.
 
-Explicit Cargo setup waits up to 60 seconds for an admitted slot owner, then
-rechecks source, build, lock and receipts before reuse. The documented invocation
-budget is 0–300 seconds; zero refuses immediately. Checks/preflight and other
-lock classes remain immediate. No owner lock is deleted or partial generation
-admitted. A one-time isolated export of the owner's focused wait fixture passes
-release/reuse, timeout, interruption and invalid-owner/acquisition failures.
+Platform retains client/DTO identities; Testkit owns startup/admission, instance
+lifetime, installation extensions and bounded progress. Existing raw PocketIC/
+native Wire calls retain error handling and explicit method translation. Optional
+Testkit Wire helpers are not selected. The library retains executor/IC0-only
+Platform selection; protocol records select Wire/Serde without runtime authority.
+Candid/management remains native-only through Testkit/PocketIC; deployed library/
+probe graphs exclude Candid, full CDK and Host tools. No storage/memory migration.
 
-Both new root-lock CLI selections are explicitly prepared with `cli` and pass
-offline admission. The first Testkit setup reached the default wait ceiling while
-ic-backup compiled the shared selection. After completion, canonical Timers setup
-reused the verified result. Foreign locks, source and candidates were untouched;
-the first failure and successful setup logs are retained. Old tools are retained.
+## Shared Tooling refresh and preparation
 
-## Product and codec boundaries
+Canonical preview/apply retains the 134-payload selection at reviewed revision
+`0b07c2a3163a5a66328e100b553baf93afd8ed07` (Shared 0.26.8). Only the store helper,
+Cargo build/source helper and generic setup guide change. All exported payloads
+verify exactly; no generic suite, optional tool bundle, audit or schedule returns.
 
-Timers owns scheduling, claims and observations; Metrics arithmetic, Platform IC
-bindings/client identities, Wire codecs, Testkit simulator lifecycle and Build/Host
-artifact/process custody remain separate. Applications own durable intent/lifecycle
-policy. The native harness imports PocketIC directly from Platform. Testkit's new
-optional WireCallSpec/native helpers are not selected here; existing raw calls
-retain their exact error handling, method translation and malformed-byte evidence.
-No obsolete finite API, compatibility facade or protocol rewrite is introduced.
+The installer tolerates record cleanup only for the same admitted physical lock,
+rechecking inputs after release and retaining timeout/invalid-owner failures.
+The default selected-tool setup wait remains 60 seconds, configurable to 0–300;
+checks/preflight stay immediate. No owner lock is removed. Source-cache bootstrap
+now uses admitted idempotent private creation and Cargo's download serialization,
+retiring the global source-preparation lock. Old slots and generations remain.
 
-Wire 0.6.5 changes only the u64 serialization fast path from 0.6.4; original u64
-admission remains. Two isolated Rust 1.91 consumer graphs compare identical code
-against each published version, reusing root-lock transitive versions. All 4,078
-request/response-frame and typed-error observations match, including checkpoint,
-snapshot/cohort records, u64 thresholds/lists, identity/direction, truncation,
-trailing bytes and byte/allocation/node/depth refusals. The initial attempt to
-resolve both compatible patch versions in one graph was rejected by Cargo; the
-separate-graph proof passes. All attempts remain outside maintained source.
-
-The library selects only Platform executor/IC0; protocol records use Wire/Serde
-without runtime authority. Independent native/Wasm graph admission passes, with
-14 library and 53 coordinator package identities. Candid/management remains
-native-only through Testkit/PocketIC; production library/probe graphs exclude
-Candid, full CDK and host tooling. No storage/memory migration is included.
+The changed build policy requires explicit setup. Common Cargo tools, the root-
+lock Build editor and Testkit CLI were prepared through existing targets; CLI
+selections retain `cli` and library dependencies remain CLI-free. Live contention
+passed through two admitted owners, then release/revalidation completed after
+nine seconds. Old selections and all diagnostics are retained. A one-time
+isolated owner fixture covers cleanup races, invalid claims, timeout, interruption
+and atomic-acquisition failure against the exact adopted helper.
 
 ## Current qualification
 
-Focused Linux checks pass: locked metadata and boundary policy, library Clippy,
-Rust 1.91 protocol/driver/probe lint and all four size features, grouped formatting,
-native/Wasm library MSRV, all three protocol tests, exact-frame/error comparison,
-metadata/version fixtures, two driver build/process tests and one report test.
-CLI adapter, hook/index, snapshot corruption and focused wait fixtures pass.
-Tool setup/offline admission, snapshot integrity and whitespace checks pass.
-Live qualification passes 27 product subjects plus three host fixtures, all four
-policy cohorts and both calibrations. The new cohort receipt matches the final
-lock; no cross-context performance improvement is inferred. Native macOS,
-installed IC and the full maintainer-operated release gate remain separate.
+Focused Linux checks pass: full locked metadata, declaration/feature/graph
+policy, library Clippy, Rust 1.91 driver/protocol/probe lint and all four size
+features, grouped formatting, native/Wasm library MSRV, CLI adapter and snapshot
+corruption fixtures. The focused owner wait fixture and ShellCheck/whitespace
+checks, common-tool/CLI setup, offline admission and hook/index/metadata/version
+fixtures pass. Live qualification passes 27 product subjects plus three host
+fixtures, all four policy cohorts and both calibrations. The new receipt matches
+the final lock; library/coordinator normal/build graphs remain 14/53 identities.
+No cross-context performance improvement is inferred. Native macOS, installed IC
+and the full maintainer-operated release gate remain separate.
 
-Before-images, registry indexes/archives, source comparisons and qualification:
-`/tmp/ic-timers-upstream-refresh-zs_qs4gq/`. Prior Wire migration evidence remains
-at `/tmp/ic-timers-wire-adopt-2rq455y3/`. No package version changes, staging,
-commits, pushes or releases are performed; sibling repositories remain read-only.
+Incoming copies, official indexes/archives, source comparisons and qualification:
+`/tmp/ic-timers-host-refresh-qlwtv9kw/`. Prior tool/codec compatibility evidence
+remains at `/tmp/ic-timers-upstream-refresh-zs_qs4gq/`; its cohort lock context is
+older. No package version changes, staging, commits, pushes or releases are
+performed. Sibling source remains read-only.

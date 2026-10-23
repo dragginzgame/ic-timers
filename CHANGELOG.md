@@ -2,6 +2,16 @@
 
 All notable changes to this project are recorded here.
 
+## [0.30.6]
+
+- Adopt aligned Build, Host and Testkit 0.66.0. Native qualification borrows
+  PocketIC clients through `instance()`, retaining server ownership until client
+  teardown; public timer APIs and probe protocols are unchanged.
+- Adopt reviewed Shared Tooling 0.26.8, fixing installer-owner cleanup races and
+  removing the global Cargo source-preparation lock. Explicitly prepare the
+  Cargo tools and selected CLIs after its build-policy change; old tools remain
+  retained and offline checks never install replacements.
+
 ## [0.30.5] - 2026-10-23
 
 - Adopt aligned Build, Host and Testkit 0.65.0 for native qualification. Keep

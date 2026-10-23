@@ -115,15 +115,16 @@ unfinished-task drop policy. Call/error/stable-error types now belong to Platfor
 no such runtime types cross the published timer API or the probe wire boundary.
 
 The native driver retains published Testkit for server admission, lifecycle and
-bounded progress. PocketIC clients/DTOs are imported directly from Platform;
+bounded progress. Native tests borrow clients through `PocketIcInstance::instance()`
+while retaining the owner through teardown. PocketIC clients/DTOs come from Platform;
 Testkit no longer forwards them. Probe RPCs use raw query/update APIs plus the shared
 Wire identities/limits. Candid and management types remain upstream transport
 implementation details. The retired `ic-testkit-candid` package remains absent.
 The driver selects Platform, Testkit, Wire and the probe protocol only for its
 test binary. Its normal build coordinator uses Build and Host for artifacts and
 process custody, plus Clap/Serde/JSON for commands and receipts. It does not link
-the simulator or codecs. Build, Host and Testkit share the published 0.65 family;
-the driver and Testkit 0.65 select the same Platform 0.6 identity. The incoming
+the simulator or codecs. Build, Host and Testkit share the published 0.66 family;
+the driver and Testkit 0.66 select the same Platform 0.6 identity. The incoming
 Testkit also selects Platform's Candid/management support for native provider
 fixtures; PocketIC retains Candid for its simulator protocols. These are native
 qualification dependencies. Independent library and canister graphs
@@ -137,7 +138,7 @@ The Candid-free runtime introduced in Platform 0.2.0 was requested in
 [#31 — Support Candid-free raw and Wire canister entrypoints](https://github.com/dragginzgame/ic-platform/issues/31).
 The two small adapters translate consumer-owned Wire limits/errors into Platform
 hooks. Wire 0.6 retains this native Serde codec and retires its finite API;
-the current probe records need no layout or limit changes. Testkit 0.65's optional
+the current probe records need no layout or limit changes. Testkit 0.66's optional
 helpers also support native Serde calls; they are not selected by this harness.
 Keep the direct raw-call/native-codec integration; the protocol package must not
 acquire a Platform dependency to hide these adapters. Host metadata generation

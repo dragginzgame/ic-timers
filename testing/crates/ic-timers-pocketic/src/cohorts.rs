@@ -32,7 +32,7 @@ fn comparable_policy_cohorts_report_size_and_instruction_subjects() {
 
 fn run_cohort(cohort: &str) -> std::collections::BTreeMap<String, u128> {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let wasm = cohort_wasm(cohort);
     let wasm_bytes = wasm.len();
     let canister_id = install_probe(pic, wasm);
@@ -190,7 +190,7 @@ fn run_watchdog_calibration(
     representative_work: bool,
 ) -> std::collections::BTreeMap<String, u128> {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, cohort_wasm("watchdog"));
     if representative_work {
         update_unit(pic, canister_id, Method::UseRepresentativeWatchdogWork);

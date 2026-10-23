@@ -3,19 +3,26 @@
 ## Current authority
 
 One [snapshot](../.shared-tooling.snapshot) records **134** canonical payloads
-from reviewed Shared Tooling **0.26.7**, revision
-`3e8d7cd3e7e9b7b79a5e800c30daf0be2710dab0`. The clean supplier checkout matches
-published `main`; VERSION and its committed changelog identify 0.26.7. Canonical
-preview/apply retains the existing selection and changes only the selected-tool
-installer, its store helper and generic setup guide. Exported files remain
-byte-for-byte supplier-owned; retired generic suites stay upstream.
+from reviewed Shared Tooling **0.26.8**, revision
+`0b07c2a3163a5a66328e100b553baf93afd8ed07`. The clean supplier checkout matches
+upstream `main`; VERSION and its committed changelog identify 0.26.8. Canonical
+preview/apply retains the existing selection, updating the store helper, Cargo
+build/source helper and generic setup guide. Exported files remain supplier-owned;
+retired generic suites stay upstream.
 
-Explicit selected Cargo-tool setup now waits up to 60 seconds for an admitted
-slot owner, then rechecks build, source, lock and receipt inputs before reuse.
-`SHARED_TOOLING_SETUP_WAIT_SECONDS` selects 0–300 seconds; zero refuses immediately.
-Checks/preflight, checkout and source-cache locks, and Host/IC setup remain
-immediate. Waiting neither removes foreign locks nor admits partial output. The
-build identity policy is unchanged; this refresh alone invalidates no binaries.
+Explicit selected Cargo-tool setup waits up to 60 seconds for an admitted slot
+owner. It tolerates record cleanup only for the same previously admitted physical
+lock, then rechecks inputs before reuse. `SHARED_TOOLING_SETUP_WAIT_SECONDS`
+selects 0–300 seconds; zero refuses immediately. Checks/preflight and other lock
+classes remain immediate. Waiting never removes foreign locks or admits partial
+output. The fixed cleanup race needs native macOS qualification separately.
+
+Cargo source-cache bootstrap now uses admitted idempotent private directory
+creation and Cargo's own download locking, removing the old global preparation
+lock. This changes the build policy: explicitly rerun `make install-rust-tools
+install-release-editor install-testkit-server`, then `make tools-check`.
+Old tool generations and source-preparation slots remain retained. No new local
+installer, retry path or source cache is introduced.
 
 This adoption includes explicit IC executable selection, corrected Cargo feature
 annotations and stronger retained validation/checksum evidence. Timers selects no
@@ -51,11 +58,11 @@ explicitly with `make install-release-editor`; check it offline with
 source admission; standalone preparation requires an already admitted executable.
 
 Selected-tool installation supports explicit Cargo features and binds their
-canonical set to immutable selections and receipts. IC Tooling 0.65 requires
+canonical set to immutable selections and receipts. IC Tooling 0.66 requires
 `cli` for the editor and Testkit server binaries. Both local setup/check adapters
 pass `--features cli`; the workspace library dependencies do not enable it.
 Prepare these selections explicitly with `make install-release-editor
-install-testkit-server`. Shared 0.26.7 retains selected-tool feature admission
+install-testkit-server`. Shared 0.26.8 retains selected-tool feature admission
 and the generic Testkit setup example passes `--features cli`. Use the local
 adapters for both
 binaries; a selected package/feature change requires a new receipt.
@@ -86,14 +93,14 @@ qualification packages here.
 Candid remains transitive only in the native driver through PocketIC/Testkit. Local probe protocols use Wire; Platform 0.6's `cdk`
 feature and both canister graphs are Candid-free. Full CDK/macros and the retired
 Testkit Candid adapter are absent from the workspace graph.
-The driver test binary and Testkit 0.65 share Platform 0.6; the driver selects
+The driver test binary and Testkit 0.66 share Platform 0.6; the driver selects
 `pocket-ic` explicitly for direct client imports, including Principal support.
 Testkit's native provider fixtures also select Platform's Candid/management
 support; those features remain excluded from deployed library and probe graphs. Its
 normal coordinator excludes Platform, Testkit, Wire and the probe protocol;
 they are dev-dependencies used by the maintained integration tests. The library
 and canister graphs exclude native simulator features. Build, Host and Testkit
-share the 0.65 family, with no older parallel Host or Platform provider.
+share the 0.66 family, with no older parallel Host or Platform provider.
 The catalog's
 local `ic-timers` entry is the probes' dependency on the production library.
 
@@ -186,7 +193,7 @@ transport remains intentional and outside the deployed-canister policy.
 ## Qualification and refresh
 
 Current preview/apply, incoming before-images, verified published archives and
-focused qualification logs are in `/tmp/ic-timers-upstream-refresh-zs_qs4gq/`.
+focused qualification logs are in `/tmp/ic-timers-host-refresh-qlwtv9kw/`.
 The [handoff](status/current.md) records tested scope and separate macOS/release
 qualification limits. A one-time isolated owner fixture checks the changed wait
 contract; no producer matrix is restored to routine Timers validation.

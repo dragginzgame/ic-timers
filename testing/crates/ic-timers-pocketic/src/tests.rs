@@ -17,7 +17,7 @@ fn typed_entrypoints_reject_invalid_wire_before_mutating_timer_state() {
     use ic_timers_test_protocol::rpc::{REQUEST_LIMITS, RESPONSE_LIMITS};
     use ic_wire::native::{decode_response, encode_request, encode_response};
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     let id = Method::StartOrdinary as u64;
     let valid = encode_request(id, &(false, false), REQUEST_LIMITS).unwrap();
@@ -66,7 +66,7 @@ fn typed_entrypoints_reject_invalid_wire_before_mutating_timer_state() {
 #[test]
 fn self_call_queue_pressure_defers_timer_submission_without_losing_work() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     update_unit(pic, canister_id, Method::PressureAndStart);
     advance_and_tick(pic, Duration::ZERO, 8);
@@ -99,7 +99,7 @@ fn self_call_queue_pressure_defers_timer_submission_without_losing_work() {
 fn deferred_submission_cancellation_and_replacement_do_not_revive_old_work() {
     for replace in [false, true] {
         let owned = fresh_pocket_ic();
-        let pic = &owned.instance;
+        let pic = owned.instance();
         let canister_id = install_probe(pic, probe_wasm());
         update_unit(pic, canister_id, Method::PressureAndStart);
         advance_and_tick(pic, Duration::ZERO, 8);
@@ -160,7 +160,7 @@ fn deferred_submission_cancellation_and_replacement_do_not_revive_old_work() {
 #[test]
 fn immediate_initial_watchdog_runs_without_advancing_cadence_time() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
 
     assert!(update_bool(pic, canister_id, Method::StartImmediately));
@@ -185,7 +185,7 @@ fn immediate_initial_watchdog_runs_without_advancing_cadence_time() {
 #[test]
 fn successful_immediate_continuation_runs_again_without_waiting_for_cadence() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(pic, canister_id, Method::Start));
     update_unit(pic, canister_id, Method::ContinueImmediatelyOnNextWork);
@@ -237,7 +237,7 @@ fn successful_immediate_continuation_runs_again_without_waiting_for_cadence() {
 #[allow(clippy::too_many_lines)] // One real-canister trap, isolation, upgrade, and measurement flow.
 fn trapped_work_keeps_committed_successor_and_executor_is_private() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
 
     assert!(update_bool(pic, canister_id, Method::Start));
@@ -367,7 +367,7 @@ fn assert_memory_summary_is_coherent(summary: &ProbeMemorySummary) {
 #[test]
 fn instruction_exhaustion_leaves_successor_for_later_progress() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(pic, canister_id, Method::Start));
 
@@ -414,7 +414,7 @@ fn instruction_exhaustion_leaves_successor_for_later_progress() {
 #[test]
 fn commit_window_ensure_stop_resume_and_large_overdue_time_remain_bounded() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(pic, canister_id, Method::Start));
 
@@ -468,7 +468,7 @@ fn commit_window_ensure_stop_resume_and_large_overdue_time_remain_bounded() {
 #[test]
 fn insufficient_cycles_defer_due_work_until_top_up() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(pic, canister_id, Method::Start));
     let (_burned, call_cost): (u128, u128) = update_wire(
@@ -500,7 +500,7 @@ fn insufficient_cycles_defer_due_work_until_top_up() {
 #[test]
 fn full_inventory_is_bounded_deterministic_and_measured() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(pic, canister_id, Method::Start));
     update_unit(pic, canister_id, Method::Stop);
@@ -524,7 +524,7 @@ fn full_inventory_is_bounded_deterministic_and_measured() {
 #[test]
 fn cancellation_between_scheduler_and_work_makes_late_provider_delivery_harmless() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(pic, canister_id, Method::Start));
     pic.advance_time(Duration::from_secs(1));
@@ -587,7 +587,7 @@ fn snapshot(pic: &PocketIc, canister_id: ExternalPrincipal) -> ProbeSnapshot {
 #[test]
 fn exact_deadline_sleeps_and_registration_replacement_marks_counter_regrowth() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(pic, canister_id, Method::Start));
     let initial = snapshot(pic, canister_id);
@@ -676,7 +676,7 @@ fn ordinary_await_allows_ingress_and_other_timers_before_completion() {
                 continue;
             }
             let owned = fresh_pocket_ic();
-            let pic = &owned.instance;
+            let pic = owned.instance();
             let canister_id = install_probe(pic, probe_wasm());
             let transient = command == "cancel";
             update_wire::<(), _>(
@@ -757,7 +757,7 @@ fn trapping_ordinary_probe(
     before_await: bool,
 ) -> (PocketIcInstance<PocketIc>, ExternalPrincipal) {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     update_wire::<(), _>(
         pic,
@@ -800,7 +800,7 @@ fn assert_ordinary_abandonment(observed: &OrdinaryObservation, removed: bool) {
 fn dispatch_response_trap_cleanup_preserves_pending_work_for_retry() {
     for after_completion in [false, true] {
         let owned = fresh_pocket_ic();
-        let pic = &owned.instance;
+        let pic = owned.instance();
         let canister_id = install_probe(pic, probe_wasm());
         update_wire::<(), _>(
             pic,
@@ -860,7 +860,7 @@ fn ordinary_trap_before_await_retires_the_rolled_back_scheduled_delivery() {
     for after_completion in [false, true] {
         for transient in [false, true] {
             let (owned, canister_id) = trapping_ordinary_probe(after_completion, transient, true);
-            let pic = &owned.instance;
+            let pic = owned.instance();
             advance_and_tick(pic, Duration::ZERO, 32);
             let observed = ordinary_observation(pic, canister_id);
             assert_ordinary_abandonment(&observed, transient);
@@ -884,7 +884,7 @@ fn ordinary_continuation_trap_retires_running_work_and_releases_expired_authorit
             for command in ["none", "cancel", "reconcile", "unregister"] {
                 let (owned, canister_id) =
                     trapping_ordinary_probe(after_completion, transient, false);
-                let pic = &owned.instance;
+                let pic = owned.instance();
                 wait_for_probe(
                     pic,
                     32,
@@ -962,7 +962,7 @@ fn churn_observation(pic: &PocketIc, canister_id: ExternalPrincipal) -> ChurnObs
 #[test]
 fn provider_replacement_churn_preserves_cancellation_and_reports_memory() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     let before = churn_observation(pic, canister_id);
     update_wire::<(), _>(
@@ -1012,7 +1012,7 @@ fn provider_replacement_churn_preserves_cancellation_and_reports_memory() {
 fn armed_callback_removal_releases_captures_with_registry_access() {
     for policy in 0_u8..3 {
         let owned = fresh_pocket_ic();
-        let pic = &owned.instance;
+        let pic = owned.instance();
         let canister_id = install_probe(pic, probe_wasm());
         update_wire::<(), _>(
             pic,
@@ -1039,7 +1039,7 @@ fn armed_callback_removal_releases_captures_with_registry_access() {
 #[test]
 fn rejected_initial_schedules_preserve_ic_inventory_and_release_captures() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     for policy in 0_u8..3 {
         for transient in [false, true] {
@@ -1065,7 +1065,7 @@ fn rejected_initial_schedules_preserve_ic_inventory_and_release_captures() {
 #[test]
 fn rejected_initial_reconciliation_preserves_ic_inventory_and_releases_captures() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     // A positive time makes now + u64::MAX overflow; never move IC time backwards.
     pic.advance_time(Duration::from_secs(1));
     let canister_id = install_probe(pic, probe_wasm());
@@ -1091,7 +1091,7 @@ fn rejected_initial_reconciliation_preserves_ic_inventory_and_releases_captures(
 #[test]
 fn backend_rejects_malformed_self_calls_and_ignores_unknown_deliveries() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(pic, canister_id, Method::Start));
     let before = snapshot(pic, canister_id);
@@ -1123,7 +1123,7 @@ fn backend_rejects_malformed_self_calls_and_ignores_unknown_deliveries() {
 #[test]
 fn accepted_ordinary_work_survives_dispatch_timeout_without_replay() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     let (): () = update_wire(
         pic,
@@ -1187,7 +1187,7 @@ fn advance_mixed_round(pic: &PocketIc, duration: Duration) {
 #[test]
 fn shared_watchdog_survives_instruction_exhaustion() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(
         pic,
@@ -1214,7 +1214,7 @@ fn shared_watchdog_survives_instruction_exhaustion() {
 #[test]
 fn shared_watchdog_survives_trap_and_upgrade() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(
         pic,
@@ -1285,7 +1285,7 @@ fn shared_watchdog_survives_trap_and_upgrade() {
 #[test]
 fn overdue_shared_timers_coalesce_to_bounded_work() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     assert!(update_bool(
         pic,
@@ -1323,7 +1323,7 @@ fn dispatch_batch_observation(
 #[test]
 fn maximum_capacity_dispatch_preserves_every_survivor_under_pressure_and_await() {
     let owned = fresh_pocket_ic();
-    let pic = &owned.instance;
+    let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     update_unit(pic, canister_id, Method::StartDispatchBatch);
     advance_and_tick(pic, Duration::ZERO, 8);
@@ -1426,7 +1426,7 @@ fn scheduling_trace(pic: &PocketIc, canister_id: ExternalPrincipal) -> Vec<u8> {
 fn deadline_trace_covers_nested_registration_and_self_cancellation() {
     for overdue in [false, true] {
         let owned = fresh_pocket_ic();
-        let pic = &owned.instance;
+        let pic = owned.instance();
         let canister_id = install_probe(pic, probe_wasm());
         update_unit(pic, canister_id, Method::StartSchedulingTrace);
         advance_and_tick(pic, Duration::ZERO, 8);
