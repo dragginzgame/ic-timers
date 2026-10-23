@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.30.6]
+## [0.30.6] - 2026-10-23
 
 - Adopt aligned Build, Host and Testkit 0.66.0. Native qualification borrows
   PocketIC clients through `instance()`, retaining server ownership until client
