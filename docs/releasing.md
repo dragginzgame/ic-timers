@@ -177,7 +177,10 @@ collection includes them. They inherit the invocation retention lifecycle.
 The child writes its candidate report there, never to the final output. The
 parent reads at most 1 MiB, requires matching schema/context/artifact records and
 all four cohorts plus both calibration subjects with their exact required metric
-fields; missing or unknown metrics reject both admission and comparison.
+fields. Typed records reject missing or unknown fields in measurements, context
+and artifact records; empty compiler/artifact identities also reject. Complete
+schema-1 receipts retain their JSON field names. Comparison uses the already
+admitted report, so the compared value is also the one published.
 A previous final report is never accepted in place of missing new evidence.
 
 `pocketic-cohorts` atomically publishes `testing/target/cohorts.json` only after

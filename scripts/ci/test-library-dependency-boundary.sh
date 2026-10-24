@@ -11,7 +11,7 @@ trap 'fixture_finish "$?" "$fixture" "Failed library-boundary fixture retained"'
 # Real Cargo resolution against the maintained catalog and lock. Empty fixture
 # source is never built; no sibling source or network dependency is introduced.
 bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$fixture" \
-    scripts/ci/check-library-dependency-boundary.sh
+    scripts/ci/check-library-dependency-boundary.sh scripts/ci/check-cargo-dependency-boundaries.sh
 cp "$root/Cargo.toml" "$root/Cargo.lock" "$fixture/"
 for package in crates/ic-timers testing/crates/ic-timers-{pocketic,runtime-probe,size-probe,test-protocol}; do
     mkdir -p "$fixture/$package/src"
@@ -138,6 +138,28 @@ EOF
 RUSTUP_AUTO_INSTALL=0 cargo tree --offline -p ic-timers --target wasm32-unknown-unknown > /dev/null
 bash "$checker"
 cp library-original.toml crates/ic-timers/Cargo.toml
+cp "$root/Cargo.lock" Cargo.lock
+
+# The common direct guard composes with Timers' stricter deployment policy.
+# Principal is intentionally absent from the local declaration list: it must
+# still reject an optional renamed target/build edge through the common owner.
+direct_checker=scripts/ci/check-cargo-dependency-boundaries.sh
+bash "$direct_checker" --consumer "$fixture" --external-ic
+perl -pi -e 's/^ic-platform = /external-principal = { package = "ic_principal", version = "0.1" }\nic-platform = /' Cargo.toml
+cat >> crates/ic-timers/Cargo.toml <<'EOF'
+
+[target.'cfg(target_arch = "wasm32")'.build-dependencies]
+external-principal = { workspace = true, optional = true }
+EOF
+RUSTUP_AUTO_INSTALL=0 cargo metadata --offline --format-version 1 > /dev/null
+bash "$direct_checker" --consumer "$fixture"
+if bash "$direct_checker" --consumer "$fixture" --external-ic > direct-failure.log 2>&1; then
+    echo 'error: common IC boundary admitted a renamed optional target/build dependency' >&2
+    exit 1
+fi
+grep -q 'ic-timers -> ic_principal' direct-failure.log
+cp library-original.toml crates/ic-timers/Cargo.toml
+cp catalog-original.toml Cargo.toml
 cp "$root/Cargo.lock" Cargo.lock
 
 # A source override at the same version is not the qualified executor identity.

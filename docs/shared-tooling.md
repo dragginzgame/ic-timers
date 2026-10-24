@@ -2,13 +2,20 @@
 
 ## Current authority
 
-One [snapshot](../.shared-tooling.snapshot) records **134** canonical payloads
-from reviewed Shared Tooling **0.26.9**, revision
-`3657c044c0e91321effe8835989491a4cd0b5cba`. The clean supplier checkout matches
-upstream `main`; VERSION and its committed changelog identify 0.26.9. Canonical
-preview/apply retains the existing selection and changes only the selected
-changelog fixture for relative entrypoints and inherited CDPATH. Other producer
-fixture changes remain upstream; exported files stay byte-for-byte supplier-owned.
+One [snapshot](../.shared-tooling.snapshot) records **137** canonical payloads
+from reviewed Shared Tooling **0.26.10**, revision
+`a8141e775983c7fe504c4dd911e978152e657fdf`. The clean supplier checkout and
+upstream `main` match. Canonical impact preview reviewed the existing roots and
+local callers; apply adds the shared IC inventory, read-only selection reporter
+and optional Cargo-tool cache key helper through their declared companion closure.
+Exported files remain supplier-owned.
+
+Formatting reads the same literal catalog parser as installation and rejects
+executable configuration or duplicate assignments. `make tools-report` is an
+optional aggregate of the existing offline checkers; `tools-check` retains its
+fail-fast admission contract. Installer `--describe` reports selection without
+installation or installed-byte qualification. The CI action's new Cargo-tool
+cache remains disabled by default; no cache policy is activated here.
 
 Explicit selected Cargo-tool setup waits up to 60 seconds for an admitted slot
 owner. It tolerates record cleanup only for the same previously admitted physical
@@ -159,8 +166,12 @@ implementation matrix as a routine consumer prerequisite.
 
 ## Deployment dependency exclusions
 
-The selected Shared direct-dependency checker `check-cargo-dependency-boundaries.sh` is now
-included in `actions-check`. The local policy forbids direct Candid/CDK-family,
+The selected Shared direct-dependency checker `check-cargo-dependency-boundaries.sh`
+runs with `--external-ic` in `actions-check`, composing the reviewed common inventory
+with Timers' stricter local policy. A real-Cargo fixture proves rejection of an
+optional renamed target/build Principal edge absent from the local list. The
+local list remains an input to deployment graph checks, so its overlapping
+entries are retained for that independent purpose. It also forbids direct Candid/CDK-family,
 Platform macro-helper, retired Testkit decoder, IC0 and executor declarations in
 every member. Platform 0.6 owns generator/runtime paths, raw stable passthroughs and
 exact upstream selections. There are no consumer exceptions. See the
@@ -196,11 +207,11 @@ transport remains intentional and outside the deployed-canister policy.
 
 ## Qualification and refresh
 
-Current preview/apply, incoming before-images, verified published archives and
-focused qualification logs are in `/tmp/ic-timers-ic-refresh-m18eo8ed/`.
+Current impact/apply, incoming before-images and focused qualification logs are
+in `/tmp/ic-timers-shared-02610/`.
 The [handoff](status/current.md) records tested scope and separate macOS/release
-qualification limits. The changed changelog fixture is checked with relative invocation and inherited
-CDPATH; no producer matrix is restored to routine Timers validation.
+qualification limits. The selected workflow fixture is checked with relative invocation and inherited
+CDPATH; producer matrices are not added to routine Timers validation.
 
 Future refreshes use the reviewed source's canonical exporter: preview first,
 then apply the same explicit root selection. Retain directly used helpers and

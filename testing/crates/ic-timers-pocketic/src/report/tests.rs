@@ -1,12 +1,33 @@
 use super::*;
 
-fn fixture_metrics(subject: &str) -> BTreeMap<String, u128> {
-    let keys = if subject.starts_with("watchdog-calibration-") {
-        CALIBRATION_METRICS
-    } else {
-        POLICY_METRICS
-    };
-    keys.iter().map(|key| ((*key).into(), 100)).collect()
+fn fixture_report() -> Report {
+    Report {
+        schema: 1,
+        context: Context {
+            lock_sha256: "lock".into(),
+            server_sha256: "server".into(),
+            host: "host".into(),
+            profile: "timer-probe".into(),
+            rustc: "rustc".into(),
+            cargo: "cargo".into(),
+            target: "wasm32-unknown-unknown".into(),
+        },
+        artifacts: crate::build::COHORTS
+            .iter()
+            .map(|(name, _)| {
+                (
+                    (*name).into(),
+                    Artifact {
+                        wasm_sha256: format!("{name} bytes"),
+                        build_fingerprint: "build".into(),
+                        input_digest: "inputs".into(),
+                        feature: (*name).into(),
+                    },
+                )
+            })
+            .collect(),
+        measurements: Some(Measurements::default()),
+    }
 }
 
 #[test]
@@ -16,78 +37,78 @@ fn missing_or_incomplete_candidate_never_replaces_a_previous_report() {
             .unwrap();
     let output = fixture.path().join("previous.json");
     let candidate = fixture.path().join("new-invocation.json");
-    let expected = Report {
-        schema: 1,
-        context: BTreeMap::from([("lock_sha256".into(), "this invocation".into())]),
-        artifacts: crate::build::COHORTS
-            .iter()
-            .map(|(name, _)| {
-                (
-                    (*name).into(),
-                    BTreeMap::from([("wasm_sha256".into(), format!("{name} bytes"))]),
-                )
-            })
-            .collect(),
-        measurements: BTreeMap::new(),
-    };
-    let mut complete: Report =
-        serde_json::from_slice(&serde_json::to_vec(&expected).unwrap()).unwrap();
-    for subject in crate::build::COHORTS.iter().map(|(name, _)| *name).chain([
-        "watchdog-calibration-minimal",
-        "watchdog-calibration-representative",
-    ]) {
-        complete
-            .measurements
-            .insert(subject.into(), fixture_metrics(subject));
-    }
+    let complete = fixture_report();
+    let mut expected = complete.clone();
+    expected.measurements = None;
     let previous = serde_json::to_vec_pretty(&complete).unwrap();
     fs::write(&output, &previous).unwrap();
-    // Even a previous report with identical source context is never a fallback
-    // for this invocation's missing evidence.
     assert!(Report::read_candidate(&candidate, &expected).is_err());
-    for change in [
-        "empty",
-        "missing-subject",
-        "missing-metric",
-        "unknown-metric",
-        "empty-metrics",
-        "context",
-        "artifact",
-        "schema",
-        "malformed",
+    // Exercise the on-disk boundary, including fields now required by the types.
+    for pointer in [
+        "/measurements",
+        "/measurements/watchdog-calibration-minimal",
+        "/measurements/once",
+        "/measurements/once/wasm_bytes",
+        "/context/rustc",
+        "/context/lock_sha256",
+        "/artifacts/once",
+        "/artifacts/once/wasm_sha256",
+        "/artifacts/once/build_fingerprint",
+        "/artifacts/once/input_digest",
+        "/artifacts/once/feature",
     ] {
-        let mut changed: Report = serde_json::from_slice(&previous).unwrap();
+        let value: serde_json::Value = serde_json::from_slice(&previous).unwrap();
+        for replacement in [
+            None,
+            Some(serde_json::Value::Null),
+            Some(serde_json::json!({})),
+        ] {
+            let mut changed = value.clone();
+            let (parent, key) = pointer.rsplit_once('/').unwrap();
+            let object = changed
+                .pointer_mut(parent)
+                .unwrap()
+                .as_object_mut()
+                .unwrap();
+            if let Some(replacement) = replacement {
+                object.insert(key.into(), replacement);
+            } else {
+                object.remove(key);
+            }
+            fs::write(&candidate, serde_json::to_vec(&changed).unwrap()).unwrap();
+            assert!(
+                Report::read_candidate(&candidate, &expected).is_err(),
+                "{pointer}"
+            );
+            assert_eq!(fs::read(&output).unwrap(), previous);
+        }
+    }
+    for pointer in [
+        "",
+        "/context",
+        "/artifacts/once",
+        "/measurements",
+        "/measurements/once",
+    ] {
+        let mut changed: serde_json::Value = serde_json::from_slice(&previous).unwrap();
+        changed
+            .pointer_mut(pointer)
+            .unwrap()
+            .as_object_mut()
+            .unwrap()
+            .insert("unknown".into(), 1.into());
+        fs::write(&candidate, serde_json::to_vec(&changed).unwrap()).unwrap();
+        assert!(
+            Report::read_candidate(&candidate, &expected).is_err(),
+            "{pointer}"
+        );
+    }
+    for change in ["context", "artifact", "schema", "malformed"] {
+        let mut changed = complete.clone();
         match change {
-            "empty" => changed.measurements.clear(),
-            "missing-subject" => {
-                changed.measurements.remove("watchdog-calibration-minimal");
-            }
-            "empty-metrics" => changed.measurements.get_mut("once").unwrap().clear(),
-            "missing-metric" => {
-                changed
-                    .measurements
-                    .get_mut("once")
-                    .unwrap()
-                    .remove("wasm_bytes");
-            }
-            "unknown-metric" => {
-                changed
-                    .measurements
-                    .get_mut("once")
-                    .unwrap()
-                    .insert("instructions".into(), 1);
-            }
-            "context" => {
-                changed
-                    .context
-                    .insert("lock_sha256".into(), "other invocation".into());
-            }
+            "context" => changed.context.lock_sha256 = "other invocation".into(),
             "artifact" => {
-                changed
-                    .artifacts
-                    .get_mut("once")
-                    .unwrap()
-                    .insert("wasm_sha256".into(), "other bytes".into());
+                changed.artifacts.get_mut("once").unwrap().wasm_sha256 = "other bytes".into()
             }
             "schema" => changed.schema = 2,
             _ => {}
@@ -102,10 +123,13 @@ fn missing_or_incomplete_candidate_never_replaces_a_previous_report() {
             Report::read_candidate(&candidate, &expected).is_err(),
             "{change}"
         );
-        assert_eq!(fs::read(&output).unwrap(), previous);
     }
     fs::write(&candidate, &previous).unwrap();
     let admitted = Report::read_candidate(&candidate, &expected).unwrap();
+    // Comparison and publication use the admitted object, even if the child's
+    // candidate is no longer available. No second read can select other bytes.
+    fs::remove_file(&candidate).unwrap();
+    admitted.compare(&output).unwrap();
     admitted.publish(&output).unwrap();
     assert_eq!(fs::read(&output).unwrap(), previous);
 }
@@ -122,57 +146,29 @@ fn report_publication_replaces_the_entry_without_truncating_hard_linked_bytes() 
     let before = b"reviewed baseline";
     fs::write(&baseline, before).unwrap();
     fs::hard_link(&baseline, &output).unwrap();
-    let report = Report {
-        schema: 1,
-        context: BTreeMap::new(),
-        artifacts: BTreeMap::new(),
-        measurements: BTreeMap::new(),
-    };
+    let mut report = fixture_report();
+    report.context.rustc.clear();
+    assert!(report.publish(&output).is_err());
+    assert_eq!(fs::read(&output).unwrap(), before);
+    report.context.rustc = "rustc".into();
     report.publish(&output).unwrap();
     assert_eq!(fs::read(&baseline).unwrap(), before);
     assert_eq!(
         fs::read(&output).unwrap(),
         serde_json::to_vec_pretty(&report).unwrap()
     );
-    let decoded: Report = serde_json::from_slice(&fs::read(&output).unwrap()).unwrap();
-    assert_eq!(decoded.schema, 1);
 }
 
 #[test]
 fn receipt_round_trip_preserves_costs_and_rejects_incomparable_contexts() {
-    let mut baseline = Report {
-        schema: 1,
-        context: BTreeMap::from([("rustc".into(), "qualified compiler".into())]),
-        artifacts: crate::build::COHORTS
-            .iter()
-            .map(|(cohort, _)| ((*cohort).into(), BTreeMap::new()))
-            .collect(),
-        measurements: crate::build::COHORTS
-            .iter()
-            .map(|(name, _)| *name)
-            .chain([
-                "watchdog-calibration-minimal",
-                "watchdog-calibration-representative",
-            ])
-            .map(|name| (name.into(), fixture_metrics(name)))
-            .collect(),
-    };
-    let mut current: Report =
-        serde_json::from_slice(&serde_json::to_vec(&baseline).unwrap()).unwrap();
-    current
-        .measurements
-        .get_mut("once")
-        .unwrap()
-        .insert("wasm_bytes".into(), 110);
+    let baseline = fixture_report();
+    let mut current = baseline.clone();
+    current.measurements.as_mut().unwrap().once.wasm_bytes = 10;
     assert_eq!(current.deltas(&baseline).unwrap()["once/wasm_bytes"], 10);
-    // Source/artifact identities change with the code under comparison. They
-    // remain attributable without making every code change incomparable.
-    current
-        .artifacts
-        .get_mut("once")
-        .unwrap()
-        .insert("wasm_sha256".into(), "new bytes".into());
+    // Source and artifact identities may differ across the sources under review.
+    current.artifacts.get_mut("once").unwrap().wasm_sha256 = "new bytes".into();
     assert!(current.deltas(&baseline).is_ok());
+    let baseline_json = serde_json::to_value(&baseline).unwrap();
     for key in [
         "rustc",
         "cargo",
@@ -182,26 +178,46 @@ fn receipt_round_trip_preserves_costs_and_rejects_incomparable_contexts() {
         "profile",
         "target",
     ] {
-        let previous = baseline
-            .context
-            .insert(key.into(), "different context".into());
-        assert!(current.deltas(&baseline).is_err(), "must reject {key}");
-        if let Some(previous) = previous {
-            baseline.context.insert(key.into(), previous);
-        } else {
-            baseline.context.remove(key);
-        }
+        let mut changed = baseline_json.clone();
+        changed["context"][key] = "different context".into();
+        let changed: Report = serde_json::from_value(changed).unwrap();
+        assert!(current.deltas(&changed).is_err(), "{key}");
     }
-    baseline
-        .measurements
-        .get_mut("once")
-        .unwrap()
-        .remove("wasm_bytes");
-    assert!(current.deltas(&baseline).is_err());
-    baseline.measurements.clone_from(&current.measurements);
-    baseline.artifacts.remove("once");
-    assert!(current.deltas(&baseline).is_err());
-    baseline.artifacts.clone_from(&current.artifacts);
-    baseline.schema = 2;
-    assert!(current.deltas(&baseline).is_err());
+    for change in [
+        "measurements",
+        "artifact",
+        "schema",
+        "empty-context",
+        "empty-artifact",
+        "feature",
+    ] {
+        let mut changed = baseline.clone();
+        match change {
+            "measurements" => changed.measurements = None,
+            "artifact" => {
+                changed.artifacts.remove("once");
+            }
+            "schema" => changed.schema = 2,
+            "empty-context" => changed.context.rustc.clear(),
+            "empty-artifact" => changed
+                .artifacts
+                .get_mut("once")
+                .unwrap()
+                .input_digest
+                .clear(),
+            "feature" => changed.artifacts.get_mut("once").unwrap().feature = "watchdog".into(),
+            _ => unreachable!(),
+        }
+        assert!(current.deltas(&changed).is_err(), "{change}");
+    }
+    current.measurements.as_mut().unwrap().once.dispatch_cycles = u128::MAX;
+    let decoded: Report = serde_json::from_slice(&serde_json::to_vec(&current).unwrap()).unwrap();
+    assert_eq!(
+        decoded.measurements.as_ref().unwrap().once.dispatch_cycles,
+        u128::MAX
+    );
+    assert!(
+        decoded.deltas(&baseline).is_err(),
+        "unrepresentable signed delta must reject"
+    );
 }

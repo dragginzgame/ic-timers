@@ -131,8 +131,6 @@ pub struct TimerProbeSnapshot {
     pub application_registered: bool,
     pub watchdog_callbacks: u32,
     pub application_callbacks: u32,
-    pub watchdog_instructions: u64,
-    pub application_instructions: u64,
     pub watchdog_times: Vec<u64>,
     pub application_times: Vec<u64>,
     pub trap_at: Option<u64>,

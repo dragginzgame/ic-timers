@@ -8,33 +8,89 @@ use std::{collections::BTreeMap, error::Error, fs, path::Path};
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
-const POLICY_METRICS: &[&str] = &[
-    "start_instructions",
-    "duplicate_instructions",
-    "cancel_instructions",
-    "snapshot_instructions",
-    "inventory_instructions",
-    "scheduler_instructions",
-    "work_instructions",
-    "memory_sampling_empty",
-    "memory_sampling_sampled",
-    "memory_sampling_overhead",
-    "dispatch_cycles",
-    "wasm_bytes",
-];
-const CALIBRATION_METRICS: &[&str] = &[
-    "scheduler_instructions",
-    "work_instructions",
-    "dispatch_cycles",
-];
+// Each field is declared once for construction, strict decoding and comparison.
+macro_rules! metrics {
+    ($name:ident { $($field:ident),* $(,)? }) => {
+        #[derive(Clone, Debug, Default, Serialize, Deserialize)]
+        #[serde(deny_unknown_fields)]
+        pub(crate) struct $name {
+            $(pub(crate) $field: u128,)*
+        }
+        impl $name {
+            fn deltas(&self, baseline: &Self, subject: &str, changes: &mut BTreeMap<String, i128>) -> Result<()> {
+                $(changes.insert(
+                    format!("{subject}/{}", stringify!($field)),
+                    i128::try_from(self.$field)?.checked_sub(i128::try_from(baseline.$field)?)
+                        .ok_or("delta overflow")?,
+                );)*
+                Ok(())
+            }
+        }
+    };
+}
 
-#[derive(Debug, Serialize, Deserialize)]
+metrics!(PolicyMetrics {
+    start_instructions,
+    duplicate_instructions,
+    cancel_instructions,
+    snapshot_instructions,
+    inventory_instructions,
+    scheduler_instructions,
+    work_instructions,
+    memory_sampling_empty,
+    memory_sampling_sampled,
+    memory_sampling_overhead,
+    dispatch_cycles,
+    wasm_bytes,
+});
+metrics!(CalibrationMetrics {
+    scheduler_instructions,
+    work_instructions,
+    dispatch_cycles
+});
+
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct Measurements {
+    pub(crate) baseline: PolicyMetrics,
+    pub(crate) once: PolicyMetrics,
+    #[serde(rename = "after-completion")]
+    pub(crate) after_completion: PolicyMetrics,
+    pub(crate) watchdog: PolicyMetrics,
+    #[serde(rename = "watchdog-calibration-minimal")]
+    pub(crate) minimal: CalibrationMetrics,
+    #[serde(rename = "watchdog-calibration-representative")]
+    pub(crate) representative: CalibrationMetrics,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Context {
+    lock_sha256: String,
+    server_sha256: String,
+    host: String,
+    profile: String,
+    rustc: String,
+    cargo: String,
+    target: String,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Artifact {
+    wasm_sha256: String,
+    build_fingerprint: String,
+    input_digest: String,
+    feature: String,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Report {
     schema: u32,
-    context: BTreeMap<String, String>,
-    artifacts: BTreeMap<String, BTreeMap<String, String>>,
-    pub(crate) measurements: BTreeMap<String, BTreeMap<String, u128>>,
+    context: Context,
+    artifacts: BTreeMap<String, Artifact>,
+    pub(crate) measurements: Option<Measurements>,
 }
 
 impl Report {
@@ -42,17 +98,17 @@ impl Report {
         let server = std::env::var_os("POCKET_IC_BIN").ok_or("missing admitted POCKET_IC_BIN")?;
         Ok(Self {
             schema: 1,
-            context: BTreeMap::from([
-                ("lock_sha256".into(), digest(&root.join("Cargo.lock"))?),
-                ("server_sha256".into(), digest(Path::new(&server))?),
-                (
-                    "host".into(),
-                    format!("{}-{}", std::env::consts::ARCH, std::env::consts::OS),
-                ),
-                ("profile".into(), "timer-probe".into()),
-            ]),
+            context: Context {
+                lock_sha256: digest(&root.join("Cargo.lock"))?,
+                server_sha256: digest(Path::new(&server))?,
+                host: format!("{}-{}", std::env::consts::ARCH, std::env::consts::OS),
+                profile: "timer-probe".into(),
+                rustc: String::new(),
+                cargo: String::new(),
+                target: String::new(),
+            },
             artifacts: BTreeMap::new(),
-            measurements: BTreeMap::new(),
+            measurements: None,
         })
     }
 
@@ -63,34 +119,44 @@ impl Report {
         artifact: &Path,
     ) -> Result<()> {
         let facts = record.facts();
-        for (key, value) in [
-            ("rustc", String::from_utf8(facts.rustc_identity.clone())?),
-            ("cargo", String::from_utf8(facts.cargo_identity.clone())?),
-            ("target", facts.target.clone()),
+        for (key, previous, value) in [
+            (
+                "rustc",
+                &mut self.context.rustc,
+                String::from_utf8(facts.rustc_identity.clone())?,
+            ),
+            (
+                "cargo",
+                &mut self.context.cargo,
+                String::from_utf8(facts.cargo_identity.clone())?,
+            ),
+            ("target", &mut self.context.target, facts.target.clone()),
         ] {
-            if let Some(previous) = self.context.insert(key.into(), value.clone())
-                && previous != value
-            {
+            if !previous.is_empty() && *previous != value {
                 return Err(format!("cohort {key} changed during builds").into());
             }
+            *previous = value;
         }
         self.artifacts.insert(
             cohort.into(),
-            BTreeMap::from([
-                ("wasm_sha256".into(), digest(artifact)?),
-                ("build_fingerprint".into(), record.fingerprint().to_string()),
-                ("input_digest".into(), record.input_digest().to_string()),
-                ("feature".into(), cohort.into()),
-            ]),
+            Artifact {
+                wasm_sha256: digest(artifact)?,
+                build_fingerprint: record.fingerprint().to_string(),
+                input_digest: record.input_digest().to_string(),
+                feature: cohort.into(),
+            },
         );
         Ok(())
     }
 
     pub(crate) fn verify_context(&self, root: &Path) -> Result<()> {
-        for (key, value) in Self::new(root)?.context {
-            if self.context.get(&key) != Some(&value) {
-                return Err(format!("qualification {key} changed during measurement").into());
-            }
+        let current = Self::new(root)?.context;
+        if self.context.lock_sha256 != current.lock_sha256
+            || self.context.server_sha256 != current.server_sha256
+            || self.context.host != current.host
+            || self.context.profile != current.profile
+        {
+            return Err("qualification context changed during measurement".into());
         }
         Ok(())
     }
@@ -98,7 +164,7 @@ impl Report {
     #[cfg(test)]
     pub(crate) fn verify_artifact(&self, cohort: &str, wasm: &[u8]) {
         assert_eq!(
-            self.artifacts[cohort]["wasm_sha256"],
+            self.artifacts[cohort].wasm_sha256,
             ic_host_artifacts::artifact::Sha256Digest::compute(wasm).to_string(),
             "measured artifact differs from its build receipt"
         );
@@ -110,32 +176,41 @@ impl Report {
         if candidate.schema != expected.schema
             || candidate.context != expected.context
             || candidate.artifacts != expected.artifacts
-            || !candidate.complete_measurements()
         {
-            return Err("incomplete cohort report or mismatched invocation build context".into());
+            return Err("mismatched invocation build context".into());
         }
+        candidate.validate()?;
         Ok(candidate)
     }
 
-    fn complete_measurements(&self) -> bool {
-        self.measurements.len() == crate::build::COHORTS.len() + 2
-            && self.measurements.iter().all(|(subject, metrics)| {
-                let expected = if crate::build::COHORTS
-                    .iter()
-                    .any(|(name, _)| name == subject)
-                {
-                    POLICY_METRICS
-                } else if matches!(
-                    subject.as_str(),
-                    "watchdog-calibration-minimal" | "watchdog-calibration-representative"
-                ) {
-                    CALIBRATION_METRICS
-                } else {
-                    return false;
-                };
-                metrics.len() == expected.len()
-                    && expected.iter().all(|key| metrics.contains_key(*key))
+    fn validate(&self) -> Result<()> {
+        let context = &self.context;
+        if self.schema != 1
+            || self.measurements.is_none()
+            || [
+                &context.lock_sha256,
+                &context.server_sha256,
+                &context.host,
+                &context.profile,
+                &context.rustc,
+                &context.cargo,
+                &context.target,
+            ]
+            .iter()
+            .any(|value| value.is_empty())
+            || self.artifacts.len() != crate::build::COHORTS.len()
+            || !crate::build::COHORTS.iter().all(|(name, _)| {
+                self.artifacts.get(*name).is_some_and(|artifact| {
+                    artifact.feature == *name
+                        && !artifact.wasm_sha256.is_empty()
+                        && !artifact.build_fingerprint.is_empty()
+                        && !artifact.input_digest.is_empty()
+                })
             })
+        {
+            return Err("incomplete cohort report".into());
+        }
+        Ok(())
     }
 
     fn read(path: &Path) -> Result<Self> {
@@ -146,6 +221,7 @@ impl Report {
     }
 
     pub(crate) fn publish(&self, path: &Path) -> Result<()> {
+        self.validate()?;
         write_bytes(
             path,
             WriteOptions {
@@ -157,51 +233,58 @@ impl Report {
         println!("cohort receipt: {}", path.display());
         Ok(())
     }
+
+    pub(crate) fn compare(&self, baseline: &Path) -> Result<()> {
+        let changes = self.deltas(&Self::read(baseline)?)?;
+        println!("cohort comparison (review evidence; positive deltas are increases):");
+        for (subject, delta) in changes {
+            println!("  {subject}: {delta:+}");
+        }
+        Ok(())
+    }
+
+    fn deltas(&self, baseline: &Self) -> Result<BTreeMap<String, i128>> {
+        self.validate()?;
+        baseline.validate()?;
+        if self.context != baseline.context {
+            return Err("incomparable cohort compiler/server/host/lock/profile/target; qualify a new baseline explicitly".into());
+        }
+        let current = self.measurements.as_ref().ok_or("missing measurements")?;
+        let previous = baseline
+            .measurements
+            .as_ref()
+            .ok_or("missing baseline measurements")?;
+        let mut changes = BTreeMap::new();
+        for (subject, value, old) in [
+            ("baseline", &current.baseline, &previous.baseline),
+            ("once", &current.once, &previous.once),
+            (
+                "after-completion",
+                &current.after_completion,
+                &previous.after_completion,
+            ),
+            ("watchdog", &current.watchdog, &previous.watchdog),
+        ] {
+            value.deltas(old, subject, &mut changes)?;
+        }
+        current.minimal.deltas(
+            &previous.minimal,
+            "watchdog-calibration-minimal",
+            &mut changes,
+        )?;
+        current.representative.deltas(
+            &previous.representative,
+            "watchdog-calibration-representative",
+            &mut changes,
+        )?;
+        Ok(changes)
+    }
 }
 
 pub(crate) fn digest(path: &Path) -> Result<String> {
     Ok(hash_reader(fs::File::open(path)?, 1024 * 1024 * 1024)?
         .sha256
         .to_string())
-}
-
-pub(crate) fn compare(current: &Path, baseline: &Path) -> Result<()> {
-    let current = Report::read(current)?;
-    let baseline = Report::read(baseline)?;
-    let changes = current.deltas(&baseline)?;
-    println!("cohort comparison (review evidence; positive deltas are increases):");
-    for (subject, delta) in changes {
-        println!("  {subject}: {delta:+}");
-    }
-    Ok(())
-}
-
-impl Report {
-    fn deltas(&self, baseline: &Self) -> Result<BTreeMap<String, i128>> {
-        if self.schema != 1 || baseline.schema != 1 || self.context != baseline.context {
-            return Err("incomparable cohort schema/compiler/server/host/lock/profile/target; qualify a new baseline explicitly".into());
-        }
-        if self.artifacts.len() != 4
-            || self.artifacts.keys().ne(baseline.artifacts.keys())
-            || !self.complete_measurements()
-            || !baseline.complete_measurements()
-        {
-            return Err("incomparable cohort subjects/artifacts".into());
-        }
-        let mut changes = BTreeMap::new();
-        for (subject, metrics) in &self.measurements {
-            let previous = &baseline.measurements[subject];
-            for (metric, value) in metrics {
-                changes.insert(
-                    format!("{subject}/{metric}"),
-                    i128::try_from(*value)?
-                        .checked_sub(i128::try_from(previous[metric])?)
-                        .ok_or("delta overflow")?,
-                );
-            }
-        }
-        Ok(changes)
-    }
 }
 
 #[cfg(test)]

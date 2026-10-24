@@ -4,128 +4,97 @@
 
 Last updated: 2026-10-24
 
-## Source and accepted work
+## Source and scope
 
-Released base: **0.30.8**, `f732b62`; Cargo versions remain unchanged. The
-undated **0.30.9** draft includes the pending qualification/tooling batch,
-registration-drop documentation and a private runtime effect-module extraction.
-The extraction preserves transition bodies and cleanup ordering. No public API,
-wire format, timer policy or recovery semantic changes are intended. Unlike the
-earlier tooling-only batch, this adds crate source/documentation changes.
+Released base: **0.30.9**, `2ddb278`. Cargo package versions remain 0.30.9.
+The undated **0.30.10** draft contains the current test/qualification cleanup.
+Published APIs, production timer transitions and recovery semantics are unchanged;
+this is compatible contributor/test work, not a reason to publish independently.
 Staging, commits, pushes and release execution remain maintainer-owned.
 
-Incoming lock selections are preserved: Platform/macros **0.6.12**, Wire/derive
-**0.6.11**, Smallvec **1.16.4**, Metrics **0.15.7** and Build/Host/Testkit **0.66.3**.
-The platform/wire refresh arrived independently during the preceding task; its
-missing sources were prepared with `cargo fetch --locked`. The current registry check confirms these are the latest published direct IC
-selections. The 0.66.3 Host family was already in the incoming lock; this adoption
-preserves that lock rather than attributing an earlier selection to this task.
-Clap 4.6.7, Serde 1.0.229 and Serde JSON 1.0.154 are also latest. Thiserror 2.0.21
-cannot resolve with PocketIC 16.1.0's exact `=2.0.18` requirement; the precise
-attempt failed without changing the lock, so 2.0.18 remains. No manifest selection,
-Cargo version or lockfile mutation was made by this task.
+The cleanup removes the local IcyDB readiness model and its self-testing mapping,
+retaining the lifecycle scenario with explicit callback results. Ordinary provider
+failure tests share a two-policy matrix. Counter tests retain event forwarding,
+role isolation and completion aggregation while delegating arithmetic to Metrics.
+Suspended sequences now run 768 traces, omitting ineffective abandonment/fault
+combinations and asserting deadlines, lifetime, failure state and counters before
+cleanup. Existing focused arbitration and IC recovery subjects remain maintained.
 
-## Shared Tooling and pending corrections
+Protocol tests retain actual record/checkpoint round trips and wide values.
+Generic codec rejection coverage was checked at Wire 0.6.12's published source
+revision `b17c0779b1db1b6805ad0135a4396ebd09ee72b9` before removal locally.
+The PocketIC boundary still tests malformed input before timer mutation.
+The unpublished mixed-policy probe drops its parallel instruction bookkeeping;
+its host and canister wire record changed together. Rebuild them together.
+Mixed-policy progress, timing, isolation and upgrade evidence remain intact.
 
-Shared **0.26.9**, `3657c044c0e91321effe8835989491a4cd0b5cba`, was the latest
-reviewed upstream and is still published main at the current remote check. Canonical preview reported KEEP;
-134 payloads verified unchanged. No optional audit or schedule was activated.
+Fresh-registration and existing-claim reconciliation retain separate dispatch:
+creation rollback/publication and later-error retention have different duties.
+A further generic selector was rejected because its indirection did not justify
+changing those lifecycle paths. Private platform handles and provider effects
+retain their established ownership and cleanup ordering.
 
-[#75](https://github.com/dragginzgame/ic-timers/issues/75): the alias-rejection
-fixture now obtains Wire's prepared identity from successful locked offline
-metadata instead of hard-coding Wire 0.5. A restricted cache reproduced the old
-failure and passed the corrected real-Cargo matrix. No registry fallback or
-weakened alias assertion was added. Default-branch delivery remains outstanding.
+## Qualification receipts
 
-[#76](https://github.com/dragginzgame/ic-timers/issues/76): README setup now names
-explicit optional IC tool selections; normal setup selects no IC executable
-bundle. Testkit retains PocketIC admission/provisioning. The README API example
-uses 0.30.8; two snippets previously compiled on Rust 1.91. Guidance is advisory,
-not a new documentation gate. Neither issue was closed by these local changes.
+Typed records now own cohort metrics, context and artifact fields. Complete
+schema-1 receipts preserve their JSON field names. Missing/unknown fields,
+empty compiler/artifact identities, wrong cohort identities and absent measurements
+reject before publication or comparison. Comparison uses the admitted object,
+not a second read of the child's candidate path. Full-width counters round-trip;
+unrepresentable signed comparison deltas still reject.
 
-## Qualification and ownership
+Qualification retains named recovery-subject admission, ignored-test rejection,
+fresh private diagnostics, caller-owned Testkit logs and atomic Host FS publication.
+Old output is never fallback evidence. Successful host CI uploads remain evidence
+receipts, not proof of qualification by upload alone. See the release guide for
+operator-controlled baseline paths and matching comparison context.
 
-The driver uses Host FS for inode-aware baseline alias admission and atomic
-publication. Earlier failures preserve the previous report. Parents remain
-caller-controlled; successful driver exit is required even if new bytes became
-visible before a later filesystem error.
+[Build #241](https://github.com/dragginzgame/ic-tooling/issues/241) remains the
+recorded source-independent build-recipe identity gap. Cross-source comparison
+still requires identical operator-controlled ambient Cargo/Rust configuration;
+this cleanup adds no local configuration resolver.
 
-Qualification discovers the selected binary before canister builds. Watchdog
-requires the driver's named critical recovery subjects; cohorts requires its
-exact subject. A second listing rejects ignored selected tests. Host preserves
-producer failures and bounds discovery output within the existing worker budget.
+## Dependencies and preserved work
 
-Every invocation owns a fresh private diagnostics directory. Failed runs retain
-subject listings, candidate reports and per-instance Testkit stdout/stderr logs;
-successful runs clean it. CI's existing temporary-root collection covers these
-files. Parent admission requires matching build context/artifacts and exact
-metric fields for four cohorts and two calibrations, then optional comparison,
-then durable publication. Old final reports are never candidate evidence.
-Successful hosted Linux/macOS jobs now upload cohort receipts for 14 days, named
-by source, host and toolchain. Upload alone does not establish qualification.
+Build/Host/Testkit remain 0.66.3, Wire/derive 0.6.12 and Metrics 0.15.7.
+Platform/macros changed independently from 0.6.12 to **0.6.13** during validation.
+That lockfile edit is preserved, not attributed to this cleanup. Its missing
+published sources were downloaded with `cargo fetch --locked`; no dependency or
+manifest selection was edited here.
 
-[Build #241](https://github.com/dragginzgame/ic-tooling/issues/241) requests a
-source-independent build-recipe identity. Published Build 0.66.3's fingerprints
-combine source and configuration, so cross-source comparison still requires
-operator-controlled identical ambient Cargo/Rust configuration. No local Cargo
-configuration resolver or environment serialization was introduced.
+Shared Tooling is now reviewed **0.26.10**,
+`a8141e775983c7fe504c4dd911e978152e657fdf`: 137 payloads refreshed through the
+canonical impact/apply interface. Formatting uses literal catalog admission;
+`actions-check` composes the common external-IC inventory with local policy.
+Optional CI Cargo-tool caching remains disabled. See `docs/shared-tooling.md`.
 
-Provider imports outside `platform` reject, including ordinary aliases. Private
-`runtime/effects.rs` owns applying effects and restoring/clearing linear handles;
-registry policy transitions remain atomic and together. New bounded native
-sequences cover suspended commands, completion/abandonment and admission failure.
-Registration-drop tests preserve the existing non-RAII contract: dropping a claim
-does not unregister, cancel or free retained registry capacity.
+The alias fixture and README setup fixes for Timers #75/#76 are in the local
+0.30.9 release history. Remote issue closure was not assessed in this pass.
+No sibling checkout, Git index, release state or package version was modified.
 
-Native Wire transport delegates to Testkit's typed call helpers; local adapters
-retain Method identities, caller selection and directional limits. Raw malformed
-frames remain necessary tests. Protocol records remain Wire/Serde-only. Tag-only
-CI prepares host tools without formatters/editor/Testkit provisioning. Adoption
-pages explicitly preserve historical evidence rather than assert current status.
+## Evidence and remaining limits
 
-## Latest dependency adoption
+Shared adoption evidence and incoming before-images: `/tmp/ic-timers-shared-02610/`.
+Snapshot integrity, actions/host-and-Wasm dependency policy, formatting, the real
+Cargo boundary fixture, hook, repository, workflow, release-gate and failure-
+evidence fixtures pass. Offline `tools-report` and read-only selection reports
+pass; tools needed no reinstallation. Native macOS/hosted cache are unqualified.
+Cleanup logs and published-source inspection: `/tmp/timers-cleanup/`.
+Focused runtime tests (84), Metrics tests (6), protocol tests (3), report tests (3),
+Rust 1.91 library Clippy/Wasm and every probe lint selection pass. Formatting
+and provider-boundary checks pass. Library checks were repeated against the
+independently updated Platform 0.6.13 lock selection.
 
-Official registry metadata and published archive inspection select Build/Host/
-Testkit 0.66.3. Host and Testkit Rust APIs are unchanged from 0.66.2; Build changes
-nested-workspace source/input observation, not the timer executor. Its generated
-`target` exclusion retains declared inputs and remains Build-owned. No recipe-
-identity API was added; #241 remains open. Both lock-selected CLIs are refreshed and admitted offline; Testkit retains the
-same admitted PocketIC 16.1.0 server. Rust 1.91 library and probe Clippy, every
-size-probe feature selection, six host regressions, Wasm compilation, complete
-selected dependency-boundary checks and the actual release-editor fixture pass.
-Linux PocketIC passes 33 recovery subjects and one policy cohort subject, then
-publishes the fresh complete report. The reviewed Shared snapshot verifies and
-remote main remains 0.26.9; the dirty supplier checkout is not adopted. Official
-registry metadata, archive checksums, source comparisons and validation logs are
-at `/tmp/ic-timers-upstream.JrCXUA/`; its `before.tar` preserves incoming work.
-No Rust source or manifest change was necessary for this adoption.
+The initial watchdog run passed 33 subjects; cohorts then refused offline
+metadata because the independently selected Platform 0.6.13 was not cached.
+That failed invocation remains at `/tmp/timer-qualification-971360-0/`.
+After locked dependency preparation, qualification was rerun against the current
+lock: all 33 watchdog selections (including host regressions) and the policy
+cohort subject pass. The fresh complete receipt is `testing/target/cohorts.json`;
+successful invocation diagnostics were cleaned by their owning driver.
 
-## Evidence and limits
-
-Prior focused evidence includes native/Wasm library checks, README compilation,
-Shared integrity, tag/setup/boundary fixtures, six host regressions, 33 Watchdog
-subjects and one cohort subject on Linux. The previous intentionally incompatible
-baseline preserved the final file and retained a complete fresh diagnostic report.
-
-Before the dependency adoption, the implementation batch passed Rust 1.91 Clippy
-for library/driver, 86 focused runtime tests
-(including 1,024 new suspended traces), six host regressions, Wasm cross-compilation,
-warning-denied API docs, actions/provider/format checks and the boundary fixture.
-PocketIC passes 33 Watchdog subjects and one cohort subject; exact-field admission
-publishes the final receipt. The initial sandbox run failed before canister
-execution at localhost bind; all 27 server stderr logs survived teardown. The
-network-enabled retry passed and cleaned its diagnostics. Successful CI upload
-wiring is inspected, not hosted-executed.
-
-Current evidence: `/tmp/ic-timers-improvements.zG1CA1/`; before-images are in
-`before.tar`. Expected sandbox-failure logs remain at
-`/tmp/timer-qualification-3258-0/`.
-Preceding evidence remains at `/tmp/ic-timers-subject-admission-s5wud59m/`,
-`/tmp/ic-timers-followup-btrst1nt/`, `/tmp/ic-timers-shared-review-ooytw4fb/`
-and `/tmp/ic-timers-new-deps-thq4p0u8/`. These are local evidence paths, not
-hosted acceptance or permanent release receipts.
-
-Native macOS, installed-IC behavior, artifact upload and the full maintainer-run
-release gate require their own qualification. Linux and cross-compilation do not
-close those gaps. No sibling source, Git index, release state or package version
-was modified; the sole upstream write is Build issue #241.
+Earlier evidence remains at `/tmp/ic-timers-upstream.JrCXUA/` and
+`/tmp/ic-timers-improvements.zG1CA1/`; their committed historical handoff preserves
+older evidence references. Do not remove retained failure/build artifacts.
+Native macOS, installed-IC execution, hosted artifact upload and the complete
+maintainer-operated release gate were not qualified by this local Linux pass.

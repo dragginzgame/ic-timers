@@ -1,5 +1,6 @@
 use super::harness::{fresh_pocket_ic, install_probe, update_unit};
 use super::harness::{query_wire, update_wire};
+use crate::report::{CalibrationMetrics, Measurements, PolicyMetrics};
 use ic_platform::pocket_ic::PocketIc;
 use ic_platform::principal::ExternalPrincipal;
 use ic_testkit::pic::advance_and_tick;
@@ -13,20 +14,16 @@ fn comparable_policy_cohorts_report_size_and_instruction_subjects() {
         &env::var("IC_TIMERS_COHORT_CONTEXT").expect("run the qualification driver"),
     )
     .expect("driver context");
-    for cohort in ["baseline", "once", "after-completion", "watchdog"] {
-        report
-            .measurements
-            .insert(cohort.into(), run_cohort(cohort));
-    }
-    let minimal = run_watchdog_calibration("minimal", false);
-    let representative = run_watchdog_calibration("representative", true);
-    assert!(representative["work_instructions"] > minimal["work_instructions"]);
-    report
-        .measurements
-        .insert("watchdog-calibration-minimal".into(), minimal);
-    report
-        .measurements
-        .insert("watchdog-calibration-representative".into(), representative);
+    let measurements = Measurements {
+        baseline: run_cohort("baseline"),
+        once: run_cohort("once"),
+        after_completion: run_cohort("after-completion"),
+        watchdog: run_cohort("watchdog"),
+        minimal: run_watchdog_calibration("minimal", false),
+        representative: run_watchdog_calibration("representative", true),
+    };
+    assert!(measurements.representative.work_instructions > measurements.minimal.work_instructions);
+    report.measurements = Some(measurements);
     let output = env::var_os("IC_TIMERS_COHORT_REPORT").expect("driver report path");
     // This is invocation-local evidence. The parent admits it and owns durable
     // publication only after successful subjects and post-measurement checks.
@@ -34,7 +31,7 @@ fn comparable_policy_cohorts_report_size_and_instruction_subjects() {
         .expect("retain candidate cohort report");
 }
 
-fn run_cohort(cohort: &str) -> std::collections::BTreeMap<String, u128> {
+fn run_cohort(cohort: &str) -> PolicyMetrics {
     let owned = fresh_pocket_ic();
     let pic = owned.instance();
     let wasm = cohort_wasm(cohort);
@@ -155,44 +152,23 @@ fn run_cohort(cohort: &str) -> std::collections::BTreeMap<String, u128> {
         dispatch_cycles,
         wasm_bytes,
     );
-    [
-        ("start_instructions", u128::from(start.instructions)),
-        ("duplicate_instructions", u128::from(duplicate.instructions)),
-        ("cancel_instructions", u128::from(cancellation.instructions)),
-        (
-            "snapshot_instructions",
-            u128::from(completed.snapshot_instructions),
-        ),
-        (
-            "inventory_instructions",
-            u128::from(completed.inventory_instructions),
-        ),
-        (
-            "scheduler_instructions",
-            completed.scheduler_instruction_total,
-        ),
-        ("work_instructions", completed.work_instruction_total),
-        ("memory_sampling_empty", u128::from(memory_sampling_empty)),
-        (
-            "memory_sampling_sampled",
-            u128::from(memory_sampling_sampled),
-        ),
-        (
-            "memory_sampling_overhead",
-            u128::from(memory_sampling_overhead),
-        ),
-        ("dispatch_cycles", dispatch_cycles),
-        ("wasm_bytes", wasm_bytes as u128),
-    ]
-    .into_iter()
-    .map(|(key, value)| (key.into(), value))
-    .collect()
+    PolicyMetrics {
+        start_instructions: u128::from(start.instructions),
+        duplicate_instructions: u128::from(duplicate.instructions),
+        cancel_instructions: u128::from(cancellation.instructions),
+        snapshot_instructions: u128::from(completed.snapshot_instructions),
+        inventory_instructions: u128::from(completed.inventory_instructions),
+        scheduler_instructions: completed.scheduler_instruction_total,
+        work_instructions: completed.work_instruction_total,
+        memory_sampling_empty: u128::from(memory_sampling_empty),
+        memory_sampling_sampled: u128::from(memory_sampling_sampled),
+        memory_sampling_overhead: u128::from(memory_sampling_overhead),
+        dispatch_cycles,
+        wasm_bytes: wasm_bytes as u128,
+    }
 }
 
-fn run_watchdog_calibration(
-    profile: &str,
-    representative_work: bool,
-) -> std::collections::BTreeMap<String, u128> {
+fn run_watchdog_calibration(profile: &str, representative_work: bool) -> CalibrationMetrics {
     let owned = fresh_pocket_ic();
     let pic = owned.instance();
     let canister_id = install_probe(pic, cohort_wasm("watchdog"));
@@ -218,14 +194,11 @@ fn run_watchdog_calibration(
         completed.work_instruction_total,
         dispatch_cycles,
     );
-    std::collections::BTreeMap::from([
-        (
-            "scheduler_instructions".into(),
-            completed.scheduler_instruction_total,
-        ),
-        ("work_instructions".into(), completed.work_instruction_total),
-        ("dispatch_cycles".into(), dispatch_cycles),
-    ])
+    CalibrationMetrics {
+        scheduler_instructions: completed.scheduler_instruction_total,
+        work_instructions: completed.work_instruction_total,
+        dispatch_cycles,
+    }
 }
 
 fn cohort_wasm(cohort: &str) -> Vec<u8> {

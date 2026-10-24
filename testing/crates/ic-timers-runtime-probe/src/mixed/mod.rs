@@ -22,8 +22,6 @@ thread_local! {
     static APPLICATION_TIMER: RefCell<Option<AfterCompletionRegistration>> = const { RefCell::new(None) };
     static WATCHDOG_CALLBACKS: Cell<u32> = const { Cell::new(0) };
     static APPLICATION_CALLBACKS: Cell<u32> = const { Cell::new(0) };
-    static WATCHDOG_INSTRUCTIONS: Cell<u64> = const { Cell::new(0) };
-    static APPLICATION_INSTRUCTIONS: Cell<u64> = const { Cell::new(0) };
     static WATCHDOG_TIMES: RefCell<Vec<u64>> = const { RefCell::new(Vec::new()) };
     static APPLICATION_TIMES: RefCell<Vec<u64>> = const { RefCell::new(Vec::new()) };
     static TRAP_AT: Cell<Option<u64>> = const { Cell::new(None) };
@@ -39,22 +37,13 @@ fn exhaust_message_instructions() -> ! {
 
 fn record_callback(
     callbacks: &'static std::thread::LocalKey<Cell<u32>>,
-    instructions: &'static std::thread::LocalKey<Cell<u64>>,
     times: &'static std::thread::LocalKey<RefCell<Vec<u64>>>,
 ) {
-    let start = ic_platform::ic0::performance_counter(1);
     callbacks.with(|count| count.set(count.get().saturating_add(1)));
     times.with_borrow_mut(|observed| {
         if observed.len() < MAX_RECORDED_CALLBACKS {
             observed.push(ic_platform::cdk::api::time());
         }
-    });
-    instructions.with(|count| {
-        count.set(
-            ic_platform::ic0::performance_counter(1)
-                .saturating_sub(start)
-                .saturating_add(count.get()),
-        );
     });
 }
 
@@ -96,7 +85,7 @@ fn startup_timer_probe_start() -> bool {
             if should_exhaust {
                 exhaust_message_instructions();
             }
-            record_callback(&WATCHDOG_CALLBACKS, &WATCHDOG_INSTRUCTIONS, &WATCHDOG_TIMES);
+            record_callback(&WATCHDOG_CALLBACKS, &WATCHDOG_TIMES);
             WatchdogRunResult::new(TimerCompletion::success(1), WatchdogDecision::Continue)
         },
     ) else {
@@ -111,11 +100,7 @@ fn startup_timer_probe_start() -> bool {
             initial: Some(TimerSchedule::After(WATCHDOG_INTERVAL)),
         },
         |_context| async {
-            record_callback(
-                &APPLICATION_CALLBACKS,
-                &APPLICATION_INSTRUCTIONS,
-                &APPLICATION_TIMES,
-            );
+            record_callback(&APPLICATION_CALLBACKS, &APPLICATION_TIMES);
             AfterCompletionRunResult::new(
                 TimerCompletion::success(1),
                 AfterCompletionDecision::RecurAfterCompletion,
@@ -183,8 +168,6 @@ fn startup_timer_probe_snapshot() -> TimerProbeSnapshot {
         application_registered: timer_is_scheduled(&application_identity()),
         watchdog_callbacks: WATCHDOG_CALLBACKS.with(Cell::get),
         application_callbacks: APPLICATION_CALLBACKS.with(Cell::get),
-        watchdog_instructions: WATCHDOG_INSTRUCTIONS.with(Cell::get),
-        application_instructions: APPLICATION_INSTRUCTIONS.with(Cell::get),
         watchdog_times: WATCHDOG_TIMES.with_borrow(Clone::clone),
         application_times: APPLICATION_TIMES.with_borrow(Clone::clone),
         trap_at: TRAP_AT.with(Cell::get),

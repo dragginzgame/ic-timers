@@ -214,7 +214,7 @@ pub(crate) fn run(
     if let Some(path) = &report_path {
         let completed = crate::report::Report::read_candidate(&candidate, &report)?;
         if let Some(baseline) = &baseline {
-            crate::report::compare(&candidate, baseline)?;
+            completed.compare(baseline)?;
         }
         completed.publish(path)?;
     }

@@ -133,7 +133,7 @@ actions-check: host-tools-check
 	perl scripts/ci/check-no-symlinks.pl --consumer "$(CURDIR)"
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/check-dependency-pins.sh \
 		--consumer "$(CURDIR)" --cargo-inheritance
-	bash scripts/ci/check-cargo-dependency-boundaries.sh --consumer "$(CURDIR)"
+	bash scripts/ci/check-cargo-dependency-boundaries.sh --consumer "$(CURDIR)" --external-ic
 	bash scripts/ci/check-library-dependency-boundary.sh
 
 shell-check:

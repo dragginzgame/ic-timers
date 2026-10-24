@@ -1301,8 +1301,6 @@ fn shared_watchdog_survives_trap_and_upgrade() {
         recovered.application_times[1]
             <= recovered.application_times[0].saturating_add(1_000_000_100)
     );
-    assert!(recovered.watchdog_instructions > 0);
-    assert!(recovered.application_instructions > 0);
     pic.upgrade_canister(canister_id, probe_wasm(), Vec::new(), None)
         .expect("upgrade without durable mixed-timer intent");
     let upgraded = mixed_snapshot(pic, canister_id);

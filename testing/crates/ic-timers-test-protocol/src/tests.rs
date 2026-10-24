@@ -76,40 +76,7 @@ fn snapshot_round_trip_preserves_wide_totals_and_optional_memory() {
 }
 
 #[test]
-fn wire_admission_rejects_wrong_identity_direction_trailing_and_resource_excess() {
-    let id = Method::Snapshot as u64;
-    let frame = encode_response(id, &ProbeSnapshot::default(), RESPONSE_LIMITS).unwrap();
-    assert_eq!(
-        decode_response::<ProbeSnapshot>(Method::Observe as u64, &frame, RESPONSE_LIMITS),
-        Err(ic_wire::Error::Identity)
-    );
-    assert!(ic_wire::native::decode_request::<ProbeSnapshot>(id, &frame, RESPONSE_LIMITS).is_err());
-    for len in 0..frame.len() {
-        assert!(decode_response::<ProbeSnapshot>(id, &frame[..len], RESPONSE_LIMITS).is_err());
-    }
-    let mut trailing = frame.clone();
-    trailing.push(0);
-    assert!(decode_response::<ProbeSnapshot>(id, &trailing, RESPONSE_LIMITS).is_err());
-    for limits in [
-        ic_wire::Limits {
-            bytes: frame.len() - 1,
-            ..RESPONSE_LIMITS
-        },
-        ic_wire::Limits {
-            allocation: RESPONSE_LIMITS.bytes,
-            ..RESPONSE_LIMITS
-        },
-        ic_wire::Limits {
-            nodes: 1,
-            ..RESPONSE_LIMITS
-        },
-        ic_wire::Limits {
-            depth: 1,
-            ..RESPONSE_LIMITS
-        },
-    ] {
-        assert!(decode_response::<ProbeSnapshot>(id, &frame, limits).is_err());
-    }
+fn checkpoint_round_trip_preserves_flags_and_wide_values() {
     // Current checkpoints retain both flags and wide values through one format.
     let state = (true, false, u64::MAX, 7_u64);
     let checkpoint =

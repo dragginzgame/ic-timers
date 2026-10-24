@@ -2,6 +2,22 @@
 
 All notable changes to this project are recorded here.
 
+## [0.30.10]
+
+- Adopt Shared Tooling 0.26.10 with literal formatter catalog admission, offline
+  tool diagnostics and common external-IC dependency guards alongside Timers'
+  deployment policy. CI tool caching remains opt-in and disabled here.
+
+- Require complete typed cohort receipts, including compiler and artifact metadata,
+  and compare the admitted report directly before publication. Complete schema-1
+  receipts keep their JSON fields; incomplete metadata now rejects consistently.
+- Consolidate native failure tests and remove duplicated consumer-policy and
+  codec checks. Suspended command sequences assert their outcome before cleanup
+  while avoiding redundant abandonment cases. Retain IC recovery evidence.
+- Remove redundant instruction bookkeeping from the unpublished mixed-policy
+  probe and its wire records; callback progress, isolation and upgrade checks remain.
+  Rebuild the probe and native driver together. Published timer APIs are unchanged.
+
 ## [0.30.9] - 2026-10-24
 
 - Qualify the incoming published Build/Host/Testkit 0.66.3 selection and refresh

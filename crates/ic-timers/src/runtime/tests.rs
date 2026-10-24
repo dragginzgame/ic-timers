@@ -2921,46 +2921,41 @@ fn public_provider_install_failure_retires_false_scheduled_state() {
 }
 
 #[test]
-fn initial_once_provider_install_failure_retires_false_scheduled_state() {
-    let _fixture = setup();
-    let timer = identity("provider-initial-once-fault");
-    let registration = register_once(
-        timer.clone(),
-        TimerStart::Retained { initial: None },
-        |_context| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
-    )
-    .expect("registration should succeed");
-
-    inject_provider_install_fault();
-    assert!(matches!(
-        registration.ensure_scheduled(TimerSchedule::At(15)),
-        Err(TimerError::OwnershipInvariant)
-    ));
-    assert_eq!(timer_count(), 0);
-    assert_retained_provider_binding_failure(&timer, 1, 0);
-}
-
-#[test]
-fn after_completion_provider_install_failure_retires_false_scheduled_state() {
-    let _fixture = setup();
-    let timer = identity("provider-after-completion-fault");
-    let registration = register_after_completion(
-        timer.clone(),
-        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
-        TimerStart::Retained { initial: None },
-        |_context| async {
-            AfterCompletionRunResult::new(TimerCompletion::no_work(), AfterCompletionDecision::Stop)
-        },
-    )
-    .expect("registration should succeed");
-
-    inject_provider_install_fault();
-    assert!(matches!(
-        registration.ensure_scheduled(),
-        Err(TimerError::OwnershipInvariant)
-    ));
-    assert_eq!(timer_count(), 0);
-    assert_retained_provider_binding_failure(&timer, 1, 0);
+fn inactive_ordinary_provider_install_failure_retires_false_scheduled_state() {
+    for recurring in [false, true] {
+        let _fixture = setup();
+        let timer = identity("inactive-ordinary-provider-fault");
+        // Keep both public control entry points covered; initial registration
+        // and replacement failures have distinct lifecycle tests.
+        let result = if recurring {
+            let registration = register_after_completion(
+                timer.clone(),
+                TimerCadence::from_nanos(5).unwrap(),
+                TimerStart::Retained { initial: None },
+                |_| async {
+                    AfterCompletionRunResult::new(
+                        TimerCompletion::no_work(),
+                        AfterCompletionDecision::Stop,
+                    )
+                },
+            )
+            .unwrap();
+            inject_provider_install_fault();
+            registration.ensure_scheduled()
+        } else {
+            let registration = register_once(
+                timer.clone(),
+                TimerStart::Retained { initial: None },
+                |_| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
+            )
+            .unwrap();
+            inject_provider_install_fault();
+            registration.ensure_scheduled(TimerSchedule::At(15))
+        };
+        assert!(matches!(result, Err(TimerError::OwnershipInvariant)));
+        assert_eq!(timer_count(), 0);
+        assert_retained_provider_binding_failure(&timer, 1, 0);
+    }
 }
 
 #[test]
@@ -3176,97 +3171,23 @@ fn remove_on_stop_watchdog_clears_successor_before_dropping_entry() {
     );
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum StartupReadiness {
-    Ready,
-    Recovering,
-    RetryableFailure,
-    TerminalFailure,
-}
-
-fn icydb_watchdog_result(
-    readiness: StartupReadiness,
-    completed_work_count: u64,
-) -> WatchdogRunResult {
-    match readiness {
-        StartupReadiness::Recovering => WatchdogRunResult::new(
-            TimerCompletion::success(completed_work_count),
-            WatchdogDecision::ContinueImmediately,
-        ),
-        StartupReadiness::RetryableFailure => WatchdogRunResult::new(
-            TimerCompletion::retryable_failure(completed_work_count),
-            WatchdogDecision::Continue,
-        ),
-        StartupReadiness::Ready if completed_work_count == 0 => {
-            WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
-        }
-        StartupReadiness::Ready => WatchdogRunResult::new(
-            TimerCompletion::success(completed_work_count),
-            WatchdogDecision::Stop,
-        ),
-        StartupReadiness::TerminalFailure => WatchdogRunResult::new(
-            TimerCompletion::invariant_failure(completed_work_count),
-            WatchdogDecision::Stop,
-        ),
-    }
-}
-
-#[test]
-fn icydb_shaped_readiness_selects_work_outcomes_and_watchdog_decisions() {
-    for (readiness, work_count, completion, decision) in [
-        (
-            StartupReadiness::Recovering,
-            1,
-            TimerCompletion::success(1),
-            WatchdogDecision::ContinueImmediately,
-        ),
-        (
-            StartupReadiness::RetryableFailure,
-            0,
-            TimerCompletion::retryable_failure(0),
-            WatchdogDecision::Continue,
-        ),
-        (
-            StartupReadiness::Ready,
-            0,
-            TimerCompletion::no_work(),
-            WatchdogDecision::Stop,
-        ),
-        (
-            StartupReadiness::Ready,
-            1,
-            TimerCompletion::success(1),
-            WatchdogDecision::Stop,
-        ),
-        (
-            StartupReadiness::TerminalFailure,
-            0,
-            TimerCompletion::invariant_failure(0),
-            WatchdogDecision::Stop,
-        ),
-    ] {
-        assert_eq!(
-            icydb_watchdog_result(readiness, work_count),
-            WatchdogRunResult::new(completion, decision),
-            "{readiness:?} with {work_count} work"
-        );
-    }
-}
-
 #[test]
 #[expect(
     clippy::too_many_lines,
-    reason = "One ordered IcyDB-shaped reconstruction and commit-guard sequence."
+    reason = "One ordered reconstruction and external-demand sequence."
 )]
-fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idempotent() {
+fn reconstruction_and_external_demand_are_synchronous_and_idempotent() {
     let _fixture = setup();
-    let timer = identity("icydb-startup-watchdog");
+    let timer = identity("reconstructed-watchdog");
     let cadence = TimerCadence::from_nanos(5).expect("fixture cadence should be valid");
-    let readiness = Rc::new(Cell::new(StartupReadiness::Recovering));
+    let result = Rc::new(Cell::new(WatchdogRunResult::new(
+        TimerCompletion::success(1),
+        WatchdogDecision::ContinueImmediately,
+    )));
     let pages = Rc::new(Cell::new(0_u64));
     let mut registration = None;
 
-    let callback_readiness = Rc::clone(&readiness);
+    let callback_result = Rc::clone(&result);
     let callback_pages = Rc::clone(&pages);
     reconcile_watchdog(
         &mut registration,
@@ -3275,12 +3196,9 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         WatchdogReconcileState::ScheduledImmediately,
         move |_context| {
             advance_instructions(13);
-            let readiness = callback_readiness.get();
-            let completed_work_count = u64::from(readiness == StartupReadiness::Recovering);
-            if completed_work_count != 0 {
-                callback_pages.set(callback_pages.get().saturating_add(completed_work_count));
-            }
-            icydb_watchdog_result(readiness, completed_work_count)
+            let result = callback_result.get();
+            callback_pages.set(callback_pages.get() + result.completion().work_count());
+            result
         },
     )
     .expect("fresh reconstruction should register and schedule");
@@ -3299,11 +3217,14 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
     .expect("repeated reconstruction should reuse the original callback claim");
     assert_eq!(timer_count(), 1);
 
-    run_icydb_watchdog_round(15);
+    run_watchdog_round(15);
     assert_eq!((pages.get(), timer_count()), (1, 1));
 
-    readiness.set(StartupReadiness::RetryableFailure);
-    run_icydb_watchdog_round(20);
+    result.set(WatchdogRunResult::new(
+        TimerCompletion::retryable_failure(0),
+        WatchdogDecision::Continue,
+    ));
+    run_watchdog_round(20);
     assert_eq!((pages.get(), timer_count()), (1, 1));
     let retrying = timer_snapshot(&timer)
         .expect("snapshot lookup should succeed")
@@ -3319,15 +3240,21 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         1
     );
 
-    readiness.set(StartupReadiness::Ready);
-    run_icydb_watchdog_round(25);
+    result.set(WatchdogRunResult::new(
+        TimerCompletion::no_work(),
+        WatchdogDecision::Stop,
+    ));
+    run_watchdog_round(25);
     assert_eq!((pages.get(), timer_count()), (1, 0));
     let stopped = timer_snapshot(&timer)
         .expect("snapshot lookup should succeed")
         .expect("retained watchdog should remain declared");
-    assert_icydb_lifecycle_measurements(&stopped);
+    assert_lifecycle_measurements(&stopped);
 
-    readiness.set(StartupReadiness::RetryableFailure);
+    result.set(WatchdogRunResult::new(
+        TimerCompletion::retryable_failure(0),
+        WatchdogDecision::Continue,
+    ));
     reconcile_watchdog(
         &mut registration,
         &timer,
@@ -3341,7 +3268,10 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
     set_time(30);
     assert!(run_next_due());
     assert_eq!(timer_count(), 2);
-    readiness.set(StartupReadiness::TerminalFailure);
+    result.set(WatchdogRunResult::new(
+        TimerCompletion::invariant_failure(0),
+        WatchdogDecision::Stop,
+    ));
     assert!(run_next_due());
     assert_eq!(timer_count(), 0);
     let terminal = timer_snapshot(&timer)
@@ -3366,7 +3296,10 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
         1
     );
 
-    readiness.set(StartupReadiness::Recovering);
+    result.set(WatchdogRunResult::new(
+        TimerCompletion::success(1),
+        WatchdogDecision::ContinueImmediately,
+    ));
     reconcile_watchdog(
         &mut registration,
         &timer,
@@ -3399,13 +3332,13 @@ fn icydb_shaped_reconstruction_and_commit_guard_ensure_are_synchronous_and_idemp
     assert!(matches!(mismatch, Err(TimerError::ReconciliationConflict)));
 }
 
-fn run_icydb_watchdog_round(now_ns: u64) {
+fn run_watchdog_round(now_ns: u64) {
     set_time(now_ns);
     assert!(run_next_due(), "scheduler message must run at {now_ns}");
     assert!(run_next_due(), "work message must run at {now_ns}");
 }
 
-fn assert_icydb_lifecycle_measurements(snapshot: &TimerSnapshot) {
+fn assert_lifecycle_measurements(snapshot: &TimerSnapshot) {
     let performance = snapshot.observability().performance();
     for (measurement, samples) in [
         (

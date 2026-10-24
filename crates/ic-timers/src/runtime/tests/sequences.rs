@@ -209,6 +209,10 @@ fn generated_command_sequences_preserve_authority_and_handle_ownership() {
 }
 
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "Keep each suspended trace, its independent outcome oracle and cleanup together."
+)]
 fn suspended_command_sequences_retire_authority_across_completion_and_abandonment() {
     for recurring in [false, true] {
         for lifetime in [
@@ -216,7 +220,11 @@ fn suspended_command_sequences_retire_authority_across_completion_and_abandonmen
             DeclarationLifetime::RemoveWhenStopped,
         ] {
             for abandon in [false, true] {
-                for admission_failure in [false, true] {
+                // Abandonment never installs a successor, so an admission fault
+                // cannot distinguish another execution path there.
+                for admission_failure in
+                    [false, true].into_iter().filter(|fault| !abandon || !fault)
+                {
                     for word in 0..4_u32.pow(3) {
                         let _fixture = setup();
                         let timer = identity("suspended-sequence");
@@ -237,8 +245,29 @@ fn suspended_command_sequences_retire_authority_across_completion_and_abandonmen
                         assert!(run_next_due());
                         let token = context.borrow().as_ref().unwrap().clone();
                         let mut commands = word;
+                        let mut expected_deadline: Option<u64> = None;
+                        let mut unregistered = false;
                         for _ in 0..3 {
-                            match commands % 4 {
+                            let command = commands % 4;
+                            if !unregistered {
+                                match command {
+                                    0 => expected_deadline = None,
+                                    1 => {
+                                        let requested = if recurring { 15 } else { 20 };
+                                        expected_deadline = Some(
+                                            expected_deadline
+                                                .map_or(requested, |old| old.min(requested)),
+                                        );
+                                    }
+                                    2 => expected_deadline = Some(30),
+                                    3 => {
+                                        unregistered = true;
+                                        expected_deadline = None;
+                                    }
+                                    _ => unreachable!(),
+                                }
+                            }
+                            match command {
                                 0 => cancel_claim(&claim, None),
                                 1 if recurring => ensure_recurring_claim(&claim, None),
                                 1 => ensure_once_claim(&claim, None, TimerSchedule::At(20)),
@@ -265,6 +294,48 @@ fn suspended_command_sequences_retire_authority_across_completion_and_abandonmen
                             assert!(run_next_due());
                         }
                         platform::ADMISSION_FAULT.set(None);
+                        let binding_failed =
+                            !abandon && admission_failure && expected_deadline.is_some();
+                        if abandon || binding_failed {
+                            expected_deadline = None;
+                        }
+                        let removed = unregistered
+                            || (lifetime == DeclarationLifetime::RemoveWhenStopped
+                                && expected_deadline.is_none());
+                        let snapshot = timer_snapshot(&timer).unwrap();
+                        assert_eq!(
+                            snapshot.is_none(),
+                            removed,
+                            "declaration: {word}/{recurring}/{abandon}/{admission_failure}"
+                        );
+                        assert_eq!(timer_count(), usize::from(expected_deadline.is_some()));
+                        if let Some(snapshot) = snapshot {
+                            assert_eq!(snapshot.next_deadline_ns(), expected_deadline);
+                            if expected_deadline.is_none() {
+                                let reason = if abandon {
+                                    InactiveReason::Abandoned
+                                } else if binding_failed {
+                                    InactiveReason::ControlFailure(
+                                        crate::TimerControlFailure::ProviderBindingFailed,
+                                    )
+                                } else {
+                                    InactiveReason::Cancelled
+                                };
+                                assert_eq!(
+                                    snapshot.state(),
+                                    TimerRuntimeStateSnapshot::Inactive { reason }
+                                );
+                            }
+                            assert_eq!(
+                                snapshot.observability().counters().work_completed().total(),
+                                u128::from(!abandon)
+                            );
+                            assert_eq!(
+                                snapshot.observability().counters().unacknowledged().total(),
+                                u128::from(abandon)
+                            );
+                        }
+
                         assert!(
                             matches!(
                                 cancel_claim(&claim, Some(&token)),

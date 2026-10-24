@@ -536,48 +536,27 @@ mod tests {
         counters.record_coalesced();
         counters.record_unacknowledged();
 
-        assert_eq!(counters.schedule_requests().total(), u128::MAX);
-        assert!(counters.schedule_requests().total_overflowed());
-        assert!(counters.schedule_requests().exact_total().is_err());
-        assert_eq!(counters.wakeups_armed().total(), u128::MAX);
-        assert!(counters.wakeups_armed().total_overflowed());
-        assert!(counters.wakeups_armed().exact_total().is_err());
-        assert_eq!(counters.work_dispatched().total(), u128::MAX);
-        assert!(counters.work_dispatched().total_overflowed());
-        assert!(counters.work_dispatched().exact_total().is_err());
-        assert_eq!(counters.scheduler_started().total(), u128::MAX);
-        assert!(counters.scheduler_started().total_overflowed());
-        assert!(counters.scheduler_started().exact_total().is_err());
-        assert_eq!(counters.work_started().total(), u128::MAX);
-        assert!(counters.work_started().total_overflowed());
-        assert!(counters.work_started().exact_total().is_err());
-        assert_eq!(counters.succeeded().total(), u128::MAX);
-        assert!(counters.succeeded().total_overflowed());
-        assert!(counters.succeeded().exact_total().is_err());
-        assert_eq!(counters.no_work().total(), u128::MAX);
-        assert!(counters.no_work().total_overflowed());
-        assert!(counters.no_work().exact_total().is_err());
-        assert_eq!(counters.retryable_failure().total(), u128::MAX);
-        assert!(counters.retryable_failure().total_overflowed());
-        assert!(counters.retryable_failure().exact_total().is_err());
-        assert_eq!(counters.invariant_failure().total(), u128::MAX);
-        assert!(counters.invariant_failure().total_overflowed());
-        assert!(counters.invariant_failure().exact_total().is_err());
-        assert_eq!(counters.cancelled().total(), u128::MAX);
-        assert!(counters.cancelled().total_overflowed());
-        assert!(counters.cancelled().exact_total().is_err());
-        assert_eq!(counters.stale_wakeups().total(), u128::MAX);
-        assert!(counters.stale_wakeups().total_overflowed());
-        assert!(counters.stale_wakeups().exact_total().is_err());
-        assert_eq!(counters.stale_work().total(), u128::MAX);
-        assert!(counters.stale_work().total_overflowed());
-        assert!(counters.stale_work().exact_total().is_err());
-        assert_eq!(counters.coalesced().total(), u128::MAX);
-        assert!(counters.coalesced().total_overflowed());
-        assert!(counters.coalesced().exact_total().is_err());
-        assert_eq!(counters.unacknowledged().total(), u128::MAX);
-        assert!(counters.unacknowledged().total_overflowed());
-        assert!(counters.unacknowledged().exact_total().is_err());
+        // Metrics owns overflow arithmetic; each event must forward to its counter.
+        let mut expected = exact_cap;
+        expected.add(1);
+        for observed in [
+            counters.schedule_requests(),
+            counters.wakeups_armed(),
+            counters.work_dispatched(),
+            counters.scheduler_started(),
+            counters.work_started(),
+            counters.succeeded(),
+            counters.no_work(),
+            counters.retryable_failure(),
+            counters.invariant_failure(),
+            counters.cancelled(),
+            counters.stale_wakeups(),
+            counters.stale_work(),
+            counters.coalesced(),
+            counters.unacknowledged(),
+        ] {
+            assert_eq!(observed, expected);
+        }
     }
 
     #[test]
@@ -630,7 +609,6 @@ mod tests {
             Ok(u128::from(u64::MAX) + 1)
         );
         assert_eq!(counters.schedule_requests().delta_since(previous), Ok(1));
-        assert!(previous.delta_since(counters.schedule_requests()).is_err());
         let mut copied = counters.schedule_requests();
         copied.add(10);
         assert_eq!(counters.schedule_requests().delta_since(previous), Ok(1));
