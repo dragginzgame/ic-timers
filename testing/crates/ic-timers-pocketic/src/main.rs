@@ -28,28 +28,26 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .get_matches();
     let (mode, options) = args.subcommand().expect("required subcommand");
+    let qualification = match mode {
+        "watchdog" => build::Qualification::Watchdog,
+        "cohorts" => build::Qualification::Cohorts {
+            report: options
+                .get_one::<std::path::PathBuf>("report")
+                .expect("default report path")
+                .clone(),
+            baseline: options.get_one::<std::path::PathBuf>("baseline").cloned(),
+        },
+        _ => unreachable!("Clap admits only declared subcommands"),
+    };
     if args.get_flag("worker") {
-        build::run(
-            mode,
-            if mode == "cohorts" {
-                options.get_one::<std::path::PathBuf>("report")
-            } else {
-                None
-            },
-            if mode == "cohorts" {
-                options.get_one::<std::path::PathBuf>("baseline")
-            } else {
-                None
-            },
-        )
+        build::run(&qualification)
     } else {
         let mut worker = std::process::Command::new(std::env::current_exe()?);
-        worker.args(["--worker", mode]);
-        if mode == "cohorts" {
-            for flag in ["report", "baseline"] {
-                if let Some(path) = options.get_one::<std::path::PathBuf>(flag) {
-                    worker.arg(format!("--{flag}")).arg(path);
-                }
+        worker.args(["--worker", qualification.name()]);
+        if let build::Qualification::Cohorts { report, baseline } = &qualification {
+            worker.arg("--report").arg(report);
+            if let Some(baseline) = baseline {
+                worker.arg("--baseline").arg(baseline);
             }
         }
         build::qualify(&mut worker, std::time::Duration::from_secs(30 * 60))?;

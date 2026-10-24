@@ -124,8 +124,8 @@ implementation details. The retired `ic-testkit-candid` package remains absent.
 The driver selects Platform, Testkit, Wire and the probe protocol only for its
 test binary. Its normal build coordinator uses Build and Host for artifacts and
 process custody, plus Clap/Serde/JSON for commands and receipts. It does not link
-the simulator or codecs. Build, Host and Testkit share published 0.66.3;
-the driver and Testkit 0.66 select the same Platform 0.6 identity. The incoming
+the simulator or codecs. Build, Host and Testkit share published 0.67.0;
+the driver and Testkit 0.67 select the same Platform 0.6 identity. The incoming
 Testkit also selects Platform's Candid/management support for native provider
 fixtures; PocketIC retains Candid for its simulator protocols. These are native
 qualification dependencies. Independent library and canister graphs
@@ -139,7 +139,7 @@ The Candid-free runtime introduced in Platform 0.2.0 was requested in
 [#31 — Support Candid-free raw and Wire canister entrypoints](https://github.com/dragginzgame/ic-platform/issues/31).
 The two small adapters translate consumer-owned Wire limits/errors into Platform
 hooks. Wire 0.6 retains this native Serde codec and retires its finite API;
-the current probe records need no layout or limit changes. Testkit 0.66's optional
+the current probe records need no layout or limit changes. Testkit 0.67's optional
 helpers own request encoding, one call without retry, response decoding and typed
 failure context in the native harness. Raw malformed-input tests remain direct
 PocketIC calls. The protocol package must not acquire a Platform dependency to

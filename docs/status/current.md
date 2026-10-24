@@ -4,97 +4,94 @@
 
 Last updated: 2026-10-24
 
-## Source and scope
+## Source and pending work
 
-Released base: **0.30.9**, `2ddb278`. Cargo package versions remain 0.30.9.
-The undated **0.30.10** draft contains the current test/qualification cleanup.
-Published APIs, production timer transitions and recovery semantics are unchanged;
-this is compatible contributor/test work, not a reason to publish independently.
-Staging, commits, pushes and release execution remain maintainer-owned.
+Released/default-branch base: **0.30.10**, `7a186003`. Incoming claim/qualification
+cleanup is preserved. Cargo package versions remain 0.30.10; dependency catalog
+and lock selections now adopt Build/Host/Testkit 0.67.0. The undated **0.30.11**
+draft combines that adoption and compatible internal cleanup. Public timer APIs,
+CLI flags, timer policy and recovery semantics are unchanged. Staging, commits,
+pushes and release execution remain maintainer-owned.
 
-The cleanup removes the local IcyDB readiness model and its self-testing mapping,
-retaining the lifecycle scenario with explicit callback results. Ordinary provider
-failure tests share a two-policy matrix. Counter tests retain event forwarding,
-role isolation and completion aggregation while delegating arithmetic to Metrics.
-Suspended sequences now run 768 traces, omitting ineffective abandonment/fault
-combinations and asserting deadlines, lifetime, failure state and counters before
-cleanup. Existing focused arbitration and IC recovery subjects remain maintained.
+Private reconciliation now receives a direct claim extractor instead of a trait
+implemented only to expose three private fields. Factory destruction, callback
+retention, conflict validation and fresh-registration rollback retain their order.
+The native reconciliation fixture uses the same direct field access.
 
-Protocol tests retain actual record/checkpoint round trips and wide values.
-Generic codec rejection coverage was checked at Wire 0.6.12's published source
-revision `b17c0779b1db1b6805ad0135a4396ebd09ee72b9` before removal locally.
-The PocketIC boundary still tests malformed input before timer mutation.
-The unpublished mixed-policy probe drops its parallel instruction bookkeeping;
-its host and canister wire record changed together. Rebuild them together.
-Mixed-policy progress, timing, isolation and upgrade evidence remain intact.
+Qualification now selects Watchdog or Cohorts through a private enum; Cohorts
+carries a required output path and optional baseline. Clap arguments normalize
+once and the parent forwards that complete selection to the worker. Subject
+admission, ignored-test rejection, deadlines, source/artifact guards, baseline
+alias rejection and durable receipt publication retain their existing contracts.
+Snapshot tests keep policy/cadence assertions; the existing callback conversion
+table now also owns the millisecond case through both public decision types.
 
-Fresh-registration and existing-claim reconciliation retain separate dispatch:
-creation rollback/publication and later-error retention have different duties.
-A further generic selector was rejected because its indirection did not justify
-changing those lifecycle paths. Private platform handles and provider effects
-retain their established ownership and cleanup ordering.
+## Delivered ownership and dependencies
 
-## Qualification receipts
+One private platform module owns one-shot dispatch and executor integration.
+Provider effects preserve linear handle restoration/cleanup and defer capture
+destruction until registry borrows and provider cleanup end. Native substitutes
+remain test evidence; installed-IC rollback is not simulated by those tests.
 
-Typed records now own cohort metrics, context and artifact fields. Complete
-schema-1 receipts preserve their JSON field names. Missing/unknown fields,
-empty compiler/artifact identities, wrong cohort identities and absent measurements
-reject before publication or comparison. Comparison uses the admitted object,
-not a second read of the child's candidate path. Full-width counters round-trip;
-unrepresentable signed comparison deltas still reject.
+Typed cohort context/artifact/metric records now require **schema 2**, including
+a nonempty per-cohort Build recipe identity. Schema 1 rejects; regenerate reviewed
+baselines. Comparison consumes the admitted report and refuses differing recipes. The mixed probe no longer maintains
+parallel instruction totals; its host and canister records changed together.
+Native sequences retain 768 distinct suspended traces with pre-cleanup outcome
+assertions. Generic codec arithmetic belongs to Wire/Metrics; Timers retains
+record, event-routing, callback-isolation and malformed-ingress integration proof.
 
-Qualification retains named recovery-subject admission, ignored-test rejection,
-fresh private diagnostics, caller-owned Testkit logs and atomic Host FS publication.
-Old output is never fallback evidence. Successful host CI uploads remain evidence
-receipts, not proof of qualification by upload alone. See the release guide for
-operator-controlled baseline paths and matching comparison context.
+Published Build/Host/Testkit **0.67.0** is selected atomically. Platform/macros
+**0.6.13**, Wire/derive **0.6.12** and Metrics **0.15.8** were already current.
+Official registry metadata and archive checksums verify these selections.
+Host's three used crate source trees are unchanged from 0.66.3; Build requires
+explicit configuration budgets. Timers supplies them at its one Wasm build call.
+Both canonical lock-selected CLIs are refreshed and admitted offline; Testkit
+retains its admitted PocketIC 16.1.0 server. No installer or server pin is copied.
 
-[Build #241](https://github.com/dragginzgame/ic-tooling/issues/241) remains the
-recorded source-independent build-recipe identity gap. Cross-source comparison
-still requires identical operator-controlled ambient Cargo/Rust configuration;
-this cleanup adds no local configuration resolver.
+Shared Tooling is reviewed commit `4c0f198e56d4c6d27b12a5c2d515e0e01070151e`,
+with 137 payloads. Its committed VERSION still says 0.26.10; 0.26.11 notes contain
+the setup phase/duration diagnostics. The supplier's dirty VERSION was excluded;
+canonical impact/apply used a clean committed clone. Path-only stdout, quiet
+offline checks and tool identities remain. CI tool caching remains disabled.
 
-## Dependencies and preserved work
+The published API from [Build #241 — Recipe identity](https://github.com/dragginzgame/ic-tooling/issues/241)
+now supplies cohort comparison admission. Its digest covers relevant configuration,
+profiles and explicit build/compiler settings without serializing values. Feature
+identity remains cohort-owned; source/cache guards and lock/compiler/server checks
+remain independent. Wrapper executable bytes and arbitrary build-script/external
+inputs still require operator equivalence; no local configuration parser is added.
 
-Build/Host/Testkit remain 0.66.3, Wire/derive 0.6.12 and Metrics 0.15.7.
-Platform/macros changed independently from 0.6.12 to **0.6.13** during validation.
-That lockfile edit is preserved, not attributed to this cleanup. Its missing
-published sources were downloaded with `cargo fetch --locked`; no dependency or
-manifest selection was edited here.
+## Issue review
 
-Shared Tooling is now reviewed **0.26.10**,
-`a8141e775983c7fe504c4dd911e978152e657fdf`: 137 payloads refreshed through the
-canonical impact/apply interface. Formatting uses literal catalog admission;
-`actions-check` composes the common external-IC inventory with local policy.
-Optional CI Cargo-tool caching remains disabled. See `docs/shared-tooling.md`.
+[Timers #76 — Correct README tool selections](https://github.com/dragginzgame/ic-timers/issues/76)
+is closed after verifying the delivered README against `main` at 7a186003 and its
+Make selections. This was advisory documentation work, not a CI/release gate.
+[Timers #75 — Keep Wire alias rejection on the current graph](https://github.com/dragginzgame/ic-timers/issues/75)
+has its source fix delivered. The latest delivered-source [CI run 40082577312](https://github.com/dragginzgame/ic-timers/actions/runs/40082577312)
+has successful Linux, MSRV and macOS ARM64 results, but the macOS Intel complete
+release gate was still running at review. A factual issue comment records that
+remaining acceptance gate; close after the complete required matrix succeeds.
+The repository has no open PRs at the review. Source changes in this batch remain
+local and are independent of those already delivered issue fixes.
 
-The alias fixture and README setup fixes for Timers #75/#76 are in the local
-0.30.9 release history. Remote issue closure was not assessed in this pass.
-No sibling checkout, Git index, release state or package version was modified.
+## Verification and limits
 
-## Evidence and remaining limits
+Current adoption evidence and incoming before-images:
+`/tmp/ic-timers-upstream-refresh/`. Official package checksums/source review, locked metadata, dependency boundaries,
+Rust 1.91 library/probe Clippy and Wasm checks pass. Report and driver regressions,
+84 runtime tests, the actual release-editor fixture and Testkit adapter fixture
+pass. Linux PocketIC passes 33 watchdog selections and one cohort subject; the
+fresh schema-2 receipt has all four recipe identities and matches the current
+lock. Both selected CLIs and Shared's 137 payloads verify offline.
+The earlier cleanup validation remains at `/tmp/ic-timers-cleanup-0311/`.
+No sibling source, Git index, own package version or release state was changed.
+The prior issue review's external writes remain factual comments/closures.
 
-Shared adoption evidence and incoming before-images: `/tmp/ic-timers-shared-02610/`.
-Snapshot integrity, actions/host-and-Wasm dependency policy, formatting, the real
-Cargo boundary fixture, hook, repository, workflow, release-gate and failure-
-evidence fixtures pass. Offline `tools-report` and read-only selection reports
-pass; tools needed no reinstallation. Native macOS/hosted cache are unqualified.
-Cleanup logs and published-source inspection: `/tmp/timers-cleanup/`.
-Focused runtime tests (84), Metrics tests (6), protocol tests (3), report tests (3),
-Rust 1.91 library Clippy/Wasm and every probe lint selection pass. Formatting
-and provider-boundary checks pass. Library checks were repeated against the
-independently updated Platform 0.6.13 lock selection.
-
-The initial watchdog run passed 33 subjects; cohorts then refused offline
-metadata because the independently selected Platform 0.6.13 was not cached.
-That failed invocation remains at `/tmp/timer-qualification-971360-0/`.
-After locked dependency preparation, qualification was rerun against the current
-lock: all 33 watchdog selections (including host regressions) and the policy
-cohort subject pass. The fresh complete receipt is `testing/target/cohorts.json`;
-successful invocation diagnostics were cleaned by their owning driver.
-
-Earlier evidence remains at `/tmp/ic-timers-upstream.JrCXUA/` and
-`/tmp/ic-timers-improvements.zG1CA1/`; their committed historical handoff preserves
-older evidence references. Do not remove retained failure/build artifacts.
-Native macOS, installed-IC execution, hosted artifact upload and the complete
-maintainer-operated release gate were not qualified by this local Linux pass.
+Earlier evidence remains at `/tmp/ic-timers-shared-02610/`,
+`/tmp/timers-cleanup/`, `/tmp/ic-timers-upstream.JrCXUA/` and
+`/tmp/ic-timers-improvements.zG1CA1/`. Prior retained failures include
+`/tmp/timer-qualification-971360-0/`; do not remove retained build/failure artifacts.
+Hosted results qualify their delivered source, not this pending working tree.
+Native macOS execution of this batch, installed-IC behavior and the complete
+maintainer-operated release gate require their own qualification.

@@ -2,6 +2,25 @@
 
 All notable changes to this project are recorded here.
 
+## [0.30.11]
+
+- Adopt published Build/Host/Testkit 0.67.0 and its explicit bounded Cargo
+  configuration observation. Refresh the lock-selected release editor and
+  Testkit CLI; Platform 0.6.13, Wire 0.6.12 and Metrics 0.15.8 remain current.
+- Bind cohort comparisons to Build's source-independent recipe identity
+  ([#241 — Build recipe identity for cohort comparisons](https://github.com/dragginzgame/ic-tooling/issues/241)).
+  Qualification receipts now require schema 2; regenerate reviewed baselines.
+  Recipe digests add configuration admission without exposing environment values.
+- Adopt committed Shared Tooling setup phase/duration diagnostics, preserving
+  path-only stdout, offline admission and existing tool identities.
+
+- Simplify private registration claim access while preserving reconciliation
+  validation, callback retention and factory cleanup ordering.
+- Represent qualification selections with a complete typed mode, keeping cohort
+  report paths together and preserving the existing CLI and recovery gates.
+- Consolidate directive conversion coverage through both public callback decision
+  types, retaining checked-delay rejection and policy/cadence assertions.
+
 ## [0.30.10] - 2026-10-24
 
 - Adopt Shared Tooling 0.26.10 with literal formatter catalog admission, offline

@@ -3,12 +3,16 @@
 ## Current authority
 
 One [snapshot](../.shared-tooling.snapshot) records **137** canonical payloads
-from reviewed Shared Tooling **0.26.10**, revision
-`a8141e775983c7fe504c4dd911e978152e657fdf`. The clean supplier checkout and
-upstream `main` match. Canonical impact preview reviewed the existing roots and
-local callers; apply adds the shared IC inventory, read-only selection reporter
-and optional Cargo-tool cache key helper through their declared companion closure.
-Exported files remain supplier-owned.
+from reviewed Shared Tooling revision
+`4c0f198e56d4c6d27b12a5c2d515e0e01070151e`. Its committed VERSION still identifies
+**0.26.10**; the 0.26.11 release notes contain the setup-diagnostics change.
+The supplier's uncommitted VERSION edit was excluded. Canonical impact/apply ran
+from a clean committed clone and updated the installer and setup documentation;
+exported files remain supplier-owned.
+
+Explicit Cargo-tool setup now reports phase, outcome and whole-second durations
+on stderr, including compilation and reuse. Stdout remains the selected path;
+offline checks stay quiet. Diagnostics do not change installed-tool identities.
 
 Formatting reads the same literal catalog parser as installation and rejects
 executable configuration or duplicate assignments. `make tools-report` is an
@@ -65,7 +69,7 @@ explicitly with `make install-release-editor`; check it offline with
 source admission; standalone preparation requires an already admitted executable.
 
 Selected-tool installation supports explicit Cargo features and binds their
-canonical set to immutable selections and receipts. IC Tooling 0.66 requires
+canonical set to immutable selections and receipts. IC Tooling 0.67 requires
 `cli` for the editor and Testkit server binaries. Both local setup/check adapters
 pass `--features cli`; the workspace library dependencies do not enable it.
 Prepare these selections explicitly with `make install-release-editor
@@ -100,17 +104,17 @@ qualification packages here.
 Candid remains transitive only in the native driver through PocketIC/Testkit. Local probe protocols use Wire; Platform 0.6's `cdk`
 feature and both canister graphs are Candid-free. Full CDK/macros and the retired
 Testkit Candid adapter are absent from the workspace graph.
-The driver test binary and Testkit 0.66 share Platform 0.6; the driver selects
+The driver test binary and Testkit 0.67 share Platform 0.6; the driver selects
 `pocket-ic` explicitly for direct client imports, including Principal support.
 Testkit's native provider fixtures also select Platform's Candid/management
 support; those features remain excluded from deployed library and probe graphs. Its
 normal coordinator excludes Platform, Testkit, Wire and the probe protocol;
 they are dev-dependencies used by the maintained integration tests. The library
 and canister graphs exclude native simulator features. Build, Host and Testkit
-share the 0.66 family, with no older parallel Host or Platform provider.
+share the 0.67 family, with no older parallel Host or Platform provider.
 The catalog's
 local `ic-timers` entry is the probes' dependency on the production library.
-The coordinator uses published Host FS 0.66.3 for baseline alias admission and
+The coordinator uses published Host FS 0.67.0 for baseline alias admission and
 atomic report publication; its test-support feature is dev-only. Testkit's `wire`
 feature is also dev-only and supplies native typed call handling. No new resolved
 package identity is introduced by these explicit edges.
@@ -208,7 +212,7 @@ transport remains intentional and outside the deployed-canister policy.
 ## Qualification and refresh
 
 Current impact/apply, incoming before-images and focused qualification logs are
-in `/tmp/ic-timers-shared-02610/`.
+in `/tmp/ic-timers-upstream-refresh/`.
 The [handoff](status/current.md) records tested scope and separate macOS/release
 qualification limits. The selected workflow fixture is checked with relative invocation and inherited
 CDPATH; producer matrices are not added to routine Timers validation.

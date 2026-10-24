@@ -400,28 +400,6 @@ pub struct WatchdogRegistration {
     claim: RegistrationClaim,
 }
 
-trait RegistrationClaimOwner {
-    fn registration_claim(&self) -> &RegistrationClaim;
-}
-
-impl RegistrationClaimOwner for OnceRegistration {
-    fn registration_claim(&self) -> &RegistrationClaim {
-        &self.claim
-    }
-}
-
-impl RegistrationClaimOwner for AfterCompletionRegistration {
-    fn registration_claim(&self) -> &RegistrationClaim {
-        &self.claim
-    }
-}
-
-impl RegistrationClaimOwner for WatchdogRegistration {
-    fn registration_claim(&self) -> &RegistrationClaim {
-        &self.claim
-    }
-}
-
 /// Desired volatile after-completion state during lifecycle reconciliation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum TimerReconcileState {
@@ -778,6 +756,7 @@ where
         registration,
         identity,
         TimerPolicy::Once,
+        |current: &OnceRegistration| &current.claim,
         || {
             let callback =
                 erase_ordinary_callback(callback, OnceContext::new, OrdinaryRunResult::from);
@@ -847,6 +826,7 @@ where
         registration,
         identity,
         TimerPolicy::AfterCompletion { cadence },
+        |current: &AfterCompletionRegistration| &current.claim,
         || {
             let callback = erase_ordinary_callback(
                 callback,
@@ -913,6 +893,7 @@ where
         registration,
         identity,
         TimerPolicy::Watchdog { cadence },
+        |current: &WatchdogRegistration| &current.claim,
         || {
             let mut callback = callback;
             let callback: WatchdogCallback = Rc::new(RefCell::new(move |token| {
@@ -971,17 +952,15 @@ fn reconcile_registration<Registration>(
     registration: &mut Option<Registration>,
     identity: &TimerIdentity,
     policy: TimerPolicy,
+    claim: impl FnOnce(&Registration) -> &RegistrationClaim,
     register: impl FnOnce() -> Result<Registration, TimerError>,
     reconcile: impl FnOnce(&Registration) -> Result<(), TimerError>,
-) -> Result<(), TimerError>
-where
-    Registration: RegistrationClaimOwner,
-{
+) -> Result<(), TimerError> {
     let Some(current) = registration.as_ref() else {
         *registration = Some(register()?);
         return Ok(());
     };
-    let claim = current.registration_claim();
+    let claim = claim(current);
     if claim.identity() != identity {
         return Err(TimerError::ReconciliationConflict);
     }

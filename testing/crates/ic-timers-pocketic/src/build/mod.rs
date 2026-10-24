@@ -3,7 +3,10 @@
 use ic_build::artifacts::{
     CacheRetentionLimits, WasmBuildSpec, build_wasm_canisters_cached, resolve_cargo_build_inputs,
 };
-use ic_build::cargo::selection::{CargoFeatureSelection, CargoSelection};
+use ic_build::cargo::{
+    environment::ConfigurationLimits,
+    selection::{CargoFeatureSelection, CargoSelection},
+};
 use ic_host_process::{
     child::CleanupPolicy,
     tool::{OutputLimit, OutputLimits, ToolError, capture_command, run_group_command},
@@ -13,6 +16,33 @@ use std::{
     process::Command,
     time::Duration,
 };
+
+// Qualification admits small Cargo configuration trees. Build owns bounded
+// reads and include traversal; Timers owns these positive resource budgets.
+const CONFIGURATION_LIMITS: ConfigurationLimits = ConfigurationLimits {
+    file_bytes: 1024 * 1024,
+    total_bytes: 16 * 1024 * 1024,
+    files: 128,
+    depth: 32,
+};
+
+/// A complete qualification selection; only cohorts has report paths.
+pub(crate) enum Qualification {
+    Watchdog,
+    Cohorts {
+        report: PathBuf,
+        baseline: Option<PathBuf>,
+    },
+}
+
+impl Qualification {
+    pub(crate) const fn name(&self) -> &'static str {
+        match self {
+            Self::Watchdog => "watchdog",
+            Self::Cohorts { .. } => "cohorts",
+        }
+    }
+}
 
 pub(crate) const COHORTS: [(&str, &str); 4] = [
     ("baseline", "IC_TIMERS_COHORT_BASELINE_WASM"),
@@ -54,24 +84,25 @@ fn test_listing(command: &mut Command) -> Result<Vec<u8>, Box<dyn std::error::Er
 
 fn discover_subjects(
     command: &mut Command,
-    mode: &str,
+    qualification: &Qualification,
 ) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     let output = test_listing(command)?;
     let names = std::str::from_utf8(&output)?
         .lines()
         .map(|line| line.strip_suffix(": test").ok_or("invalid test listing"))
         .collect::<Result<Vec<_>, _>>()?;
-    let admitted = match mode {
-        "watchdog" => REQUIRED_WATCHDOG_SUBJECTS
+    let admitted = match qualification {
+        Qualification::Watchdog => REQUIRED_WATCHDOG_SUBJECTS
             .iter()
             .all(|name| names.contains(name)),
-        "cohorts" => names == [COHORT_SUBJECT],
-        _ => false,
+        Qualification::Cohorts { .. } => names == [COHORT_SUBJECT],
     };
     if !admitted {
-        return Err(
-            format!("missing {mode} qualification subjects in successful test listing").into(),
-        );
+        return Err(format!(
+            "missing {} qualification subjects in successful test listing",
+            qualification.name()
+        )
+        .into());
     }
     // Listing includes ignored tests. Refuse ignored selected subjects rather than
     // silently qualifying a partial run or overriding an intentional ignore.
@@ -82,24 +113,24 @@ fn discover_subjects(
     Ok(output)
 }
 
-pub(crate) fn run(
-    mode: &str,
-    report_path: Option<&PathBuf>,
-    baseline: Option<&PathBuf>,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub(crate) fn run(qualification: &Qualification) -> Result<(), Box<dyn std::error::Error>> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../..")
         .canonicalize()?;
-    let report_path = report_path.map(|path| root.join(path));
-    let baseline = baseline.map(|path| root.join(path));
+    let (report_path, baseline) = match qualification {
+        Qualification::Watchdog => (None, None),
+        Qualification::Cohorts { report, baseline } => (
+            Some(root.join(report)),
+            baseline.as_ref().map(|path| root.join(path)),
+        ),
+    };
     if let (Some(output), Some(baseline)) = (&report_path, &baseline) {
         let baseline = baseline.canonicalize()?;
         ic_host_fs::durable::validate_non_aliasing(output, &[&baseline], 40)?;
     }
-    let filter = match mode {
-        "watchdog" => "tests::",
-        "cohorts" if report_path.is_some() => COHORT_SUBJECT,
-        _ => return Err("select watchdog or cohorts with a report output".into()),
+    let filter = match qualification {
+        Qualification::Watchdog => "tests::",
+        Qualification::Cohorts { .. } => COHORT_SUBJECT,
     };
     // Retain failures (including a completed child's unadmitted report) without
     // ever consulting the previous final output. Host owns unique allocation.
@@ -129,18 +160,18 @@ pub(crate) fn run(
         .current_dir(&root)
         .args(tests.get_args())
         .args(["--", "--list", "--format", "terse"]);
-    if mode == "cohorts" {
+    if matches!(qualification, Qualification::Cohorts { .. }) {
         discovery.arg("--exact");
         tests.args(["--", "--exact", "--nocapture"]);
     }
     std::fs::write(
         scratch.path().join("subjects.txt"),
-        discover_subjects(&mut discovery, mode)?,
+        discover_subjects(&mut discovery, qualification)?,
     )?;
     let mut builds = Vec::new();
     let mut inputs = Vec::new();
     let mut report = crate::report::Report::new(&root)?;
-    let recipes = if mode == "watchdog" {
+    let recipes = if matches!(qualification, Qualification::Watchdog) {
         vec![(
             "runtime",
             "IC_TIMERS_PROBE_WASM",
@@ -165,16 +196,22 @@ pub(crate) fn run(
             },
             ..CargoSelection::default()
         };
-        let spec = WasmBuildSpec::new(&root, &target, &[package], std::env::vars_os())
-            .with_isolated_builds()
-            .with_prune_policy(
-                CacheRetentionLimits::new()
-                    .with_max_age(Duration::from_secs(7 * 24 * 60 * 60))
-                    .with_max_size_bytes(512 * 1024 * 1024),
-            )
-            .with_cargo_program("cargo")
-            .with_rustc_identity_program("rustc")
-            .with_cargo_selection(selection);
+        let spec = WasmBuildSpec::new(
+            &root,
+            &target,
+            &[package],
+            std::env::vars_os(),
+            CONFIGURATION_LIMITS,
+        )
+        .with_isolated_builds()
+        .with_prune_policy(
+            CacheRetentionLimits::new()
+                .with_max_age(Duration::from_secs(7 * 24 * 60 * 60))
+                .with_max_size_bytes(512 * 1024 * 1024),
+        )
+        .with_cargo_program("cargo")
+        .with_rustc_identity_program("rustc")
+        .with_cargo_selection(selection);
         let before = resolve_cargo_build_inputs(&spec)?;
         let built =
             build_wasm_canisters_cached(&spec, ic_host_process::child::OwnedChild::spawn_direct)?;
@@ -182,7 +219,7 @@ pub(crate) fn run(
             return Err(format!("expected exactly one Wasm artifact for {label}").into());
         };
         tests.env(variable, artifact);
-        if mode == "cohorts" {
+        if matches!(qualification, Qualification::Cohorts { .. }) {
             report.record_build(label, built.record(), artifact)?;
         }
         // Retain exact artifacts until the child tests finish reading them.
@@ -209,7 +246,11 @@ pub(crate) fn run(
     report.verify_context(&root)?;
     drop(builds);
     if !status.success() {
-        return Err(format!("{mode} PocketIC subjects failed: {status}").into());
+        return Err(format!(
+            "{} PocketIC subjects failed: {status}",
+            qualification.name()
+        )
+        .into());
     }
     if let Some(path) = &report_path {
         let completed = crate::report::Report::read_candidate(&candidate, &report)?;

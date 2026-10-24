@@ -139,10 +139,10 @@ inherited streaming output and typed timeout/nonzero-exit failures. OS spawn,
 signal and reap syscalls can exceed elapsed-time budgets; group signalling does
 not prove every descendant has exited. Native macOS timing remains unqualified.
 
-The receipt reader, filesystem publication and injected build spawner use published Host and Build 0.66,
+The receipt reader, filesystem publication and injected build spawner use published Host and Build 0.67,
 whose artifact engine accepts the same `OwnedChild` identity.
 Update these together when exchanging Host values; metadata/tree observation's
-command/byte boundary does not cover this build API. Testkit 0.66 selects the
+command/byte boundary does not cover this build API. Testkit 0.67 selects the
 same Host family. It and Platform/Wire/protocol are dev-dependencies of the driver;
 only the child test binary needs the simulator and codecs. No aliases or local
 child conversions are needed.
@@ -179,7 +179,8 @@ parent reads at most 1 MiB, requires matching schema/context/artifact records an
 all four cohorts plus both calibration subjects with their exact required metric
 fields. Typed records reject missing or unknown fields in measurements, context
 and artifact records; empty compiler/artifact identities also reject. Complete
-schema-1 receipts retain their JSON field names. Comparison uses the already
+schema-2 receipts require a per-cohort Build recipe identity; schema 1 rejects.
+Regenerate reviewed baselines after adopting this dependency selection. Comparison uses the already
 admitted report, so the compared value is also the one published.
 A previous final report is never accepted in place of missing new evidence.
 
@@ -212,7 +213,8 @@ and an error after publication can leave the complete new report visible. Keep
 the selected parent hierarchy under caller control and exclude concurrent namespace
 writers; these checks are not confinement. A successful driver exit remains
 required for qualification. Comparisons require matching schema,
-compiler/Cargo, target/profile, lockfile, server, host and measurement subjects.
+compiler/Cargo, target/profile, lockfile, server, host, measurement subjects and
+Build recipe identities for each corresponding cohort.
 Source and artifact identities may change: they attribute the candidate bytes
 rather than prohibit code comparisons. Successful Linux and macOS qualification
 jobs upload the final receipt with source/host/toolchain identity and 14-day
@@ -220,11 +222,22 @@ retention. Artifact upload alone does not qualify a failed or cancelled job.
 Changed dependencies or tools require an explicitly reviewed new baseline; there is no automatic rewrite or cross-context
 comparison. Deltas are review evidence, not an arbitrary performance pass/fail
 budget. Whole-message and unaccounted instruction totals remain unavailable;
-cycle costs are not converted to instructions. Use identical ambient Cargo/Rust
-configuration for comparisons: the recorded context checks do not normalize it.
-[Build #241](https://github.com/dragginzgame/ic-tooling/issues/241) requests a
-source-independent recipe identity at the canonical configuration owner; pending
-that released capability, no local Cargo configuration resolver is introduced.
+cycle costs are not converted to instructions. Build 0.67's published
+`recipe_identity()` supplies the source-independent configuration admission
+requested in [Build #241](https://github.com/dragginzgame/ic-tooling/issues/241).
+It covers observed compiler/Cargo identities, package/example/target/profile,
+workspace profiles, discovered configuration and relevant explicit build/compiler
+environment settings. Features remain separately attributable by cohort. Source
+bytes, lock identity, output directories and unrelated credentials are excluded;
+existing source/cache fingerprints and mutation guards remain independent.
+Configuration locations are compared conservatively. Wrapper executable bytes,
+arbitrary build-script inputs and additional external inputs remain operator
+obligations; the digest does not prove those equivalent.
+
+Timers supplies explicit configuration limits at the Build boundary: 1 MiB per
+file, 16 MiB total, 128 files and include depth 32. Build owns bounded reads,
+include discovery and recipe hashing; no Cargo parser or environment dump is
+implemented here. Exceeding a limit fails qualification before measurement.
 Minimal and representative work calibrations remain separate from scheduler/work instruction brackets.
 
 

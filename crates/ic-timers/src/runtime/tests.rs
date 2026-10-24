@@ -4409,15 +4409,9 @@ impl ReconciliationSlot {
 
     fn claim(&self) -> Option<&RegistrationClaim> {
         match self {
-            Self::Once(slot) => slot
-                .as_ref()
-                .map(RegistrationClaimOwner::registration_claim),
-            Self::AfterCompletion(slot) => slot
-                .as_ref()
-                .map(RegistrationClaimOwner::registration_claim),
-            Self::Watchdog(slot) => slot
-                .as_ref()
-                .map(RegistrationClaimOwner::registration_claim),
+            Self::Once(slot) => slot.as_ref().map(|registration| &registration.claim),
+            Self::AfterCompletion(slot) => slot.as_ref().map(|registration| &registration.claim),
+            Self::Watchdog(slot) => slot.as_ref().map(|registration| &registration.claim),
         }
     }
 

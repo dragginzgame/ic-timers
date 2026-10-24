@@ -64,6 +64,13 @@ fn public_decisions_project_inert_snapshots_with_checked_delays() {
             TimerDirectiveSnapshot::RetryAfter { delay_ns: 7 },
         ),
         (
+            OnceDecision::RetryAfter(Duration::from_millis(25)),
+            AfterCompletionDecision::RetryAfter(Duration::from_millis(25)),
+            TimerDirectiveSnapshot::RetryAfter {
+                delay_ns: 25_000_000,
+            },
+        ),
+        (
             OnceDecision::ScheduleAt(50),
             AfterCompletionDecision::ScheduleAt(50),
             TimerDirectiveSnapshot::ScheduleAt { deadline_ns: 50 },

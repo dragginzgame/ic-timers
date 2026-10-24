@@ -2,7 +2,7 @@ use super::*;
 
 fn fixture_report() -> Report {
     Report {
-        schema: 1,
+        schema: SCHEMA,
         context: Context {
             lock_sha256: "lock".into(),
             server_sha256: "server".into(),
@@ -21,6 +21,7 @@ fn fixture_report() -> Report {
                         wasm_sha256: format!("{name} bytes"),
                         build_fingerprint: "build".into(),
                         input_digest: "inputs".into(),
+                        recipe_identity: "recipe".into(),
                         feature: (*name).into(),
                     },
                 )
@@ -55,6 +56,7 @@ fn missing_or_incomplete_candidate_never_replaces_a_previous_report() {
         "/artifacts/once/wasm_sha256",
         "/artifacts/once/build_fingerprint",
         "/artifacts/once/input_digest",
+        "/artifacts/once/recipe_identity",
         "/artifacts/once/feature",
     ] {
         let value: serde_json::Value = serde_json::from_slice(&previous).unwrap();
@@ -103,14 +105,26 @@ fn missing_or_incomplete_candidate_never_replaces_a_previous_report() {
             "{pointer}"
         );
     }
-    for change in ["context", "artifact", "schema", "malformed"] {
+    for change in [
+        "context",
+        "artifact",
+        "recipe",
+        "schema",
+        "legacy-schema",
+        "malformed",
+    ] {
         let mut changed = complete.clone();
         match change {
             "context" => changed.context.lock_sha256 = "other invocation".into(),
             "artifact" => {
                 changed.artifacts.get_mut("once").unwrap().wasm_sha256 = "other bytes".into()
             }
-            "schema" => changed.schema = 2,
+            "recipe" => {
+                changed.artifacts.get_mut("once").unwrap().recipe_identity =
+                    "other configuration".into()
+            }
+            "schema" => changed.schema = SCHEMA + 1,
+            "legacy-schema" => changed.schema = 1,
             _ => {}
         }
         let bytes = if change == "malformed" {
@@ -167,6 +181,8 @@ fn receipt_round_trip_preserves_costs_and_rejects_incomparable_contexts() {
     assert_eq!(current.deltas(&baseline).unwrap()["once/wasm_bytes"], 10);
     // Source and artifact identities may differ across the sources under review.
     current.artifacts.get_mut("once").unwrap().wasm_sha256 = "new bytes".into();
+    current.artifacts.get_mut("once").unwrap().input_digest = "new sources".into();
+    current.artifacts.get_mut("once").unwrap().build_fingerprint = "new cache identity".into();
     assert!(current.deltas(&baseline).is_ok());
     let baseline_json = serde_json::to_value(&baseline).unwrap();
     for key in [
@@ -189,6 +205,9 @@ fn receipt_round_trip_preserves_costs_and_rejects_incomparable_contexts() {
         "schema",
         "empty-context",
         "empty-artifact",
+        "recipe",
+        "empty-recipe",
+        "legacy-schema",
         "feature",
     ] {
         let mut changed = baseline.clone();
@@ -197,13 +216,24 @@ fn receipt_round_trip_preserves_costs_and_rejects_incomparable_contexts() {
             "artifact" => {
                 changed.artifacts.remove("once");
             }
-            "schema" => changed.schema = 2,
+            "recipe" => {
+                changed.artifacts.get_mut("once").unwrap().recipe_identity =
+                    "other configuration".into()
+            }
+            "schema" => changed.schema = SCHEMA + 1,
+            "legacy-schema" => changed.schema = 1,
             "empty-context" => changed.context.rustc.clear(),
             "empty-artifact" => changed
                 .artifacts
                 .get_mut("once")
                 .unwrap()
                 .input_digest
+                .clear(),
+            "empty-recipe" => changed
+                .artifacts
+                .get_mut("once")
+                .unwrap()
+                .recipe_identity
                 .clear(),
             "feature" => changed.artifacts.get_mut("once").unwrap().feature = "watchdog".into(),
             _ => unreachable!(),

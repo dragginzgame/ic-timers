@@ -10,16 +10,25 @@ fn subject_discovery_rejects_empty_unrelated_and_failed_producers() {
         .collect::<String>();
     let missing = watchdog.lines().skip(1).collect::<Vec<_>>().join("\n");
     let cohort = format!("{COHORT_SUBJECT}: test\n");
-    for (mode, listing, admitted) in [
-        ("watchdog", "", false),
-        ("watchdog", "report::tests::host_only: test\n", false),
-        ("watchdog", "tests::recovery: test\n", false),
-        ("watchdog", watchdog.as_str(), true),
-        ("watchdog", missing.as_str(), false),
-        ("cohorts", "", false),
-        ("cohorts", "cohorts::renamed_subject: test\n", false),
-        ("cohorts", cohort.as_str(), true),
-        ("watchdog", "tests::fake: benchmark\n", false),
+    let watchdog_selection = Qualification::Watchdog;
+    let cohort_selection = Qualification::Cohorts {
+        report: "unused.json".into(),
+        baseline: None,
+    };
+    for (qualification, listing, admitted) in [
+        (&watchdog_selection, "", false),
+        (
+            &watchdog_selection,
+            "report::tests::host_only: test\n",
+            false,
+        ),
+        (&watchdog_selection, "tests::recovery: test\n", false),
+        (&watchdog_selection, watchdog.as_str(), true),
+        (&watchdog_selection, missing.as_str(), false),
+        (&cohort_selection, "", false),
+        (&cohort_selection, "cohorts::renamed_subject: test\n", false),
+        (&cohort_selection, cohort.as_str(), true),
+        (&watchdog_selection, "tests::fake: benchmark\n", false),
     ] {
         let mut command = Command::new("sh");
         command.args([
@@ -28,12 +37,15 @@ fn subject_discovery_rejects_empty_unrelated_and_failed_producers() {
             "fixture",
             listing,
         ]);
-        assert_eq!(discover_subjects(&mut command, mode).is_ok(), admitted);
+        assert_eq!(
+            discover_subjects(&mut command, qualification).is_ok(),
+            admitted
+        );
     }
     let mut ignored = Command::new("sh");
     ignored.args(["-c", "printf '%s' \"$1\"", "fixture", &cohort]);
     assert!(
-        discover_subjects(&mut ignored, "cohorts")
+        discover_subjects(&mut ignored, &cohort_selection)
             .unwrap_err()
             .to_string()
             .contains("ignored")
@@ -41,7 +53,7 @@ fn subject_discovery_rejects_empty_unrelated_and_failed_producers() {
     // A valid-looking listing on stdout cannot hide Cargo/compiler failure.
     let mut command = Command::new("sh");
     command.args(["-c", "printf '%s' \"$1\"; exit 7", "fixture", &cohort]);
-    let error = discover_subjects(&mut command, "cohorts").unwrap_err();
+    let error = discover_subjects(&mut command, &cohort_selection).unwrap_err();
     let Some(ToolError::Execution(error)) = error.downcast_ref::<ToolError>() else {
         panic!("expected retained producer failure: {error}");
     };
@@ -92,7 +104,11 @@ fn baseline_output_alias_is_rejected_before_any_build_or_write() {
     std::fs::hard_link(&baseline, &hard_link).unwrap();
     std::os::unix::fs::symlink(&baseline, &symlink).unwrap();
     for alias in [fixture.path().join("./baseline.json"), hard_link, symlink] {
-        let error = run("cohorts", Some(&alias), Some(&baseline)).unwrap_err();
+        let error = run(&Qualification::Cohorts {
+            report: alias,
+            baseline: Some(baseline.clone()),
+        })
+        .unwrap_err();
         assert!(
             matches!(
                 error.downcast_ref::<ic_host_fs::durable::NonAliasingWriteError>(),

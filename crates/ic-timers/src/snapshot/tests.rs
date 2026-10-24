@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    ScheduleError, TimerCadence, TimerSchedule,
+    TimerCadence, TimerSchedule,
     callback::OrdinaryRunResult,
     registry::{RegistryEffect, TimerRegistry},
     schedule::OrdinaryDirective,
@@ -130,25 +130,11 @@ fn identity_clones_preserve_value_semantics_and_outlive_the_original() {
 }
 
 #[test]
-fn policies_and_directive_snapshots_preserve_validated_values() {
+fn policies_preserve_validated_cadence() {
     let cadence = TimerCadence::from_nanos(5_000).expect("fixture cadence should be valid");
     let policy = TimerPolicy::Watchdog { cadence };
     assert_eq!(policy.label(), "watchdog");
     assert_eq!(policy.cadence().map(TimerCadence::as_nanos), Some(5_000));
-
-    let directive = OrdinaryDirective::RetryAfter(Duration::from_millis(25));
-    let snapshot = TimerDirectiveSnapshot::try_from(directive)
-        .expect("25 milliseconds should fit in nanoseconds");
-    assert_eq!(
-        snapshot,
-        TimerDirectiveSnapshot::RetryAfter {
-            delay_ns: 25_000_000,
-        }
-    );
-    assert_eq!(
-        TimerDirectiveSnapshot::try_from(OrdinaryDirective::RetryAfter(Duration::MAX)),
-        Err(ScheduleError::DelayOutOfRange)
-    );
 }
 
 #[test]

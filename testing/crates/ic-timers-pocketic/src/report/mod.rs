@@ -8,6 +8,8 @@ use std::{collections::BTreeMap, error::Error, fs, path::Path};
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
+const SCHEMA: u32 = 2;
+
 // Each field is declared once for construction, strict decoding and comparison.
 macro_rules! metrics {
     ($name:ident { $($field:ident),* $(,)? }) => {
@@ -81,6 +83,7 @@ struct Artifact {
     wasm_sha256: String,
     build_fingerprint: String,
     input_digest: String,
+    recipe_identity: String,
     feature: String,
 }
 
@@ -97,7 +100,7 @@ impl Report {
     pub(crate) fn new(root: &Path) -> Result<Self> {
         let server = std::env::var_os("POCKET_IC_BIN").ok_or("missing admitted POCKET_IC_BIN")?;
         Ok(Self {
-            schema: 1,
+            schema: SCHEMA,
             context: Context {
                 lock_sha256: digest(&root.join("Cargo.lock"))?,
                 server_sha256: digest(Path::new(&server))?,
@@ -143,6 +146,7 @@ impl Report {
                 wasm_sha256: digest(artifact)?,
                 build_fingerprint: record.fingerprint().to_string(),
                 input_digest: record.input_digest().to_string(),
+                recipe_identity: record.recipe_identity().to_string(),
                 feature: cohort.into(),
             },
         );
@@ -185,7 +189,7 @@ impl Report {
 
     fn validate(&self) -> Result<()> {
         let context = &self.context;
-        if self.schema != 1
+        if self.schema != SCHEMA
             || self.measurements.is_none()
             || [
                 &context.lock_sha256,
@@ -205,6 +209,7 @@ impl Report {
                         && !artifact.wasm_sha256.is_empty()
                         && !artifact.build_fingerprint.is_empty()
                         && !artifact.input_digest.is_empty()
+                        && !artifact.recipe_identity.is_empty()
                 })
             })
         {
@@ -248,6 +253,16 @@ impl Report {
         baseline.validate()?;
         if self.context != baseline.context {
             return Err("incomparable cohort compiler/server/host/lock/profile/target; qualify a new baseline explicitly".into());
+        }
+        if !self.artifacts.iter().all(|(cohort, artifact)| {
+            baseline
+                .artifacts
+                .get(cohort)
+                .is_some_and(|previous| previous.recipe_identity == artifact.recipe_identity)
+        }) {
+            return Err(
+                "incomparable cohort build recipes; qualify a new baseline explicitly".into(),
+            );
         }
         let current = self.measurements.as_ref().ok_or("missing measurements")?;
         let previous = baseline
