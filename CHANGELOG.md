@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.30.9]
+## [0.30.9] - 2026-10-24
 
 - Qualify the incoming published Build/Host/Testkit 0.66.3 selection and refresh
   both lock-selected CLIs. Build excludes generated targets in nested explicit
