@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.31.0]
+## [0.31.0] - 2026-10-24
 
 - **Breaking:** adopt Metrics 0.16.0. `MeasurementCounter` and
   `MeasurementSummary` now have the Metrics 0.16 Rust identity, including values
