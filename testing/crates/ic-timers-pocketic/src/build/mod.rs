@@ -6,7 +6,7 @@ use ic_build::artifacts::{
 use ic_build::cargo::selection::{CargoFeatureSelection, CargoSelection};
 use ic_host_process::{
     child::CleanupPolicy,
-    tool::{OutputLimit, OutputLimits, ToolError, run_group_command},
+    tool::{OutputLimit, OutputLimits, ToolError, capture_command, run_group_command},
 };
 use std::{
     path::{Path, PathBuf},
@@ -21,6 +21,67 @@ pub(crate) const COHORTS: [(&str, &str); 4] = [
     ("watchdog", "IC_TIMERS_COHORT_WATCHDOG_WASM"),
 ];
 
+const COHORT_SUBJECT: &str =
+    "cohorts::comparable_policy_cohorts_report_size_and_instruction_subjects";
+
+// These subjects anchor the maintained recovery contract, not incidental test counts.
+const REQUIRED_WATCHDOG_SUBJECTS: &[&str] = &[
+    "tests::trapped_work_keeps_committed_successor_and_executor_is_private",
+    "tests::instruction_exhaustion_leaves_successor_for_later_progress",
+    "tests::insufficient_cycles_defer_due_work_until_top_up",
+    "tests::dispatch_response_trap_cleanup_preserves_pending_work_for_retry",
+    "tests::ordinary_trap_before_await_retires_the_rolled_back_scheduled_delivery",
+    "tests::ordinary_continuation_trap_retires_running_work_and_releases_expired_authority",
+    "tests::accepted_ordinary_work_survives_dispatch_timeout_without_replay",
+    "tests::shared_watchdog_survives_trap_and_upgrade",
+    "tests::maximum_capacity_dispatch_preserves_every_survivor_under_pressure_and_await",
+];
+
+fn test_listing(command: &mut Command) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    // The owning worker supplies the elapsed deadline and process group. Host
+    // bounds discovery output and preserves a failed producer's status/evidence.
+    let output = capture_command(
+        command,
+        OutputLimits {
+            stdout: OutputLimit::Terminate(64 * 1024),
+            stderr: OutputLimit::Terminate(256 * 1024),
+            timeout: None,
+        },
+    )?
+    .require_success()?;
+    Ok(output.stdout)
+}
+
+fn discover_subjects(
+    command: &mut Command,
+    mode: &str,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+    let output = test_listing(command)?;
+    let names = std::str::from_utf8(&output)?
+        .lines()
+        .map(|line| line.strip_suffix(": test").ok_or("invalid test listing"))
+        .collect::<Result<Vec<_>, _>>()?;
+    let admitted = match mode {
+        "watchdog" => REQUIRED_WATCHDOG_SUBJECTS
+            .iter()
+            .all(|name| names.contains(name)),
+        "cohorts" => names == [COHORT_SUBJECT],
+        _ => false,
+    };
+    if !admitted {
+        return Err(
+            format!("missing {mode} qualification subjects in successful test listing").into(),
+        );
+    }
+    // Listing includes ignored tests. Refuse ignored selected subjects rather than
+    // silently qualifying a partial run or overriding an intentional ignore.
+    let ignored = test_listing(command.arg("--ignored"))?;
+    if !ignored.is_empty() {
+        return Err("qualification selection contains ignored subjects".into());
+    }
+    Ok(output)
+}
+
 pub(crate) fn run(
     mode: &str,
     report_path: Option<&PathBuf>,
@@ -31,20 +92,55 @@ pub(crate) fn run(
         .canonicalize()?;
     let report_path = report_path.map(|path| root.join(path));
     let baseline = baseline.map(|path| root.join(path));
-    if let (Some(output), Some(baseline)) = (&report_path, &baseline)
-        && output.canonicalize().ok().as_ref() == Some(&baseline.canonicalize()?)
-    {
-        return Err("report output must not overwrite the baseline".into());
+    if let (Some(output), Some(baseline)) = (&report_path, &baseline) {
+        let baseline = baseline.canonicalize()?;
+        ic_host_fs::durable::validate_non_aliasing(output, &[&baseline], 40)?;
     }
+    let filter = match mode {
+        "watchdog" => "tests::",
+        "cohorts" if report_path.is_some() => COHORT_SUBJECT,
+        _ => return Err("select watchdog or cohorts with a report output".into()),
+    };
+    // Retain failures (including a completed child's unadmitted report) without
+    // ever consulting the previous final output. Host owns unique allocation.
+    let mut scratch = ic_host_fs::owned_directory::OwnedDirectory::new(
+        ic_host_fs::directory::create_unique_directory(
+            &std::env::temp_dir().canonicalize()?,
+            "timer-qualification",
+            0o700,
+            std::num::NonZeroUsize::new(128),
+        )?,
+    );
+    scratch.disarm();
+    eprintln!("qualification diagnostics: {}", scratch.path().display());
+    let candidate = scratch.path().join("cohorts.json");
     let mut tests = Command::new("cargo");
-    tests
+    tests.current_dir(&root).args([
+        "test",
+        "-p",
+        "ic-timers-pocketic",
+        "--bin",
+        "ic-timers-pocketic",
+        "--locked",
+        filter,
+    ]);
+    let mut discovery = Command::new(tests.get_program());
+    discovery
         .current_dir(&root)
-        .args(["test", "-p", "ic-timers-pocketic", "--locked"]);
+        .args(tests.get_args())
+        .args(["--", "--list", "--format", "terse"]);
+    if mode == "cohorts" {
+        discovery.arg("--exact");
+        tests.args(["--", "--exact", "--nocapture"]);
+    }
+    std::fs::write(
+        scratch.path().join("subjects.txt"),
+        discover_subjects(&mut discovery, mode)?,
+    )?;
     let mut builds = Vec::new();
     let mut inputs = Vec::new();
     let mut report = crate::report::Report::new(&root)?;
     let recipes = if mode == "watchdog" {
-        tests.arg("tests::");
         vec![(
             "runtime",
             "IC_TIMERS_PROBE_WASM",
@@ -52,11 +148,6 @@ pub(crate) fn run(
             None,
         )]
     } else {
-        tests.args([
-            "comparable_policy_cohorts_report_size_and_instruction_subjects",
-            "--",
-            "--nocapture",
-        ]);
         COHORTS
             .iter()
             .map(|&(cohort, variable)| (cohort, variable, "ic-timers-size-probe", Some(cohort)))
@@ -98,10 +189,11 @@ pub(crate) fn run(
         inputs.push((spec, before));
         builds.push(built);
     }
-    if let Some(path) = &report_path {
-        tests.env("IC_TIMERS_COHORT_REPORT", path);
+    if report_path.is_some() {
+        tests.env("IC_TIMERS_COHORT_REPORT", &candidate);
         tests.env("IC_TIMERS_COHORT_CONTEXT", serde_json::to_string(&report)?);
     }
+    tests.env("IC_TIMERS_DIAGNOSTICS", scratch.path());
     let status = tests.status()?;
     for ((spec, before), built) in inputs.iter().zip(&builds) {
         let after = resolve_cargo_build_inputs(spec)?;
@@ -119,9 +211,14 @@ pub(crate) fn run(
     if !status.success() {
         return Err(format!("{mode} PocketIC subjects failed: {status}").into());
     }
-    if let (Some(path), Some(baseline)) = (&report_path, &baseline) {
-        crate::report::compare(path, baseline)?;
+    if let Some(path) = &report_path {
+        let completed = crate::report::Report::read_candidate(&candidate, &report)?;
+        if let Some(baseline) = &baseline {
+            crate::report::compare(&candidate, baseline)?;
+        }
+        completed.publish(path)?;
     }
+    scratch.cleanup()?;
     Ok(())
 }
 

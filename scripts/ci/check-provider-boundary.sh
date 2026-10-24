@@ -27,7 +27,7 @@ find({ no_chdir => 1, wanted => sub {
     if ($file ne $ffi && $text =~ /(?:\bunsafe\s*(?:\{|extern|fn)|unsafe\(export_name|allow\(unsafe_code\)|ic_platform::ic0::call_(?:new|on_cleanup)\b)/) {
         die "unsafe operations and IC callback registration belong to FFI: $file\n";
     }
-    if ($file !~ m{/platform/} && $text =~ /ic_platform::ic0::global_timer_set|ic_platform::executor::/) {
+    if ($file !~ m{/platform/} && $text =~ /\bic_platform\b/) {
         die "timer execution belongs to the private platform: $file\n";
     }
 }}, $root);

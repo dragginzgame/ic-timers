@@ -2,10 +2,31 @@
 
 use ic_build::artifacts::WasmBuildRecord;
 use ic_host_artifacts::artifact::{hash_reader, read_reader};
+use ic_host_fs::durable::{PublicationMode, WriteOptions, write_bytes};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, error::Error, fs, path::Path};
 
 type Result<T> = std::result::Result<T, Box<dyn Error>>;
+
+const POLICY_METRICS: &[&str] = &[
+    "start_instructions",
+    "duplicate_instructions",
+    "cancel_instructions",
+    "snapshot_instructions",
+    "inventory_instructions",
+    "scheduler_instructions",
+    "work_instructions",
+    "memory_sampling_empty",
+    "memory_sampling_sampled",
+    "memory_sampling_overhead",
+    "dispatch_cycles",
+    "wasm_bytes",
+];
+const CALIBRATION_METRICS: &[&str] = &[
+    "scheduler_instructions",
+    "work_instructions",
+    "dispatch_cycles",
+];
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -83,18 +104,56 @@ impl Report {
         );
     }
 
-    #[cfg(test)]
-    pub(crate) fn publish(&self) -> Result<()> {
-        let path =
-            std::env::var_os("IC_TIMERS_COHORT_REPORT").ok_or("missing cohort report path")?;
-        let path = Path::new(&path);
-        if let Some(parent) = path
-            .parent()
-            .filter(|parent| !parent.as_os_str().is_empty())
+    /// Admit only a complete report from this invocation's child and build context.
+    pub(crate) fn read_candidate(path: &Path, expected: &Self) -> Result<Self> {
+        let candidate = Self::read(path)?;
+        if candidate.schema != expected.schema
+            || candidate.context != expected.context
+            || candidate.artifacts != expected.artifacts
+            || !candidate.complete_measurements()
         {
-            fs::create_dir_all(parent)?;
+            return Err("incomplete cohort report or mismatched invocation build context".into());
         }
-        fs::write(path, serde_json::to_vec_pretty(self)?)?;
+        Ok(candidate)
+    }
+
+    fn complete_measurements(&self) -> bool {
+        self.measurements.len() == crate::build::COHORTS.len() + 2
+            && self.measurements.iter().all(|(subject, metrics)| {
+                let expected = if crate::build::COHORTS
+                    .iter()
+                    .any(|(name, _)| name == subject)
+                {
+                    POLICY_METRICS
+                } else if matches!(
+                    subject.as_str(),
+                    "watchdog-calibration-minimal" | "watchdog-calibration-representative"
+                ) {
+                    CALIBRATION_METRICS
+                } else {
+                    return false;
+                };
+                metrics.len() == expected.len()
+                    && expected.iter().all(|key| metrics.contains_key(*key))
+            })
+    }
+
+    fn read(path: &Path) -> Result<Self> {
+        Ok(serde_json::from_slice(&read_reader(
+            fs::File::open(path)?,
+            1024 * 1024,
+        )?)?)
+    }
+
+    pub(crate) fn publish(&self, path: &Path) -> Result<()> {
+        write_bytes(
+            path,
+            WriteOptions {
+                mode: PublicationMode::Replace,
+                permissions: 0o600,
+            },
+            &serde_json::to_vec_pretty(self)?,
+        )?;
         println!("cohort receipt: {}", path.display());
         Ok(())
     }
@@ -107,14 +166,8 @@ pub(crate) fn digest(path: &Path) -> Result<String> {
 }
 
 pub(crate) fn compare(current: &Path, baseline: &Path) -> Result<()> {
-    let load = |path: &Path| -> Result<Report> {
-        Ok(serde_json::from_slice(&read_reader(
-            fs::File::open(path)?,
-            1024 * 1024,
-        )?)?)
-    };
-    let current = load(current)?;
-    let baseline = load(baseline)?;
+    let current = Report::read(current)?;
+    let baseline = Report::read(baseline)?;
     let changes = current.deltas(&baseline)?;
     println!("cohort comparison (review evidence; positive deltas are increases):");
     for (subject, delta) in changes {
@@ -130,17 +183,14 @@ impl Report {
         }
         if self.artifacts.len() != 4
             || self.artifacts.keys().ne(baseline.artifacts.keys())
-            || self.measurements.is_empty()
-            || self.measurements.keys().ne(baseline.measurements.keys())
+            || !self.complete_measurements()
+            || !baseline.complete_measurements()
         {
             return Err("incomparable cohort subjects/artifacts".into());
         }
         let mut changes = BTreeMap::new();
         for (subject, metrics) in &self.measurements {
             let previous = &baseline.measurements[subject];
-            if metrics.is_empty() || metrics.keys().ne(previous.keys()) {
-                return Err("incomparable cohort metrics".into());
-            }
             for (metric, value) in metrics {
                 changes.insert(
                     format!("{subject}/{metric}"),

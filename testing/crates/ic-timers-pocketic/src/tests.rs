@@ -51,6 +51,49 @@ fn typed_entrypoints_reject_invalid_wire_before_mutating_timer_state() {
         assert!(!ordinary_observation(pic, canister_id).declared);
         assert_eq!(snapshot(pic, canister_id).scheduler_started.total, 0);
     }
+    // Exercise our protocol-to-Testkit adapter at its three failure boundaries.
+    // Raw malformed frames above remain direct calls so no client normalizes them.
+    let caller = ExternalPrincipal::anonymous();
+    let error = update_wire::<(), _>(
+        pic,
+        canister_id,
+        caller,
+        Method::StartOrdinary,
+        vec![0_u8; REQUEST_LIMITS.bytes + 1],
+    )
+    .unwrap_err();
+    assert!(matches!(
+        error,
+        ic_testkit::pic::WireCallError::Encode { .. }
+    ));
+    let error = update_wire::<(), _>(
+        pic,
+        canister_id,
+        caller,
+        Method::StartOrdinary,
+        (2_u8, false),
+    )
+    .unwrap_err();
+    let ic_testkit::pic::WireCallError::Call { context, source } = error else {
+        panic!("expected probe rejection, got {error}");
+    };
+    assert_eq!(context.operation, "update_call");
+    assert_eq!(context.canister_id, canister_id);
+    assert_eq!(context.caller, caller);
+    assert_eq!(context.method, Method::StartOrdinary.name());
+    assert_eq!(context.method_id, id);
+    assert!(matches!(
+        source.as_ref(),
+        ic_testkit::pic::PocketIcCallFailure::Rejected(_)
+    ));
+    let error = query_wire::<bool, _>(pic, canister_id, caller, Method::OrdinaryObservation, ())
+        .unwrap_err();
+    let ic_testkit::pic::WireCallError::Decode { context, .. } = error else {
+        panic!("expected response shape rejection, got {error}");
+    };
+    assert_eq!(context.operation, "query_call");
+    assert_eq!(context.method_id, Method::OrdinaryObservation as u64);
+    assert!(!ordinary_observation(pic, canister_id).declared);
     let reply = pic
         .update_call(
             canister_id,

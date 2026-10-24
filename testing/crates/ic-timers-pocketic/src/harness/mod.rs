@@ -3,7 +3,8 @@
 use ic_platform::pocket_ic::{PocketIc, PocketIcBuilder};
 use ic_platform::principal::ExternalPrincipal;
 use ic_testkit::pic::{
-    CanisterInstallExt, InstallSpec, PocketIcInstance, PocketIcStartupConfig, tick_until,
+    CanisterInstallExt, InstallSpec, PocketIcInstance, PocketIcStartupConfig, WireCallError,
+    WireCallSpec, tick_until,
 };
 use ic_timers_test_protocol::rpc::{Method, REQUEST_LIMITS, RESPONSE_LIMITS};
 use serde::{Serialize, de::DeserializeOwned};
@@ -54,12 +55,22 @@ pub fn fresh_pocket_ic() -> PocketIcInstance<PocketIc> {
         .filter(|path| !path.is_empty())
         .map(PathBuf::from)
         .expect("run the Testkit pocketic-check gate and supply its admitted POCKET_IC_BIN");
+    let diagnostics = env::var_os("IC_TIMERS_DIAGNOSTICS")
+        .map(PathBuf::from)
+        .expect("qualification diagnostics directory");
+    let logs = ic_host_fs::directory::create_unique_directory(
+        &diagnostics,
+        "pocketic",
+        0o700,
+        std::num::NonZeroUsize::new(128),
+    )
+    .expect("allocate per-instance server logs");
     PocketIcStartupConfig::Spawn {
         server_binary: binary,
         timeout: STARTUP_TIMEOUT,
         server_hard_ttl: Some(Duration::from_secs(5 * 60)),
         server_idle_ttl: None,
-        server_output_files: None,
+        server_output_files: Some((logs.join("stdout.log"), logs.join("stderr.log"))),
     }
     .build_instance(PocketIcBuilder::new().with_application_subnet())
     .expect("construct a fresh owned PocketIC instance through ic-testkit")
@@ -71,24 +82,25 @@ pub fn update_unit(pic: &PocketIc, canister_id: ExternalPrincipal, method: Metho
         .expect("probe update succeeds");
 }
 
-/// Send one method-bound Wire request through the maintained raw PocketIC API.
+/// Keep probe protocol selection local; Testkit owns typed transport and errors.
+fn wire_call(method: Method) -> WireCallSpec {
+    WireCallSpec {
+        method: method.name(),
+        method_id: method as u64,
+        request_limits: REQUEST_LIMITS,
+        response_limits: RESPONSE_LIMITS,
+    }
+}
+
+/// Send one method-bound Wire update without retrying consumer work.
 pub fn update_wire<T: Serialize + DeserializeOwned, A: Serialize>(
     pic: &PocketIc,
     canister_id: ExternalPrincipal,
     caller: ExternalPrincipal,
     method: Method,
     args: A,
-) -> Result<T, Box<dyn std::error::Error>> {
-    let id = method as u64;
-    let request = ic_wire::native::encode_request(id, &args, REQUEST_LIMITS)?;
-    let response = pic
-        .update_call(canister_id, caller, method.name(), request)
-        .map_err(|error| format!("{}: {error:?}", method.name()))?;
-    Ok(ic_wire::native::decode_response(
-        id,
-        &response,
-        RESPONSE_LIMITS,
-    )?)
+) -> Result<T, WireCallError> {
+    ic_testkit::pic::update_wire(pic, canister_id, caller, wire_call(method), &args)
 }
 
 /// Decode a bounded Wire query reply without changing its caller or timing.
@@ -98,15 +110,6 @@ pub fn query_wire<T: Serialize + DeserializeOwned, A: Serialize>(
     caller: ExternalPrincipal,
     method: Method,
     args: A,
-) -> Result<T, Box<dyn std::error::Error>> {
-    let id = method as u64;
-    let request = ic_wire::native::encode_request(id, &args, REQUEST_LIMITS)?;
-    let response = pic
-        .query_call(canister_id, caller, method.name(), request)
-        .map_err(|error| format!("{}: {error:?}", method.name()))?;
-    Ok(ic_wire::native::decode_response(
-        id,
-        &response,
-        RESPONSE_LIMITS,
-    )?)
+) -> Result<T, WireCallError> {
+    ic_testkit::pic::query_wire(pic, canister_id, caller, wire_call(method), &args)
 }

@@ -2,6 +2,42 @@
 
 All notable changes to this project are recorded here.
 
+## [0.30.9]
+
+- Qualify the incoming published Build/Host/Testkit 0.66.3 selection and refresh
+  both lock-selected CLIs. Build excludes generated targets in nested explicit
+  Cargo workspaces while retaining declared source inputs. Platform/macros 0.6.12,
+  Wire/derive 0.6.11 and Metrics 0.15.7 are current published selections. Retain
+  Thiserror 2.0.18 because the selected PocketIC client requires that exact version.
+
+- Require named recovery subjects and reject ignored qualification selections.
+  Validate exact cohort metric fields, retain per-instance PocketIC logs on
+  failures, and upload successful hosted cohort receipts without extra builds.
+- Confine Platform imports to the private provider boundary, including aliases.
+  Isolate provider-effect application in a private runtime module without changing
+  transition ordering, public APIs or recovery semantics.
+- Exercise suspended ordinary command sequences through completion, abandonment
+  and backend rejection. Document and test that dropping a registration does not
+  cancel or unregister it. Mark consumer adoption records as historical evidence.
+
+- Reject empty/missing qualification test selections before canister builds.
+  Require a fresh complete cohort report matching this invocation's build context,
+  and publish it only after successful subjects, input checks and any comparison.
+- Protect reviewed cohort baselines with Host's inode-aware alias admission and
+  atomically publish complete candidate reports through published Host FS 0.66.3.
+- Keep tag-only metadata checks on the shared host-tool setup/check path without
+  provisioning the release editor, Testkit CLI or PocketIC server.
+- Delegate native probe Wire calls to Testkit 0.66.3's typed helpers, preserving
+  method identities, caller selection and codec limits. Keep deliberately
+  malformed-frame tests on raw transport; deployed timer/probe graphs are unchanged.
+- Keep the renamed-Wire rejection fixture on the prepared current lock selection,
+  so offline CI reaches its dependency-boundary assertions without downloading
+  obsolete Wire packages ([#75](https://github.com/dragginzgame/ic-timers/issues/75)).
+- Correct README setup guidance to require explicit optional IC-tool selections
+  ([#76](https://github.com/dragginzgame/ic-timers/issues/76)) and update its
+  published API example to 0.30.8. This is advisory documentation upkeep; it adds
+  no release gate and changes no runtime behavior.
+
 ## [0.30.8] - 2026-10-23
 
 - Adopt published Platform/macros 0.6.11 and Wire/derive 0.6.10, retaining

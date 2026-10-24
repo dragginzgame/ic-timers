@@ -2,6 +2,13 @@
 
 # Canic adapter contract
 
+This page preserves dated adoption evidence, not current dependency or issue
+status. Current integration guidance is in [runtime architecture](../architecture.md#consumer-integration)
+and [the public API](../../README.md#runtime-ownership). Consumer owners qualify
+their selected graphs and deployed artifacts; historical receipts below qualify
+only their named sources. See [the release guide](../releasing.md#host-support)
+for this repository's host-evidence limits.
+
 Status: historical exact-0.5.0 adapter record with runtime introspection schema 3.
 
 This record preserves the supplied exact-0.5.0 evidence; it is not a fresh

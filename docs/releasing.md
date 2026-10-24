@@ -139,13 +139,17 @@ inherited streaming output and typed timeout/nonzero-exit failures. OS spawn,
 signal and reap syscalls can exceed elapsed-time budgets; group signalling does
 not prove every descendant has exited. Native macOS timing remains unqualified.
 
-The receipt reader and injected build spawner use published Host and Build 0.66,
+The receipt reader, filesystem publication and injected build spawner use published Host and Build 0.66,
 whose artifact engine accepts the same `OwnedChild` identity.
 Update these together when exchanging Host values; metadata/tree observation's
 command/byte boundary does not cover this build API. Testkit 0.66 selects the
 same Host family. It and Platform/Wire/protocol are dev-dependencies of the driver;
 only the child test binary needs the simulator and codecs. No aliases or local
 child conversions are needed.
+The child selects Testkit's `wire` feature for one-call typed transport; Timers
+still selects method names/IDs, callers and directional limits. Deliberately
+malformed inputs continue through raw PocketIC calls. Typed errors preserve the
+original Wire or transport cause with call context rather than local string wrapping.
 
 The root-lock-selected Build editor and Testkit server executables require the
 `cli` feature. Their local setup/check adapters pass it to Shared's installer;
@@ -153,8 +157,33 @@ normal library dependencies remain CLI-free. After updating the package/feature
 selection, run `make install-release-editor install-testkit-server` explicitly,
 then `make tools-check`. Tool checks remain offline and never repair selections.
 
-`pocketic-cohorts` writes `testing/target/cohorts.json` only after its subjects
-pass. The report contains instruction brackets, dispatch cycles and Wasm bytes,
+Before canister builds, the driver captures Cargo's terse test listing for the
+selected binary/filter through Host's bounded command interface. Watchdog
+selection must include every critical subject named by the driver's recovery
+roster; one unrelated runtime test cannot qualify missing recovery coverage.
+A second listing rejects ignored selected subjects without forcibly running them.
+Cohorts must select its one fully qualified subject, run with `--exact`.
+Failed discovery, invalid output and missing subjects fail even if Cargo exits
+zero. Discovery executes no test bodies or simulator calls and shares the
+worker's existing elapsed-time/process-group budget.
+
+Each invocation allocates a fresh private `timer-qualification-*` directory under
+the selected temporary root. Its path is printed and failures retain the directory;
+successful runs clean it up. Successful discovery leaves `subjects.txt` there.
+Each Testkit instance writes stdout/stderr to a unique subdirectory of this
+invocation through the published caller-owned output interface. These logs survive
+instance teardown and remain with failed diagnostics; existing CI temporary-root
+collection includes them. They inherit the invocation retention lifecycle.
+The child writes its candidate report there, never to the final output. The
+parent reads at most 1 MiB, requires matching schema/context/artifact records and
+all four cohorts plus both calibration subjects with their exact required metric
+fields; missing or unknown metrics reject both admission and comparison.
+A previous final report is never accepted in place of missing new evidence.
+
+`pocketic-cohorts` atomically publishes `testing/target/cohorts.json` only after
+subjects pass, post-measurement inputs are rechecked, candidate admission succeeds
+and any requested baseline comparison passes. Earlier failures preserve an existing
+final report and retain the unadmitted candidate as diagnostics. The report contains instruction brackets, dispatch cycles and Wasm bytes,
 plus Build's compiler/Cargo identities, target/profile, per-cohort feature,
 source/build fingerprints and artifact SHA-256. It also records the root lockfile
 and admitted server SHA-256 and native host. Installed bytes are checked against
@@ -171,16 +200,29 @@ POCKET_IC_BIN="$(bash scripts/dev/testkit-server.sh check)" \
   cohorts --baseline /absolute/path/to/reviewed-cohorts.json
 ```
 
-Use `--report PATH` for a separate candidate output. The driver rejects the baseline’s canonical path as its output. Comparisons require matching schema,
+Use `--report PATH` for a separate candidate output. Before building, the driver
+uses Host's alias admission to reject the baseline's resolved name, symlinks and
+device/inode aliases, including hard links. Host atomically replaces the report
+directory entry with complete serialized bytes using owner-only file permissions;
+it never truncates an existing inode. Interrupted staging can leave diagnostics,
+and an error after publication can leave the complete new report visible. Keep
+the selected parent hierarchy under caller control and exclude concurrent namespace
+writers; these checks are not confinement. A successful driver exit remains
+required for qualification. Comparisons require matching schema,
 compiler/Cargo, target/profile, lockfile, server, host and measurement subjects.
 Source and artifact identities may change: they attribute the candidate bytes
-rather than prohibit code comparisons. Changed dependencies or tools require an
-explicitly reviewed new baseline; there is no automatic rewrite or cross-context
+rather than prohibit code comparisons. Successful Linux and macOS qualification
+jobs upload the final receipt with source/host/toolchain identity and 14-day
+retention. Artifact upload alone does not qualify a failed or cancelled job.
+Changed dependencies or tools require an explicitly reviewed new baseline; there is no automatic rewrite or cross-context
 comparison. Deltas are review evidence, not an arbitrary performance pass/fail
 budget. Whole-message and unaccounted instruction totals remain unavailable;
 cycle costs are not converted to instructions. Use identical ambient Cargo/Rust
-configuration for comparisons: the recorded context checks do not normalize it. Minimal and representative work
-calibrations remain separate from scheduler/work instruction brackets.
+configuration for comparisons: the recorded context checks do not normalize it.
+[Build #241](https://github.com/dragginzgame/ic-tooling/issues/241) requests a
+source-independent recipe identity at the canonical configuration owner; pending
+that released capability, no local Cargo configuration resolver is introduced.
+Minimal and representative work calibrations remain separate from scheduler/work instruction brackets.
 
 
 The native protocol tests belong to `make test`. Native runtime tests use a
@@ -200,6 +242,9 @@ checks the actual annotated tag/version, main reachability, the unified snapshot
 payload and the locked graph without repeating broad release fixtures or full
 Rust builds for the same commit. A successful tag lane alone is not product
 qualification.
+That lane prepares/checks the shared host bundle for the metadata parsers; it
+does not provision common Cargo formatters, the release editor, Testkit CLI or
+PocketIC. PR/main and ordinary developer setup retain the complete toolset.
 
 ## Dependency role boundary
 

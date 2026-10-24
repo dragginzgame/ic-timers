@@ -88,7 +88,7 @@ actual use through `workspace = true`.
 The published `ic-timers` library uses Metrics, Thiserror and Platform
 (executor and raw IC system bindings). Serde is qualification-only and belongs
 in the tests/tooling catalog group; the library's lean Platform graph excludes it.
-Wire, Platform's canister runtime, Build, Host Process, Testkit and the probe protocol serve
+Wire, Platform's canister runtime, Build, Host FS/Process, Testkit and the probe protocol serve
 qualification packages here.
 Candid remains transitive only in the native driver through PocketIC/Testkit. Local probe protocols use Wire; Platform 0.6's `cdk`
 feature and both canister graphs are Candid-free. Full CDK/macros and the retired
@@ -103,6 +103,10 @@ and canister graphs exclude native simulator features. Build, Host and Testkit
 share the 0.66 family, with no older parallel Host or Platform provider.
 The catalog's
 local `ic-timers` entry is the probes' dependency on the production library.
+The coordinator uses published Host FS 0.66.3 for baseline alias admission and
+atomic report publication; its test-support feature is dev-only. Testkit's `wire`
+feature is also dev-only and supplies native typed call handling. No new resolved
+package identity is introduced by these explicit edges.
 
 Shared's Make defaults select `cargo sort --workspace --grouped` for formatting
 and add `--check` for independent checks; the duplicate local overrides are removed. Hooks use the same `make fmt` policy

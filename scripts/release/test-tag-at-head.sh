@@ -196,7 +196,8 @@ cat >> "${workflow_root}/bin/make" <<'STUB'
 set -euo pipefail
 printf '%s\n' "$*" >> "$TAG_MAKE_EVENTS"
 case "$*" in
-    install-tools|tools-check) ;;
+    install-host-tools|host-tools-check)
+        [[ "${TAG_FAIL_HOST_TARGET:-}" != "$*" ]] || exit 37 ;;
     fetch) [[ "${TAG_FAIL_FETCH:-false}" != true ]] || exit 37 ;;
     ci) [[ "$TAG_WORKFLOW_SCOPE" == checks ]] || exit 97 ;;
     '--no-print-directory version')
@@ -220,7 +221,7 @@ run_workflow() {
         > "${workflow_root}/workflow.log" 2>&1
 }
 run_workflow
-printf 'install-tools\ntools-check\n--no-print-directory version\nrelease-tag-check\nfetch\n' > "${workflow_root}/expected-make-events"
+printf 'install-host-tools\nhost-tools-check\n--no-print-directory version\nrelease-tag-check\nfetch\n' > "${workflow_root}/expected-make-events"
 cmp "${workflow_root}/expected-make-events" "$TAG_MAKE_EVENTS"
 for expected in 'scripts/ci/verify-shared-tooling-snapshot.sh' \
     'scripts/ci/cargo-release-metadata.sh check-graph ic-timers'; do
@@ -233,6 +234,11 @@ reject_workflow() {
 }
 GITHUB_REF_NAME=v0.0.0 reject_workflow
 TAG_FAIL_VERSION=true reject_workflow
+for target in install-host-tools host-tools-check; do
+    TAG_FAIL_HOST_TARGET="$target" reject_workflow
+    if grep -Fxq -- '--no-print-directory version' "$TAG_MAKE_EVENTS"; then exit 1; fi
+    if [[ "$target" == install-host-tools ]] && grep -Fxq host-tools-check "$TAG_MAKE_EVENTS"; then exit 1; fi
+done
 # Actual failed snapshot admission must stop before graph validation.
 for payload in DRAGGINZGAME.md audits/README.md scripts/ci/dependency-pins.jq; do
     cp -p "$GITHUB_WORKSPACE/$payload" "${workflow_root}/original"

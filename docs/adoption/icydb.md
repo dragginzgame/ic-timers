@@ -2,6 +2,13 @@
 
 # IcyDB adoption record
 
+This page preserves dated adoption evidence, not current dependency or issue
+status. Current integration guidance is in [runtime architecture](../architecture.md#consumer-integration)
+and [the public API](../../README.md#runtime-ownership). Consumer owners qualify
+their selected graphs and deployed artifacts; historical receipts below qualify
+only their named sources. See [the release guide](../releasing.md#host-support)
+for this repository's host-evidence limits.
+
 Status: historical exact-0.5.0 IcyDB adoption record.
 This is maintained downstream evidence supplied by the IcyDB owner; this
 repository did not modify IcyDB. Historical tagged and intermediate evidence

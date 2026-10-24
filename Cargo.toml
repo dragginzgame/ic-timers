@@ -35,6 +35,7 @@ thiserror = "2.0"
 clap = { version = "4.6", default-features = false, features = ["std", "help", "usage", "error-context"] }
 ic-build = "0.66"
 ic-host-artifacts = "0.66"
+ic-host-fs = "0.66"
 ic-host-process = "0.66"
 ic-testkit = "0.66"
 ic-timers = { path = "crates/ic-timers" }

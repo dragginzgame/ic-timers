@@ -114,7 +114,10 @@ printf '%s\n' 'mod platform;' > crates/ic-timers/src/lib.rs
 expect_failure 'public interfaces' bash scripts/ci/check-provider-boundary.sh
 printf '%s\n' "${facade_header[@]}" > crates/ic-timers/src/lib.rs
 for operation in 'unsafe fn leak() {}' 'fn leak() { ic_platform::ic0::global_timer_set(1); }' \
-    'fn leak() { ic_platform::executor::spawn_protected(async {}); }'; do
+    'fn leak() { ic_platform::executor::spawn_protected(async {}); }' \
+    'use ic_platform::ic0; fn leak() { ic0::global_timer_set(1); }' \
+    'use ic_platform::{executor as ex}; fn leak() { ex::spawn_protected(async {}); }' \
+    'use ic_platform as platform_alias;'; do
     printf '%s\n' "${operation}" > crates/ic-timers/src/leak.rs
     if [[ "${operation}" == unsafe* ]]; then expected=FFI; else expected='private platform'; fi
     expect_failure "${expected}" bash scripts/ci/check-provider-boundary.sh

@@ -37,9 +37,10 @@ canister graphs must still exclude older providers that lack that key.
 | Measurement arithmetic | `ic-metrics` | Timer-specific event names, recording/sample boundaries and memory extents in `snapshot/metrics.rs` |
 | Durable jobs, readiness, lifecycle order and operator-health labels | Consuming application/framework | Registration claims and snapshots; no durable task database or application lifecycle exports here |
 | Wasm compilation and artifact-cache custody | `ic-build`, with explicit child custody from `ic-host-process` | `testing/crates/ic-timers-pocketic/src/build/mod.rs` selects packages, profile, features and artifact lifetime |
+| Native report alias admission and atomic publication | `ic-host-fs` | The qualification driver protects its reviewed baseline and selects report schema, path and permissions |
 | PocketIC client types and raw call transport | `ic-platform` | Native tests import `pocket_ic` directly and retain bounded Wire requests |
 | PocketIC server selection, admission, lifecycle and bounded progress | `ic-testkit` | `scripts/dev/testkit-server.sh` selects the root-lock CLI; the native harness supplies instance configuration |
-| Controlled probe codecs | Published `ic-wire::native` and Serde | The unpublished protocol owns method identities/limits; Platform hooks and the native harness own transport integration |
+| Controlled probe codecs | Published `ic-wire::native` and Serde; Testkit owns native typed call handling | The unpublished protocol owns method identities/limits; Platform hooks translate canister failures to traps; the native harness selects the protocol and caller |
 | Common tools, fixture dependency closure, evidence transport and release mechanics | Reviewed Shared Tooling snapshot | Local Make selections, product release/source policy and evidence identity; see [adoption boundaries](shared-tooling.md) |
 
 The [root manifest](../Cargo.toml) owns all five maintained packages and every
@@ -123,7 +124,7 @@ implementation details. The retired `ic-testkit-candid` package remains absent.
 The driver selects Platform, Testkit, Wire and the probe protocol only for its
 test binary. Its normal build coordinator uses Build and Host for artifacts and
 process custody, plus Clap/Serde/JSON for commands and receipts. It does not link
-the simulator or codecs. Build, Host and Testkit share the published 0.66 family;
+the simulator or codecs. Build, Host and Testkit share published 0.66.3;
 the driver and Testkit 0.66 select the same Platform 0.6 identity. The incoming
 Testkit also selects Platform's Candid/management support for native provider
 fixtures; PocketIC retains Candid for its simulator protocols. These are native
@@ -139,9 +140,10 @@ The Candid-free runtime introduced in Platform 0.2.0 was requested in
 The two small adapters translate consumer-owned Wire limits/errors into Platform
 hooks. Wire 0.6 retains this native Serde codec and retires its finite API;
 the current probe records need no layout or limit changes. Testkit 0.66's optional
-helpers also support native Serde calls; they are not selected by this harness.
-Keep the direct raw-call/native-codec integration; the protocol package must not
-acquire a Platform dependency to hide these adapters. Host metadata generation
+helpers own request encoding, one call without retry, response decoding and typed
+failure context in the native harness. Raw malformed-input tests remain direct
+PocketIC calls. The protocol package must not acquire a Platform dependency to
+hide the canister adapters. Host metadata generation
 is not selected by probes or the protocol package.
 
 The published library retains three direct dependencies: Metrics owns counter
@@ -530,3 +532,9 @@ subjects. Their API tables and historical provider limits are not current
 integration instructions. The numbered design records preserve decisions that
 preceded the owned backend; current behavior is defined by the facade,
 implementation and maintained tests above.
+
+Provider-effect application lives in the private `runtime/effects.rs` owner.
+It retains the existing ordering: detach under registry control, restore or clear
+every linear handle, then release removed callback captures outside registry
+borrows. Policy arbitration remains in the registry's atomic transitions; the
+module boundary adds no provider, public interface or compatibility layer.

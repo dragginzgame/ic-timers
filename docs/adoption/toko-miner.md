@@ -2,8 +2,15 @@
 
 # Toko Miner adoption evidence
 
-Status: current dirty graph selects two timer package identities; coordinated
-adoption is blocked. Earlier single-package composition receipts remain historical.
+This page preserves dated adoption evidence, not current dependency or issue
+status. Current integration guidance is in [runtime architecture](../architecture.md#consumer-integration)
+and [the public API](../../README.md#runtime-ownership). Consumer owners qualify
+their selected graphs and deployed artifacts; historical receipts below qualify
+only their named sources. See [the release guide](../releasing.md#host-support)
+for this repository's host-evidence limits.
+
+Historical status on 2026-10-03: the inspected dirty graph selected two timer
+package identities and could not qualify coordinated adoption. Earlier single-package composition receipts remain historical.
 
 ## Current read-only dependency inspection — 2026-10-03
 
@@ -17,7 +24,7 @@ Core's exact `=0.8.1` requirement and IcyDB's `0.9` requirement.
 This graph cannot establish one shared timer registry. The earlier aligned
 0.8.1 receipts do not qualify it. No fresh resolver, build, timer inventory or
 IC scenario was run; this is inspected lock/manifests, not deployment evidence.
-[Canic #33](https://github.com/dragginzgame/canic/issues/33) remains open for a
+[Canic #33](https://github.com/dragginzgame/canic/issues/33) was the recorded tracker for a
 published coherent graph and composed qualification. Current local Canic uses
 timer `0.9`, but its dirty worktree is not that published Core package.
 
@@ -111,7 +118,7 @@ of all later Canic/IcyDB/application combinations. The receipt SHA-256 is
 This repository inspected the owner-supplied evidence without rerunning its
 managed scenarios or editing any sibling repository.
 
-## Remaining application work
+## Application work identified on 2026-10-03
 
 - The checkpoint timer still uses an auxiliary `OnceRegistration` to wake its
   Watchdog. The released exact-deadline API supports removing that hand-off;

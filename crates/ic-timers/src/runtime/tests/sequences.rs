@@ -207,3 +207,133 @@ fn generated_command_sequences_preserve_authority_and_handle_ownership() {
         }
     }
 }
+
+#[test]
+fn suspended_command_sequences_retire_authority_across_completion_and_abandonment() {
+    for recurring in [false, true] {
+        for lifetime in [
+            DeclarationLifetime::Retained,
+            DeclarationLifetime::RemoveWhenStopped,
+        ] {
+            for abandon in [false, true] {
+                for admission_failure in [false, true] {
+                    for word in 0..4_u32.pow(3) {
+                        let _fixture = setup();
+                        let timer = identity("suspended-sequence");
+                        let gate = SuspendedWork::default();
+                        let context = Rc::new(RefCell::new(None));
+                        let captured = Rc::new(());
+                        let claim = suspended_ordinary_registration(
+                            recurring,
+                            timer.clone(),
+                            lifetime,
+                            gate.clone(),
+                            Rc::clone(&context),
+                            Rc::clone(&captured),
+                        );
+                        reconcile_ordinary_claim(&claim, None, Some(TimerSchedule::At(10)))
+                            .unwrap();
+                        set_time(10);
+                        assert!(run_next_due());
+                        let token = context.borrow().as_ref().unwrap().clone();
+                        let mut commands = word;
+                        for _ in 0..3 {
+                            match commands % 4 {
+                                0 => cancel_claim(&claim, None),
+                                1 if recurring => ensure_recurring_claim(&claim, None),
+                                1 => ensure_once_claim(&claim, None, TimerSchedule::At(20)),
+                                2 => reconcile_ordinary_claim(
+                                    &claim,
+                                    None,
+                                    Some(TimerSchedule::At(30)),
+                                ),
+                                3 => unregister_claim(&claim),
+                                _ => unreachable!(),
+                            }
+                            .unwrap();
+                            commands /= 4;
+                            assert_eq!(timer_count(), 0, "running work owns no pending wakeup");
+                        }
+                        if admission_failure {
+                            platform::ADMISSION_FAULT
+                                .set(Some((0, platform::AdmissionError::Capacity)));
+                        }
+                        gate.resume();
+                        if abandon {
+                            assert!(discard_next_due());
+                        } else {
+                            assert!(run_next_due());
+                        }
+                        platform::ADMISSION_FAULT.set(None);
+                        assert!(
+                            matches!(
+                                cancel_claim(&claim, Some(&token)),
+                                Err(TimerError::RegistrationExpired)
+                            ),
+                            "stale context: recurring={recurring} lifetime={lifetime:?} abandon={abandon} fault={admission_failure} word={word}"
+                        );
+                        if timer_snapshot(&timer).unwrap().is_some() {
+                            unregister_claim(&claim).unwrap();
+                        }
+                        assert_eq!(timer_count(), 0);
+                        assert!(timer_inventory().unwrap().is_empty());
+                        assert_eq!(Rc::strong_count(&captured), 1);
+                    }
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn dropping_public_claims_does_not_cancel_or_unregister() {
+    for policy in 0..3 {
+        let _fixture = setup();
+        let timer = identity("dropped-claim");
+        let start = TimerStart::Retained {
+            initial: Some(TimerSchedule::At(10)),
+        };
+        let cadence = TimerCadence::from_nanos(5).unwrap();
+        match policy {
+            0 => drop(
+                register_once(timer.clone(), start, |_| async {
+                    OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
+                })
+                .unwrap(),
+            ),
+            1 => drop(
+                register_after_completion(timer.clone(), cadence, start, |_| async {
+                    AfterCompletionRunResult::new(
+                        TimerCompletion::no_work(),
+                        AfterCompletionDecision::Stop,
+                    )
+                })
+                .unwrap(),
+            ),
+            _ => drop(
+                register_watchdog(timer.clone(), cadence, start, |_| {
+                    WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
+                })
+                .unwrap(),
+            ),
+        }
+        assert_eq!(timer_count(), 1);
+        assert_eq!(timer_inventory().unwrap().len(), 1);
+        set_time(10);
+        assert!(run_next_due());
+        if policy == 2 {
+            assert!(run_next_due());
+        }
+        assert_eq!(timer_count(), 0);
+        let snapshot = timer_snapshot(&timer).unwrap().unwrap();
+        assert_eq!(
+            snapshot.observability().counters().work_completed().total(),
+            1
+        );
+        assert_eq!(
+            timer_inventory().unwrap().len(),
+            1,
+            "retained declaration survives its lost claim"
+        );
+    }
+}

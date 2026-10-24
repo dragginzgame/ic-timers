@@ -27,7 +27,11 @@ fn comparable_policy_cohorts_report_size_and_instruction_subjects() {
     report
         .measurements
         .insert("watchdog-calibration-representative".into(), representative);
-    report.publish().expect("retain cohort receipt");
+    let output = env::var_os("IC_TIMERS_COHORT_REPORT").expect("driver report path");
+    // This is invocation-local evidence. The parent admits it and owns durable
+    // publication only after successful subjects and post-measurement checks.
+    fs::write(output, serde_json::to_vec_pretty(&report).unwrap())
+        .expect("retain candidate cohort report");
 }
 
 fn run_cohort(cohort: &str) -> std::collections::BTreeMap<String, u128> {

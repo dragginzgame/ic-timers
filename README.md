@@ -57,7 +57,7 @@ but it does not promise that a task will happen exactly once.
 
 | Field | Value |
 | --- | --- |
-| Released API line | `0.27` |
+| Released API line | `0.30` |
 
 IC Timers is written in Rust 2024 and supports Rust
 1.91.0 and newer. The private backend owns one-shot dispatch through IC
@@ -179,14 +179,14 @@ exact reconciliation can discard an invalid callback delay before that check.
 
 ## Minimal `Once` example
 
-The examples below use the released 0.27 API.
+The examples below use the released 0.30 API.
 
 Select one exact published package version when this crate participates in a
 shared framework/application registry:
 
 ```toml
 [dependencies]
-ic-timers = "=0.27.1"
+ic-timers = "=0.30.8"
 ```
 
 Every framework and application crate linked into the same canister must use
@@ -227,7 +227,9 @@ fn declare_cleanup_timer() -> Result<OnceRegistration, Box<dyn Error>> {
 The returned registration is the sole-owner control capability. Keep it in
 volatile owner state so that code can inspect, ensure, reconcile, cancel, or
 unregister that exact claim. The capability types are `#[must_use]` and are
-intentionally not cloneable.
+intentionally not cloneable. Dropping a registration does not cancel or unregister
+its timer. Call `unregister()` for explicit removal; losing a retained claim can
+leave its declaration occupying registry capacity until the next Wasm instance.
 
 For fixed declarations, use `reconcile_once`,
 `reconcile_after_completion`, or `reconcile_watchdog` during both `init` and
@@ -480,10 +482,10 @@ remain defined in [AGENTS.md](AGENTS.md).
 
 | Command | Purpose |
 | --- | --- |
-| `make update-dev` | Install the pinned toolchain, components, host/IC/Cargo tools and Testkit server, Wasm target, and formatting hook |
+| `make update-dev` | Install both selected Rust toolchains, components/Wasm targets, host/Cargo tools, release editor, Testkit CLI/server and formatting hook |
 | `make install-host-tools` / `make host-tools-check` | Install pinned jq/yq/ripgrep/cloc or verify the complete bundle offline |
-| `make install-ic-tools` / `make ic-tools-check` | Install the pinned five-tool IC bundle or verify it offline |
-| `make install-tools` / `make tools-check` | Prepare or verify host, IC and Cargo tools, then the selected Testkit CLI/server |
+| `make install-ic-tools IC_TOOLS="wasm-opt"` / `make ic-tools-check IC_TOOLS="wasm-opt"` | Optional manual setup or offline admission for the explicitly named IC executables; no default selection |
+| `make install-tools` / `make tools-check` | Prepare or verify host/Cargo tools, the release editor and selected Testkit CLI/server |
 | `make install-testkit-server` / `make pocketic-check` | Prepare the root-lock selected Testkit CLI/server or check admission offline |
 | `make cloc` | Report Rust LOC/test counts for all root workspace members |
 | `make fmt` / `make fmt-check` | Sort manifests and format or check Rust for all workspace members |
@@ -502,6 +504,9 @@ the Wasm target before installing/checking the common toolsets and hook. Local
 setup and CI use the same reviewed Rust installer; validation remains offline.
 For manual setup, prepare both Rust toolchains and run `make install-tools`
 followed by `make tools-check`.
+Timers' normal setup selects no IC executable bundle. The optional standalone
+IC-tool commands require an explicit `IC_TOOLS` list; setup and checks must use
+the same list. Testkit owns PocketIC server selection and admission independently.
 Common Cargo tools use `.tools/rust/common/bin`; update interactive shell PATH
 exports when adopting the
 [new installation contract](docs/evidence/shared-tooling-history.md#shared-tooling-060-cargo-storage-adoption).

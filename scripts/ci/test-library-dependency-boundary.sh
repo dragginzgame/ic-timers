@@ -102,7 +102,20 @@ cp "$root/Cargo.lock" Cargo.lock
 # the same package used only in dev-dependencies is outside this library graph.
 # Lock preparation is confined to this disposable fixture, never the checkout.
 cp Cargo.toml catalog-original.toml
-perl -pi -e 's/^ic-wire = /leaked-wire = { package = "ic-wire", version = "0.5" }\nic-wire = /' Cargo.toml
+# Pin the deliberate alias to the already prepared package, rather than resolving
+# an independent old Wire graph that a clean offline CI cache cannot provide.
+RUSTUP_AUTO_INSTALL=0 cargo metadata --locked --offline --format-version 1 > wire-alias-metadata.json
+perl -MJSON::PP -0777 -i -pe '
+    BEGIN {
+        open my $input, "<", "wire-alias-metadata.json" or die "$!\n";
+        my @wire = grep { $_->{name} eq "ic-wire" } @{decode_json(<$input>)->{packages}};
+        close $input or die "$!\n";
+        @wire == 1 or die "expected one prepared Wire package\n";
+        $version = $wire[0]{version};
+    }
+    s/^ic-wire = /leaked-wire = { package = "ic-wire", version = "=$version" }\nic-wire = /m
+        or die "missing workspace Wire declaration\n";
+' Cargo.toml
 for table in "target.'cfg(target_arch = \"wasm32\")'.dependencies" "target.'cfg(unix)'.build-dependencies"; do
     cp library-original.toml crates/ic-timers/Cargo.toml
     # Build-dependency cfgs describe the host; normal dependencies describe the
