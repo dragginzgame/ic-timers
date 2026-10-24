@@ -27,7 +27,7 @@ categories = ["asynchronous", "wasm"]
 # Groups describe use by this workspace's packages; members inherit with `workspace = true`.
 [workspace.dependencies]
 # Production dependencies
-ic-metrics = "0.15"
+ic-metrics = "0.16"
 ic-platform = { version = "0.6", default-features = false }
 thiserror = "2.0"
 

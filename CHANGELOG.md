@@ -2,6 +2,18 @@
 
 All notable changes to this project are recorded here.
 
+## [0.31.0]
+
+- **Breaking:** adopt Metrics 0.16.0. `MeasurementCounter` and
+  `MeasurementSummary` now have the Metrics 0.16 Rust identity, including values
+  returned by timer snapshots. Align direct Metrics dependencies when exchanging
+  these values. Arithmetic APIs and implementations are unchanged; Timers does
+  not use the stable adapter extracted to Persistence, and needs no storage reset.
+- Qualify the incoming published Build/Host/Testkit 0.68.1 selection and refresh
+  both lock-selected CLIs. Platform/macros 0.6.15 and Wire/derive 0.7.2 remain
+  current. Retain Thiserror 2.0.18 because the selected PocketIC client requires
+  that exact version; the other direct registry dependencies are already current.
+
 ## [0.30.13] - 2026-10-24
 
 - Qualify the incoming published Platform/macros 0.6.15 selection. Their Rust

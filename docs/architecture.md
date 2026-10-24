@@ -51,6 +51,13 @@ not scheduling authority. The native platform substitute is test-only; it does
 not replace IC execution or prove recovery. Runtime subjects and policy cohorts
 remain separate evidence selections in the [release guide](releasing.md).
 
+Metrics 0.16 supplies the exact public `MeasurementCounter` and
+`MeasurementSummary` identities, including snapshot getter results. Its arithmetic
+source matches 0.15.8, but the new Cargo minor identity is a Timers 0.31 API cut.
+Consumers exchanging values with direct Metrics dependencies must select 0.16
+too. The extracted stable adapter belongs to Persistence; Timers does not depend
+on it or introduce a persisted-format migration.
+
 ## Candid and CDK dependency boundary
 
 Registry-published `ic-platform` is the selected boundary; the current lock and
@@ -124,7 +131,7 @@ implementation details. The retired `ic-testkit-candid` package remains absent.
 The driver selects Platform, Testkit, Wire and the probe protocol only for its
 test binary. Its normal build coordinator uses Build and Host for artifacts and
 process custody, plus Clap/Serde/JSON for commands and receipts. It does not link
-the simulator or codecs. Build, Host and Testkit share published 0.68.0;
+the simulator or codecs. Build, Host and Testkit share published 0.68.1;
 the driver and Testkit 0.68 select the same Platform 0.6 identity. The selected
 Testkit also selects Platform's Candid/management support for native provider
 fixtures; PocketIC retains Candid for its simulator protocols. These are native

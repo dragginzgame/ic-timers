@@ -344,8 +344,10 @@ It distinguishes empty from measured zero and returns `SampleCountOverflow` on
 actual count overflow even when scale is zero. An exact count bounds the scaled
 result within `u128`; there is no separate projection-error case.
 
-Use `ic_timers::{MeasurementCounter, MeasurementSummary}` or the same Metrics
-package when exchanging these values with other libraries. The [root dependency catalog](Cargo.toml) and
+Use `ic_timers::{MeasurementCounter, MeasurementSummary}` or Metrics **0.16**
+when exchanging these values with other libraries. Timers 0.30 used Metrics 0.15;
+align direct Metrics dependencies when moving values across the 0.31 boundary.
+The [root dependency catalog](Cargo.toml) and
 lockfile select that package identity; different Metrics lines have distinct Rust
 types. Preserve wide totals in reports/codecs, or use checked conversions when
 a narrower consumer field is required. The
