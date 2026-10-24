@@ -2,6 +2,13 @@
 
 All notable changes to this project are recorded here.
 
+## [0.30.13]
+
+- Qualify the incoming published Platform/macros 0.6.15 selection. Their Rust
+  sources match 0.6.14; retain executor/IC0 identities, callbacks and probe
+  protocols. Platform's optional Wire metadata remains disabled, so its metadata
+  dependency update does not change the selected Wire 0.7.2 graph.
+
 ## [0.30.12] - 2026-10-24
 
 - Adopt published Build/Host/Testkit 0.68.0 and Wire/derive 0.7.1 together,

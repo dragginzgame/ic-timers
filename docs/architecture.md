@@ -138,7 +138,7 @@ query/update attributes in maintained probe source.
 The Candid-free runtime introduced in Platform 0.2.0 was requested in
 [#31 — Support Candid-free raw and Wire canister entrypoints](https://github.com/dragginzgame/ic-platform/issues/31).
 The two small adapters translate consumer-owned Wire limits/errors into Platform
-hooks. Wire 0.7.1 retains this native Serde codec and its encoder bytes;
+hooks. Wire 0.7.2 retains this native Serde codec and its encoder bytes;
 the current probe records need no layout or limit changes. Testkit 0.68's optional
 helpers own request encoding, one call without retry, response decoding and typed
 failure context in the native harness. Raw malformed-input tests remain direct
