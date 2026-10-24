@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.30.12]
+## [0.30.12] - 2026-10-24
 
 - Adopt published Build/Host/Testkit 0.68.0 and Wire/derive 0.7.1 together,
   removing the Testkit limits mismatch tracked in
