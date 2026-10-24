@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.30.11]
+## [0.30.11] - 2026-10-24
 
 - Adopt published Build/Host/Testkit 0.67.0 and its explicit bounded Cargo
   configuration observation. Refresh the lock-selected release editor and
