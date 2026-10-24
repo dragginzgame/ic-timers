@@ -93,7 +93,7 @@ fn wire_call(method: Method) -> WireCallSpec {
 }
 
 /// Send one method-bound Wire update without retrying consumer work.
-pub fn update_wire<T: Serialize + DeserializeOwned, A: Serialize>(
+pub fn update_wire<T: DeserializeOwned, A: Serialize>(
     pic: &PocketIc,
     canister_id: ExternalPrincipal,
     caller: ExternalPrincipal,
@@ -104,7 +104,7 @@ pub fn update_wire<T: Serialize + DeserializeOwned, A: Serialize>(
 }
 
 /// Decode a bounded Wire query reply without changing its caller or timing.
-pub fn query_wire<T: Serialize + DeserializeOwned, A: Serialize>(
+pub fn query_wire<T: DeserializeOwned, A: Serialize>(
     pic: &PocketIc,
     canister_id: ExternalPrincipal,
     caller: ExternalPrincipal,

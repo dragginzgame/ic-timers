@@ -10,7 +10,7 @@ pub(crate) fn admit_request() -> Result<(), String> {
     Ok(())
 }
 
-pub(crate) fn decode<T: Serialize + DeserializeOwned, const ID: u64>(bytes: Vec<u8>) -> T {
+pub(crate) fn decode<T: DeserializeOwned, const ID: u64>(bytes: Vec<u8>) -> T {
     ic_wire::native::decode_request(ID, &bytes, REQUEST_LIMITS)
         .unwrap_or_else(|error| ic_platform::cdk::api::trap(format!("probe request: {error}")))
 }

@@ -51,6 +51,26 @@ fn typed_entrypoints_reject_invalid_wire_before_mutating_timer_state() {
         assert!(!ordinary_observation(pic, canister_id).declared);
         assert_eq!(snapshot(pic, canister_id).scheduler_started.total, 0);
     }
+    // Wire 0.7 rejects nonminimal varints during decoding, before the endpoint
+    // can reach its missing-registration trap or reconcile a timer deadline.
+    let mut nonminimal =
+        encode_request(Method::ScheduleAt as u64, &(0_u64,), REQUEST_LIMITS).unwrap();
+    assert_eq!(nonminimal.pop(), Some(0));
+    nonminimal.extend_from_slice(&[0x80, 0]);
+    let rejection = pic
+        .update_call(
+            canister_id,
+            ExternalPrincipal::anonymous(),
+            Method::ScheduleAt.name(),
+            nonminimal,
+        )
+        .unwrap_err();
+    assert!(
+        rejection
+            .reject_message
+            .contains("probe request: wire Malformed")
+    );
+    assert_eq!(snapshot(pic, canister_id).scheduler_started.total, 0);
     // Exercise our protocol-to-Testkit adapter at its three failure boundaries.
     // Raw malformed frames above remain direct calls so no client normalizes them.
     let caller = ExternalPrincipal::anonymous();
@@ -103,7 +123,14 @@ fn typed_entrypoints_reject_invalid_wire_before_mutating_timer_state() {
         )
         .expect("valid arguments still work after rejected input");
     decode_response::<()>(id, &reply, RESPONSE_LIMITS).expect("method-bound unit reply");
-    assert!(ordinary_observation(pic, canister_id).declared);
+    // Responses need Deserialize only, including through our native adapter.
+    #[derive(Debug, serde::Deserialize)]
+    #[serde(transparent)]
+    struct ResponseOnly(OrdinaryObservation);
+    let observed =
+        query_wire::<ResponseOnly, _>(pic, canister_id, caller, Method::OrdinaryObservation, ())
+            .unwrap();
+    assert!(observed.0.declared);
 }
 
 #[test]

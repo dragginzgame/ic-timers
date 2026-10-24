@@ -139,10 +139,10 @@ inherited streaming output and typed timeout/nonzero-exit failures. OS spawn,
 signal and reap syscalls can exceed elapsed-time budgets; group signalling does
 not prove every descendant has exited. Native macOS timing remains unqualified.
 
-The receipt reader, filesystem publication and injected build spawner use published Host and Build 0.67,
+The receipt reader, filesystem publication and injected build spawner use published Host and Build 0.68,
 whose artifact engine accepts the same `OwnedChild` identity.
 Update these together when exchanging Host values; metadata/tree observation's
-command/byte boundary does not cover this build API. Testkit 0.67 selects the
+command/byte boundary does not cover this build API. Testkit 0.68 selects the
 same Host family. It and Platform/Wire/protocol are dev-dependencies of the driver;
 only the child test binary needs the simulator and codecs. No aliases or local
 child conversions are needed.
@@ -222,7 +222,7 @@ retention. Artifact upload alone does not qualify a failed or cancelled job.
 Changed dependencies or tools require an explicitly reviewed new baseline; there is no automatic rewrite or cross-context
 comparison. Deltas are review evidence, not an arbitrary performance pass/fail
 budget. Whole-message and unaccounted instruction totals remain unavailable;
-cycle costs are not converted to instructions. Build 0.67's published
+cycle costs are not converted to instructions. Build 0.68's published
 `recipe_identity()` supplies the source-independent configuration admission
 requested in [Build #241](https://github.com/dragginzgame/ic-tooling/issues/241).
 It covers observed compiler/Cargo identities, package/example/target/profile,

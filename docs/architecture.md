@@ -118,14 +118,14 @@ no such runtime types cross the published timer API or the probe wire boundary.
 The native driver retains published Testkit for server admission, lifecycle and
 bounded progress. Native tests borrow clients through `PocketIcInstance::instance()`
 while retaining the owner through teardown. PocketIC clients/DTOs come from Platform;
-Testkit no longer forwards them. Probe RPCs use raw query/update APIs plus the shared
-Wire identities/limits. Candid and management types remain upstream transport
+Testkit no longer forwards them. Probe RPCs use Testkit's typed query/update helpers
+with shared Wire identities/limits. Candid and management types remain upstream transport
 implementation details. The retired `ic-testkit-candid` package remains absent.
 The driver selects Platform, Testkit, Wire and the probe protocol only for its
 test binary. Its normal build coordinator uses Build and Host for artifacts and
 process custody, plus Clap/Serde/JSON for commands and receipts. It does not link
-the simulator or codecs. Build, Host and Testkit share published 0.67.0;
-the driver and Testkit 0.67 select the same Platform 0.6 identity. The incoming
+the simulator or codecs. Build, Host and Testkit share published 0.68.0;
+the driver and Testkit 0.68 select the same Platform 0.6 identity. The selected
 Testkit also selects Platform's Candid/management support for native provider
 fixtures; PocketIC retains Candid for its simulator protocols. These are native
 qualification dependencies. Independent library and canister graphs
@@ -138,11 +138,16 @@ query/update attributes in maintained probe source.
 The Candid-free runtime introduced in Platform 0.2.0 was requested in
 [#31 — Support Candid-free raw and Wire canister entrypoints](https://github.com/dragginzgame/ic-platform/issues/31).
 The two small adapters translate consumer-owned Wire limits/errors into Platform
-hooks. Wire 0.6 retains this native Serde codec and retires its finite API;
-the current probe records need no layout or limit changes. Testkit 0.67's optional
+hooks. Wire 0.7.1 retains this native Serde codec and its encoder bytes;
+the current probe records need no layout or limit changes. Testkit 0.68's optional
 helpers own request encoding, one call without retry, response decoding and typed
 failure context in the native harness. Raw malformed-input tests remain direct
-PocketIC calls. The protocol package must not acquire a Platform dependency to
+PocketIC calls. Decoding requires only Deserialize and rejects malformed primitives
+without reserializing values. Maps, sets and custom visitors may normalize input;
+successful decoding is not proof of byte canonicality. Current probe records use
+structs, tuples, scalars and vectors, with no signature/hash or exact-frame retry
+protocol. Such protocols must retain original frames and own semantic validation.
+The protocol package must not acquire a Platform dependency to
 hide the canister adapters. Host metadata generation
 is not selected by probes or the protocol package.
 

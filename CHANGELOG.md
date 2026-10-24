@@ -2,6 +2,18 @@
 
 All notable changes to this project are recorded here.
 
+## [0.30.12]
+
+- Adopt published Build/Host/Testkit 0.68.0 and Wire/derive 0.7.1 together,
+  removing the Testkit limits mismatch tracked in
+  [ic-tooling #248](https://github.com/dragginzgame/ic-tooling/issues/248).
+  Refresh the lock-selected release editor and Testkit CLI.
+- Remove decode-only Serialize bounds from unpublished probe adapters. Retain
+  method identities, encoder bytes and existing resource limits; qualify
+  nonminimal-varint rejection and Deserialize-only native responses. Wire 0.7
+  no longer proves byte canonicality by reserializing decoded values. Published
+  timer APIs and deployed library dependencies are unchanged.
+
 ## [0.30.11] - 2026-10-24
 
 - Adopt published Build/Host/Testkit 0.67.0 and its explicit bounded Cargo
