@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.30.10]
+## [0.30.10] - 2026-10-24
 
 - Adopt Shared Tooling 0.26.10 with literal formatter catalog admission, offline
   tool diagnostics and common external-IC dependency guards alongside Timers'
