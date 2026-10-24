@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.30.13]
+## [0.30.13] - 2026-10-24
 
 - Qualify the incoming published Platform/macros 0.6.15 selection. Their Rust
   sources match 0.6.14; retain executor/IC0 identities, callbacks and probe
