@@ -169,8 +169,7 @@ pub(crate) fn run(qualification: &Qualification) -> Result<(), Box<dyn std::erro
         discover_subjects(&mut discovery, qualification)?,
     )?;
     let mut builds = Vec::new();
-    let mut inputs = Vec::new();
-    let mut report = crate::report::Report::new(&root)?;
+    let mut report = crate::report::BuildContext::new(&root)?;
     let recipes = if matches!(qualification, Qualification::Watchdog) {
         vec![(
             "runtime",
@@ -223,8 +222,7 @@ pub(crate) fn run(qualification: &Qualification) -> Result<(), Box<dyn std::erro
             report.record_build(label, built.record(), artifact)?;
         }
         // Retain exact artifacts until the child tests finish reading them.
-        inputs.push((spec, before));
-        builds.push(built);
+        builds.push((spec, before, built));
     }
     if report_path.is_some() {
         tests.env("IC_TIMERS_COHORT_REPORT", &candidate);
@@ -232,7 +230,7 @@ pub(crate) fn run(qualification: &Qualification) -> Result<(), Box<dyn std::erro
     }
     tests.env("IC_TIMERS_DIAGNOSTICS", scratch.path());
     let status = tests.status()?;
-    for ((spec, before), built) in inputs.iter().zip(&builds) {
+    for (spec, before, built) in &builds {
         let after = resolve_cargo_build_inputs(spec)?;
         if before.validation_digest() != after.validation_digest()
             || before.fingerprint() != built.record().fingerprint()

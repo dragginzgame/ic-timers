@@ -27,3 +27,14 @@ pub(super) fn install(
     *slot = Some(registration);
     true
 }
+
+#[inline(never)]
+pub(super) fn exhaust_message_instructions() -> ! {
+    loop {
+        std::hint::black_box(ic_platform::ic0::performance_counter(0));
+    }
+}
+
+pub(super) fn in_window(window: Option<(u64, u64)>, now_ns: u64) -> bool {
+    window.is_some_and(|(start, end)| now_ns >= start && now_ns < end)
+}

@@ -2,7 +2,7 @@
 
 ## Current authority
 
-One [snapshot](../.shared-tooling.snapshot) records **137** canonical payloads
+One [snapshot](../.shared-tooling.snapshot) records **134** canonical payloads
 from reviewed Shared Tooling revision
 `4c0f198e56d4c6d27b12a5c2d515e0e01070151e`. Its committed VERSION still identifies
 **0.26.10**; the 0.26.11 release notes contain the setup-diagnostics change.
@@ -208,6 +208,18 @@ Platform is a dependency of each selected runtime root here. Graph evidence is
 not final deployment admission. Consumers must bind their own target/features,
 source/lock, successful builds and final artifact digests. Native simulator Candid
 transport remains intentional and outside the deployed-canister policy.
+
+## Consumer fixture selection
+
+The release gate no longer dispatches Shared's generic snapshot-verifier,
+checksum-parser or workflow-step-parser matrices. They are qualified by the
+reviewed revision's `test-snapshot-distribution.sh` and `test-portable-tools.sh`.
+The canonical exporter retired their three payloads without changing supplier
+revision. Timers still runs actual snapshot/caller integration, failure evidence,
+release and dependency boundaries, including its own `test-fixture-completion.sh`
+checks of local fixture exits and native macOS assertions. Native host and
+PocketIC qualification requirements are unchanged. Paths in the supplier
+verification guide still identify upstream coverage, not additional local callers.
 
 ## Qualification and refresh
 

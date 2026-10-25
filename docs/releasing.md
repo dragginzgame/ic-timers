@@ -174,7 +174,9 @@ Each Testkit instance writes stdout/stderr to a unique subdirectory of this
 invocation through the published caller-owned output interface. These logs survive
 instance teardown and remain with failed diagnostics; existing CI temporary-root
 collection includes them. They inherit the invocation retention lifecycle.
-The child writes its candidate report there, never to the final output. The
+The child receives build context separately and constructs a complete report
+with required measurements. It writes its candidate there, never to the final
+output. The
 parent reads at most 1 MiB, requires matching schema/context/artifact records and
 all four cohorts plus both calibration subjects with their exact required metric
 fields. Typed records reject missing or unknown fields in measurements, context
@@ -183,6 +185,8 @@ schema-2 receipts require a per-cohort Build recipe identity; schema 1 rejects.
 Regenerate reviewed baselines after adopting this dependency selection. Comparison uses the already
 admitted report, so the compared value is also the one published.
 A previous final report is never accepted in place of missing new evidence.
+The JSON receipt is the canonical metric output; console output identifies its
+path and, when requested, derives baseline deltas from the admitted receipt.
 
 `pocketic-cohorts` atomically publishes `testing/target/cohorts.json` only after
 subjects pass, post-measurement inputs are rechecked, candidate admission succeeds

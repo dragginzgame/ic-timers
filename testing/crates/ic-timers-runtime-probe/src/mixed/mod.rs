@@ -6,7 +6,7 @@ use ic_timers::{
     AfterCompletionDecision, AfterCompletionRegistration, AfterCompletionRunResult, TimerCadence,
     TimerCompletion, TimerIdentity, TimerSchedule, TimerStart, WatchdogDecision,
     WatchdogRegistration, WatchdogRunResult, initialize_runtime, register_after_completion,
-    register_watchdog, timer_snapshot,
+    timer_snapshot,
 };
 use std::{
     cell::{Cell, RefCell},
@@ -24,15 +24,8 @@ thread_local! {
     static APPLICATION_CALLBACKS: Cell<u32> = const { Cell::new(0) };
     static WATCHDOG_TIMES: RefCell<Vec<u64>> = const { RefCell::new(Vec::new()) };
     static APPLICATION_TIMES: RefCell<Vec<u64>> = const { RefCell::new(Vec::new()) };
-    static TRAP_AT: Cell<Option<u64>> = const { Cell::new(None) };
-    static EXHAUST_AT: Cell<Option<u64>> = const { Cell::new(None) };
-}
-
-#[inline(never)]
-fn exhaust_message_instructions() -> ! {
-    loop {
-        std::hint::black_box(ic_platform::ic0::performance_counter(0));
-    }
+    static TRAP_WINDOW: Cell<Option<(u64, u64)>> = const { Cell::new(None) };
+    static EXHAUST_WINDOW: Cell<Option<(u64, u64)>> = const { Cell::new(None) };
 }
 
 fn record_callback(
@@ -61,37 +54,26 @@ fn startup_timer_probe_start() -> bool {
     }
     let cadence = timer_cadence();
 
-    let Ok(watchdog) = register_watchdog(
-        watchdog_identity(),
-        cadence,
-        TimerStart::Retained {
-            initial: Some(TimerSchedule::After(WATCHDOG_INTERVAL)),
-        },
-        |_context| {
-            let now = ic_platform::cdk::api::time();
-            let should_trap = TRAP_AT.with(|trap_at| {
-                trap_at.get().is_some_and(|start| {
-                    now >= start && now < start.saturating_add(WATCHDOG_INTERVAL_NANOS)
-                })
-            });
-            if should_trap {
-                ic_platform::cdk::api::trap("startup watchdog trap probe");
-            }
-            let should_exhaust = EXHAUST_AT.with(|at| {
-                at.get().is_some_and(|start| {
-                    now >= start && now < start.saturating_add(WATCHDOG_INTERVAL_NANOS)
-                })
-            });
-            if should_exhaust {
-                exhaust_message_instructions();
-            }
-            record_callback(&WATCHDOG_CALLBACKS, &WATCHDOG_TIMES);
-            WatchdogRunResult::new(TimerCompletion::success(1), WatchdogDecision::Continue)
-        },
-    ) else {
-        ic_platform::cdk::api::trap("startup watchdog registration failed");
-    };
-    WATCHDOG_TIMER.with_borrow_mut(|slot| *slot = Some(watchdog));
+    WATCHDOG_TIMER.with_borrow_mut(|slot| {
+        super::watchdog::install(
+            slot,
+            watchdog_identity(),
+            WATCHDOG_INTERVAL_NANOS,
+            |_context| {
+                let now = ic_platform::cdk::api::time();
+                let should_trap = super::watchdog::in_window(TRAP_WINDOW.get(), now);
+                if should_trap {
+                    ic_platform::cdk::api::trap("startup watchdog trap probe");
+                }
+                let should_exhaust = super::watchdog::in_window(EXHAUST_WINDOW.get(), now);
+                if should_exhaust {
+                    super::watchdog::exhaust_message_instructions();
+                }
+                record_callback(&WATCHDOG_CALLBACKS, &WATCHDOG_TIMES);
+                WatchdogRunResult::new(TimerCompletion::success(1), WatchdogDecision::Continue)
+            },
+        )
+    });
 
     let Ok(application) = register_after_completion(
         application_identity(),
@@ -142,7 +124,12 @@ fn startup_timer_probe_stop() {
 )]
 fn startup_timer_probe_arm_trap() -> u64 {
     let trap_at = ic_platform::cdk::api::time().saturating_add(WATCHDOG_INTERVAL_NANOS);
-    TRAP_AT.with(|slot| slot.set(Some(trap_at)));
+    TRAP_WINDOW.with(|slot| {
+        slot.set(Some((
+            trap_at,
+            trap_at.saturating_add(WATCHDOG_INTERVAL_NANOS),
+        )))
+    });
     trap_at
 }
 
@@ -153,7 +140,12 @@ fn startup_timer_probe_arm_trap() -> u64 {
 )]
 fn startup_timer_probe_arm_exhaustion() -> u64 {
     let exhaust_at = ic_platform::cdk::api::time().saturating_add(WATCHDOG_INTERVAL_NANOS);
-    EXHAUST_AT.with(|slot| slot.set(Some(exhaust_at)));
+    EXHAUST_WINDOW.with(|slot| {
+        slot.set(Some((
+            exhaust_at,
+            exhaust_at.saturating_add(WATCHDOG_INTERVAL_NANOS),
+        )))
+    });
     exhaust_at
 }
 
@@ -170,8 +162,8 @@ fn startup_timer_probe_snapshot() -> TimerProbeSnapshot {
         application_callbacks: APPLICATION_CALLBACKS.with(Cell::get),
         watchdog_times: WATCHDOG_TIMES.with_borrow(Clone::clone),
         application_times: APPLICATION_TIMES.with_borrow(Clone::clone),
-        trap_at: TRAP_AT.with(Cell::get),
-        exhaust_at: EXHAUST_AT.with(Cell::get),
+        trap_at: TRAP_WINDOW.get().map(|(start, _)| start),
+        exhaust_at: EXHAUST_WINDOW.get().map(|(start, _)| start),
     }
 }
 

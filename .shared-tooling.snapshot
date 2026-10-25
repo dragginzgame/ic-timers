@@ -80,7 +80,6 @@ revision	4c0f198e56d4c6d27b12a5c2d515e0e01070151e
 # entrypoint	scripts/dev/install-host-tools.sh
 # entrypoint	scripts/dev/install-ic-tools.sh
 # entrypoint	scripts/ci/verify-evidence-checksums.sh
-# entrypoint	scripts/ci/test-evidence-checksums.sh
 # entrypoint	audits/ic-canister-applications.md
 # entrypoint	scripts/dev/install-rust-tools.sh
 # entrypoint	scripts/ci/ic-tool-pins.awk
@@ -99,11 +98,9 @@ revision	4c0f198e56d4c6d27b12a5c2d515e0e01070151e
 # entrypoint	scripts/ci/check-release-commands.sh
 # entrypoint	scripts/ci/cargo-release-metadata.sh
 # entrypoint	scripts/ci/extract-workflow-step.sh
-# entrypoint	scripts/ci/test-workflow-step.sh
 # entrypoint	scripts/ci/check-release-changelog.sh
 # entrypoint	scripts/ci/test-release-changelog.sh
 # entrypoint	scripts/dev/prepare-rust-toolchain.sh
-# entrypoint	scripts/ci/test-snapshot-verifier.sh
 # entrypoint	scripts/ci/test-failure-evidence.py
 # entrypoint	.github/actions/prepare-common-tools/action.yml
 # entrypoint	scripts/ci/make-adapter-probes.sh
@@ -190,7 +187,6 @@ file	066c02089e069c9e781c2eba50254e9bd3bf45149f5b71c5e716784f61057aae	-	rules/de
 file	60f44d8da8f06c3c55d63e08cebdb7fc666702e89d27fc90ed1a0275fa3c8032	x	scripts/dev/install-host-tools.sh
 file	fd91efdff85a25a268544cc00ee5e5e07ca8a4fd0163a640c51b34b80526fa5a	x	scripts/dev/install-ic-tools.sh
 file	ebf236f1db579744a13bc995ec1c58c2ee87e34caed23088a6d9b75e638dd27f	x	scripts/ci/verify-evidence-checksums.sh
-file	63aa3234167bca3d4e4b37a40a48a3f2a96c34fba74d6770bfa8f3e226ada84e	x	scripts/ci/test-evidence-checksums.sh
 file	fd07cef3f8203d8a1e3fe0667fcb91e00a485b5c123940a649c979a2f5c2fe1d	-	audits/ic-canister-applications.md
 file	bff6587a262b6e2fa3a7f516da1f79217158433ebdd296947abfa80114857ef6	x	scripts/dev/install-rust-tools.sh
 file	6d99677e86759273a88fb4149cbd4c14f2aacc99e1838a0db343d76c776f1aba	-	scripts/ci/ic-tool-pins.awk
@@ -209,11 +205,9 @@ file	d7b179f9ceaec6e11c690c975b61f91bedc80526415f71571615064db14f0c9c	x	scripts/
 file	dcf4585f8794b2158259054f550dbabea64fadd7d4f07161388ea49a0dfa3d80	x	scripts/ci/check-release-commands.sh
 file	b46a945b4a4edda01fd73fcc0d84f5e126fd376ae7197c9a23c0c1ecfd6ac1e1	x	scripts/ci/cargo-release-metadata.sh
 file	e2825c554ea3952515ecb2938f7ad592d6539ec5304c3b3107d32a1bfc6b4eda	-	scripts/ci/extract-workflow-step.sh
-file	4fd76379593617deae7f0312161b867ceb9a030b26373a179beb7f50d473ce16	-	scripts/ci/test-workflow-step.sh
 file	5a4f1abe764e1e46c472bcf1e2e38f7f998085c570f53976591c808eca884d65	-	scripts/ci/check-release-changelog.sh
 file	a3df182ddb655e5ab48c512f2989f0aac9ca8b1f54261afc385cdef139fdb112	-	scripts/ci/test-release-changelog.sh
 file	31c47b675fba90850681c6fac0d685def34b08a68e7e05bc55ae0403419fdf82	x	scripts/dev/prepare-rust-toolchain.sh
-file	8ff3f278317b01ca40bfb793d764ca4f4d04135a208d0a9ff2018e09ea7c0145	x	scripts/ci/test-snapshot-verifier.sh
 file	b5b93238bc0a0fb67f09a6f033652499935b24889b36aa8a561aa2c87810a569	-	scripts/ci/test-failure-evidence.py
 file	4f8004bdbb5052394b8f313a6f65d30e8230a12a019c666c6d412cd3779b8df0	-	.github/actions/prepare-common-tools/action.yml
 file	f3ccdd33f1322c6069daedf66669b3d4bac267476f80725d7031c741f20cb278	-	scripts/ci/make-adapter-probes.sh

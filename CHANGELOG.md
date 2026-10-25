@@ -2,6 +2,22 @@
 
 All notable changes to this project are recorded here.
 
+## [0.31.1]
+
+- Share fresh/existing lifecycle reconciliation decisions and select watchdog
+  completion reasons and schedule metadata in one precedence pass. Preserve
+  public APIs, callback authority, cleanup ordering and successor recovery.
+- Consolidate probe Wire gate exchanges, watchdog fault injection and native
+  cancellation assertions without removing policy or installed-IC test cases.
+- Separate unfinished cohort build context from complete schema-2 receipts;
+  require measurements in completed reports and couple each artifact lease to
+  its checked build inputs. Retire duplicate metric text records in favor of
+  the existing JSON receipt and comparison output.
+- Repository tooling: retire three generic Shared Tooling test dispatches and
+  snapshot payloads through the same reviewed revision's exporter. Keep local
+  fixture/macOS assertions and product gates. Reset dependency-boundary fixture
+  manifests together between independent mutation cases.
+
 ## [0.31.0] - 2026-10-24
 
 - **Breaking:** adopt Metrics 0.16.0. `MeasurementCounter` and

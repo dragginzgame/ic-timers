@@ -146,11 +146,9 @@ shell-check:
 release-check:
 	bash scripts/ci/test-fixture-completion.sh
 	+$(MAKE) --no-print-directory shared-tooling-check
-	bash scripts/ci/test-snapshot-verifier.sh
 	bash scripts/ci/test-shared-snapshots.sh
 	bash scripts/ci/test-rust-preparation.sh
 	bash scripts/ci/test-failure-evidence.sh
-	bash scripts/ci/test-evidence-checksums.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/test-dependency-pins.sh
 	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/test-cargo-metadata.sh
 	bash scripts/ci/check-release-commands.sh "$(CURDIR)" \
@@ -160,7 +158,6 @@ release-check:
 	bash scripts/release/test-committed-release.sh
 	bash scripts/release/test-release-index.sh
 	bash scripts/ci/test-release-changelog.sh
-	bash scripts/ci/test-workflow-step.sh
 	bash scripts/release/test-release-impact.sh
 	RELEASE_COMMIT='' bash scripts/ci/cargo-release-metadata.sh check-graph ic-timers
 	bash scripts/release/test-release-gate.sh

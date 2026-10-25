@@ -752,6 +752,9 @@ where
     F: FnMut(OnceContext) -> Fut + 'static,
     Fut: Future<Output = OnceRunResult> + 'static,
 {
+    let reconcile = |registry: &mut TimerRegistry, claim: &RegistrationClaim| {
+        registry.reconcile_ordinary(claim, platform::time_ns(), desired)
+    };
     reconcile_registration(
         registration,
         identity,
@@ -773,9 +776,7 @@ where
                 },
                 |registry, claim, ()| {
                     registry
-                        .transition_claim(claim, |registry| {
-                            registry.reconcile_ordinary(claim, platform::time_ns(), desired)
-                        })
+                        .transition_claim(claim, |registry| reconcile(registry, claim))
                         .map(Some)
                         .map_err(TimerError::from)
                 },
@@ -783,7 +784,11 @@ where
             drop(callback);
             Ok(OnceRegistration { claim: claim? })
         },
-        |registration| registration.reconcile_schedule(desired),
+        |registration| {
+            apply_claim_transition(&registration.claim, None, |registry| {
+                reconcile(registry, &registration.claim)
+            })
+        },
     )
 }
 
@@ -822,6 +827,10 @@ where
     F: FnMut(AfterCompletionContext) -> Fut + 'static,
     Fut: Future<Output = AfterCompletionRunResult> + 'static,
 {
+    let reconcile = |registry: &mut TimerRegistry, claim: &RegistrationClaim| match desired {
+        TimerReconcileState::Inactive => registry.cancel(claim),
+        TimerReconcileState::Scheduled => registry.ensure_recurring(claim, platform::time_ns()),
+    };
     reconcile_registration(
         registration,
         identity,
@@ -847,12 +856,7 @@ where
                 },
                 |registry, claim, ()| {
                     registry
-                        .transition_claim(claim, |registry| match desired {
-                            TimerReconcileState::Inactive => registry.cancel(claim),
-                            TimerReconcileState::Scheduled => {
-                                registry.ensure_recurring(claim, platform::time_ns())
-                            }
-                        })
+                        .transition_claim(claim, |registry| reconcile(registry, claim))
                         .map(Some)
                         .map_err(TimerError::from)
                 },
@@ -860,9 +864,10 @@ where
             drop(callback);
             Ok(AfterCompletionRegistration { claim: claim? })
         },
-        |registration| match desired {
-            TimerReconcileState::Inactive => registration.cancel(),
-            TimerReconcileState::Scheduled => registration.ensure_scheduled(),
+        |registration| {
+            apply_claim_transition(&registration.claim, None, |registry| {
+                reconcile(registry, &registration.claim)
+            })
         },
     )
 }
@@ -889,6 +894,18 @@ pub fn reconcile_watchdog<F>(
 where
     F: FnMut(WatchdogContext) -> WatchdogRunResult + 'static,
 {
+    let reconcile = |registry: &mut TimerRegistry, claim: &RegistrationClaim| match desired {
+        WatchdogReconcileState::Inactive => registry.cancel(claim),
+        WatchdogReconcileState::Scheduled => registry.ensure_recurring(claim, platform::time_ns()),
+        WatchdogReconcileState::ScheduledImmediately => {
+            registry.ensure_watchdog_immediately(claim, platform::time_ns())
+        }
+        WatchdogReconcileState::ScheduledAt(deadline_ns) => registry.reconcile_watchdog_schedule(
+            claim,
+            platform::time_ns(),
+            Some(TimerSchedule::At(deadline_ns)),
+        ),
+    };
     reconcile_registration(
         registration,
         identity,
@@ -913,21 +930,7 @@ where
                 },
                 |registry, claim, ()| {
                     registry
-                        .transition_claim(claim, |registry| match desired {
-                            WatchdogReconcileState::Inactive => registry.cancel(claim),
-                            WatchdogReconcileState::Scheduled => {
-                                registry.ensure_recurring(claim, platform::time_ns())
-                            }
-                            WatchdogReconcileState::ScheduledImmediately => {
-                                registry.ensure_watchdog_immediately(claim, platform::time_ns())
-                            }
-                            WatchdogReconcileState::ScheduledAt(deadline_ns) => registry
-                                .reconcile_watchdog_schedule(
-                                    claim,
-                                    platform::time_ns(),
-                                    Some(TimerSchedule::At(deadline_ns)),
-                                ),
-                        })
+                        .transition_claim(claim, |registry| reconcile(registry, claim))
                         .map(Some)
                         .map_err(TimerError::from)
                 },
@@ -935,15 +938,10 @@ where
             drop(callback);
             Ok(WatchdogRegistration { claim: claim? })
         },
-        |registration| match desired {
-            WatchdogReconcileState::Inactive => registration.cancel(),
-            WatchdogReconcileState::Scheduled => registration.ensure_scheduled(),
-            WatchdogReconcileState::ScheduledImmediately => {
-                registration.ensure_scheduled_immediately()
-            }
-            WatchdogReconcileState::ScheduledAt(deadline_ns) => {
-                registration.reconcile_schedule(Some(TimerSchedule::At(deadline_ns)))
-            }
+        |registration| {
+            apply_claim_transition(&registration.claim, None, |registry| {
+                reconcile(registry, &registration.claim)
+            })
         },
     )
 }

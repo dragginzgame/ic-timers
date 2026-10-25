@@ -27,7 +27,7 @@ fn fixture_report() -> Report {
                 )
             })
             .collect(),
-        measurements: Some(Measurements::default()),
+        measurements: Measurements::default(),
     }
 }
 
@@ -39,9 +39,20 @@ fn missing_or_incomplete_candidate_never_replaces_a_previous_report() {
     let output = fixture.path().join("previous.json");
     let candidate = fixture.path().join("new-invocation.json");
     let complete = fixture_report();
-    let mut expected = complete.clone();
-    expected.measurements = None;
+    let expected = BuildContext {
+        schema: complete.schema,
+        context: complete.context.clone(),
+        artifacts: complete.artifacts.clone(),
+    };
     let previous = serde_json::to_vec_pretty(&complete).unwrap();
+    let completed = expected
+        .clone()
+        .complete(complete.measurements.clone())
+        .unwrap();
+    assert_eq!(serde_json::to_vec_pretty(&completed).unwrap(), previous);
+    let mut incomplete = expected.clone();
+    incomplete.context.rustc.clear();
+    assert!(incomplete.complete(Measurements::default()).is_err());
     fs::write(&output, &previous).unwrap();
     assert!(Report::read_candidate(&candidate, &expected).is_err());
     // Exercise the on-disk boundary, including fields now required by the types.
@@ -177,7 +188,7 @@ fn report_publication_replaces_the_entry_without_truncating_hard_linked_bytes() 
 fn receipt_round_trip_preserves_costs_and_rejects_incomparable_contexts() {
     let baseline = fixture_report();
     let mut current = baseline.clone();
-    current.measurements.as_mut().unwrap().once.wasm_bytes = 10;
+    current.measurements.once.wasm_bytes = 10;
     assert_eq!(current.deltas(&baseline).unwrap()["once/wasm_bytes"], 10);
     // Source and artifact identities may differ across the sources under review.
     current.artifacts.get_mut("once").unwrap().wasm_sha256 = "new bytes".into();
@@ -200,7 +211,6 @@ fn receipt_round_trip_preserves_costs_and_rejects_incomparable_contexts() {
         assert!(current.deltas(&changed).is_err(), "{key}");
     }
     for change in [
-        "measurements",
         "artifact",
         "schema",
         "empty-context",
@@ -212,7 +222,6 @@ fn receipt_round_trip_preserves_costs_and_rejects_incomparable_contexts() {
     ] {
         let mut changed = baseline.clone();
         match change {
-            "measurements" => changed.measurements = None,
             "artifact" => {
                 changed.artifacts.remove("once");
             }
@@ -240,12 +249,9 @@ fn receipt_round_trip_preserves_costs_and_rejects_incomparable_contexts() {
         }
         assert!(current.deltas(&changed).is_err(), "{change}");
     }
-    current.measurements.as_mut().unwrap().once.dispatch_cycles = u128::MAX;
+    current.measurements.once.dispatch_cycles = u128::MAX;
     let decoded: Report = serde_json::from_slice(&serde_json::to_vec(&current).unwrap()).unwrap();
-    assert_eq!(
-        decoded.measurements.as_ref().unwrap().once.dispatch_cycles,
-        u128::MAX
-    );
+    assert_eq!(decoded.measurements.once.dispatch_cycles, u128::MAX);
     assert!(
         decoded.deltas(&baseline).is_err(),
         "unrepresentable signed delta must reject"

@@ -112,12 +112,8 @@ fn install_watchdog_with_initial_schedule(immediate: bool) -> bool {
             if immediate { 0 } else { CADENCE_NS },
             |context| {
                 let now_ns = ic_platform::cdk::api::time();
-                let should_trap = TRAP_WINDOW
-                    .with(Cell::get)
-                    .is_some_and(|(start, end)| now_ns >= start && now_ns < end);
-                let should_exhaust = EXHAUST_WINDOW
-                    .with(Cell::get)
-                    .is_some_and(|(start, end)| now_ns >= start && now_ns < end);
+                let should_trap = watchdog::in_window(TRAP_WINDOW.get(), now_ns);
+                let should_exhaust = watchdog::in_window(EXHAUST_WINDOW.get(), now_ns);
                 if should_trap || should_exhaust {
                     if context
                         .reconcile_schedule(Some(TimerSchedule::At(now_ns + 60 * CADENCE_NS)))
@@ -128,7 +124,7 @@ fn install_watchdog_with_initial_schedule(immediate: bool) -> bool {
                     if should_trap {
                         ic_platform::cdk::api::trap("intentional watchdog work trap");
                     }
-                    exhaust_message_instructions();
+                    watchdog::exhaust_message_instructions();
                 }
                 COMPLETED_WORK.with(|completed| completed.set(completed.get().saturating_add(1)));
                 let decision = take_work_decision();
@@ -359,13 +355,6 @@ fn inventory_measurement() -> (u64, u64, bool) {
         .windows(2)
         .all(|pair| pair[0].identity() < pair[1].identity());
     (inventory.len() as u64, instructions, ordered)
-}
-
-#[inline(never)]
-fn exhaust_message_instructions() -> ! {
-    loop {
-        std::hint::black_box(ic_platform::ic0::performance_counter(0));
-    }
 }
 
 #[ic_platform::cdk::query(

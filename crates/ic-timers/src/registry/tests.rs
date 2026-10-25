@@ -2368,6 +2368,35 @@ fn watchdog_checked_deadline_overflow_is_terminal() {
     );
 }
 
+fn assert_cancelled_lifetime(
+    registry: &mut TimerRegistry,
+    claim: &RegistrationClaim,
+    lifetime: DeclarationLifetime,
+) {
+    if lifetime == DeclarationLifetime::RemoveWhenStopped {
+        assert!(registry.is_empty());
+        assert_eq!(
+            registry.cancel(claim).map(|_| ()),
+            Err(RegistryError::UnknownRegistration)
+        );
+        return;
+    }
+    assert_eq!(
+        registry.cancel(claim).unwrap().effect(),
+        &RegistryEffect::None
+    );
+    let snapshot = registry.snapshot(claim.identity()).unwrap();
+    assert_eq!(
+        snapshot.state(),
+        TimerRuntimeStateSnapshot::Inactive {
+            reason: InactiveReason::Cancelled
+        }
+    );
+    let counters = snapshot.observability().counters();
+    assert_eq!(counters.cancelled().exact_total().unwrap(), 1);
+    assert_eq!(counters.work_started().exact_total().unwrap(), 0);
+}
+
 #[test]
 fn ordinary_cancellation_at_maximum_generation_preserves_lifetime_and_rejects_delivery() {
     for lifetime in [
@@ -2408,6 +2437,7 @@ fn ordinary_cancellation_at_maximum_generation_preserves_lifetime_and_rejects_de
                 }
             );
             assert!(registry.begin_ordinary(&token).is_none());
+            assert_cancelled_lifetime(&mut registry, &claim, lifetime);
             if lifetime == DeclarationLifetime::Retained {
                 let EntryKind::Ordinary { control, .. } =
                     &registry.entries.get(&timer).unwrap().kind
@@ -2416,46 +2446,11 @@ fn ordinary_cancellation_at_maximum_generation_preserves_lifetime_and_rejects_de
                 };
                 assert_eq!(control.generation(), u64::MAX);
                 assert_eq!(
-                    registry.cancel(&claim).unwrap().effect(),
-                    &RegistryEffect::None
-                );
-                let snapshot = registry.snapshot(&timer).unwrap();
-                assert_eq!(
-                    snapshot.state(),
-                    TimerRuntimeStateSnapshot::Inactive {
-                        reason: InactiveReason::Cancelled,
-                    }
-                );
-                assert_eq!(
-                    snapshot
-                        .observability()
-                        .counters()
-                        .cancelled()
-                        .exact_total()
-                        .unwrap(),
-                    1
-                );
-                assert_eq!(
-                    snapshot
-                        .observability()
-                        .counters()
-                        .work_started()
-                        .exact_total()
-                        .unwrap(),
-                    0
-                );
-                assert_eq!(
                     registry
                         .reconcile_ordinary(&claim, 10, Some(TimerSchedule::At(20)))
                         .unwrap()
                         .failure(),
                     Some(TimerControlFailure::GenerationExhausted)
-                );
-            } else {
-                assert!(registry.is_empty());
-                assert_eq!(
-                    registry.cancel(&claim).map(|_| ()),
-                    Err(RegistryError::UnknownRegistration)
                 );
             }
         }
@@ -2509,6 +2504,7 @@ fn watchdog_cancellation_at_maximum_generation_clears_the_selected_callbacks() {
             if let Some(work) = work {
                 assert!(registry.begin_watchdog_work(&work).is_none());
             }
+            assert_cancelled_lifetime(&mut registry, &claim, lifetime);
             if lifetime == DeclarationLifetime::Retained {
                 let EntryKind::Watchdog { control, .. } =
                     &registry.entries.get(&timer).unwrap().kind
@@ -2517,43 +2513,8 @@ fn watchdog_cancellation_at_maximum_generation_clears_the_selected_callbacks() {
                 };
                 assert_eq!(control.generation, u64::MAX);
                 assert_eq!(
-                    registry.cancel(&claim).unwrap().effect(),
-                    &RegistryEffect::None
-                );
-                let snapshot = registry.snapshot(&timer).unwrap();
-                assert_eq!(
-                    snapshot.state(),
-                    TimerRuntimeStateSnapshot::Inactive {
-                        reason: InactiveReason::Cancelled,
-                    }
-                );
-                assert_eq!(
-                    snapshot
-                        .observability()
-                        .counters()
-                        .cancelled()
-                        .exact_total()
-                        .unwrap(),
-                    1
-                );
-                assert_eq!(
-                    snapshot
-                        .observability()
-                        .counters()
-                        .work_started()
-                        .exact_total()
-                        .unwrap(),
-                    0
-                );
-                assert_eq!(
                     registry.ensure_recurring(&claim, 2).unwrap().failure(),
                     Some(TimerControlFailure::GenerationExhausted)
-                );
-            } else {
-                assert!(registry.is_empty());
-                assert_eq!(
-                    registry.cancel(&claim).map(|_| ()),
-                    Err(RegistryError::UnknownRegistration)
                 );
             }
         }

@@ -34,26 +34,9 @@ fn install(index: usize, counter: usize) -> OnceRegistration {
             PEAK_ACTIVE.set(PEAK_ACTIVE.get().max(ACTIVE.get()));
             loop {
                 // A real call keeps each protected task's IC context alive.
-                let response = ic_platform::cdk::call::Call::unbounded_wait(
-                    ic_platform::cdk::api::canister_self(),
-                    "dispatch_batch_gate",
-                )
-                .take_raw_args(
-                    ic_wire::native::encode_request(
-                        ic_timers_test_protocol::rpc::Method::DispatchBatchGate as u64,
-                        &(),
-                        ic_timers_test_protocol::rpc::REQUEST_LIMITS,
-                    )
-                    .expect("gate request"),
-                )
-                .await
-                .expect("batch gate call");
-                if ic_wire::native::decode_response::<bool>(
-                    ic_timers_test_protocol::rpc::Method::DispatchBatchGate as u64,
-                    &response.into_bytes(),
-                    ic_timers_test_protocol::rpc::RESPONSE_LIMITS,
-                )
-                .expect("batch gate response")
+                if super::codec::call_gate(ic_timers_test_protocol::rpc::Method::DispatchBatchGate)
+                    .await
+                    .expect("batch gate exchange")
                 {
                     break;
                 }

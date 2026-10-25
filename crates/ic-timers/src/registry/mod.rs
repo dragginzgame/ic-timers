@@ -1437,27 +1437,28 @@ impl TimerRegistry {
 
             let completion = result.completion();
             entry.observability.record_completion(completion, now_ns);
+            let mut stop_reason = InactiveReason::Stopped;
+            let mut pending_schedule = None;
             let decision = if completion.outcome() == TimerCompletionOutcome::InvariantFailure {
+                stop_reason = InactiveReason::InvariantFailure;
                 WatchdogDecision::Stop
             } else {
                 match pending {
-                    Some(WatchdogPending::Cancel | WatchdogPending::Unregister) => {
+                    Some(WatchdogPending::Cancel) => {
+                        stop_reason = InactiveReason::Cancelled;
                         WatchdogDecision::Stop
                     }
+                    Some(WatchdogPending::Unregister) => WatchdogDecision::Stop,
                     Some(WatchdogPending::Ensure) => WatchdogDecision::Continue,
                     Some(WatchdogPending::EnsureImmediately) => {
                         WatchdogDecision::ContinueImmediately
                     }
                     Some(WatchdogPending::Reconcile(requested)) => {
+                        pending_schedule = Some(requested);
                         WatchdogDecision::ScheduleAt(requested.deadline_ns)
                     }
                     None => result.decision(),
                 }
-            };
-            let cancelled = matches!(pending, Some(WatchdogPending::Cancel));
-            let pending_schedule = match pending {
-                Some(WatchdogPending::Reconcile(requested)) => Some(requested),
-                _ => None,
             };
 
             let transition = match decision {
@@ -1497,16 +1498,12 @@ impl TimerRegistry {
                     }
                 }
                 WatchdogDecision::Stop => {
-                    let reason = if completion.outcome() == TimerCompletionOutcome::InvariantFailure
-                    {
-                        InactiveReason::InvariantFailure
-                    } else if cancelled {
+                    if stop_reason == InactiveReason::Cancelled {
                         entry.observability.counters_mut().record_cancellation();
-                        InactiveReason::Cancelled
-                    } else {
-                        InactiveReason::Stopped
+                    }
+                    control.state = WatchdogState::Inactive {
+                        reason: stop_reason,
                     };
-                    control.state = WatchdogState::Inactive { reason };
                     RegistryTransition::normal(RegistryEffect::ClearCallbacks {
                         handles: CallbacksToClear::Wakeup,
                     })

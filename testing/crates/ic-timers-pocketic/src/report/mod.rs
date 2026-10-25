@@ -89,14 +89,23 @@ struct Artifact {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+pub(crate) struct BuildContext {
+    schema: u32,
+    context: Context,
+    artifacts: BTreeMap<String, Artifact>,
+}
+
+/// Only a completed measurement has the on-disk report shape.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub(crate) struct Report {
     schema: u32,
     context: Context,
     artifacts: BTreeMap<String, Artifact>,
-    pub(crate) measurements: Option<Measurements>,
+    measurements: Measurements,
 }
 
-impl Report {
+impl BuildContext {
     pub(crate) fn new(root: &Path) -> Result<Self> {
         let server = std::env::var_os("POCKET_IC_BIN").ok_or("missing admitted POCKET_IC_BIN")?;
         Ok(Self {
@@ -111,7 +120,6 @@ impl Report {
                 target: String::new(),
             },
             artifacts: BTreeMap::new(),
-            measurements: None,
         })
     }
 
@@ -174,8 +182,22 @@ impl Report {
         );
     }
 
+    #[cfg(test)]
+    pub(crate) fn complete(self, measurements: Measurements) -> Result<Report> {
+        let report = Report {
+            schema: self.schema,
+            context: self.context,
+            artifacts: self.artifacts,
+            measurements,
+        };
+        report.validate()?;
+        Ok(report)
+    }
+}
+
+impl Report {
     /// Admit only a complete report from this invocation's child and build context.
-    pub(crate) fn read_candidate(path: &Path, expected: &Self) -> Result<Self> {
+    pub(crate) fn read_candidate(path: &Path, expected: &BuildContext) -> Result<Self> {
         let candidate = Self::read(path)?;
         if candidate.schema != expected.schema
             || candidate.context != expected.context
@@ -190,7 +212,6 @@ impl Report {
     fn validate(&self) -> Result<()> {
         let context = &self.context;
         if self.schema != SCHEMA
-            || self.measurements.is_none()
             || [
                 &context.lock_sha256,
                 &context.server_sha256,
@@ -264,11 +285,8 @@ impl Report {
                 "incomparable cohort build recipes; qualify a new baseline explicitly".into(),
             );
         }
-        let current = self.measurements.as_ref().ok_or("missing measurements")?;
-        let previous = baseline
-            .measurements
-            .as_ref()
-            .ok_or("missing baseline measurements")?;
+        let current = &self.measurements;
+        let previous = &baseline.measurements;
         let mut changes = BTreeMap::new();
         for (subject, value, old) in [
             ("baseline", &current.baseline, &previous.baseline),

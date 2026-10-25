@@ -10,7 +10,7 @@ use std::{env, fs, path::PathBuf, time::Duration};
 
 #[test]
 fn comparable_policy_cohorts_report_size_and_instruction_subjects() {
-    let mut report: crate::report::Report = serde_json::from_str(
+    let context: crate::report::BuildContext = serde_json::from_str(
         &env::var("IC_TIMERS_COHORT_CONTEXT").expect("run the qualification driver"),
     )
     .expect("driver context");
@@ -19,11 +19,13 @@ fn comparable_policy_cohorts_report_size_and_instruction_subjects() {
         once: run_cohort("once"),
         after_completion: run_cohort("after-completion"),
         watchdog: run_cohort("watchdog"),
-        minimal: run_watchdog_calibration("minimal", false),
-        representative: run_watchdog_calibration("representative", true),
+        minimal: run_watchdog_calibration(false),
+        representative: run_watchdog_calibration(true),
     };
     assert!(measurements.representative.work_instructions > measurements.minimal.work_instructions);
-    report.measurements = Some(measurements);
+    let report = context
+        .complete(measurements)
+        .expect("complete cohort receipt");
     let output = env::var_os("IC_TIMERS_COHORT_REPORT").expect("driver report path");
     // This is invocation-local evidence. The parent admits it and owns durable
     // publication only after successful subjects and post-measurement checks.
@@ -136,22 +138,6 @@ fn run_cohort(cohort: &str) -> PolicyMetrics {
             )
         });
 
-    println!(
-        "ic_timers_cohort cohort={} start={} duplicate={} cancel={} snapshot={} inventory={} scheduler={} work={} memory_sampling_empty={} memory_sampling_sampled={} memory_sampling_overhead={} dispatch_cycles={} wasm_bytes={}",
-        cohort,
-        start.instructions,
-        duplicate.instructions,
-        cancellation.instructions,
-        completed.snapshot_instructions,
-        completed.inventory_instructions,
-        completed.scheduler_instruction_total,
-        completed.work_instruction_total,
-        memory_sampling_empty,
-        memory_sampling_sampled,
-        memory_sampling_overhead,
-        dispatch_cycles,
-        wasm_bytes,
-    );
     PolicyMetrics {
         start_instructions: u128::from(start.instructions),
         duplicate_instructions: u128::from(duplicate.instructions),
@@ -168,7 +154,7 @@ fn run_cohort(cohort: &str) -> PolicyMetrics {
     }
 }
 
-fn run_watchdog_calibration(profile: &str, representative_work: bool) -> CalibrationMetrics {
+fn run_watchdog_calibration(representative_work: bool) -> CalibrationMetrics {
     let owned = fresh_pocket_ic();
     let pic = owned.instance();
     let canister_id = install_probe(pic, cohort_wasm("watchdog"));
@@ -187,13 +173,6 @@ fn run_watchdog_calibration(profile: &str, representative_work: bool) -> Calibra
     assert_eq!(completed.work_instruction_samples, 1);
     assert_eq!(completed.work_completed.total, 1);
 
-    println!(
-        "ic_timers_watchdog_calibration profile={} total_message_instructions=unavailable scheduler={} work={} unaccounted_instructions=unavailable dispatch_cycles={}",
-        profile,
-        completed.scheduler_instruction_total,
-        completed.work_instruction_total,
-        dispatch_cycles,
-    );
     CalibrationMetrics {
         scheduler_instructions: completed.scheduler_instruction_total,
         work_instructions: completed.work_instruction_total,
@@ -210,7 +189,7 @@ fn cohort_wasm(cohort: &str) -> Vec<u8> {
         .map(PathBuf::from)
         .unwrap_or_else(|| panic!("{variable} must name the resolved cohort Wasm artifact"));
     let wasm = fs::read(&path).unwrap_or_else(|error| panic!("read {}: {error}", path.display()));
-    let report: crate::report::Report =
+    let report: crate::report::BuildContext =
         serde_json::from_str(&env::var("IC_TIMERS_COHORT_CONTEXT").expect("driver context"))
             .expect("valid context");
     report.verify_artifact(cohort, &wasm);

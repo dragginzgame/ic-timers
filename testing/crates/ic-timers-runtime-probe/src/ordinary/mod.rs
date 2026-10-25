@@ -143,28 +143,8 @@ async fn work() -> TimerCompletion {
         // Every closed-gate reply is followed by another real call await. A bare
         // Pending future cannot keep the IC call context alive, and a protected
         // CDK task cannot resume in the separate ingress that opens the gate.
-        let result = ic_platform::cdk::call::Call::unbounded_wait(
-            ic_platform::cdk::api::canister_self(),
-            "ordinary_gate",
-        )
-        .take_raw_args(
-            ic_wire::native::encode_request(
-                ic_timers_test_protocol::rpc::Method::OrdinaryGate as u64,
-                &(),
-                ic_timers_test_protocol::rpc::REQUEST_LIMITS,
-            )
-            .expect("gate request"),
-        )
-        .await
-        .map_err(|error| error.to_string())
-        .and_then(|response| {
-            ic_wire::native::decode_response::<bool>(
-                ic_timers_test_protocol::rpc::Method::OrdinaryGate as u64,
-                &response.into_bytes(),
-                ic_timers_test_protocol::rpc::RESPONSE_LIMITS,
-            )
-            .map_err(|error| error.to_string())
-        });
+        let result =
+            super::codec::call_gate(ic_timers_test_protocol::rpc::Method::OrdinaryGate).await;
         let open = match result {
             Ok(open) => open,
             Err(error) => {
