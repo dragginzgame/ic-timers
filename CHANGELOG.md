@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.31.1]
+## [0.31.1] - 2026-10-25
 
 - Share fresh/existing lifecycle reconciliation decisions and select watchdog
   completion reasons and schedule metadata in one precedence pass. Preserve
