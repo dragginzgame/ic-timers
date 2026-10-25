@@ -59,17 +59,20 @@ for mode in setup check; do
     cmp "$fixture/expected-offline" "$fixture/offline"
     cmp "$fixture/expected-offline" "$fixture/installer-offline"
 done
-# Failed lock/tool admission cannot execute Testkit, even with a path on stdout.
+# Failed lock/tool admission, including Shared's busy status, cannot execute
+# Testkit even with a plausible path on stdout.
 for mode in setup check; do
-    rm -f "$fixture/owner-arguments"
-    status=0
-    FIXTURE_INSTALLER_STATUS=23 bash "$consumer/scripts/dev/testkit-server.sh" "$mode" \
-        > "$fixture/failure.out" 2> "$fixture/failure.log" || status=$?
-    test "$status" -eq 23
-    test ! -s "$fixture/failure.out"
-    grep -Fq 'fixture selected Cargo tool refused' "$fixture/failure.log"
-    grep -Fq 'run make install-testkit-server' "$fixture/failure.log"
-    test ! -e "$fixture/owner-arguments"
+    for refusal in 23 75; do
+        rm -f "$fixture/owner-arguments"
+        status=0
+        FIXTURE_INSTALLER_STATUS="$refusal" bash "$consumer/scripts/dev/testkit-server.sh" "$mode" \
+            > "$fixture/failure.out" 2> "$fixture/failure.log" || status=$?
+        test "$status" -eq "$refusal"
+        test ! -s "$fixture/failure.out"
+        grep -Fq 'fixture selected Cargo tool refused' "$fixture/failure.log"
+        grep -Fq 'run make install-testkit-server' "$fixture/failure.log"
+        test ! -e "$fixture/owner-arguments"
+    done
 done
 status=0
 FIXTURE_OWNER_STATUS=31 bash "$consumer/scripts/dev/testkit-server.sh" check > "$fixture/failure.log" 2>&1 || status=$?
@@ -104,6 +107,13 @@ for mode in setup check; do
     test ! -e "$fixture/owner-arguments"
     cmp "$fixture/next-lock" "$consumer/Cargo.lock"
 done
+
+# The editor delegates directly to Shared and must preserve busy admission too.
+status=0
+FIXTURE_INSTALLER_STATUS=75 bash "$consumer/scripts/dev/release-editor.sh" check \
+    > "$fixture/failure.out" 2> "$fixture/failure.log" || status=$?
+test "$status" -eq 75
+test ! -e "$fixture/owner-arguments"
 
 # Exercise this consumer's actual aggregate wiring with substitute common tools
 # and owner effects. Upstream tests own tool downloads/receipts; this proves the

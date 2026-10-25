@@ -2,6 +2,19 @@
 
 All notable changes to this project are recorded here.
 
+## [0.31.2]
+
+- Qualify published Metrics 0.16.2, Build/Host/Testkit 0.68.2 and Wire/derive
+  0.7.9. Retain timer APIs, probe wire contracts and the
+  Candid-free deployed graphs. Refresh the lock-selected editor and Testkit CLI.
+- Adopt Platform/macros 0.6.16, qualifying refactored probe entrypoint generation
+  with explicit Wire codecs and unchanged executor/IC0 identities. Principal
+  decoding now preserves structured format errors from its deserializer.
+- Adopt Shared Tooling 0.26.16: preserve incomplete earlier delivery evidence
+  when advancing from manually committed release metadata, and distinguish
+  busy Cargo-tool admission with status 75. Local checks remain immediate and
+  offline; optional read-only waiting does not install or repair tools.
+
 ## [0.31.1] - 2026-10-25
 
 - Share fresh/existing lifecycle reconciliation decisions and select watchdog

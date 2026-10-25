@@ -2,13 +2,21 @@
 
 ## Current authority
 
-One [snapshot](../.shared-tooling.snapshot) records **134** canonical payloads
-from reviewed Shared Tooling revision
-`4c0f198e56d4c6d27b12a5c2d515e0e01070151e`. Its committed VERSION still identifies
-**0.26.10**; the 0.26.11 release notes contain the setup-diagnostics change.
-The supplier's uncommitted VERSION edit was excluded. Canonical impact/apply ran
-from a clean committed clone and updated the installer and setup documentation;
-exported files remain supplier-owned.
+One [snapshot](../.shared-tooling.snapshot) records **135** canonical payloads
+from reviewed Shared Tooling **0.26.16**, revision
+`2077c934efb82b181bea58fe50078dbad289c1aa`. Canonical impact/apply ran from a
+clean clone of that committed revision; exported files remain supplier-owned.
+The existing roots are preserved, including retirement of the three generic
+producer fixtures. The new RPC-budget governance companion is required by the
+baseline; Timers has no generated browser RPC client to qualify.
+
+This revision preserves uncertain earlier delivery when advancing from clean,
+manually committed candidate metadata. It still refuses conflicting source or
+refs and requires fresh validation; it does not mark the prior release complete.
+Cargo-tool admission now returns 75 for admitted contention. Explicit
+`--check --wait-seconds N` supports bounded read-only waiting; local adapters
+retain immediate checks and propagate failure. Waiting never installs, repairs
+or removes another owner's lock. Tool selections and product gates are unchanged.
 
 Explicit Cargo-tool setup now reports phase, outcome and whole-second durations
 on stderr, including compilation and reuse. Stdout remains the selected path;
@@ -24,9 +32,9 @@ cache remains disabled by default; no cache policy is activated here.
 Explicit selected Cargo-tool setup waits up to 60 seconds for an admitted slot
 owner. It tolerates record cleanup only for the same previously admitted physical
 lock, then rechecks inputs before reuse. `SHARED_TOOLING_SETUP_WAIT_SECONDS`
-selects 0–300 seconds; zero refuses immediately. Checks/preflight and other lock
-classes remain immediate. Waiting never removes foreign locks or admits partial
-output. The fixed cleanup race needs native macOS qualification separately.
+selects 0–300 seconds; zero refuses immediately. Local checks, preflight and
+other lock classes remain immediate; only explicitly requested Cargo admission
+waits. Waiting never removes foreign locks or admits partial output. The fixed cleanup race needs native macOS qualification separately.
 
 Cargo source-cache bootstrap now uses admitted idempotent private directory
 creation and Cargo's own download locking, removing the old global preparation
@@ -104,17 +112,17 @@ qualification packages here.
 Candid remains transitive only in the native driver through PocketIC/Testkit. Local probe protocols use Wire; Platform 0.6's `cdk`
 feature and both canister graphs are Candid-free. Full CDK/macros and the retired
 Testkit Candid adapter are absent from the workspace graph.
-The driver test binary and Testkit 0.67 share Platform 0.6; the driver selects
+The driver test binary and Testkit 0.68 share Platform 0.6; the driver selects
 `pocket-ic` explicitly for direct client imports, including Principal support.
 Testkit's native provider fixtures also select Platform's Candid/management
 support; those features remain excluded from deployed library and probe graphs. Its
 normal coordinator excludes Platform, Testkit, Wire and the probe protocol;
 they are dev-dependencies used by the maintained integration tests. The library
 and canister graphs exclude native simulator features. Build, Host and Testkit
-share the 0.67 family, with no older parallel Host or Platform provider.
+share the 0.68 family, with no older parallel Host or Platform provider.
 The catalog's
 local `ic-timers` entry is the probes' dependency on the production library.
-The coordinator uses published Host FS 0.67.0 for baseline alias admission and
+The coordinator uses published Host FS 0.68.2 for baseline alias admission and
 atomic report publication; its test-support feature is dev-only. Testkit's `wire`
 feature is also dev-only and supplies native typed call handling. No new resolved
 package identity is introduced by these explicit edges.
@@ -224,10 +232,11 @@ verification guide still identify upstream coverage, not additional local caller
 ## Qualification and refresh
 
 Current impact/apply, incoming before-images and focused qualification logs are
-in `/tmp/ic-timers-upstream-refresh/`.
+in `/tmp/ic-timers-adoption-0312/`.
 The [handoff](status/current.md) records tested scope and separate macOS/release
-qualification limits. The selected workflow fixture is checked with relative invocation and inherited
-CDPATH; producer matrices are not added to routine Timers validation.
+qualification limits. The reviewed supplier release-runner fixture was checked
+from the temporary clone; producer matrices are not added to routine Timers
+validation.
 
 Future refreshes use the reviewed source's canonical exporter: preview first,
 then apply the same explicit root selection. Retain directly used helpers and
