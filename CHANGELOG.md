@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.31.2]
+## [0.31.2] - 2026-10-25
 
 - Qualify published Metrics 0.16.2, Build/Host/Testkit 0.68.2 and Wire/derive
   0.7.9. Retain timer APIs, probe wire contracts and the
