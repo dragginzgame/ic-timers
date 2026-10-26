@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.31.5] - Unreleased
+## [0.31.5] - 2026-10-26
 
 - Adopt published Build/Host/Testkit 0.68.7 for host qualification and the
   lock-selected release editor and Testkit CLI. Testkit now checks the final
