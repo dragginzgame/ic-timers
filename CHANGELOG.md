@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.31.3]
+## [0.31.3] - 2026-10-26
 
 - Adopt published Wire/derive 0.7.15 and Build/Host/Testkit 0.68.6 for probe and
   host qualification, retaining existing frame bytes, limits and timer APIs.
