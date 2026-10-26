@@ -2,12 +2,19 @@
 
 ## Current authority
 
-One [snapshot](../.shared-tooling.snapshot) records **135** canonical payloads
-from reviewed Shared Tooling **0.26.19**, revision
-`c830c33447f0a84e015bda7fa14b6c096a58368e`. The commit subject says 0.27.19;
-its committed VERSION and changelog declare 0.26.19, which the exporter records.
+One [snapshot](../.shared-tooling.snapshot) records **136** canonical payloads
+from reviewed Shared Tooling **0.26.20**, revision
+`a7f85d45d4212d4c39225f58597580560a333550`.
 Canonical impact/apply ran from a clean clone of that committed revision with
 unchanged roots; exported files remain supplier-owned.
+
+The compact baseline delegates task-specific detail to
+[`rules/engineering-details.md`](../rules/engineering-details.md). Validation
+follows a coherent edit batch with the smallest meaningful affected checks;
+line metrics and symbol inventories are opt-in. This refresh changes selected
+guidance and its catalog, not executable helpers. The optional npm SDK boundary
+checks remain unselected because Timers has no npm consumer. Repository purpose
+and its GitHub description remain aligned.
 
 Normal release commands now start fresh from current clean, committed metadata
 without scanning historical plans or replaying their effects. Explicit
@@ -132,7 +139,7 @@ and canister graphs exclude native simulator features. Build, Host and Testkit
 share the 0.68 family, with no older parallel Host or Platform provider.
 The catalog's
 local `ic-timers` entry is the probes' dependency on the production library.
-The coordinator uses published Host FS 0.68.6 for baseline alias admission and
+The coordinator uses published Host FS 0.68.7 for baseline alias admission and
 atomic report publication; its test-support feature is dev-only. Testkit's `wire`
 feature is also dev-only and supplies native typed call handling. No new resolved
 package identity is introduced by these explicit edges.
@@ -242,11 +249,11 @@ verification guide still identify upstream coverage, not additional local caller
 ## Qualification and refresh
 
 Current impact/apply, incoming before-images and focused qualification logs are
-in `/tmp/ic-timers-adoption-0313/`.
+in `/tmp/ic-timers-adoption-0315/`.
 The [handoff](status/current.md) records tested scope and separate macOS/release
-qualification limits. The reviewed supplier release-runner fixture was checked
-from the temporary clone; producer matrices are not added to routine Timers
-validation.
+qualification limits. Published Build/Host/Testkit 0.68.7 are selected by the
+root lockfile; no moving sibling code is used. Producer matrices are not added
+to routine Timers validation.
 
 Future refreshes use the reviewed source's canonical exporter: preview first,
 then apply the same explicit root selection. Retain directly used helpers and

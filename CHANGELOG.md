@@ -2,6 +2,16 @@
 
 All notable changes to this project are recorded here.
 
+## [0.31.5] - Unreleased
+
+- Adopt published Build/Host/Testkit 0.68.7 for host qualification and the
+  lock-selected release editor and Testkit CLI. Testkit now checks the final
+  synchronous startup deadline consistently with async construction. Preserve
+  timer APIs, probe wire contracts and deployed dependency exclusions.
+- Adopt Shared Tooling 0.26.20: compact task-specific guidance, focused batch
+  validation and opt-in line/symbol reporting. Selected executable helpers and
+  product release gates remain unchanged; optional npm checks stay unselected.
+
 ## [0.31.4] - 2026-10-26
 
 - Adopt published Platform/macros 0.6.18 and Wire/derive 0.7.16. Preserve timer
