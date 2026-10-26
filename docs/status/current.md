@@ -2,81 +2,70 @@
 
 # Current status
 
-Last updated: 2026-10-25
+Last updated: 2026-10-26
 
 ## Source and pending work
 
-Released base: **0.31.1**, `6dd07a1`. The accepted complexity cleanup is released.
-The undated **0.31.2** section covers compatible dependency qualification and
-Shared Tooling adoption. Public timer APIs, runtime semantics, probe records and
-MSRV remain unchanged; no minor release is required for this batch. Cargo package
-versions remain 0.31.1. Commits, staging, pushes and releases remain user-owned.
+Released base: **0.31.2**, `50ee4ca`. The undated **0.31.3** section covers
+compatible dependency qualification and Shared Tooling adoption. Cargo package
+versions remain 0.31.2. No timer API, runtime semantic, probe protocol or MSRV
+change requires a minor release. This is tooling/dependency qualification;
+publication can wait for the next code-bearing release. Commits, staging, pushes
+and release execution remain maintainer-owned.
 
-The incoming lockfile already selected published Metrics **0.16.2**,
-Build/Host/Testkit **0.68.2** and Wire/derive **0.7.9**. It is preserved byte for
-byte. Registry metadata and checksum-verified published archives confirm those
-selections. Platform/macros **0.6.16** is now published and was already selected
-in the incoming lockfile for the subsequent Platform adoption. Clap **4.6.7**, Serde
-**1.0.229** and Serde JSON **1.0.154** are current. Thiserror **2.0.18** remains
-required by PocketIC 16.1.0's exact constraint despite newer 2.0.21 publication.
+The incoming lockfile already selected published Wire/derive **0.7.15**,
+Build/Host/Testkit **0.68.6** and Platform/macros **0.6.17**. It is preserved byte
+for byte. Registry metadata and checksum-verified published archives confirm
+these selections and Rust 1.91 support. Wire 0.7.16 in the sibling checkout was
+unpublished when checked and is not adopted. Metrics **0.16.2** and Thiserror
+**2.0.18** remain selected; PocketIC requires that exact Thiserror version.
 
 ## Ownership and adoption
 
-The library still depends directly only on Metrics, Platform and Thiserror.
-Platform retains executor **2.0.0** and IC0 **1.2.0** identities. Library and probe
-deployment graphs remain Candid-free; the native Testkit/PocketIC test transport
-intentionally retains Candid. The normal host coordinator excludes that transport.
-The protocol package owns Wire/Serde records only. Timer policy, authority,
-provider cleanup and callback recovery remain local.
+The library still uses only Metrics, Platform and Thiserror directly. Platform
+retains executor **2.0.0** and IC0 **1.2.0** identities. Library and probe deployment
+graphs remain Candid-free; native Testkit/PocketIC transport intentionally retains
+Candid. The normal host coordinator excludes that transport. The protocol package
+owns Wire/Serde records; timer policy, authority and callback recovery stay local.
 
-Metrics and Host Rust sources match their previous selections. Wire changes are
-in unselected TypeScript tooling; derive sources and runtime codecs are unchanged.
-Build refactors metadata editing and shared-incremental acquisition; Timers keeps
-isolated builds. Testkit consolidates startup/fixture internals without changing
-its selected PocketIC 16.1.0 server. Both root-lock-selected 0.68.2 CLIs have been
-explicitly prepared through their existing adapters and admitted offline.
+Wire runtime codecs are unchanged. Its host generator API changes are outside
+Timers' selected features; probe schemas and budgets remain intact. Platform and
+macro Rust sources match 0.6.16. Tooling changes build resolution, metadata editing,
+filesystem and startup internals; the existing APIs need no local adapters.
+Both lock-selected 0.68.6 CLIs were explicitly prepared and admitted offline;
+Testkit still selects PocketIC 16.1.0. CLI build inputs use the setup compiler;
+probe/build qualification selects Rust 1.91 separately after server admission.
 
-Platform 0.6.16 preserves structured Principal deserializer errors and refactors
-entrypoint validation/emission. Published archive review confirms unchanged
-executor/IC0 bindings and feature declarations; probe codec hooks, export names,
-guard ordering and executor-context selection are preserved. No local Rust or
-manifest changes were needed. The root range remains compatible, and the pending
-0.31.2 notes cover this adoption without a public timer contract change.
-
-Shared Tooling **0.26.16**, reviewed revision
-`2077c934efb82b181bea58fe50078dbad289c1aa`, supplies **135** payloads through its
-canonical exporter. Existing roots and producer-fixture retirements are preserved.
-The added RPC-budget rule does not introduce a browser client or product gate.
-Local adapter fixtures now verify propagation of busy admission status 75.
-Optional read-only waits are not enabled in local adapters. CI caching stays off;
-all release, native-host and PocketIC recovery/cohort gates remain required.
+Shared Tooling **0.26.19**, revision
+`c830c33447f0a84e015bda7fa14b6c096a58368e`, supplies **135** payloads through its
+canonical exporter. The source VERSION/changelog declare 0.26.19 despite the
+0.27.19 commit subject. Roots and retired producer fixtures are unchanged.
+Normal release commands now start fresh; exact recovery requires
+`release-resume VERSION=x.y.z`. Local instructions and release guidance match.
+Build/validation evidence and current-source/ref checks remain; no real release
+operation ran. CI caching stays off and all product/native-host gates remain.
 
 ## Verification and limits
 
-Latest Platform evidence and the incoming lockfile are retained in
-`/tmp/ic-timers-platform-refresh-0312/`. Rust 1.91 Clippy passes for the library,
-both probes and host runner; library Wasm checking, runtime-probe compilation,
-all four size-probe Wasm feature checks and the native runtime-probe unit test
-pass. Four Linux PocketIC tests pass: typed Wire rejection, trapped-work successor
-and executor privacy, shared-watchdog trap/upgrade recovery, and ordinary async
-await with concurrent ingress. Formatting and direct/deployed dependency and
-provider boundaries pass. The selected graph contains one Platform 0.6.16,
-executor 2.0.0 and IC0 1.2.0; native test transport Candid stays outside deployment.
+Evidence, published archives, exporter impact/apply and the incoming lockfile are
+in `/tmp/ic-timers-adoption-0313/`. Rust 1.91 Clippy passes for all five affected
+packages. Library Wasm checking and optimized runtime-probe compilation pass.
+Protocol, build-driver and report tests pass (three each). Three Linux PocketIC
+subjects pass: typed Wire rejection, trapped-work successor/executor privacy, and
+shared-watchdog trap/upgrade recovery. The actual cohort driver passes all four
+policies and both calibration subjects, retaining a separate schema-2 receipt at
+`/tmp/ic-timers-adoption-0313/cohorts.json`; existing baselines were not replaced.
 
-Earlier batch evidence and its incoming lockfile are retained in
-`/tmp/ic-timers-adoption-0312/`. Rust 1.91 Clippy passes for all five affected
-packages/targets. Library Wasm checking and optimized runtime-probe compilation
-pass. Protocol, build-driver and report tests pass (three each). Three Linux
-PocketIC subjects pass: typed Wire rejection, trapped-work successor/executor
-privacy, and shared-watchdog trap/upgrade recovery.
+Formatting, pin/direct/deployed dependency boundaries, provider ownership,
+snapshot integrity/corruption, local fixture completion, Testkit adapter,
+changelog and metadata-preparation/release-gate fixtures pass. The reviewed
+supplier release-runner command-stub fixture passes from the temporary clone,
+without adding producer matrices to the snapshot or routine gate.
 
-Formatting, direct/deployed dependency boundaries, provider ownership, snapshot
-integrity/corruption, local Testkit adapter and release metadata/gate fixtures pass.
-The reviewed supplier's release-runner command-stub fixture also passes from the
-temporary clone; it was not added to Timers' snapshot or routine gate. An initial
-sandbox offline admission overlapped an inaccessible installation lock and refused;
-subsequent admission used the completed installation without repair or lock removal.
-
-No full release suite, fresh cohort comparison, native macOS or live deployment
-qualification was run. Previous cleanup evidence remains in
-`/tmp/ic-timers-complexity-0311/`; it is not relabelled as new dependency evidence.
+The first integration invocation selected Rust 1.91 before CLI admission, which
+correctly refused an unprepared CLI build identity and left the tests without an
+admitted server. Its failure log remains retained. The passing retry admitted the
+prepared CLI first, then selected Rust 1.91 for probes; no admission was weakened.
+No full release suite, baseline performance comparison, native macOS or live
+deployment qualification ran. Prior release evidence remains at its original
+owners and is not relabelled as qualification of this selection.

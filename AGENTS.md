@@ -157,12 +157,13 @@ This file is normative for automated contributors.
   push may use a smaller package/tag job only when it also verifies the exact
   version tag and that the tagged commit is reachable from `main`; do not
   duplicate identical full builds for a same-SHA main-and-tag push.
-- Fresh combined release targets run their requested version bump. A normal
-  target reconciles saved unfinished intent at its exact version first. After
-  that release is committed, newer descendant fixes or a different requested
-  increment trigger fresh validation for the requested next release. Late
-  checks inspect `RELEASE_COMMIT`, independently of HEAD. Changelog preparation
-  alone neither advances Cargo nor creates runtime release intent.
+- Normal combined release targets start fresh from current clean, committed
+  source and canonical metadata, with their requested increment and complete
+  validation. They do not scan or replay historical plans. Exact saved-attempt
+  recovery requires `release-resume VERSION=x.y.z`; current source, lock, ref and
+  destination conflicts still refuse. Late checks inspect `RELEASE_COMMIT`,
+  independently of HEAD. Changelog preparation alone neither advances Cargo
+  nor creates runtime release intent.
 - Version-bump helpers must support preparing a release from the current
   worktree without requiring a preparatory commit. Preserve unrelated changes,
   leave test execution to deployment. The user stages release metadata.

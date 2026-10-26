@@ -3,20 +3,30 @@
 ## Current authority
 
 One [snapshot](../.shared-tooling.snapshot) records **135** canonical payloads
-from reviewed Shared Tooling **0.26.16**, revision
-`2077c934efb82b181bea58fe50078dbad289c1aa`. Canonical impact/apply ran from a
-clean clone of that committed revision; exported files remain supplier-owned.
-The existing roots are preserved, including retirement of the three generic
-producer fixtures. The new RPC-budget governance companion is required by the
-baseline; Timers has no generated browser RPC client to qualify.
+from reviewed Shared Tooling **0.26.19**, revision
+`c830c33447f0a84e015bda7fa14b6c096a58368e`. The commit subject says 0.27.19;
+its committed VERSION and changelog declare 0.26.19, which the exporter records.
+Canonical impact/apply ran from a clean clone of that committed revision with
+unchanged roots; exported files remain supplier-owned.
 
-This revision preserves uncertain earlier delivery when advancing from clean,
-manually committed candidate metadata. It still refuses conflicting source or
-refs and requires fresh validation; it does not mark the prior release complete.
-Cargo-tool admission now returns 75 for admitted contention. Explicit
+Normal release commands now start fresh from current clean, committed metadata
+without scanning historical plans or replaying their effects. Explicit
+`release-resume VERSION=x.y.z` retains exact saved-attempt recovery. Fresh commands
+may discard their candidate's stale local plan/staging/PR receipts; build and
+validation evidence remain retained. Current source, lock, ref and destination
+checks and the complete product gate remain required. Local instructions and the
+release guide follow this contract; release execution remains maintainer-owned.
+
+Archived Draft headings are tolerated only beyond the historical changelog
+boundary; pending candidate conflicts still refuse. Retention-probe generation
+now diagnoses unsupported assertion/trap layouts and leaves no partial runnable
+script. The existing consumer fixture shapes and selected roots are unchanged.
+
+Cargo-tool admission still returns 75 for admitted contention. Explicit
 `--check --wait-seconds N` supports bounded read-only waiting; local adapters
 retain immediate checks and propagate failure. Waiting never installs, repairs
-or removes another owner's lock. Tool selections and product gates are unchanged.
+or removes another owner's lock. The RPC-budget rule adds no browser client or
+new product gate here; the three retired producer fixtures remain unselected.
 
 Explicit Cargo-tool setup now reports phase, outcome and whole-second durations
 on stderr, including compilation and reuse. Stdout remains the selected path;
@@ -122,7 +132,7 @@ and canister graphs exclude native simulator features. Build, Host and Testkit
 share the 0.68 family, with no older parallel Host or Platform provider.
 The catalog's
 local `ic-timers` entry is the probes' dependency on the production library.
-The coordinator uses published Host FS 0.68.2 for baseline alias admission and
+The coordinator uses published Host FS 0.68.6 for baseline alias admission and
 atomic report publication; its test-support feature is dev-only. Testkit's `wire`
 feature is also dev-only and supplies native typed call handling. No new resolved
 package identity is introduced by these explicit edges.
@@ -232,7 +242,7 @@ verification guide still identify upstream coverage, not additional local caller
 ## Qualification and refresh
 
 Current impact/apply, incoming before-images and focused qualification logs are
-in `/tmp/ic-timers-adoption-0312/`.
+in `/tmp/ic-timers-adoption-0313/`.
 The [handoff](status/current.md) records tested scope and separate macOS/release
 qualification limits. The reviewed supplier release-runner fixture was checked
 from the temporary clone; producer matrices are not added to routine Timers

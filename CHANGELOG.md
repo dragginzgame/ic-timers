@@ -2,6 +2,18 @@
 
 All notable changes to this project are recorded here.
 
+## [0.31.3]
+
+- Adopt published Wire/derive 0.7.15 and Build/Host/Testkit 0.68.6 for probe and
+  host qualification, retaining existing frame bytes, limits and timer APIs.
+  Qualify the incoming Platform/macros 0.6.17 selection and refresh both
+  lock-selected CLIs.
+- Adopt Shared Tooling 0.26.19. Normal release commands now start fresh from
+  current committed metadata; use `release-resume VERSION=x.y.z` for a saved
+  attempt. Preserve validation evidence and current-source/ref checks. Historical
+  Draft labels no longer block new releases; fixture-retention failures have
+  clearer diagnostics.
+
 ## [0.31.2] - 2026-10-25
 
 - Qualify published Metrics 0.16.2, Build/Host/Testkit 0.68.2 and Wire/derive

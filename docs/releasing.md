@@ -65,11 +65,14 @@ The consumer-owned [delivery declaration](../ci/release-delivery.txt) admits onl
 checker. Environment or command-line requests for `pr` refuse before effects;
 they are not silently converted to direct delivery.
 
-Normal retry reconciles saved unfinished intent at its exact version before
-considering another increment. `make release-resume VERSION=x.y.z` explicitly
-resumes that saved release. A saved plan alone does not require manual deletion
-or block normal retry. New descendant fixes or a different increment receive
-fresh validation after the old release is completed. Late checks bind to
+Normal release commands start fresh from current clean, committed source and
+canonical metadata, with full preflight and validation. Historical plans are not
+scanned and their effects are not replayed. To recover a particular saved attempt,
+use `make release-resume VERSION=x.y.z`; its exact source, payload and destination
+must still match. A normal command can discard its new candidate's stale local
+plan/staging/PR receipts while retaining build and validation evidence. Current
+dirty source/index, occupied locks, candidate refs and destination conflicts still
+refuse. Late checks bind to
 `RELEASE_COMMIT`, independently of HEAD; they inspect its immutable metadata
 with current helpers and never execute scripts from the exported tree.
 
