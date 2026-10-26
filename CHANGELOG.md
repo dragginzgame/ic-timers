@@ -2,6 +2,12 @@
 
 All notable changes to this project are recorded here.
 
+## [0.31.4]
+
+- Adopt published Platform/macros 0.6.18 and Wire/derive 0.7.16. Preserve timer
+  APIs, executor/IC0 identities and probe wire contracts. Platform's new optional
+  BLAKE3 feature remains disabled; Wire retains varint rejection and decode limits.
+
 ## [0.31.3] - 2026-10-26
 
 - Adopt published Wire/derive 0.7.15 and Build/Host/Testkit 0.68.6 for probe and
