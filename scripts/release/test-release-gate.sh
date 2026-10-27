@@ -142,7 +142,8 @@ for target in build test msrv; do
     done
 done
 
-# Exercise explicit setup and offline admission through the real Make adapter.
+# The dedicated Testkit fixture owns setup/check forwarding and owner admission.
+# This fixture owns qualification barriers and driver dispatch after admission.
 mkdir -p scripts/ci scripts/dev
 cp "$repository_root/scripts/ci/run-validation-targets.sh" \
     "$repository_root/scripts/ci/verify-file-checksum.sh" scripts/ci/
@@ -152,16 +153,6 @@ set -euo pipefail
 printf '%s\n' "$@" >> server-events
 exit "${FIXTURE_SERVER_STATUS:-0}"
 EOF
-make --no-print-directory install-testkit-server >/dev/null
-make --no-print-directory pocketic-check >/dev/null
-printf 'setup\ncheck\n' > expected-server-events
-cmp expected-server-events server-events
-if FIXTURE_SERVER_STATUS=31 make --no-print-directory pocketic-check >/dev/null 2>&1; then
-    echo 'error: failed Testkit offline admission was accepted' >&2
-    exit 1
-fi
-rm server-events
-
 # Standalone qualification must refuse before any probe compilation, including
 # under parallel Make. The real dependency edges dispatch only offline admission.
 for target in pocketic-watchdog pocketic-cohorts; do

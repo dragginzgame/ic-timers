@@ -63,7 +63,6 @@ revision	66c91c4412856baa147482e648fc80428db8b179
 # entrypoint	scripts/ci/failure_evidence.py
 # entrypoint	scripts/ci/qualify-hosted-failure.sh
 # entrypoint	scripts/ci/collect-release-changes.sh
-# entrypoint	scripts/ci/test-release-changes.sh
 # entrypoint	scripts/ci/fixture-retention-probes.sh
 # entrypoint	audits/README.md
 # entrypoint	audits/code-hygiene.md
@@ -91,15 +90,12 @@ revision	66c91c4412856baa147482e648fc80428db8b179
 # entrypoint	scripts/dev/cargo-tool-build.sh
 # entrypoint	scripts/ci/check-dependency-pins.sh
 # entrypoint	scripts/ci/dependency-pins.jq
-# entrypoint	scripts/ci/test-dependency-pins.sh
 # entrypoint	scripts/ci/read-cargo-workspace-version.sh
-# entrypoint	scripts/ci/test-cargo-metadata.sh
 # entrypoint	scripts/ci/check-release-tag.sh
 # entrypoint	scripts/ci/check-release-commands.sh
 # entrypoint	scripts/ci/cargo-release-metadata.sh
 # entrypoint	scripts/ci/extract-workflow-step.sh
 # entrypoint	scripts/ci/check-release-changelog.sh
-# entrypoint	scripts/ci/test-release-changelog.sh
 # entrypoint	scripts/dev/prepare-rust-toolchain.sh
 # entrypoint	.github/actions/prepare-common-tools/action.yml
 # entrypoint	scripts/ci/make-adapter-probes.sh
@@ -169,7 +165,6 @@ file	523996a3e4eb9dbe87e8daa4285293a28c5e005223feaa84bd5383d430784b09	-	scripts/
 file	0c2748e027cf6315c535db627c193e337561d8bdc00502f57ae1fdf1422d397b	-	scripts/ci/failure_evidence.py
 file	b04addd6f0e042d7d1ab85bd7f161807401b1fe6ff443f9fb1461d0bb5922bc8	x	scripts/ci/qualify-hosted-failure.sh
 file	e175c47969e75bfbbe7c90b731da68cc40d47f79cc37026a4e6b2260f369bb8f	-	scripts/ci/collect-release-changes.sh
-file	78705d773918a45fd770168a8e534041e705f82104f80687b271f28b389c0e29	-	scripts/ci/test-release-changes.sh
 file	c7d7a7dfd617e785cc770f7fc6835447f49b6dc4568a24db0cf0fdf3362c07a2	-	scripts/ci/fixture-retention-probes.sh
 file	d5933681ed28d3a4cc34c1d5a6cc5701261f5f947f167863e76178b474861f6e	-	audits/README.md
 file	bf4d6e18b578aa84b9f96a7c6c0794852636bce48b28bff4664e531dd79eaf21	-	audits/code-hygiene.md
@@ -197,15 +192,12 @@ file	af563f004e8b03bea5f12c3896fb7228ae672ce33e7b548ce6da7f0545da6c15	-	scripts/
 file	5d55c982b343ac07d3ba38e684f9cd80d1081c531e1164402ca9b34f16cb5a03	-	scripts/dev/cargo-tool-build.sh
 file	a008802ec5ba5950b658b7e0fe6e0a24164cd0f5f0cd946e01bf2f0784047775	x	scripts/ci/check-dependency-pins.sh
 file	3d56ca1b0c5952b9534ece61b6754ca39e6ec1980d929f09de3dbd967a0c4977	-	scripts/ci/dependency-pins.jq
-file	f0fa06579c46aa3bd02a3f5823400ea1f42bdcec29305cce7869c5c091310608	x	scripts/ci/test-dependency-pins.sh
 file	40f31a19d6115411ebffe7c26e3ed30b8af7eead10dd4830de8d5a9312291222	x	scripts/ci/read-cargo-workspace-version.sh
-file	a37905355c8606327be4ea0af48b9032b2be7e3c1bbb2d2eb73bb5e1f65a7fc3	x	scripts/ci/test-cargo-metadata.sh
 file	d7b179f9ceaec6e11c690c975b61f91bedc80526415f71571615064db14f0c9c	x	scripts/ci/check-release-tag.sh
 file	dcf4585f8794b2158259054f550dbabea64fadd7d4f07161388ea49a0dfa3d80	x	scripts/ci/check-release-commands.sh
 file	b46a945b4a4edda01fd73fcc0d84f5e126fd376ae7197c9a23c0c1ecfd6ac1e1	x	scripts/ci/cargo-release-metadata.sh
 file	e2825c554ea3952515ecb2938f7ad592d6539ec5304c3b3107d32a1bfc6b4eda	-	scripts/ci/extract-workflow-step.sh
 file	5a4f1abe764e1e46c472bcf1e2e38f7f998085c570f53976591c808eca884d65	-	scripts/ci/check-release-changelog.sh
-file	7974f6898415696b53aa43b284381257a8b087673d52a9a1334160526b2254b9	-	scripts/ci/test-release-changelog.sh
 file	31c47b675fba90850681c6fac0d685def34b08a68e7e05bc55ae0403419fdf82	x	scripts/dev/prepare-rust-toolchain.sh
 file	4f8004bdbb5052394b8f313a6f65d30e8230a12a019c666c6d412cd3779b8df0	-	.github/actions/prepare-common-tools/action.yml
 file	f3ccdd33f1322c6069daedf66669b3d4bac267476f80725d7031c741f20cb278	-	scripts/ci/make-adapter-probes.sh

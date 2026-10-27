@@ -46,6 +46,5 @@ done
 # A crate path cannot stop draining the owner before it reports final success.
 printf '%s\0' Cargo.toml docs/note.md > "$IMPACT_PATHS"
 [[ "$(bash "$classifier")" == crate ]] || exit 1
-bash "$repository_root/scripts/ci/test-release-changes.sh"
 fixture_complete=true
 echo 'Release-impact local policy, owner binding and failure propagation checks passed'

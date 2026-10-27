@@ -21,21 +21,10 @@ finish() {
     fixture_finish "$status" "$fixture" 'Failed committed-release fixture retained'
 }
 trap finish EXIT
-mkdir -p "$fixture/current/scripts" "$fixture/current/scripts/ci" \
-    "$fixture/selected" "$fixture/bin" "$fixture/tmp"
-cp "$root/Makefile" "$fixture/current/"
-bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$fixture/current" make/consumer.mk
-mkdir -p "$fixture/current/scripts/release"
-cp "$root/scripts/release/adapter.sh" "$fixture/current/scripts/release/"
-cp "$root/scripts/ci/read-cargo-workspace-version.sh" \
-    "$root/scripts/ci/check-release-tag.sh" \
-    "$root/scripts/ci/cargo-release-metadata.sh" \
-    "$root/scripts/ci/cargo-workspace-members.jq" \
-    "$root/scripts/ci/compare-stable-versions.pl" \
-    "$root/scripts/ci/StableVersion.pm" \
-    "$fixture/current/scripts/ci/"
-mkdir -p "$fixture/current/ci"
-cp "$root/ci/tool-versions.env" "$root/ci/release-delivery.txt" "$fixture/current/ci/"
+mkdir -p "$fixture/current" "$fixture/selected" "$fixture/bin" "$fixture/tmp"
+bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$fixture/current" \
+    Makefile make/consumer.mk scripts/release/adapter.sh \
+    scripts/ci/check-release-tag.sh scripts/ci/cargo-release-metadata.sh ci/release-delivery.txt
 printf '%s\n' '[workspace.package]' 'version = "0.1.0"' > "$fixture/selected/Cargo.toml"
 printf '%s\n' 'ic-timers = "=0.0.7"' > "$fixture/selected/README.md"
 printf '%s\n' '## [0.1.0] - 2026-10-06' > "$fixture/selected/CHANGELOG.md"

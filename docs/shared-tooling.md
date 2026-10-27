@@ -2,7 +2,7 @@
 
 ## Current authority
 
-One [snapshot](../.shared-tooling.snapshot) records **135** canonical payloads
+One [snapshot](../.shared-tooling.snapshot) records **131** canonical payloads
 from reviewed Shared Tooling **0.26.21**, revision
 `66c91c4412856baa147482e648fc80428db8b179`.
 Canonical impact/apply ran from a clean clone of that committed revision with
@@ -10,7 +10,10 @@ the reviewed roots; exported files remain supplier-owned. A subsequent same-revi
 export retired the generic `scripts/ci/test-failure-evidence.py` root after its
 manual-workflow dispatch was removed. Timers retains its own
 `test_failure_evidence.py` and downloaded-artifact verifier. Shared qualifies the
-generic archive/receipt rejection matrix upstream.
+generic archive/receipt rejection matrix upstream. The 0.31.7 follow-up also
+retires the generic dependency-pin, Cargo-metadata, changelog and release-change
+suites through the same reviewed revision's exporter; their actual consumer
+checks remain selected.
 
 The compact baseline delegates task-specific detail to
 [`rules/engineering-details.md`](../rules/engineering-details.md). Validation
@@ -199,6 +202,24 @@ Product MSRV, Wasm, watchdog and cohort qualification is unchanged. Review relev
 upstream fixtures when a contract changes; do not replay the producer's whole
 implementation matrix as a routine consumer prerequisite.
 
+Shared's reviewed `test-portable-tools.sh` dispatches its generic dependency-pin,
+Cargo-metadata, changelog and release-change suites. Timers no longer selects or
+dispatches those producer matrices, including the former indirect release-change
+dispatch inside its local impact fixture. The consumer proofs remain:
+
+| Contract | Timers evidence owner |
+| --- | --- |
+| Actual dependency/workflow declarations and policy refusal | `actions-check`, `test-repository-checks.sh` and `test-library-dependency-boundary.sh` |
+| Coordinated metadata, selected release commit and changelog preparation | The graph check in `release-check`, `test-committed-release.sh`, `test-release-index.sh` and `test-version-preparation.sh` |
+| Release-impact policy, failed observations and actual source admission | `test-release-impact.sh`, the real classifier and the index/tag fixtures |
+
+Committed-release and tag fixtures select their actual entrypoints through
+`prepare-script-fixture.sh`; producer-declared companions replace hand-copied
+transitive dependency lists. Fixture Git/Cargo substitutions stay local. The
+dedicated Testkit fixture owns setup/check forwarding, lock-selected CLI inputs,
+offline admission and aggregate failure ordering. Release-gate tests retain
+their distinct parallel admission-before-compilation and driver/toolchain checks.
+
 ## Deployment dependency exclusions
 
 The selected Shared direct-dependency checker `check-cargo-dependency-boundaries.sh`
@@ -257,6 +278,8 @@ verification guide still identify upstream coverage, not additional local caller
 Current impact/apply, incoming before-images and focused qualification logs are
 in `/tmp/ic-timers-shared-02621.TPKVvh/`. The same-revision generic evidence-test
 retirement and its consumer checks are in `/tmp/ic-timers-cleanup-0316.GVZnfK/`.
+The additional producer-suite retirement and release-fixture qualification are
+in `/tmp/ic-timers-tooling-0317.4tYjxn/`.
 The [handoff](status/current.md) records tested scope and separate macOS/release
 qualification limits. Earlier Build/Host/Testkit 0.68.7 qualification remains
 in `/tmp/ic-timers-adoption-0315/`; incoming dependency updates are separate

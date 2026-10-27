@@ -2,6 +2,16 @@
 
 All notable changes to this project are recorded here.
 
+## [0.31.7] - Unreleased
+
+### 🧪 Testing
+
+- Retire redundant Shared regression suites from local release validation;
+  retain Timers' actual dependency, metadata, changelog and source-policy checks.
+- Prepare release fixtures through the canonical dependency copier and keep
+  Testkit setup/admission checks in their dedicated fixture. Release tests retain
+  the parallel qualification barriers and driver-failure checks.
+
 ## [0.31.6] - 2026-10-27
 
 ### 🧹 Cleanup

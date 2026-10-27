@@ -17,10 +17,9 @@ git config user.name 'ic-timers release test'
 git config user.email 'release-test@example.invalid'
 printf '%s\n' '[workspace.dependencies.fixture]' 'version = "0.2.0"' \
     '[workspace.package]' 'version = "0.1.0"' > Cargo.toml
-cp "$repository_root/Makefile" .
-bash "$repository_root/scripts/ci/prepare-script-fixture.sh" "$repository_root" "$temporary_root" make/consumer.mk
-cp "$repository_root/scripts/ci/read-cargo-workspace-version.sh" \
-    "$repository_root/scripts/ci/check-release-source.sh" "$checker" scripts/ci/
+bash "$repository_root/scripts/ci/prepare-script-fixture.sh" "$repository_root" "$temporary_root" \
+    Makefile make/consumer.mk scripts/ci/read-cargo-workspace-version.sh \
+    scripts/ci/check-release-source.sh scripts/ci/check-release-tag.sh
 git add Cargo.toml Makefile ci make scripts
 git commit -qm fixture
 
@@ -145,8 +144,8 @@ rm 'untracked publication change'
 make --no-print-directory ensure-clean
 # A source-only checker can admit an empty unborn checkout; publication cannot.
 git init -q "$temporary_root/unborn"
-cp "$repository_root/Makefile" "$temporary_root/unborn/"
-bash "$repository_root/scripts/ci/prepare-script-fixture.sh" "$repository_root" "$temporary_root/unborn" make/consumer.mk
+bash "$repository_root/scripts/ci/prepare-script-fixture.sh" "$repository_root" "$temporary_root/unborn" \
+    Makefile make/consumer.mk
 if output="$(cd "$temporary_root/unborn" && make --no-print-directory ensure-clean 2>&1)"; then
     echo 'error: clean publication guard admitted a checkout without a commit' >&2
     exit 1

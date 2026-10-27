@@ -141,7 +141,7 @@ shell-check:
 		bash -n "$$script"; \
 	done
 
-# Shared owns generic command, formatter, Make-interface and LOC matrices.
+# Shared owns generic mechanics and their regression matrices.
 # Retain Timers' actual wiring, release/recovery and host/product evidence.
 release-check:
 	bash scripts/ci/test-fixture-completion.sh
@@ -149,15 +149,12 @@ release-check:
 	bash scripts/ci/test-shared-snapshots.sh
 	bash scripts/ci/test-rust-preparation.sh
 	bash scripts/ci/test-failure-evidence.sh
-	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/test-dependency-pins.sh
-	YQ="$(CURDIR)/.tools/host/bin/yq" bash scripts/ci/test-cargo-metadata.sh
 	bash scripts/ci/check-release-commands.sh "$(CURDIR)" \
 		ci/tool-versions.env ci/release-delivery.txt make/consumer.mk make/tools.mk make/rust-format.mk make/release.mk \
 		scripts/ci/check-release-delivery.sh \
 		make/execution.mk scripts/ci/check-make-execution.sh scripts/ci/run-formatting.sh
 	bash scripts/release/test-committed-release.sh
 	bash scripts/release/test-release-index.sh
-	bash scripts/ci/test-release-changelog.sh
 	bash scripts/release/test-release-impact.sh
 	RELEASE_COMMIT='' bash scripts/ci/cargo-release-metadata.sh check-graph ic-timers
 	bash scripts/release/test-release-gate.sh
