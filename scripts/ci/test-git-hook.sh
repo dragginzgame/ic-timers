@@ -52,7 +52,8 @@ EOF
 done
 git add Makefile make/ ci/tool-versions.env Cargo.toml \
     crates/hook-fixture testing/crates/hook-probe \
-    scripts/ci/check-format-tools.sh scripts/ci/check-make-execution.sh scripts/ci/run-formatting.sh
+    scripts/ci/check-format-tools.sh scripts/ci/check-make-execution.sh \
+    scripts/ci/run-formatting.sh scripts/ci/run-rust-formatting.pl
 printf 'unrelated working edit\n' >> README.md
 cp README.md "${temporary_root}/unrelated-readme"
 # Preserve distinct index and working lock bytes across selected-file formatting.
@@ -118,11 +119,12 @@ if ! CARGO_NET_OFFLINE=true RUSTUP_AUTO_INSTALL=0 \
     cat "${temporary_root}/format.log" >&2
     exit 1
 fi
-# The formatter owns one success line; the hook separately confirms index refresh.
-printf '%s\n' 'Formatting... ok' \
-    'Pre-commit formatting passed; refreshed only the selected files.' \
-    > "${temporary_root}/expected-format-output"
-cmp "${temporary_root}/expected-format-output" "${temporary_root}/format.log"
+# The isolated hook must execute both passes and separately confirm index refresh.
+for pass in 'Manifest sorting' 'Rust formatting'; do
+    grep -Eq "^$pass \[\.\]\.\.\. ok \([0-9]+\.[0-9]+s\)$" "${temporary_root}/format.log"
+done
+grep -Fxq 'Pre-commit formatting passed; refreshed only the selected files.' \
+    "${temporary_root}/format.log"
 for path in crates/hook-fixture/src/lib.rs testing/crates/hook-probe/src/lib.rs; do
     formatted="$(git show ":${path}")"
     test "${formatted}" = 'pub fn fixture() {}'
@@ -134,15 +136,17 @@ cmp "${temporary_root}/index-lock" "${temporary_root}/after-hook-index-lock"
 if ! SHARED_TOOLING_ROOT="${temporary_root}/unselected-snapshot" \
     HOST_TOOL_VERSIONS="${temporary_root}/unselected-pins.env" \
     RUST_TOOL_VERSIONS="${temporary_root}/unselected-rust-pins.env" make --no-print-directory \
-    fmt-check "SHARED_TOOLING_ROOT=${temporary_root}/unselected-snapshot" \
+    fmt-check FORMAT_RUST_ARGS=--no-cache \
+    "SHARED_TOOLING_ROOT=${temporary_root}/unselected-snapshot" \
     "HOST_TOOL_VERSIONS=${temporary_root}/unselected-pins.env" \
     "RUST_TOOL_VERSIONS=${temporary_root}/unselected-rust-pins.env" \
     > "${temporary_root}/fmt-check.log" 2>&1; then
     cat "${temporary_root}/fmt-check.log" >&2
     exit 1
 fi
-printf 'Checking formatting... ok\n' > "${temporary_root}/expected-check-output"
-cmp "${temporary_root}/expected-check-output" "${temporary_root}/fmt-check.log"
+for pass in 'Manifest sorting' 'Rust formatting'; do
+    grep -Eq "^$pass \[\.\]\.\.\. ok \([0-9]+\.[0-9]+s\)$" "${temporary_root}/fmt-check.log"
+done
 cmp "${temporary_root}/working-lock" Cargo.lock
 git show :Cargo.lock > "${temporary_root}/after-check-index-lock"
 cmp "${temporary_root}/index-lock" "${temporary_root}/after-check-index-lock"
@@ -168,15 +172,15 @@ for target in fmt fmt-check; do
     RUNNER_TEMP="${temporary_root}/format-logs" \
         SHARED_TOOLING_CARGO_SORT_VERSION="$SHARED_TOOLING_CARGO_SORT_VERSION" \
         FORMAT_TEST_EVENTS="${temporary_root}/unexpected-format-events" \
-        make --no-print-directory "$target" "FORMAT_CARGO=${temporary_root}/failing-cargo" \
+        make --no-print-directory "$target" FORMAT_RUST_ARGS=--no-cache \
+        "FORMAT_CARGO=${temporary_root}/failing-cargo" \
         > "${temporary_root}/$target-failure.log" 2>&1 || status=$?
     test "$status" -eq 2
-    label=Formatting
-    [[ "$target" != fmt-check ]] || label='Checking formatting'
-    grep -Fxq "$label... FAILED (exit 23)" "${temporary_root}/$target-failure.log"
+    grep -Eq '^Manifest sorting \[\.\]\.\.\. FAILED \(exit 23, [0-9]+\.[0-9]+s\)$' \
+        "${temporary_root}/$target-failure.log"
     logs=("${temporary_root}"/format-logs/formatting.*)
     test "${#logs[@]}" -eq 1
-    printf 'Details: %q\n' "${logs[0]}" > "${temporary_root}/expected-log-path"
+    printf 'Details: %s\n' "${logs[0]}" > "${temporary_root}/expected-log-path"
     grep -Fxf "${temporary_root}/expected-log-path" "${temporary_root}/$target-failure.log"
     cmp "${temporary_root}/expected-diagnostics" "${logs[0]}"
     test ! -e "${temporary_root}/unexpected-format-events"

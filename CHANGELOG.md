@@ -2,6 +2,15 @@
 
 All notable changes to this project are recorded here.
 
+## [0.31.11] - Unreleased
+
+### 🔧 Changed
+
+- Adopt Shared Tooling 0.26.24 with visible per-pass formatting timings and
+  reuse of successful results for unchanged inputs. Keep prepared-tool admission,
+  selected-file hook isolation and retained failure diagnostics; include the
+  upstream hook fix that keeps submodule contents opaque.
+
 ## [0.31.10] - 2026-10-27
 
 ### 📦 Dependencies
