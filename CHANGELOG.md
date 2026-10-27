@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.31.10] - Unreleased
+## [0.31.10] - 2026-10-27
 
 ### 📦 Dependencies
 
