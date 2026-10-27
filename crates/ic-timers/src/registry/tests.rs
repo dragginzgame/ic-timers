@@ -676,6 +676,12 @@ fn measurement_routing_rejects_a_policy_role_mismatch() {
 
 #[test]
 fn explicit_unregistration_consumes_scheduled_and_running_claims() {
+    enum LaterRequest {
+        Ensure,
+        Reconcile,
+        Cancel,
+    }
+
     let mut registry = registry();
     let scheduled_id = identity("unregister-scheduled");
     let scheduled = registry
@@ -699,7 +705,11 @@ fn explicit_unregistration_consumes_scheduled_and_running_claims() {
     assert!(registry.begin_ordinary(&queued).is_none());
 
     for once in [true, false] {
-        for command in 0..3 {
+        for command in [
+            LaterRequest::Ensure,
+            LaterRequest::Reconcile,
+            LaterRequest::Cancel,
+        ] {
             let running_id = identity("unregister-running");
             let running = if once {
                 registry.register_once(running_id.clone(), DeclarationLifetime::Retained)
@@ -722,15 +732,17 @@ fn explicit_unregistration_consumes_scheduled_and_running_claims() {
                 &RegistryEffect::None
             );
             let later_request = match command {
-                0 => {
+                LaterRequest::Ensure => {
                     if once {
                         registry.ensure_once(&running, 10, TimerSchedule::At(20))
                     } else {
                         registry.ensure_recurring(&running, 10)
                     }
                 }
-                1 => registry.reconcile_ordinary(&running, 10, Some(TimerSchedule::At(30))),
-                _ => registry.cancel(&running),
+                LaterRequest::Reconcile => {
+                    registry.reconcile_ordinary(&running, 10, Some(TimerSchedule::At(30)))
+                }
+                LaterRequest::Cancel => registry.cancel(&running),
             }
             .unwrap();
             assert_eq!(later_request.effect(), &RegistryEffect::None);
@@ -2929,9 +2941,116 @@ fn registration_sequence_exhaustion_never_reuses_a_snapshot_identity() {
     assert!(registry.snapshot(&timer).is_none());
 }
 
+#[derive(Clone, Copy)]
+enum WatchdogOrderCommand {
+    Cancel,
+    Unregister,
+    Immediate,
+    Cadence,
+    Reconcile(u64),
+}
+
+#[derive(Clone, Copy)]
+enum WatchdogOrderState {
+    Removed,
+    Inactive(InactiveReason),
+    Scheduled(u64),
+}
+
+struct WatchdogOrderCase {
+    name: &'static str,
+    commands: &'static [WatchdogOrderCommand],
+    invariant_failure: bool,
+    expected: WatchdogOrderState,
+    checked_effect: Option<&'static RegistryEffect>,
+}
+
+const WATCHDOG_ORDER_CASES: [WatchdogOrderCase; 9] = {
+    use WatchdogOrderCommand::{Cadence, Cancel, Immediate, Reconcile, Unregister};
+    use WatchdogOrderState::{Inactive, Removed, Scheduled};
+    const CLEAR: RegistryEffect = RegistryEffect::ClearCallbacks {
+        handles: CallbacksToClear::Wakeup,
+    };
+    // Inputs and independent expected states/effects stay together in each row.
+    [
+        WatchdogOrderCase {
+            name: "cancel",
+            commands: &[Cancel],
+            invariant_failure: false,
+            expected: Inactive(InactiveReason::Cancelled),
+            checked_effect: Some(&CLEAR),
+        },
+        WatchdogOrderCase {
+            name: "unregister then reconcile",
+            commands: &[Unregister, Reconcile(200)],
+            invariant_failure: false,
+            expected: Removed,
+            checked_effect: Some(&CLEAR),
+        },
+        WatchdogOrderCase {
+            name: "immediate",
+            commands: &[Immediate],
+            invariant_failure: false,
+            expected: Scheduled(10),
+            checked_effect: None,
+        },
+        WatchdogOrderCase {
+            name: "cadence",
+            commands: &[Cadence],
+            invariant_failure: false,
+            expected: Scheduled(100),
+            checked_effect: None,
+        },
+        WatchdogOrderCase {
+            name: "cancel then reconcile",
+            commands: &[Cancel, Reconcile(200)],
+            invariant_failure: false,
+            expected: Scheduled(200),
+            checked_effect: None,
+        },
+        WatchdogOrderCase {
+            name: "earlier deadline",
+            commands: &[Reconcile(15)],
+            invariant_failure: false,
+            expected: Scheduled(15),
+            checked_effect: Some(&RegistryEffect::None),
+        },
+        WatchdogOrderCase {
+            name: "invariant failure",
+            commands: &[],
+            invariant_failure: true,
+            expected: Inactive(InactiveReason::InvariantFailure),
+            checked_effect: Some(&CLEAR),
+        },
+        WatchdogOrderCase {
+            name: "cancel then invariant failure",
+            commands: &[Cancel],
+            invariant_failure: true,
+            expected: Inactive(InactiveReason::InvariantFailure),
+            checked_effect: Some(&CLEAR),
+        },
+        WatchdogOrderCase {
+            name: "unregister then invariant failure",
+            commands: &[Unregister, Reconcile(200)],
+            invariant_failure: true,
+            expected: Removed,
+            checked_effect: Some(&CLEAR),
+        },
+    ]
+};
+
 #[test]
 fn watchdog_exact_pending_order_preserves_terminal_and_immediate_precedence() {
-    for scenario in 0..9 {
+    use WatchdogOrderCommand::{Cadence, Cancel, Immediate, Reconcile, Unregister};
+    use WatchdogOrderState::{Inactive, Removed, Scheduled};
+    for WatchdogOrderCase {
+        name,
+        commands,
+        invariant_failure,
+        expected,
+        checked_effect,
+    } in WATCHDOG_ORDER_CASES
+    {
         let mut registry = registry();
         let timer = identity("deadline-arbitration");
         let claim = registry
@@ -2943,32 +3062,21 @@ fn watchdog_exact_pending_order_preserves_terminal_and_immediate_precedence() {
         registry
             .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(100)))
             .unwrap();
-        match scenario {
-            0 | 4 | 7 => {
-                registry.cancel(&claim).unwrap();
+        for command in commands {
+            match *command {
+                Cancel => registry.cancel(&claim),
+                Unregister => registry.unregister(&claim),
+                Immediate => registry.ensure_watchdog_immediately(&claim, 10),
+                Cadence => registry.ensure_recurring(&claim, 10),
+                Reconcile(deadline) => registry.reconcile_watchdog_schedule(
+                    &claim,
+                    10,
+                    Some(TimerSchedule::At(deadline)),
+                ),
             }
-            1 | 8 => {
-                registry.unregister(&claim).unwrap();
-            }
-            2 => {
-                registry.ensure_watchdog_immediately(&claim, 10).unwrap();
-            }
-            3 => {
-                registry.ensure_recurring(&claim, 10).unwrap();
-            }
-            5 => {
-                registry
-                    .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(15)))
-                    .unwrap();
-            }
-            _ => {}
+            .unwrap();
         }
-        if matches!(scenario, 1 | 4 | 8) {
-            registry
-                .reconcile_watchdog_schedule(&claim, 10, Some(TimerSchedule::At(200)))
-                .unwrap();
-        }
-        let completion = if scenario >= 6 {
+        let completion = if invariant_failure {
             TimerCompletion::invariant_failure(0)
         } else {
             TimerCompletion::success(1)
@@ -2980,50 +3088,43 @@ fn watchdog_exact_pending_order_preserves_terminal_and_immediate_precedence() {
                 WatchdogRunResult::new(completion, WatchdogDecision::ScheduleAt(300)),
             )
             .unwrap();
-        if matches!(scenario, 1 | 8) {
-            assert!(registry.snapshot(&timer).is_none());
-        } else {
-            let snapshot = registry.snapshot(&timer).unwrap();
-            let expected = match scenario {
-                0 | 6..=7 => None,
-                2 => Some(10),
-                3 => Some(100),
-                4 => Some(200),
-                _ => Some(15),
-            };
-            assert_eq!(snapshot.next_deadline_ns(), expected, "scenario {scenario}");
-            let counters = snapshot.observability().counters();
-            assert_eq!(counters.work_completed().exact_total().unwrap(), 1);
-            assert_eq!(
-                counters.cancelled().exact_total().unwrap(),
-                u128::from(scenario == 0)
-            );
-            assert_eq!(
-                counters.invariant_failure().exact_total().unwrap(),
-                u128::from(scenario >= 6)
-            );
-            if matches!(scenario, 0 | 6..=7) {
-                let reason = if scenario == 0 {
-                    InactiveReason::Cancelled
-                } else {
-                    InactiveReason::InvariantFailure
+        match expected {
+            Removed => assert!(registry.snapshot(&timer).is_none(), "{name}"),
+            Inactive(_) | Scheduled(_) => {
+                let snapshot = registry.snapshot(&timer).unwrap();
+                let deadline = match expected {
+                    Scheduled(deadline) => Some(deadline),
+                    Inactive(reason) => {
+                        assert_eq!(
+                            snapshot.state(),
+                            TimerRuntimeStateSnapshot::Inactive { reason },
+                            "{name}"
+                        );
+                        None
+                    }
+                    Removed => unreachable!("removed cases handled above"),
                 };
+                assert_eq!(snapshot.next_deadline_ns(), deadline, "{name}");
+                let counters = snapshot.observability().counters();
                 assert_eq!(
-                    snapshot.state(),
-                    TimerRuntimeStateSnapshot::Inactive { reason }
+                    counters.work_completed().exact_total().unwrap(),
+                    1,
+                    "{name}"
+                );
+                assert_eq!(
+                    counters.cancelled().exact_total().unwrap(),
+                    u128::from(matches!(expected, Inactive(InactiveReason::Cancelled))),
+                    "{name}"
+                );
+                assert_eq!(
+                    counters.invariant_failure().exact_total().unwrap(),
+                    u128::from(invariant_failure),
+                    "{name}"
                 );
             }
         }
-        if matches!(scenario, 0 | 1 | 6..=8) {
-            assert_eq!(
-                transition.effect(),
-                &RegistryEffect::ClearCallbacks {
-                    handles: CallbacksToClear::Wakeup,
-                }
-            );
-        }
-        if scenario == 5 {
-            assert_eq!(transition.into_effect(), RegistryEffect::None);
+        if let Some(effect) = checked_effect {
+            assert_eq!(transition.effect(), effect, "{name}");
         }
     }
 }

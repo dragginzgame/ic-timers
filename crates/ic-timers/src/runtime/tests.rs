@@ -15,6 +15,17 @@ use std::{
     task::{Poll, Waker},
 };
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum TestPolicy {
+    Once,
+    AfterCompletion,
+    Watchdog,
+}
+
+impl TestPolicy {
+    const ALL: [Self; 3] = [Self::Once, Self::AfterCompletion, Self::Watchdog];
+}
+
 #[derive(Clone, Default)]
 struct SuspendedWork {
     ready: Rc<Cell<bool>>,
@@ -538,29 +549,55 @@ fn suspended_once_work_allows_other_timers_and_arbitrates_external_commands() {
     reason = "Keep both policy paths and their arbitration observations in one decision matrix."
 )]
 fn policy_specific_results_schedule_through_live_runtime() {
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    enum ResultCase {
+        Stop,
+        Continue,
+        Retry,
+        AtDeadline,
+        Recur,
+        UnrepresentableDelay,
+        OverflowingDeadline,
+        InvariantFailure,
+    }
+    use ResultCase::{
+        AtDeadline, Continue, InvariantFailure, OverflowingDeadline, Recur, Retry, Stop,
+        UnrepresentableDelay,
+    };
+
     for recurring in [false, true] {
-        for case in 0..8 {
-            if !recurring && case == 4 {
+        for case in [
+            Stop,
+            Continue,
+            Retry,
+            AtDeadline,
+            Recur,
+            UnrepresentableDelay,
+            OverflowingDeadline,
+            InvariantFailure,
+        ] {
+            if !recurring && case == Recur {
                 continue;
             }
             for reconcile in [false, true] {
                 let _fixture = setup();
                 let timer = identity("typed-results");
-                let completion = if case == 7 {
+                let completion = if case == InvariantFailure {
                     TimerCompletion::invariant_failure(2)
                 } else {
                     TimerCompletion::retryable_failure(2)
                 };
                 if recurring {
                     let decision = match case {
-                        0 => AfterCompletionDecision::Stop,
-                        1 | 7 => AfterCompletionDecision::ContinueImmediately,
-                        2 => AfterCompletionDecision::RetryAfter(Duration::from_nanos(7)),
-                        3 => AfterCompletionDecision::ScheduleAt(50),
-                        4 => AfterCompletionDecision::RecurAfterCompletion,
-                        5 => AfterCompletionDecision::RetryAfter(Duration::MAX),
-                        6 => AfterCompletionDecision::RetryAfter(Duration::from_nanos(u64::MAX)),
-                        _ => unreachable!("fixed decision cases"),
+                        Stop => AfterCompletionDecision::Stop,
+                        Continue | InvariantFailure => AfterCompletionDecision::ContinueImmediately,
+                        Retry => AfterCompletionDecision::RetryAfter(Duration::from_nanos(7)),
+                        AtDeadline => AfterCompletionDecision::ScheduleAt(50),
+                        Recur => AfterCompletionDecision::RecurAfterCompletion,
+                        UnrepresentableDelay => AfterCompletionDecision::RetryAfter(Duration::MAX),
+                        OverflowingDeadline => {
+                            AfterCompletionDecision::RetryAfter(Duration::from_nanos(u64::MAX))
+                        }
                     };
                     let registration = register_after_completion(
                         timer.clone(),
@@ -581,13 +618,15 @@ fn policy_specific_results_schedule_through_live_runtime() {
                         .unwrap();
                 } else {
                     let decision = match case {
-                        0 => OnceDecision::Stop,
-                        1 | 7 => OnceDecision::ContinueImmediately,
-                        2 => OnceDecision::RetryAfter(Duration::from_nanos(7)),
-                        3 => OnceDecision::ScheduleAt(50),
-                        5 => OnceDecision::RetryAfter(Duration::MAX),
-                        6 => OnceDecision::RetryAfter(Duration::from_nanos(u64::MAX)),
-                        _ => unreachable!("Once has no configured recurrence"),
+                        Stop => OnceDecision::Stop,
+                        Continue | InvariantFailure => OnceDecision::ContinueImmediately,
+                        Retry => OnceDecision::RetryAfter(Duration::from_nanos(7)),
+                        AtDeadline => OnceDecision::ScheduleAt(50),
+                        UnrepresentableDelay => OnceDecision::RetryAfter(Duration::MAX),
+                        OverflowingDeadline => {
+                            OnceDecision::RetryAfter(Duration::from_nanos(u64::MAX))
+                        }
+                        Recur => unreachable!("Once has no configured recurrence"),
                     };
                     let registration = register_once(
                         timer.clone(),
@@ -609,28 +648,28 @@ fn policy_specific_results_schedule_through_live_runtime() {
                 set_time(20);
                 assert!(run_next_due());
                 let snapshot = timer_snapshot(&timer).unwrap().unwrap();
-                let deadline = if reconcile && case != 7 {
+                let deadline = if reconcile && case != InvariantFailure {
                     Some(100)
                 } else {
                     match case {
-                        1 => Some(20),
-                        2 => Some(27),
-                        3 => Some(50),
-                        4 => Some(25),
+                        Continue => Some(20),
+                        Retry => Some(27),
+                        AtDeadline => Some(50),
+                        Recur => Some(25),
                         _ => None,
                     }
                 };
                 assert_eq!(snapshot.next_deadline_ns(), deadline);
                 assert_eq!(timer_count(), usize::from(deadline.is_some()));
-                if case == 7 {
+                if case == InvariantFailure {
                     assert_eq!(
                         snapshot.state(),
                         TimerRuntimeStateSnapshot::Inactive {
                             reason: InactiveReason::InvariantFailure,
                         }
                     );
-                } else if !reconcile && matches!(case, 5 | 6) {
-                    let failure = if case == 5 {
+                } else if !reconcile && matches!(case, UnrepresentableDelay | OverflowingDeadline) {
+                    let failure = if case == UnrepresentableDelay {
                         TimerControlFailure::DelayOutOfRange
                     } else {
                         TimerControlFailure::DeadlineOverflow
@@ -650,7 +689,8 @@ fn policy_specific_results_schedule_through_live_runtime() {
                 assert_eq!(
                     snapshot.observability().outcomes().last_outcome(),
                     Some(TimerLastOutcome::Completed(
-                        if !reconcile && matches!(case, 5 | 6) {
+                        if !reconcile && matches!(case, UnrepresentableDelay | OverflowingDeadline)
+                        {
                             crate::TimerCompletionOutcome::InvariantFailure
                         } else {
                             completion.outcome()
@@ -4137,7 +4177,7 @@ impl Drop for RemovalCapture {
 
 #[test]
 fn cancellation_and_unregistration_release_captures_after_provider_cleanup() {
-    for policy in 0..3 {
+    for policy in TestPolicy::ALL {
         for (armed, unregister) in [(false, true), (true, true), (true, false)] {
             let _fixture = setup();
             let timer = identity("normal-removal-capture");
@@ -4156,7 +4196,7 @@ fn cancellation_and_unregistration_release_captures_after_provider_cleanup() {
                 }
             };
             let claim = match policy {
-                0 => {
+                TestPolicy::Once => {
                     register_once(timer, start, move |_| {
                         std::hint::black_box(&captured);
                         async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
@@ -4164,7 +4204,7 @@ fn cancellation_and_unregistration_release_captures_after_provider_cleanup() {
                     .unwrap()
                     .claim
                 }
-                1 => {
+                TestPolicy::AfterCompletion => {
                     register_after_completion(
                         timer,
                         TimerCadence::from_nanos(5).unwrap(),
@@ -4182,7 +4222,7 @@ fn cancellation_and_unregistration_release_captures_after_provider_cleanup() {
                     .unwrap()
                     .claim
                 }
-                _ => {
+                TestPolicy::Watchdog => {
                     register_watchdog(
                         timer,
                         TimerCadence::from_nanos(5).unwrap(),
@@ -4228,11 +4268,11 @@ fn rejected_registration_releases_its_captures_outside_registry_borrow() {
         |_| async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) },
     )
     .unwrap();
-    for policy in 0..3 {
+    for policy in TestPolicy::ALL {
         let dropped = Rc::new(Cell::new(false));
         let captured = RejectedCapture(Rc::clone(&dropped));
         let rejected = match policy {
-            0 => register_once(
+            TestPolicy::Once => register_once(
                 timer.clone(),
                 TimerStart::Retained {
                     initial: Some(TimerSchedule::At(20)),
@@ -4243,7 +4283,7 @@ fn rejected_registration_releases_its_captures_outside_registry_borrow() {
                 },
             )
             .map(|_| ()),
-            1 => register_after_completion(
+            TestPolicy::AfterCompletion => register_after_completion(
                 timer.clone(),
                 TimerCadence::from_nanos(5).unwrap(),
                 TimerStart::Retained {
@@ -4260,7 +4300,7 @@ fn rejected_registration_releases_its_captures_outside_registry_borrow() {
                 },
             )
             .map(|_| ()),
-            _ => register_watchdog(
+            TestPolicy::Watchdog => register_watchdog(
                 timer.clone(),
                 TimerCadence::from_nanos(5).unwrap(),
                 TimerStart::Retained {
@@ -4392,11 +4432,11 @@ enum ReconciliationSlot {
 }
 
 impl ReconciliationSlot {
-    const fn new(policy: u8) -> Self {
+    const fn new(policy: TestPolicy) -> Self {
         match policy {
-            0 => Self::Once(None),
-            1 => Self::AfterCompletion(None),
-            _ => Self::Watchdog(None),
+            TestPolicy::Once => Self::Once(None),
+            TestPolicy::AfterCompletion => Self::AfterCompletion(None),
+            TestPolicy::Watchdog => Self::Watchdog(None),
         }
     }
 
@@ -4471,8 +4511,14 @@ impl ReconciliationSlot {
 
 #[test]
 fn failed_first_reconciliation_retires_all_policies_before_retry() {
-    for policy in 0..3 {
-        for rejection in 0..2 {
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    enum Rejection {
+        DeadlineOverflow,
+        ProviderBinding,
+    }
+
+    for policy in TestPolicy::ALL {
+        for rejection in [Rejection::DeadlineOverflow, Rejection::ProviderBinding] {
             let _fixture = setup();
             let timer = identity("first-reconciliation");
             let dropped = Rc::new(Cell::new(false));
@@ -4482,9 +4528,13 @@ fn failed_first_reconciliation_retires_all_policies_before_retry() {
             };
             let failed_calls = Rc::new(Cell::new(0));
             let mut slot = ReconciliationSlot::new(policy);
-            let cadence =
-                TimerCadence::from_nanos(if rejection == 0 { u64::MAX } else { 5 }).unwrap();
-            if rejection == 1 {
+            let cadence = TimerCadence::from_nanos(if rejection == Rejection::DeadlineOverflow {
+                u64::MAX
+            } else {
+                5
+            })
+            .unwrap();
+            if rejection == Rejection::ProviderBinding {
                 inject_provider_install_fault();
             }
             let result = slot.reconcile(
@@ -4497,9 +4547,12 @@ fn failed_first_reconciliation_retires_all_policies_before_retry() {
             assert!(matches!(
                 (rejection, result),
                 (
-                    0,
+                    Rejection::DeadlineOverflow,
                     Err(TimerError::Schedule(ScheduleError::DeadlineOverflow))
-                ) | (1, Err(TimerError::OwnershipInvariant))
+                ) | (
+                    Rejection::ProviderBinding,
+                    Err(TimerError::OwnershipInvariant)
+                )
             ));
             assert!(slot.claim().is_none());
             assert!(dropped.get());
@@ -4559,7 +4612,7 @@ fn first_once_reconciliation_rejects_unencodable_delay_without_retaining_authori
 
 #[test]
 fn later_reconciliation_deadline_error_preserves_existing_inactive_authority() {
-    for policy in 0..3 {
+    for policy in TestPolicy::ALL {
         let _fixture = setup();
         let timer = identity("later-reconciliation-deadline");
         let cadence = TimerCadence::from_nanos(u64::MAX).unwrap();
@@ -4594,7 +4647,7 @@ fn later_reconciliation_deadline_error_preserves_existing_inactive_authority() {
 
 #[test]
 fn later_reconciliation_provider_error_retains_original_callback_for_retry() {
-    for policy in 0..3 {
+    for policy in TestPolicy::ALL {
         let _fixture = setup();
         let timer = identity("later-reconciliation-provider");
         let cadence = TimerCadence::from_nanos(5).unwrap();
@@ -4641,18 +4694,18 @@ fn later_reconciliation_provider_error_retains_original_callback_for_retry() {
 }
 
 fn initial_registration_with_capture(
-    policy: u8,
+    policy: TestPolicy,
     timer: TimerIdentity,
     start: TimerStart,
     captured: RemovalCapture,
 ) -> Result<RegistrationClaim, TimerError> {
     match policy {
-        0 => register_once(timer, start, move |_| {
+        TestPolicy::Once => register_once(timer, start, move |_| {
             std::hint::black_box(&captured);
             async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
         })
         .map(|registration| registration.claim),
-        1 => register_after_completion(
+        TestPolicy::AfterCompletion => register_after_completion(
             timer,
             TimerCadence::from_nanos(5).unwrap(),
             start,
@@ -4667,7 +4720,7 @@ fn initial_registration_with_capture(
             },
         )
         .map(|registration| registration.claim),
-        _ => register_watchdog(
+        TestPolicy::Watchdog => register_watchdog(
             timer,
             TimerCadence::from_nanos(5).unwrap(),
             start,
@@ -4682,7 +4735,7 @@ fn initial_registration_with_capture(
 
 #[test]
 fn initial_registration_confirms_exact_wakeup_before_returning_authority() {
-    for policy in 0..3 {
+    for policy in TestPolicy::ALL {
         for lifetime in [
             DeclarationLifetime::Retained,
             DeclarationLifetime::RemoveWhenStopped,
@@ -4732,7 +4785,7 @@ fn initial_registration_confirms_exact_wakeup_before_returning_authority() {
 
 #[test]
 fn rejected_initial_schedule_allocates_no_claim_and_releases_captures() {
-    for policy in 0..3 {
+    for policy in TestPolicy::ALL {
         for lifetime in [
             DeclarationLifetime::Retained,
             DeclarationLifetime::RemoveWhenStopped,
@@ -4774,7 +4827,7 @@ fn rejected_initial_schedule_allocates_no_claim_and_releases_captures() {
 
 #[test]
 fn initial_provider_failures_retire_all_policies_and_lifetimes_before_capture_drop() {
-    for policy in 0..3 {
+    for policy in TestPolicy::ALL {
         for lifetime in [
             DeclarationLifetime::Retained,
             DeclarationLifetime::RemoveWhenStopped,
@@ -4804,7 +4857,7 @@ fn initial_provider_failures_retire_all_policies_and_lifetimes_before_capture_dr
 
 #[test]
 fn backend_admission_failure_retires_initial_claim_before_capture_drop() {
-    for policy in 0..3 {
+    for policy in TestPolicy::ALL {
         for error in [
             platform::AdmissionError::Capacity,
             platform::AdmissionError::IdentityExhausted,

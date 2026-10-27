@@ -2,6 +2,15 @@
 
 All notable changes to this project are recorded here.
 
+## [0.31.8] - Unreleased
+
+### 🧪 Testing
+
+- Replace numeric native-test policies, trace commands and arbitration scenarios
+  with named cases and explicit expectations. Preserve exhaustive interleavings,
+  lifecycle cleanup coverage and independent outcome assertions; timer behavior
+  and published APIs are unchanged.
+
 ## [0.31.7] - 2026-10-27
 
 ### 🧪 Testing

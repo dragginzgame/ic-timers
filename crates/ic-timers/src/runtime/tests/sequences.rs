@@ -4,21 +4,21 @@
 use super::*;
 
 fn declaration(
-    policy: u8,
+    policy: TestPolicy,
     timer: &TimerIdentity,
     lifetime: DeclarationLifetime,
 ) -> RegistrationClaim {
     let start = scheduled_start(lifetime, TimerSchedule::After(Duration::from_nanos(5)));
     let cadence = TimerCadence::from_nanos(5).unwrap();
     match policy {
-        0 => {
+        TestPolicy::Once => {
             register_once(timer.clone(), start, |_| async {
                 OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
             })
             .unwrap()
             .claim
         }
-        1 => {
+        TestPolicy::AfterCompletion => {
             register_after_completion(timer.clone(), cadence, start, |_| async {
                 AfterCompletionRunResult::new(
                     TimerCompletion::no_work(),
@@ -28,14 +28,13 @@ fn declaration(
             .unwrap()
             .claim
         }
-        2 => {
+        TestPolicy::Watchdog => {
             register_watchdog(timer.clone(), cadence, start, |_| {
                 WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue)
             })
             .unwrap()
             .claim
         }
-        _ => unreachable!(),
     }
 }
 
@@ -45,14 +44,32 @@ fn declaration(
     reason = "Keep the bounded trace driver and its invariant checks together."
 )]
 fn generated_command_sequences_preserve_authority_and_handle_ownership() {
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    enum Command {
+        Ensure,
+        Reconcile,
+        Cancel,
+        Replace,
+        Tick,
+        Discard,
+    }
+    const COMMANDS: [Command; 6] = [
+        Command::Ensure,
+        Command::Reconcile,
+        Command::Cancel,
+        Command::Replace,
+        Command::Tick,
+        Command::Discard,
+    ];
+
     // Exhaust every four-command word over six operations, for all three
     // policies and both lifetimes: 7,776 traces. Include each command prefix.
-    for policy in 0..3 {
+    for policy in TestPolicy::ALL {
         for lifetime in [
             DeclarationLifetime::Retained,
             DeclarationLifetime::RemoveWhenStopped,
         ] {
-            for word in 0..6_u32.pow(4) {
+            for word in 0..COMMANDS.len().pow(4) {
                 let _fixture = setup();
                 let timer = identity("sequence");
                 let sentinel = register_once(
@@ -68,12 +85,12 @@ fn generated_command_sequences_preserve_authority_and_handle_ownership() {
                 let mut retired = Vec::new();
                 let mut commands = word;
                 for step in 0..4 {
-                    let command = commands % 6;
-                    commands /= 6;
+                    let command = COMMANDS[commands % COMMANDS.len()];
+                    commands /= COMMANDS.len();
                     let trace = (policy, lifetime, word, step, command);
                     let exists = timer_snapshot(&timer).unwrap().is_some();
                     // Capture a delivery only when this command invalidates it.
-                    let stale = if exists && matches!(command, 2 | 3) {
+                    let stale = if exists && matches!(command, Command::Cancel | Command::Replace) {
                         let detached =
                             with_registry_mut(|registry| Ok(registry.take_wakeup_handle(&timer)))
                                 .unwrap();
@@ -86,22 +103,22 @@ fn generated_command_sequences_preserve_authority_and_handle_ownership() {
                         None
                     };
                     let result = match command {
-                        0 if policy == 0 => ensure_once_claim(
+                        Command::Ensure if policy == TestPolicy::Once => ensure_once_claim(
                             &claim,
                             None,
                             TimerSchedule::After(Duration::from_nanos(5)),
                         ),
-                        0 => ensure_recurring_claim(&claim, None),
-                        1 => {
+                        Command::Ensure => ensure_recurring_claim(&claim, None),
+                        Command::Reconcile => {
                             let schedule = Some(TimerSchedule::After(Duration::from_nanos(7)));
-                            if policy == 2 {
+                            if policy == TestPolicy::Watchdog {
                                 reconcile_watchdog_claim(&claim, None, schedule)
                             } else {
                                 reconcile_ordinary_claim(&claim, None, schedule)
                             }
                         }
-                        2 => cancel_claim(&claim, None),
-                        3 => {
+                        Command::Cancel => cancel_claim(&claim, None),
+                        Command::Replace => {
                             if exists {
                                 unregister_claim(&claim).unwrap();
                             }
@@ -109,18 +126,17 @@ fn generated_command_sequences_preserve_authority_and_handle_ownership() {
                             claim = declaration(policy, &timer, lifetime);
                             Ok(())
                         }
-                        4 => {
+                        Command::Tick => {
                             set_time(platform::time_ns() + 10);
                             // Leave watchdog work pending in some prefixes;
                             // later commands must honor its lifecycle ownership.
                             let _ran = run_next_due();
                             Ok(())
                         }
-                        5 => {
+                        Command::Discard => {
                             let _discarded = discard_next_due();
                             Ok(())
                         }
-                        _ => unreachable!(),
                     };
                     assert!(
                         result.is_ok() || matches!(result, Err(TimerError::RegistrationExpired)),
@@ -139,15 +155,15 @@ fn generated_command_sequences_preserve_authority_and_handle_ownership() {
                         // Scheduler cancellation while work is pending can be
                         // deferred. Deliver only after its claim really retires,
                         // or ordinary cancellation has invalidated the generation.
-                        if policy != 2
-                            || command == 3
+                        if policy != TestPolicy::Watchdog
+                            || command == Command::Replace
                             || timer_snapshot(&timer)
                                 .unwrap()
                                 .is_none_or(|s| s.next_deadline_ns().is_none())
                         {
                             let before = timer_snapshot(&timer).unwrap();
                             let handles = timer_count();
-                            if policy == 2 {
+                            if policy == TestPolicy::Watchdog {
                                 dispatch_watchdog_scheduler(&token);
                             } else {
                                 let _delivery = platform::set_timer(
@@ -199,7 +215,7 @@ fn generated_command_sequences_preserve_authority_and_handle_ownership() {
                 assert_eq!(
                     timer_count(),
                     1,
-                    "cleanup: policy={policy} lifetime={lifetime:?} word={word}"
+                    "cleanup: policy={policy:?} lifetime={lifetime:?} word={word}"
                 );
                 sentinel.unregister().unwrap();
                 assert_eq!(timer_count(), 0);
@@ -214,6 +230,20 @@ fn generated_command_sequences_preserve_authority_and_handle_ownership() {
     reason = "Keep each suspended trace, its independent outcome oracle and cleanup together."
 )]
 fn suspended_command_sequences_retire_authority_across_completion_and_abandonment() {
+    #[derive(Clone, Copy, Debug)]
+    enum Command {
+        Cancel,
+        Ensure,
+        Reconcile,
+        Unregister,
+    }
+    const COMMANDS: [Command; 4] = [
+        Command::Cancel,
+        Command::Ensure,
+        Command::Reconcile,
+        Command::Unregister,
+    ];
+
     for recurring in [false, true] {
         for lifetime in [
             DeclarationLifetime::Retained,
@@ -225,7 +255,7 @@ fn suspended_command_sequences_retire_authority_across_completion_and_abandonmen
                 for admission_failure in
                     [false, true].into_iter().filter(|fault| !abandon || !fault)
                 {
-                    for word in 0..4_u32.pow(3) {
+                    for word in 0..COMMANDS.len().pow(3) {
                         let _fixture = setup();
                         let timer = identity("suspended-sequence");
                         let gate = SuspendedWork::default();
@@ -248,39 +278,41 @@ fn suspended_command_sequences_retire_authority_across_completion_and_abandonmen
                         let mut expected_deadline: Option<u64> = None;
                         let mut unregistered = false;
                         for _ in 0..3 {
-                            let command = commands % 4;
+                            let command = COMMANDS[commands % COMMANDS.len()];
                             if !unregistered {
                                 match command {
-                                    0 => expected_deadline = None,
-                                    1 => {
+                                    Command::Cancel => expected_deadline = None,
+                                    Command::Ensure => {
                                         let requested = if recurring { 15 } else { 20 };
                                         expected_deadline = Some(
                                             expected_deadline
                                                 .map_or(requested, |old| old.min(requested)),
                                         );
                                     }
-                                    2 => expected_deadline = Some(30),
-                                    3 => {
+                                    Command::Reconcile => expected_deadline = Some(30),
+                                    Command::Unregister => {
                                         unregistered = true;
                                         expected_deadline = None;
                                     }
-                                    _ => unreachable!(),
                                 }
                             }
                             match command {
-                                0 => cancel_claim(&claim, None),
-                                1 if recurring => ensure_recurring_claim(&claim, None),
-                                1 => ensure_once_claim(&claim, None, TimerSchedule::At(20)),
-                                2 => reconcile_ordinary_claim(
+                                Command::Cancel => cancel_claim(&claim, None),
+                                Command::Ensure if recurring => {
+                                    ensure_recurring_claim(&claim, None)
+                                }
+                                Command::Ensure => {
+                                    ensure_once_claim(&claim, None, TimerSchedule::At(20))
+                                }
+                                Command::Reconcile => reconcile_ordinary_claim(
                                     &claim,
                                     None,
                                     Some(TimerSchedule::At(30)),
                                 ),
-                                3 => unregister_claim(&claim),
-                                _ => unreachable!(),
+                                Command::Unregister => unregister_claim(&claim),
                             }
                             .unwrap();
-                            commands /= 4;
+                            commands /= COMMANDS.len();
                             assert_eq!(timer_count(), 0, "running work owns no pending wakeup");
                         }
                         if admission_failure {
@@ -358,7 +390,7 @@ fn suspended_command_sequences_retire_authority_across_completion_and_abandonmen
 
 #[test]
 fn dropping_public_claims_does_not_cancel_or_unregister() {
-    for policy in 0..3 {
+    for policy in TestPolicy::ALL {
         let _fixture = setup();
         let timer = identity("dropped-claim");
         let start = TimerStart::Retained {
@@ -366,13 +398,13 @@ fn dropping_public_claims_does_not_cancel_or_unregister() {
         };
         let cadence = TimerCadence::from_nanos(5).unwrap();
         match policy {
-            0 => drop(
+            TestPolicy::Once => drop(
                 register_once(timer.clone(), start, |_| async {
                     OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop)
                 })
                 .unwrap(),
             ),
-            1 => drop(
+            TestPolicy::AfterCompletion => drop(
                 register_after_completion(timer.clone(), cadence, start, |_| async {
                     AfterCompletionRunResult::new(
                         TimerCompletion::no_work(),
@@ -381,7 +413,7 @@ fn dropping_public_claims_does_not_cancel_or_unregister() {
                 })
                 .unwrap(),
             ),
-            _ => drop(
+            TestPolicy::Watchdog => drop(
                 register_watchdog(timer.clone(), cadence, start, |_| {
                     WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
                 })
@@ -392,7 +424,7 @@ fn dropping_public_claims_does_not_cancel_or_unregister() {
         assert_eq!(timer_inventory().unwrap().len(), 1);
         set_time(10);
         assert!(run_next_due());
-        if policy == 2 {
+        if policy == TestPolicy::Watchdog {
             assert!(run_next_due());
         }
         assert_eq!(timer_count(), 0);
