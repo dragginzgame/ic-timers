@@ -1,8 +1,6 @@
 //! Consumer recipes; IC Build owns Cargo execution and exact Wasm artifacts.
 
-use ic_build::artifacts::{
-    CacheRetentionLimits, WasmBuildSpec, build_wasm_canisters_cached, resolve_cargo_build_inputs,
-};
+use ic_build::artifacts::{CacheRetentionLimits, WasmBuildEvidence, WasmBuildSpec};
 use ic_build::cargo::{
     environment::ConfigurationLimits,
     selection::{CargoFeatureSelection, CargoSelection},
@@ -247,9 +245,8 @@ pub(crate) fn run(qualification: &Qualification) -> Result<(), Box<dyn std::erro
         .with_cargo_program("cargo")
         .with_rustc_identity_program("rustc")
         .with_cargo_selection(selection);
-        let before = resolve_cargo_build_inputs(&spec)?;
         let built =
-            build_wasm_canisters_cached(&spec, ic_host_process::child::OwnedChild::spawn_direct)?;
+            WasmBuildEvidence::acquire(spec, ic_host_process::child::OwnedChild::spawn_direct)?;
         let [artifact] = built.record().artifacts() else {
             return Err(format!("expected exactly one Wasm artifact for {label}").into());
         };
@@ -258,7 +255,7 @@ pub(crate) fn run(qualification: &Qualification) -> Result<(), Box<dyn std::erro
             report.record_build(label, built.record(), artifact)?;
         }
         // Retain exact artifacts until the child tests finish reading them.
-        builds.push((spec, before, built));
+        builds.push(built);
     }
     if report_path.is_some() {
         tests.env("IC_TIMERS_COHORT_REPORT", &candidate);
@@ -266,16 +263,8 @@ pub(crate) fn run(qualification: &Qualification) -> Result<(), Box<dyn std::erro
     }
     tests.env("IC_TIMERS_DIAGNOSTICS", scratch.path());
     let status = tests.status()?;
-    for (spec, before, built) in &builds {
-        let after = resolve_cargo_build_inputs(spec)?;
-        if before.validation_digest() != after.validation_digest()
-            || before.fingerprint() != built.record().fingerprint()
-            || before.fingerprint() != after.fingerprint()
-        {
-            return Err(
-                "qualification inputs changed during measurement; discard the cohort report".into(),
-            );
-        }
+    for built in &builds {
+        built.verify_current()?;
     }
     report.verify_context(&root)?;
     drop(builds);

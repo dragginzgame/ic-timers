@@ -4,6 +4,18 @@ All notable changes to this project are recorded here.
 
 ## [0.31.8] - Unreleased
 
+### 📦 Dependencies
+
+- Adopt Platform 0.6.20 and Build/Host/Testkit 0.68.11; align the catalog with
+  selected Wire 0.7.18 and Metrics 0.16.3. Contributor tools must be prepared
+  again through `make install-release-editor install-testkit-server`.
+
+### 🧹 Cleanup
+
+- Delegate qualification build retention and freshness checks to IC Build's
+  published evidence owner, preserving exact artifact selection and cohort
+  report admission ([IC Tooling #255](https://github.com/dragginzgame/ic-tooling/issues/255)).
+
 ### 🧪 Testing
 
 - Replace numeric native-test policies, trace commands and arbitration scenarios

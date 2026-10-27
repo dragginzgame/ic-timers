@@ -170,6 +170,14 @@ Failed discovery, invalid output and missing subjects fail even if Cargo exits
 zero. Discovery executes no test bodies or simulator calls and shares the
 worker's existing elapsed-time/process-group budget.
 
+IC Build's published `WasmBuildEvidence` owns each acquired build, retained cache
+lease and input observation through measurement. Timers borrows its record to
+select exactly one artifact and populate the existing report context, then calls
+`verify_current()` before accepting results. Artifact paths alone do not retain
+the build. Keep source custody throughout qualification: freshness checks detect
+persistent changes, not edits reverted between observations. Timers still owns
+subject selection, exact loaded-Wasm admission and completed-report publication.
+
 Each invocation allocates a fresh private `timer-qualification-*` directory under
 the selected temporary root. Its path is printed and failures retain the directory;
 successful runs clean it up. Successful discovery leaves `subjects.txt` there.
