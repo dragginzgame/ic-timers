@@ -2,6 +2,19 @@
 
 All notable changes to this project are recorded here.
 
+## [0.31.10] - Unreleased
+
+### 📦 Dependencies
+
+- Adopt Build/Host/Testkit 0.69.0, aligning native tooling with Platform 0.7
+  and removing its older Platform dependency. Timer APIs and deployed features
+  remain unchanged.
+
+### 🧭 Migration Notes
+
+- Prepare the updated contributor tools with
+  `make install-release-editor install-testkit-server`.
+
 ## [0.31.9] - 2026-10-27
 
 ### 📦 Dependencies

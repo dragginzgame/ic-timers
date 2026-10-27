@@ -6,69 +6,64 @@ Last updated: 2026-10-27
 
 ## Source and pending work
 
-Released base: **0.31.8**, `69910ed`. The undated **0.31.9** draft records the
-accepted IC Tooling, Shared Tooling and Platform adoption. Platform's removed
-Candid compiler APIs have no Timers consumers; the published timer API, runtime
-semantics and protocols are unchanged, so the next patch remains appropriate.
-Cargo package versions remain 0.31.8. Staging, commits, pushes and release
+Released base: **0.31.9**, `b472937`. The checkout was clean at the start of the
+accepted IC Tooling adoption. The undated **0.31.10** draft records that batch;
+Cargo package versions remain 0.31.9. Staging, commits, pushes and release
 execution remain maintainer-owned.
 
-The batch began with a pending root lock update to Build/Host/Testkit 0.68.12
-and Platform 0.6.21. That work is preserved; the root catalog now selects the
-published Platform 0.7.0 and Tooling 0.68.12 minimums. The lock additionally
-selects Platform/macros 0.7.0. Official registry records and matching published
-archive checksums establish availability. Wire 0.7.18 and Metrics 0.16.3 stay
-unchanged; no unpublished sibling source is used.
+This is a compatible tooling-only batch: no published timer API, implementation,
+protocol or deployed dependency selection changes. Bundle repository-only work
+with the next code-bearing release by default; an explicit maintainer-owned bump
+can select a repository-only patch under the existing release exception.
 
-## Shared adoption and ownership
+## Adoption and ownership
 
-Shared Tooling **0.26.22**, revision
-`5fc904a935d82ad31f0fba14434b71ccb8c10345`, is verified against upstream main
-and adopted from a clean clone through canonical impact/apply. All 131 payloads
-verify. The existing roots are preserved; five governance documents change,
-without executable, tool-version, payload-roster or gate changes. The local
-[adoption guide](../shared-tooling.md) distinguishes updated guidance from
-executable enforcement. No optional audit or schedule was activated.
+The root catalog and lock select published Build/Host/Testkit **0.69.0**.
+Official sparse-index metadata establishes publication, and the downloaded Build
+archive matches its registry checksum. All five consumed packages' published
+`src/` trees are identical to 0.68.12. The supplier's minor boundary aligns its
+Platform requirement with 0.7, including Principal identity in optional Registry
+APIs; Timers already selects that line and exposes none of those APIs.
+No consumer adapters or compatibility paths were needed.
 
-The new rules clarify owned-type Candid restrictions, mechanical error derives,
-complete source inspection, strict machine-output admission, subprocess bounds
-and safe diagnostics. Existing Timers declaration/graph/provider checks retain
-codec and deployment enforcement; adopting broader prose does not add a general
-scanner or qualify native-host behavior.
+Platform **0.6.21** is removed from the root lock. There is now exactly one
+resolved Platform package, **0.7.0**, including native simulator tests. Metrics
+0.16.3 and Wire 0.7.18 are unchanged. The deployed library graph still selects
+only Platform's executor/ic0 features, one executor 2.0.0 and ic0 1.2.0; Candid,
+Wire and host tooling remain excluded. Candid remains transitive in native
+simulator tests through Platform/PocketIC, not in timer application protocols.
 
-The deployed timer library still selects only Platform's executor/ic0 features,
-with one executor 2.0.0 and ic0 1.2.0 identity. Candid, Wire and host tooling
-remain excluded from its resolved normal/build graph. Probes retain their Wire
-protocol and existing runtime feature selection. The native simulator test graph
-contains both Platform 0.7.0 and 0.6.21: published Testkit 0.68.12 still requires
-`^0.6.19`. This is a host-test facade duplication, not a parallel timer provider;
-no patch, source override or consumer compatibility layer was introduced. Testkit
-must publish a 0.7-compatible requirement to eliminate its remaining facade.
+Shared Tooling remains **0.26.22**, revision
+`5fc904a935d82ad31f0fba14434b71ccb8c10345`, with the same 131 payloads and
+existing gates. No exported files, shared tool catalogs or sibling repositories
+were changed in this batch. The [adoption guide](../shared-tooling.md) retains
+the distinction between governance and executable enforcement.
 
-The preceding 0.31.8 adoption already delegates retained build ownership and
-freshness to `WasmBuildEvidence`, including its published `record()` accessor
-([Tooling #255](https://github.com/dragginzgame/ic-tooling/issues/255)). Exact
-artifact selection, recipe/report context and final publication stay Timers-owned.
+Build continues to own retained acquisition/freshness through
+`WasmBuildEvidence`. Timers owns recipes, subject discovery, artifact cardinality,
+exact loaded-Wasm/report admission and durable report publication. Platform owns
+external IC dependencies; Testkit owns server admission and lifecycle.
 
 ## Verification and limits
 
-Before-images, official registry records, impact/apply output and focused logs:
-`/tmp/ic-timers-adoption-0319.yLi7Qi/`. Rust 1.91 strict Clippy passes for library,
-coordinator/test targets, runtime probe and protocol. All 15 selected native
-tests pass: build-driver (3), report admission (3), private platform (9).
-Rust 1.91 Wasm compilation passes for library, runtime probe and the size probe's
-default baseline. Snapshot integrity, formatting, changelog, pin/inheritance,
-external-IC declarations, native/Wasm graph and private-provider checks pass.
+Before-images, registry/checksum evidence and focused logs are retained at
+`/tmp/ic-timers-tooling-03110.BwVqaF/`. Rust 1.91 strict Clippy passes for both
+coordinator and test targets. All six selected native build-driver/report tests
+pass, covering failed discovery, ignored subjects, process cleanup/deadlines,
+baseline aliases, malformed/incomplete reports, context identity and publication.
+Locked metadata, formatting, changelog, pin/inheritance, external-IC declarations
+and native/Wasm deployment-graph checks pass. The duplicate-graph observation
+and metadata confirm the old Platform identity is gone.
 
-Selected editor and Testkit CLI 0.68.12 setup and offline admission pass; Testkit
-admits the existing PocketIC 16.1.0 server. The first server setup timed out on
-an active sibling-owned installation slot. After that installer exited, the
-second setup reused its completed build. Both attempts remain retained; no
-foreign lock or previous tool/evidence generation was removed.
+Selected release editor and Testkit CLI 0.69.0 setup and offline admission pass;
+Testkit admits the existing PocketIC 16.1.0 server. The first Testkit setup
+reached its 60-second contention limit on a sibling-owned installer. A subsequent
+setup observed slot release and reused the completed build; no foreign lock or
+previous tool/evidence generation was removed. Both attempts remain in the logs.
 
-These are local Linux native tests and Wasm cross-compilation, not a fresh full
-release gate, installed-IC recovery, PocketIC measurement or native macOS run.
-The full user-operated release gate and required host matrix remain intact.
-Previous dependency/evidence-owner adoption logs remain at
-`/tmp/ic-timers-deps-0318.9bj5hB/`; preceding native-fixture evidence remains at
-`/tmp/ic-timers-native-cases-0318.iRKVot/`, each with its original input scope.
+These are focused local Linux checks. No fresh full release gate, Wasm compiler
+execution, installed-IC/PocketIC measurement or native macOS run was performed;
+production source and its dependency graph are unchanged. The full user-operated
+release gate and required native-host matrix remain intact. Prior Platform/shared
+adoption evidence remains at `/tmp/ic-timers-adoption-0319.yLi7Qi/`, with its
+original input and qualification scope.
