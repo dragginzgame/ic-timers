@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.31.6] - Unreleased
+## [0.31.6] - 2026-10-27
 
 ### 🧹 Cleanup
 
