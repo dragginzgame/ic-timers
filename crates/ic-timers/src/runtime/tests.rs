@@ -3369,6 +3369,26 @@ fn assert_lifecycle_measurements(snapshot: &TimerSnapshot) {
     );
 }
 
+fn assert_reconciliation_conflict_preserves_runtime(
+    result: &Result<(), TimerError>,
+    before: &TimerInventorySnapshot,
+) {
+    assert!(matches!(result, Err(TimerError::ReconciliationConflict)));
+    assert_eq!(&timer_inventory().unwrap(), before);
+    assert_eq!(timer_count(), 1);
+}
+
+fn assert_original_callback_completes(calls: &Cell<u64>, now_ns: u64) {
+    set_time(now_ns);
+    assert!(run_next_due());
+    assert_eq!(
+        calls.get(),
+        1,
+        "the original callback must remain installed"
+    );
+    assert_eq!(timer_count(), 0);
+}
+
 #[test]
 fn once_reconciliation_rejects_identity_mismatch_without_disturbing_live_work() {
     let _fixture = setup();
@@ -3397,21 +3417,12 @@ fn once_reconciliation_rejects_identity_mismatch_without_disturbing_live_work() 
     let rejected = reconcile_once(&mut registration, &other, None, |_| async {
         OnceRunResult::new(TimerCompletion::invariant_failure(0), OnceDecision::Stop)
     });
-    assert!(matches!(rejected, Err(TimerError::ReconciliationConflict)));
-    assert_eq!(timer_inventory().unwrap(), before);
-    assert_eq!(timer_count(), 1);
+    assert_reconciliation_conflict_preserves_runtime(&rejected, &before);
     let original = registration.as_ref().unwrap();
     assert_eq!(original.identity(), &timer);
     assert!(original.has_armed_wakeup().unwrap());
 
-    set_time(20);
-    assert!(run_next_due());
-    assert_eq!(
-        calls.get(),
-        1,
-        "the original callback must remain installed"
-    );
-    assert_eq!(timer_count(), 0);
+    assert_original_callback_completes(&calls, 20);
 }
 
 #[test]
@@ -3454,21 +3465,12 @@ fn after_completion_reconciliation_rejects_transient_lifetime_without_cancelling
             )
         },
     );
-    assert!(matches!(rejected, Err(TimerError::ReconciliationConflict)));
-    assert_eq!(timer_inventory().unwrap(), before);
-    assert_eq!(timer_count(), 1);
+    assert_reconciliation_conflict_preserves_runtime(&rejected, &before);
     let original = registration.as_ref().unwrap();
     assert_eq!(original.identity(), &timer);
     assert!(original.has_armed_wakeup().unwrap());
 
-    set_time(15);
-    assert!(run_next_due());
-    assert_eq!(
-        calls.get(),
-        1,
-        "the original callback must remain installed"
-    );
-    assert_eq!(timer_count(), 0);
+    assert_original_callback_completes(&calls, 15);
     assert!(timer_snapshot(&timer).unwrap().is_none());
 }
 
@@ -3512,9 +3514,7 @@ fn after_completion_reconciliation_rejects_cadence_mismatch_without_disturbing_l
             )
         },
     );
-    assert!(matches!(rejected, Err(TimerError::ReconciliationConflict)));
-    assert_eq!(timer_inventory().unwrap(), before);
-    assert_eq!(timer_count(), 1);
+    assert_reconciliation_conflict_preserves_runtime(&rejected, &before);
     let original = registration.as_ref().unwrap();
     assert_eq!(original.identity(), &timer);
     assert!(original.has_armed_wakeup().unwrap());
@@ -3522,14 +3522,7 @@ fn after_completion_reconciliation_rejects_cadence_mismatch_without_disturbing_l
     set_time(14);
     assert!(!run_next_due());
     assert_eq!(calls.get(), 0);
-    set_time(15);
-    assert!(run_next_due());
-    assert_eq!(
-        calls.get(),
-        1,
-        "the original callback must run at its original deadline"
-    );
-    assert_eq!(timer_count(), 0);
+    assert_original_callback_completes(&calls, 15);
 }
 
 #[test]

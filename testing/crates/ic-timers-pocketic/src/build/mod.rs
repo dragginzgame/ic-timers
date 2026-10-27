@@ -44,12 +44,41 @@ impl Qualification {
     }
 }
 
-pub(crate) const COHORTS: [(&str, &str); 4] = [
-    ("baseline", "IC_TIMERS_COHORT_BASELINE_WASM"),
-    ("once", "IC_TIMERS_COHORT_ONCE_WASM"),
-    ("after-completion", "IC_TIMERS_COHORT_AFTER_COMPLETION_WASM"),
-    ("watchdog", "IC_TIMERS_COHORT_WATCHDOG_WASM"),
-];
+/// Policy cohorts admitted by both the build driver and measurement/report consumers.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) enum Cohort {
+    Baseline,
+    Once,
+    AfterCompletion,
+    Watchdog,
+}
+
+impl Cohort {
+    pub(crate) const ALL: [Self; 4] = [
+        Self::Baseline,
+        Self::Once,
+        Self::AfterCompletion,
+        Self::Watchdog,
+    ];
+
+    pub(crate) const fn name(self) -> &'static str {
+        match self {
+            Self::Baseline => "baseline",
+            Self::Once => "once",
+            Self::AfterCompletion => "after-completion",
+            Self::Watchdog => "watchdog",
+        }
+    }
+
+    pub(crate) const fn environment(self) -> &'static str {
+        match self {
+            Self::Baseline => "IC_TIMERS_COHORT_BASELINE_WASM",
+            Self::Once => "IC_TIMERS_COHORT_ONCE_WASM",
+            Self::AfterCompletion => "IC_TIMERS_COHORT_AFTER_COMPLETION_WASM",
+            Self::Watchdog => "IC_TIMERS_COHORT_WATCHDOG_WASM",
+        }
+    }
+}
 
 const COHORT_SUBJECT: &str =
     "cohorts::comparable_policy_cohorts_report_size_and_instruction_subjects";
@@ -178,9 +207,16 @@ pub(crate) fn run(qualification: &Qualification) -> Result<(), Box<dyn std::erro
             None,
         )]
     } else {
-        COHORTS
-            .iter()
-            .map(|&(cohort, variable)| (cohort, variable, "ic-timers-size-probe", Some(cohort)))
+        Cohort::ALL
+            .into_iter()
+            .map(|cohort| {
+                (
+                    cohort.name(),
+                    cohort.environment(),
+                    "ic-timers-size-probe",
+                    Some(cohort.name()),
+                )
+            })
             .collect()
     };
     for (label, variable, package, feature) in recipes {

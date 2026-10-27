@@ -16,7 +16,7 @@ RELEASE_DELIVERY ?= direct
 export RELEASE_DELIVERY
 include make/consumer.mk
 
-CI_TARGETS := actions-check shell-check provider-check fmt-check clippy check release-check docs-check test wasm-check package
+CI_TARGETS := actions-check shell-check provider-check fmt-check clippy release-check docs-check test wasm-check package
 RELEASE_TARGETS := fetch install-release-editor install-testkit-server pocketic-check ci msrv testing-check pocketic-watchdog pocketic-cohorts
 REPOSITORY_TARGETS := actions-check shell-check release-check provider-check fmt-check
 

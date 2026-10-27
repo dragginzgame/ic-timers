@@ -12,18 +12,32 @@ trap 'fixture_finish "$?" "$fixture" "Failed library-boundary fixture retained"'
 # source is never built; no sibling source or network dependency is introduced.
 bash "$root/scripts/ci/prepare-script-fixture.sh" "$root" "$fixture" \
     scripts/ci/check-library-dependency-boundary.sh scripts/ci/check-cargo-dependency-boundaries.sh
-cp "$root/Cargo.toml" "$root/Cargo.lock" "$fixture/"
-for package in crates/ic-timers testing/crates/ic-timers-{pocketic,runtime-probe,size-probe,test-protocol}; do
+RUSTUP_AUTO_INSTALL=0 cargo metadata --no-deps --locked --offline --format-version 1 > "$fixture/workspace.json"
+perl -MJSON::PP -MFile::Spec -0777 -e '
+    my $metadata = decode_json(<>);
+    my %members = map { $_ => 1 } @{$metadata->{workspace_members}};
+    for my $package (@{$metadata->{packages}}) {
+        next unless $members{$package->{id}};
+        my $manifest = File::Spec->abs2rel($package->{manifest_path}, $metadata->{workspace_root});
+        $manifest !~ m{^(?:\.\./|/)} && $manifest !~ /[\r\n]/ or die "invalid member manifest\n";
+        print "$manifest\n";
+    }
+' "$fixture/workspace.json" > "$fixture/member-manifests"
+manifests=(Cargo.toml Cargo.lock)
+while IFS= read -r manifest; do
+    [[ "$manifest" == Cargo.toml ]] || manifests+=("$manifest")
+    package="${manifest%/Cargo.toml}"
     mkdir -p "$fixture/$package/src"
-    cp "$root/$package/Cargo.toml" "$fixture/$package/"
     touch "$fixture/$package/src/lib.rs" "$fixture/$package/src/main.rs"
+done < "$fixture/member-manifests"
+for manifest in "${manifests[@]}"; do
+    cp "$root/$manifest" "$fixture/$manifest"
 done
 printf 'fn main() {}\n' > "$fixture/crates/ic-timers/build.rs"
 git init -q "$fixture"
 cd "$fixture"
 reset_manifests() {
-    for manifest in Cargo.toml Cargo.lock crates/ic-timers/Cargo.toml \
-        testing/crates/ic-timers-{pocketic,runtime-probe,size-probe,test-protocol}/Cargo.toml; do
+    for manifest in "${manifests[@]}"; do
         cp "$root/$manifest" "$manifest"
     done
 }

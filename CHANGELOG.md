@@ -2,7 +2,32 @@
 
 All notable changes to this project are recorded here.
 
+## [0.31.6] - Unreleased
+
+### 🧹 Cleanup
+
+- Share fresh lifecycle initialization across timer policies and resolve ordinary
+  scheduling directly into execution and observation values. Preserve callback
+  authority, failure precedence and cleanup ordering.
+- Replace numeric/boolean probe policy selectors with named Wire records and
+  centralize cohort selection. Rebuild the unpublished runtime probe and native
+  driver together; published timer APIs and cohort report formats are unchanged.
+
+### 🧪 Testing
+
+- Consolidate lifecycle-refusal assertions and derive dependency-fixture members
+  from the workspace. Remove redundant compile-only CI dispatch and the generic
+  Shared evidence-test dispatch while retaining Timers' integration checks.
+
+### 📚 Documentation
+
+- Adopt Shared Tooling 0.26.21 and its emoji category headings for current and
+  future release notes. Preserve release identities, dates and older history;
+  changelog presentation adds no deployment gate.
+
 ## [0.31.5] - 2026-10-26
+
+### 📝 Summary
 
 - Adopt published Build/Host/Testkit 0.68.7 for host qualification and the
   lock-selected release editor and Testkit CLI. Testkit now checks the final

@@ -3,7 +3,7 @@ use super::harness::{query_wire, update_wire};
 use ic_platform::pocket_ic::PocketIc;
 use ic_platform::principal::ExternalPrincipal;
 use ic_testkit::pic::{PocketIcInstance, advance_and_tick};
-use ic_timers_test_protocol::rpc::Method;
+use ic_timers_test_protocol::rpc::{Method, OrdinaryPolicy, ProbeLifetime, ProbePolicy};
 use ic_timers_test_protocol::{
     ChurnObservation, DispatchBatchObservation, OrdinaryObservation, ProbeMemorySummary,
     ProbeSnapshot, TimerProbeSnapshot,
@@ -20,12 +20,18 @@ fn typed_entrypoints_reject_invalid_wire_before_mutating_timer_state() {
     let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
     let id = Method::StartOrdinary as u64;
-    let valid = encode_request(id, &(false, false), REQUEST_LIMITS).unwrap();
+    let valid = encode_request(
+        id,
+        &(OrdinaryPolicy::Once, ProbeLifetime::Retained),
+        REQUEST_LIMITS,
+    )
+    .unwrap();
     let mut truncated = valid.clone();
     truncated.pop();
     for arguments in [
         b"not wire".to_vec(),
-        encode_request(id, &(2_u8, false), REQUEST_LIMITS).unwrap(),
+        encode_request(id, &(2_u8, ProbeLifetime::Retained), REQUEST_LIMITS).unwrap(),
+        encode_request(id, &(OrdinaryPolicy::Once, 2_u8), REQUEST_LIMITS).unwrap(),
         encode_request(id, &(false,), REQUEST_LIMITS).unwrap(),
         encode_request(id, &(false, false, 0_u8), REQUEST_LIMITS).unwrap(),
         encode_request(
@@ -740,21 +746,25 @@ fn ordinary_observation(pic: &PocketIc, canister_id: ExternalPrincipal) -> Ordin
 
 #[test]
 fn ordinary_await_allows_ingress_and_other_timers_before_completion() {
-    for after_completion in [false, true] {
+    for policy in OrdinaryPolicy::ALL {
         for command in ["cancel", "reconcile", "unregister", "recur"] {
-            if command == "recur" && !after_completion {
+            if command == "recur" && policy == OrdinaryPolicy::Once {
                 continue;
             }
             let owned = fresh_pocket_ic();
             let pic = owned.instance();
             let canister_id = install_probe(pic, probe_wasm());
-            let transient = command == "cancel";
+            let lifetime = if command == "cancel" {
+                ProbeLifetime::RemoveWhenStopped
+            } else {
+                ProbeLifetime::Retained
+            };
             update_wire::<(), _>(
                 pic,
                 canister_id,
                 ExternalPrincipal::anonymous(),
                 Method::StartOrdinary,
-                (after_completion, transient),
+                (policy, lifetime),
             )
             .expect("probe update succeeds");
             let suspended = wait_for_probe(
@@ -822,8 +832,8 @@ fn ordinary_await_allows_ingress_and_other_timers_before_completion() {
 }
 
 fn trapping_ordinary_probe(
-    after_completion: bool,
-    transient: bool,
+    policy: OrdinaryPolicy,
+    lifetime: ProbeLifetime,
     before_await: bool,
 ) -> (PocketIcInstance<PocketIc>, ExternalPrincipal) {
     let owned = fresh_pocket_ic();
@@ -842,7 +852,7 @@ fn trapping_ordinary_probe(
         canister_id,
         ExternalPrincipal::anonymous(),
         Method::StartOrdinary,
-        (after_completion, transient),
+        (policy, lifetime),
     )
     .expect("probe update succeeds");
     (owned, canister_id)
@@ -868,7 +878,7 @@ fn assert_ordinary_abandonment(observed: &OrdinaryObservation, removed: bool) {
 
 #[test]
 fn dispatch_response_trap_cleanup_preserves_pending_work_for_retry() {
-    for after_completion in [false, true] {
+    for policy in OrdinaryPolicy::ALL {
         let owned = fresh_pocket_ic();
         let pic = owned.instance();
         let canister_id = install_probe(pic, probe_wasm());
@@ -893,7 +903,7 @@ fn dispatch_response_trap_cleanup_preserves_pending_work_for_retry() {
             canister_id,
             ExternalPrincipal::anonymous(),
             Method::StartOrdinary,
-            (after_completion, true),
+            (policy, ProbeLifetime::RemoveWhenStopped),
         )
         .expect("start transient work");
         advance_and_tick(pic, Duration::ZERO, 32);
@@ -927,19 +937,19 @@ fn dispatch_response_trap_cleanup_preserves_pending_work_for_retry() {
 
 #[test]
 fn ordinary_trap_before_await_retires_the_rolled_back_scheduled_delivery() {
-    for after_completion in [false, true] {
-        for transient in [false, true] {
-            let (owned, canister_id) = trapping_ordinary_probe(after_completion, transient, true);
+    for policy in OrdinaryPolicy::ALL {
+        for lifetime in ProbeLifetime::ALL {
+            let (owned, canister_id) = trapping_ordinary_probe(policy, lifetime, true);
             let pic = owned.instance();
             advance_and_tick(pic, Duration::ZERO, 32);
             let observed = ordinary_observation(pic, canister_id);
-            assert_ordinary_abandonment(&observed, transient);
+            assert_ordinary_abandonment(&observed, lifetime == ProbeLifetime::RemoveWhenStopped);
             assert_eq!(observed.gate_replies, 0);
             assert!(update_bool(pic, canister_id, Method::Start));
             pic.advance_time(Duration::from_secs(2));
             advance_and_tick(pic, Duration::ZERO, 16);
             assert_eq!(snapshot(pic, canister_id).completed_work, 1);
-            if !transient {
+            if lifetime == ProbeLifetime::Retained {
                 update_unit(pic, canister_id, Method::UnregisterOrdinary);
                 assert_eq!(ordinary_observation(pic, canister_id).captures_dropped, 1);
             }
@@ -949,11 +959,10 @@ fn ordinary_trap_before_await_retires_the_rolled_back_scheduled_delivery() {
 
 #[test]
 fn ordinary_continuation_trap_retires_running_work_and_releases_expired_authority() {
-    for after_completion in [false, true] {
-        for transient in [false, true] {
+    for policy in OrdinaryPolicy::ALL {
+        for lifetime in ProbeLifetime::ALL {
             for command in ["none", "cancel", "reconcile", "unregister"] {
-                let (owned, canister_id) =
-                    trapping_ordinary_probe(after_completion, transient, false);
+                let (owned, canister_id) = trapping_ordinary_probe(policy, lifetime, false);
                 let pic = owned.instance();
                 wait_for_probe(
                     pic,
@@ -973,7 +982,8 @@ fn ordinary_continuation_trap_retires_running_work_and_releases_expired_authorit
                 update_unit(pic, canister_id, Method::ReleaseOrdinaryWork);
                 advance_and_tick(pic, Duration::ZERO, 32);
                 let observed = ordinary_observation(pic, canister_id);
-                let removed = transient || command == "unregister";
+                let removed =
+                    lifetime == ProbeLifetime::RemoveWhenStopped || command == "unregister";
                 assert_ordinary_abandonment(&observed, removed);
                 assert_eq!(observed.gate_error, None);
                 assert!(update_bool(
@@ -991,7 +1001,7 @@ fn ordinary_continuation_trap_retires_running_work_and_releases_expired_authorit
                         canister_id,
                         ExternalPrincipal::anonymous(),
                         Method::StartOrdinary,
-                        (after_completion, false),
+                        (policy, ProbeLifetime::Retained),
                     )
                     .expect("probe update succeeds");
                 } else {
@@ -1080,7 +1090,7 @@ fn provider_replacement_churn_preserves_cancellation_and_reports_memory() {
 
 #[test]
 fn armed_callback_removal_releases_captures_with_registry_access() {
-    for policy in 0_u8..3 {
+    for policy in ProbePolicy::ALL {
         let owned = fresh_pocket_ic();
         let pic = owned.instance();
         let canister_id = install_probe(pic, probe_wasm());
@@ -1111,14 +1121,14 @@ fn rejected_initial_schedules_preserve_ic_inventory_and_release_captures() {
     let owned = fresh_pocket_ic();
     let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
-    for policy in 0_u8..3 {
-        for transient in [false, true] {
+    for policy in ProbePolicy::ALL {
+        for lifetime in ProbeLifetime::ALL {
             let result: (bool, u64, bool) = update_wire(
                 pic,
                 canister_id,
                 ExternalPrincipal::anonymous(),
                 Method::RejectInitialSchedule,
-                (policy, transient),
+                (policy, lifetime),
             )
             .expect("initial schedule rejection observation");
             assert_eq!(result, (true, 1, true));
@@ -1139,7 +1149,7 @@ fn rejected_initial_reconciliation_preserves_ic_inventory_and_releases_captures(
     // A positive time makes now + u64::MAX overflow; never move IC time backwards.
     pic.advance_time(Duration::from_secs(1));
     let canister_id = install_probe(pic, probe_wasm());
-    for policy in 0_u8..3 {
+    for policy in ProbePolicy::ALL {
         let result: (bool, bool, u64, bool) = update_wire(
             pic,
             canister_id,
@@ -1200,7 +1210,7 @@ fn accepted_ordinary_work_survives_dispatch_timeout_without_replay() {
         canister_id,
         ExternalPrincipal::anonymous(),
         Method::StartOrdinary,
-        (false, false),
+        (OrdinaryPolicy::Once, ProbeLifetime::Retained),
     )
     .unwrap();
     let waiting = wait_for_probe(

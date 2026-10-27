@@ -1,8 +1,8 @@
 # Shared Tooling snapshot v1
-# version	0.26.20
+# version	0.26.21
 format	1
 source	https://github.com/dragginzgame/shared-tooling
-revision	a7f85d45d4212d4c39225f58597580560a333550
+revision	66c91c4412856baa147482e648fc80428db8b179
 # entrypoint	DRAGGINZGAME.md
 # entrypoint	rules/changelogs.md
 # entrypoint	rules/cargo-dependencies.md
@@ -101,7 +101,6 @@ revision	a7f85d45d4212d4c39225f58597580560a333550
 # entrypoint	scripts/ci/check-release-changelog.sh
 # entrypoint	scripts/ci/test-release-changelog.sh
 # entrypoint	scripts/dev/prepare-rust-toolchain.sh
-# entrypoint	scripts/ci/test-failure-evidence.py
 # entrypoint	.github/actions/prepare-common-tools/action.yml
 # entrypoint	scripts/ci/make-adapter-probes.sh
 # entrypoint	scripts/ci/prepare-script-fixture.sh
@@ -110,8 +109,8 @@ revision	a7f85d45d4212d4c39225f58597580560a333550
 # entrypoint	scripts/ci/check-no-symlinks.pl
 # entrypoint	scripts/ci/check-license.pl
 # entrypoint	audits/ci-release-integrity.md
-file	6cfb92f17d07c051fbd2f2f000176b7eede69f412596943fd3616285f724bb09	-	DRAGGINZGAME.md
-file	3c88853136d4ad9962b8c01caacd9607192164c2d4aeb901e36b4e3da81fdf99	-	rules/changelogs.md
+file	6bbddc6caf450fbc987dcef66c8756eee1d7571e74b49529ff05708aaff206bf	-	DRAGGINZGAME.md
+file	f5b493200ef3aaa2f08b27b4a644345005d5e86431dc4cb33fd27844056f5ff0	-	rules/changelogs.md
 file	2f30364bf420a76ba27579b3942cb6657fc456695ccd5d0fb47c97600963c07b	-	rules/cargo-dependencies.md
 file	ea61b8d4e501011f73729ed56613c365b14a947c8ca18d66dced4990cbdb40ea	-	rules/git-hooks.md
 file	9567eeaba8dc34c56f5da8e32910b0db57aa43606a6e08109615d1476a356c94	-	docs/releases.md
@@ -208,7 +207,6 @@ file	e2825c554ea3952515ecb2938f7ad592d6539ec5304c3b3107d32a1bfc6b4eda	-	scripts/
 file	5a4f1abe764e1e46c472bcf1e2e38f7f998085c570f53976591c808eca884d65	-	scripts/ci/check-release-changelog.sh
 file	7974f6898415696b53aa43b284381257a8b087673d52a9a1334160526b2254b9	-	scripts/ci/test-release-changelog.sh
 file	31c47b675fba90850681c6fac0d685def34b08a68e7e05bc55ae0403419fdf82	x	scripts/dev/prepare-rust-toolchain.sh
-file	b5b93238bc0a0fb67f09a6f033652499935b24889b36aa8a561aa2c87810a569	-	scripts/ci/test-failure-evidence.py
 file	4f8004bdbb5052394b8f313a6f65d30e8230a12a019c666c6d412cd3779b8df0	-	.github/actions/prepare-common-tools/action.yml
 file	f3ccdd33f1322c6069daedf66669b3d4bac267476f80725d7031c741f20cb278	-	scripts/ci/make-adapter-probes.sh
 file	92d926a0195db35172ffea5bfd0553e407d2d377114962fe71789aa1f33d9f8c	x	scripts/ci/prepare-script-fixture.sh

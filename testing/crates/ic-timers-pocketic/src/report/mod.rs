@@ -1,5 +1,6 @@
 //! Host-only cohort receipts and review comparisons; never deployed in probes.
 
+use crate::build::Cohort;
 use ic_build::artifacts::WasmBuildRecord;
 use ic_host_artifacts::artifact::{hash_reader, read_reader};
 use ic_host_fs::durable::{PublicationMode, WriteOptions, write_bytes};
@@ -63,6 +64,17 @@ pub(crate) struct Measurements {
     pub(crate) minimal: CalibrationMetrics,
     #[serde(rename = "watchdog-calibration-representative")]
     pub(crate) representative: CalibrationMetrics,
+}
+
+impl Measurements {
+    const fn policy(&self, cohort: Cohort) -> &PolicyMetrics {
+        match cohort {
+            Cohort::Baseline => &self.baseline,
+            Cohort::Once => &self.once,
+            Cohort::AfterCompletion => &self.after_completion,
+            Cohort::Watchdog => &self.watchdog,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -223,10 +235,11 @@ impl Report {
             ]
             .iter()
             .any(|value| value.is_empty())
-            || self.artifacts.len() != crate::build::COHORTS.len()
-            || !crate::build::COHORTS.iter().all(|(name, _)| {
-                self.artifacts.get(*name).is_some_and(|artifact| {
-                    artifact.feature == *name
+            || self.artifacts.len() != Cohort::ALL.len()
+            || !Cohort::ALL.iter().all(|cohort| {
+                let name = cohort.name();
+                self.artifacts.get(name).is_some_and(|artifact| {
+                    artifact.feature == name
                         && !artifact.wasm_sha256.is_empty()
                         && !artifact.build_fingerprint.is_empty()
                         && !artifact.input_digest.is_empty()
@@ -288,17 +301,10 @@ impl Report {
         let current = &self.measurements;
         let previous = &baseline.measurements;
         let mut changes = BTreeMap::new();
-        for (subject, value, old) in [
-            ("baseline", &current.baseline, &previous.baseline),
-            ("once", &current.once, &previous.once),
-            (
-                "after-completion",
-                &current.after_completion,
-                &previous.after_completion,
-            ),
-            ("watchdog", &current.watchdog, &previous.watchdog),
-        ] {
-            value.deltas(old, subject, &mut changes)?;
+        for cohort in Cohort::ALL {
+            current
+                .policy(cohort)
+                .deltas(previous.policy(cohort), cohort.name(), &mut changes)?;
         }
         current.minimal.deltas(
             &previous.minimal,

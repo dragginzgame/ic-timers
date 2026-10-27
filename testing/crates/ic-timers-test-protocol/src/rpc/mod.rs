@@ -17,6 +17,40 @@ pub const RESPONSE_LIMITS: ic_wire::Limits = ic_wire::Limits {
     depth: 32,
 };
 
+/// Ordinary callback policy selected by a probe request.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum OrdinaryPolicy {
+    Once,
+    AfterCompletion,
+}
+
+impl OrdinaryPolicy {
+    pub const ALL: [Self; 2] = [Self::Once, Self::AfterCompletion];
+}
+
+/// All policies exercised by registration-failure and removal probes.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum ProbePolicy {
+    Once,
+    AfterCompletion,
+    Watchdog,
+}
+
+impl ProbePolicy {
+    pub const ALL: [Self; 3] = [Self::Once, Self::AfterCompletion, Self::Watchdog];
+}
+
+/// Declaration retention selected by a probe request.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum ProbeLifetime {
+    Retained,
+    RemoveWhenStopped,
+}
+
+impl ProbeLifetime {
+    pub const ALL: [Self; 2] = [Self::Retained, Self::RemoveWhenStopped];
+}
+
 /// Frame identity for the four-field fixture checkpoint; not an RPC endpoint.
 pub const CHECKPOINT_ID: u64 = 0x5449_4d45_5253_4350;
 

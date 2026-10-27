@@ -9,7 +9,10 @@ use ic_timers::{
     reconcile_once, reconcile_watchdog, register_after_completion, register_once,
     register_watchdog, timer_inventory, timer_snapshot,
 };
-use ic_timers_test_protocol::OrdinaryObservation;
+use ic_timers_test_protocol::{
+    OrdinaryObservation,
+    rpc::{OrdinaryPolicy, ProbeLifetime, ProbePolicy},
+};
 use std::{
     cell::{Cell, RefCell},
     rc::Rc,
@@ -81,9 +84,9 @@ fn identity() -> TimerIdentity {
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::StartOrdinary as u64 }>",
     encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::StartOrdinary as u64 }>"
 )]
-fn start_ordinary(after_completion: bool, transient: bool) {
+fn start_ordinary(policy: OrdinaryPolicy, lifetime: ProbeLifetime) {
     let initial = TimerSchedule::At(ic_platform::cdk::api::time());
-    let start = if transient {
+    let start = if lifetime == ProbeLifetime::RemoveWhenStopped {
         TimerStart::RemoveWhenStopped { initial }
     } else {
         TimerStart::Retained {
@@ -93,7 +96,7 @@ fn start_ordinary(after_completion: bool, transient: bool) {
     REGISTRATION.with_borrow_mut(|slot| {
         assert!(slot.is_none(), "one probe registration");
         let captured = Rc::new(CapturedState);
-        let registration = if after_completion {
+        let registration = if policy == OrdinaryPolicy::AfterCompletion {
             Registration::AfterCompletion(
                 register_after_completion(
                     identity(),
@@ -364,13 +367,13 @@ fn ordinary_observation() -> OrdinaryObservation {
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::RemoveArmedCallback as u64 }>",
     encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::RemoveArmedCallback as u64 }>"
 )]
-fn remove_armed_callback(policy: u8) {
+fn remove_armed_callback(policy: ProbePolicy) {
     let deadline = ic_platform::cdk::api::time()
         .checked_add(super::CADENCE_NS)
         .expect("fixture deadline");
     let captured = CapturedState;
     match policy {
-        0 => {
+        ProbePolicy::Once => {
             let timer = register_once(
                 identity(),
                 TimerStart::Retained {
@@ -384,7 +387,7 @@ fn remove_armed_callback(policy: u8) {
             .expect("register Once");
             timer.unregister().expect("unregister Once");
         }
-        1 => {
+        ProbePolicy::AfterCompletion => {
             let timer = register_after_completion(
                 identity(),
                 TimerCadence::from_nanos(super::CADENCE_NS).expect("cadence"),
@@ -404,7 +407,7 @@ fn remove_armed_callback(policy: u8) {
             .expect("register after-completion");
             timer.cancel().expect("cancel transient");
         }
-        2 => {
+        ProbePolicy::Watchdog => {
             let timer = register_watchdog(
                 identity(),
                 TimerCadence::from_nanos(super::CADENCE_NS).expect("cadence"),
@@ -419,7 +422,6 @@ fn remove_armed_callback(policy: u8) {
             .expect("register Watchdog");
             timer.unregister().expect("unregister Watchdog");
         }
-        _ => ic_platform::cdk::api::trap("unknown removal policy"),
     }
 }
 
@@ -429,11 +431,11 @@ fn remove_armed_callback(policy: u8) {
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::RejectInitialSchedule as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::RejectInitialSchedule as u64 }>"
 )]
-fn reject_initial_schedule(policy: u8, transient: bool) -> (bool, u64, bool) {
+fn reject_initial_schedule(policy: ProbePolicy, lifetime: ProbeLifetime) -> (bool, u64, bool) {
     let before = timer_inventory().expect("initial inventory");
     let dropped_before = CAPTURES_DROPPED.with(Cell::get);
     let initial = TimerSchedule::After(std::time::Duration::MAX);
-    let start = if transient {
+    let start = if lifetime == ProbeLifetime::RemoveWhenStopped {
         TimerStart::RemoveWhenStopped { initial }
     } else {
         TimerStart::Retained {
@@ -442,12 +444,12 @@ fn reject_initial_schedule(policy: u8, transient: bool) -> (bool, u64, bool) {
     };
     let captured = CapturedState;
     let result = match policy {
-        0 => register_once(identity(), start, move |_| {
+        ProbePolicy::Once => register_once(identity(), start, move |_| {
             std::hint::black_box(&captured);
             async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
         })
         .map(|_| ()),
-        1 => register_after_completion(
+        ProbePolicy::AfterCompletion => register_after_completion(
             identity(),
             TimerCadence::from_nanos(super::CADENCE_NS).expect("cadence"),
             start,
@@ -462,7 +464,7 @@ fn reject_initial_schedule(policy: u8, transient: bool) -> (bool, u64, bool) {
             },
         )
         .map(|_| ()),
-        2 => register_watchdog(
+        ProbePolicy::Watchdog => register_watchdog(
             identity(),
             TimerCadence::from_nanos(super::CADENCE_NS).expect("cadence"),
             start,
@@ -472,7 +474,6 @@ fn reject_initial_schedule(policy: u8, transient: bool) -> (bool, u64, bool) {
             },
         )
         .map(|_| ()),
-        _ => ic_platform::cdk::api::trap("unknown initial policy"),
     };
     let rejected = matches!(
         result,
@@ -494,13 +495,13 @@ fn reject_initial_schedule(policy: u8, transient: bool) -> (bool, u64, bool) {
     decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::RejectInitialReconciliation as u64 }>",
     encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::RejectInitialReconciliation as u64 }>"
 )]
-fn reject_initial_reconciliation(policy: u8) -> (bool, bool, u64, bool) {
+fn reject_initial_reconciliation(policy: ProbePolicy) -> (bool, bool, u64, bool) {
     let before = timer_inventory().expect("initial inventory");
     let dropped_before = CAPTURES_DROPPED.with(Cell::get);
     let captured = CapturedState;
     let cadence = TimerCadence::from_nanos(u64::MAX).expect("positive cadence");
     let (result, empty) = match policy {
-        0 => {
+        ProbePolicy::Once => {
             let mut slot = None;
             let result = reconcile_once(
                 &mut slot,
@@ -513,7 +514,7 @@ fn reject_initial_reconciliation(policy: u8) -> (bool, bool, u64, bool) {
             );
             (result, slot.is_none())
         }
-        1 => {
+        ProbePolicy::AfterCompletion => {
             let mut slot = None;
             let result = reconcile_after_completion(
                 &mut slot,
@@ -532,7 +533,7 @@ fn reject_initial_reconciliation(policy: u8) -> (bool, bool, u64, bool) {
             );
             (result, slot.is_none())
         }
-        2 => {
+        ProbePolicy::Watchdog => {
             let mut slot = None;
             let result = reconcile_watchdog(
                 &mut slot,
@@ -546,17 +547,16 @@ fn reject_initial_reconciliation(policy: u8) -> (bool, bool, u64, bool) {
             );
             (result, slot.is_none())
         }
-        _ => ic_platform::cdk::api::trap("unknown reconciliation policy"),
     };
     let rejected = matches!(
         (policy, result),
         (
-            0,
+            ProbePolicy::Once,
             Err(TimerError::Schedule(
                 ic_timers::ScheduleError::DelayOutOfRange
             ))
         ) | (
-            1 | 2,
+            ProbePolicy::AfterCompletion | ProbePolicy::Watchdog,
             Err(TimerError::Schedule(
                 ic_timers::ScheduleError::DeadlineOverflow
             ))

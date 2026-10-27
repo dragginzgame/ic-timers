@@ -2,17 +2,23 @@
 
 ## Current authority
 
-One [snapshot](../.shared-tooling.snapshot) records **136** canonical payloads
-from reviewed Shared Tooling **0.26.20**, revision
-`a7f85d45d4212d4c39225f58597580560a333550`.
+One [snapshot](../.shared-tooling.snapshot) records **135** canonical payloads
+from reviewed Shared Tooling **0.26.21**, revision
+`66c91c4412856baa147482e648fc80428db8b179`.
 Canonical impact/apply ran from a clean clone of that committed revision with
-unchanged roots; exported files remain supplier-owned.
+the reviewed roots; exported files remain supplier-owned. A subsequent same-revision
+export retired the generic `scripts/ci/test-failure-evidence.py` root after its
+manual-workflow dispatch was removed. Timers retains its own
+`test_failure_evidence.py` and downloaded-artifact verifier. Shared qualifies the
+generic archive/receipt rejection matrix upstream.
 
 The compact baseline delegates task-specific detail to
 [`rules/engineering-details.md`](../rules/engineering-details.md). Validation
 follows a coherent edit batch with the smallest meaningful affected checks;
-line metrics and symbol inventories are opt-in. This refresh changes selected
-guidance and its catalog, not executable helpers. The optional npm SDK boundary
+line metrics and symbol inventories are opt-in. This refresh changes the baseline
+and changelog guidance only. Current and future root entries use emoji category
+headings; older history, release identities and dates stay intact. Formatting
+does not add a deployment gate. The optional npm SDK boundary
 checks remain unselected because Timers has no npm consumer. Repository purpose
 and its GitHub description remain aligned.
 
@@ -33,7 +39,7 @@ Cargo-tool admission still returns 75 for admitted contention. Explicit
 `--check --wait-seconds N` supports bounded read-only waiting; local adapters
 retain immediate checks and propagate failure. Waiting never installs, repairs
 or removes another owner's lock. The RPC-budget rule adds no browser client or
-new product gate here; the three retired producer fixtures remain unselected.
+new product gate here; the previously retired producer fixtures remain unselected.
 
 Explicit Cargo-tool setup now reports phase, outcome and whole-second durations
 on stderr, including compilation and reuse. Stdout remains the selected path;
@@ -249,11 +255,12 @@ verification guide still identify upstream coverage, not additional local caller
 ## Qualification and refresh
 
 Current impact/apply, incoming before-images and focused qualification logs are
-in `/tmp/ic-timers-adoption-0315/`.
+in `/tmp/ic-timers-shared-02621.TPKVvh/`. The same-revision generic evidence-test
+retirement and its consumer checks are in `/tmp/ic-timers-cleanup-0316.GVZnfK/`.
 The [handoff](status/current.md) records tested scope and separate macOS/release
-qualification limits. Published Build/Host/Testkit 0.68.7 are selected by the
-root lockfile; no moving sibling code is used. Producer matrices are not added
-to routine Timers validation.
+qualification limits. Earlier Build/Host/Testkit 0.68.7 qualification remains
+in `/tmp/ic-timers-adoption-0315/`; incoming dependency updates are separate
+pending work. Producer matrices are not added to routine Timers validation.
 
 Future refreshes use the reviewed source's canonical exporter: preview first,
 then apply the same explicit root selection. Retain directly used helpers and

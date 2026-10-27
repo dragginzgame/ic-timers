@@ -12,17 +12,18 @@ fn fixture_report() -> Report {
             cargo: "cargo".into(),
             target: "wasm32-unknown-unknown".into(),
         },
-        artifacts: crate::build::COHORTS
+        artifacts: Cohort::ALL
             .iter()
-            .map(|(name, _)| {
+            .map(|cohort| {
+                let name = cohort.name();
                 (
-                    (*name).into(),
+                    name.into(),
                     Artifact {
                         wasm_sha256: format!("{name} bytes"),
                         build_fingerprint: "build".into(),
                         input_digest: "inputs".into(),
                         recipe_identity: "recipe".into(),
-                        feature: (*name).into(),
+                        feature: name.into(),
                     },
                 )
             })

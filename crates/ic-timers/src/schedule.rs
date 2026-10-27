@@ -87,38 +87,52 @@ impl OrdinaryDirective {
         now_ns: u64,
         cadence: Option<TimerCadence>,
     ) -> Result<(Option<ResolvedSchedule>, TimerDirectiveSnapshot), TimerControlFailure> {
-        let snapshot =
-            TimerDirectiveSnapshot::try_from(self).map_err(ScheduleError::control_failure)?;
-        let schedule = match snapshot {
-            TimerDirectiveSnapshot::Stop => None,
-            TimerDirectiveSnapshot::ContinueImmediately => Some(ResolvedSchedule {
-                deadline_ns: now_ns,
-                requested_delay_ns: Some(0),
-                mode: TimerSchedulingMode::Continuation,
-            }),
-            TimerDirectiveSnapshot::RetryAfter { delay_ns } => Some(ResolvedSchedule {
-                deadline_ns: checked_deadline_after(now_ns, delay_ns)
-                    .map_err(ScheduleError::control_failure)?,
-                requested_delay_ns: Some(delay_ns),
-                mode: TimerSchedulingMode::Retry,
-            }),
-            TimerDirectiveSnapshot::ScheduleAt { deadline_ns } => Some(ResolvedSchedule {
-                deadline_ns,
-                requested_delay_ns: None,
-                mode: TimerSchedulingMode::Deadline,
-            }),
-            TimerDirectiveSnapshot::RecurAfterCompletion => {
-                let cadence = cadence.ok_or(TimerControlFailure::DirectiveNotAllowed)?;
+        // Resolve executable proposals directly. Snapshots observe the selected
+        // directive; they are not an intermediate execution representation.
+        Ok(match self {
+            Self::Stop => (None, TimerDirectiveSnapshot::Stop),
+            Self::ContinueImmediately => (
                 Some(ResolvedSchedule {
-                    deadline_ns: cadence
-                        .deadline_after(now_ns)
-                        .map_err(ScheduleError::control_failure)?,
-                    requested_delay_ns: Some(cadence.as_nanos()),
-                    mode: TimerSchedulingMode::AfterCompletion,
-                })
+                    deadline_ns: now_ns,
+                    requested_delay_ns: Some(0),
+                    mode: TimerSchedulingMode::Continuation,
+                }),
+                TimerDirectiveSnapshot::ContinueImmediately,
+            ),
+            Self::RetryAfter(delay) => {
+                let delay_ns = duration_ns(delay).map_err(ScheduleError::control_failure)?;
+                (
+                    Some(ResolvedSchedule {
+                        deadline_ns: checked_deadline_after(now_ns, delay_ns)
+                            .map_err(ScheduleError::control_failure)?,
+                        requested_delay_ns: Some(delay_ns),
+                        mode: TimerSchedulingMode::Retry,
+                    }),
+                    TimerDirectiveSnapshot::RetryAfter { delay_ns },
+                )
             }
-        };
-        Ok((schedule, snapshot))
+            Self::ScheduleAt(deadline_ns) => (
+                Some(ResolvedSchedule {
+                    deadline_ns,
+                    requested_delay_ns: None,
+                    mode: TimerSchedulingMode::Deadline,
+                }),
+                TimerDirectiveSnapshot::ScheduleAt { deadline_ns },
+            ),
+            Self::RecurAfterCompletion => {
+                let cadence = cadence.ok_or(TimerControlFailure::DirectiveNotAllowed)?;
+                (
+                    Some(ResolvedSchedule {
+                        deadline_ns: cadence
+                            .deadline_after(now_ns)
+                            .map_err(ScheduleError::control_failure)?,
+                        requested_delay_ns: Some(cadence.as_nanos()),
+                        mode: TimerSchedulingMode::AfterCompletion,
+                    }),
+                    TimerDirectiveSnapshot::RecurAfterCompletion,
+                )
+            }
+        })
     }
 }
 

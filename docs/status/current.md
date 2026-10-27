@@ -2,59 +2,71 @@
 
 # Current status
 
-Last updated: 2026-10-26
+Last updated: 2026-10-27
 
 ## Source and pending work
 
-Released base: **0.31.4**, `b04401c`. The undated **0.31.5** section covers
-published Build/Host/Testkit **0.68.7** and Shared Tooling **0.26.20** adoption.
-All five Tooling packages were already selected in the incoming lockfile;
-it is preserved byte for byte. Registry metadata and checksum-verified published
-archives establish availability and Rust 1.91 support. Cargo package versions
-remain 0.31.4; commits, staging, pushes and release execution remain
-maintainer-owned. No timer API or probe wire-contract change is required.
+Released base: **0.31.5**, `8b91bf0`. The undated **0.31.6** section includes
+Shared Tooling **0.26.21** and the accepted complexity cleanup. The batch preserves
+published timer APIs and semantics, so the next patch remains appropriate.
+Cargo package versions remain 0.31.5. Commits, staging, pushes and release
+execution remain maintainer-owned.
 
-## Ownership and adoption
+Incoming `Cargo.lock` and `scripts/ci/test-repository-checks.sh` edits remain
+byte-identical to their before-images. Focused checks below use that selected
+graph (including Build/Host/Testkit 0.68.9); they are not a separate broad
+upstream-dependency audit or release qualification.
 
-Shared's canonical exporter applied revision
-`a7f85d45d4212d4c39225f58597580560a333550` with unchanged roots and 136 payloads.
-The compact baseline adds task-specific engineering details, focused batch
-validation and opt-in line/symbol reporting. Selected executable helpers are
-unchanged. Optional npm checks remain unselected; Timers has no npm consumer.
-Normal releases start fresh; saved-attempt recovery remains `release-resume`.
+## Completed cleanup and ownership
 
-Published Tooling 0.68.7 consolidates Cargo completion tracking and native error
-sources without changing public APIs or report/cache formats. Testkit now refuses
-synchronous instance completion after the startup deadline, matching async
-admission. Server ownership and cleanup remain upstream. Host Rust sources are
-unchanged. Both lock-selected CLIs use canonical explicit setup and offline
-admission; no moving sibling implementation or local replacement is introduced.
-Testkit's selected server remains PocketIC **16.1.0**.
+Fresh lifecycle creation shares one private reconciliation transaction. Ordinary
+directives produce executable schedules and inert observations directly, with
+unchanged error precedence. Negative lifecycle tests share preservation and
+original-callback assertions while keeping distinct policy and stale-claim cases.
 
-The library still uses only Metrics, Platform and Thiserror directly. Platform
-**0.6.18**, Wire **0.7.16**, Metrics **0.16.2** and Thiserror **2.0.18** remain
-selected. Executor **2.0.0** and IC0 **1.2.0** identities remain unique. Library
-and probe deployment graphs exclude Candid and host tooling; native
-Testkit/PocketIC transport intentionally retains Candid. The unpublished
-Wire/Serde protocol package owns probe records, not runtime authority.
+The unpublished protocol owns named ordinary/all-policy and retention selectors,
+replacing numeric and boolean policy arguments. Probe and host callers migrate
+together; rebuild both sides. It still depends only on Wire/Serde and owns no
+runtime authority. A private cohort enum owns names, features and Wasm environment
+selection; measurement and report consumers use it without changing schema 2.
+
+CI omits redundant library `check` dispatch while retaining lint and executed
+tests. Dependency fixtures derive copy/reset membership from admitted root
+workspace metadata. Shared's canonical same-revision exporter retires its generic
+evidence-test payload and root; the manual workflow keeps Timers' own adapter
+regressions and downloaded-artifact admission. The snapshot now has **135**
+payloads at `66c91c4412856baa147482e648fc80428db8b179`.
+
+## Upstream boundary and deliberate retention
+
+[IC Tooling #255](https://github.com/dragginzgame/ic-tooling/issues/255) requests
+borrowed record access from published `WasmBuildEvidence`: Timers needs artifact,
+compiler and recipe facts for cohort admission. Keep the existing retained-build
+and freshness checks until a supplying API is published; no duplicate build or
+local wrapper was introduced.
+
+The proposed Wire binding generator is not pursued. The delivered
+[Platform #31 discussion](https://github.com/dragginzgame/ic-platform/issues/31)
+explicitly retains consumer codec hooks; published Platform 0.6.19 and Wire
+0.7.17 support that boundary. Both tiny adapters, pre-copy guards and explicit
+entrypoint bindings remain. No new generator framework or runtime is justified.
 
 ## Verification and limits
 
-Evidence, published archives, source diffs, exporter logs and incoming lockfile
-are retained in `/tmp/ic-timers-adoption-0315/`. Rust 1.91 Clippy passes for the
-affected host runner's normal and test targets. All six host build/report tests
-pass. The actual cohort driver builds four optimized policy Wasms, runs the
-Linux PocketIC subject and publishes a validated report for four policies plus
-two watchdog calibrations. No baseline was replaced and no performance
-improvement is claimed.
+Evidence and incoming before-images are in `/tmp/ic-timers-cleanup-0316.GVZnfK/`.
+Rust 1.91 strict Clippy passes for library, runtime probe, protocol and native
+runner normal/test targets. All 33 focused native lifecycle, schedule, directive,
+callback, build/report and protocol tests pass. Optimized runtime-probe Wasm
+compilation and ten selected real-Wasm Linux PocketIC tests pass, including
+unknown selector rejection before effects, failed initialization, capture cleanup,
+ordinary suspension/traps and Watchdog upgrade recovery. Four optimized cohort
+builds and the PocketIC cohort subject (four policies/two calibrations) pass;
+the validated receipt is `cohorts.json`. No baseline was replaced or speedup claimed.
 
-Both 0.68.7 CLIs were explicitly prepared and passed offline admission. Release
-version-preparation rollback/dirty-worktree and Testkit adapter setup/check
-failure-propagation fixtures pass. Snapshot integrity/corruption, provider,
-direct and deployed dependency boundaries, pins, formatting, changelog and
-diff checks pass. No missing enforcement was identified for this adoption.
-Earlier Platform/Wire evidence remains in `/tmp/ic-timers-platform-wire-0314/`
-and is not relabelled for the new Tooling selection.
-
-The complete release gate, native macOS and live deployment remain separately
-required. Local Linux PocketIC evidence does not qualify those environments.
+Dependency-boundary, repository-boundary, snapshot corruption, evidence-reader and
+release-ordering fixtures pass. Formatting, snapshot integrity, provider ownership,
+changelog and diff checks pass. Initial lint findings were fixed; both failed
+and passing attempts remain retained. Earlier evidence remains at
+`/tmp/ic-timers-adoption-0315/` and `/tmp/ic-timers-platform-wire-0314/` with its
+original scope. Full release validation, native macOS and live deployment remain
+separate; Linux simulator evidence does not qualify those environments.

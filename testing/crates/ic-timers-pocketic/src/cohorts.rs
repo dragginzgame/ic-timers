@@ -1,3 +1,4 @@
+use super::build::Cohort;
 use super::harness::{fresh_pocket_ic, install_probe, update_unit};
 use super::harness::{query_wire, update_wire};
 use crate::report::{CalibrationMetrics, Measurements, PolicyMetrics};
@@ -15,10 +16,10 @@ fn comparable_policy_cohorts_report_size_and_instruction_subjects() {
     )
     .expect("driver context");
     let measurements = Measurements {
-        baseline: run_cohort("baseline"),
-        once: run_cohort("once"),
-        after_completion: run_cohort("after-completion"),
-        watchdog: run_cohort("watchdog"),
+        baseline: run_cohort(Cohort::Baseline),
+        once: run_cohort(Cohort::Once),
+        after_completion: run_cohort(Cohort::AfterCompletion),
+        watchdog: run_cohort(Cohort::Watchdog),
         minimal: run_watchdog_calibration(false),
         representative: run_watchdog_calibration(true),
     };
@@ -33,7 +34,7 @@ fn comparable_policy_cohorts_report_size_and_instruction_subjects() {
         .expect("retain candidate cohort report");
 }
 
-fn run_cohort(cohort: &str) -> PolicyMetrics {
+fn run_cohort(cohort: Cohort) -> PolicyMetrics {
     let owned = fresh_pocket_ic();
     let pic = owned.instance();
     let wasm = cohort_wasm(cohort);
@@ -41,18 +42,18 @@ fn run_cohort(cohort: &str) -> PolicyMetrics {
     let canister_id = install_probe(pic, wasm);
 
     let initial = observe(pic, canister_id);
-    assert_eq!(initial.cohort, cohort);
+    assert_eq!(initial.cohort, cohort.name());
     assert!(!initial.registered);
     assert_eq!(initial.callbacks, 0);
     assert_eq!(initial.inventory_len, 0);
 
     let start = update_measurement(pic, canister_id, Method::CohortStart);
     let duplicate = update_measurement(pic, canister_id, Method::EnsureAgain);
-    assert_eq!(start.changed, cohort != "baseline");
+    assert_eq!(start.changed, cohort != Cohort::Baseline);
     assert!(!duplicate.changed);
 
     let scheduled = observe(pic, canister_id);
-    if cohort == "baseline" {
+    if cohort == Cohort::Baseline {
         assert!(!scheduled.registered);
         assert_eq!(scheduled.schedule_requests.total, 0);
     } else {
@@ -69,25 +70,25 @@ fn run_cohort(cohort: &str) -> PolicyMetrics {
     let dispatch_cycles = cycles_before_dispatch.saturating_sub(pic.cycle_balance(canister_id));
     let completed = observe(pic, canister_id);
     match cohort {
-        "baseline" => {
+        Cohort::Baseline => {
             assert_eq!(completed.callbacks, 0);
             assert_eq!(completed.work_started.total, 0);
         }
-        "once" => {
+        Cohort::Once => {
             assert_eq!(completed.callbacks, 1);
             assert_eq!(completed.work_started.total, 1);
             assert_eq!(completed.work_completed.total, 1);
             assert_eq!(completed.next_deadline_ns, None);
             assert_eq!(completed.work_instruction_samples, 1);
         }
-        "after-completion" => {
+        Cohort::AfterCompletion => {
             assert_eq!(completed.callbacks, 1);
             assert_eq!(completed.work_started.total, 1);
             assert_eq!(completed.work_completed.total, 1);
             assert!(completed.next_deadline_ns.is_some());
             assert_eq!(completed.work_instruction_samples, 1);
         }
-        "watchdog" => {
+        Cohort::Watchdog => {
             assert_eq!(completed.callbacks, 1);
             assert_eq!(completed.scheduler_started.total, 1);
             assert_eq!(completed.work_dispatched.total, 1);
@@ -97,13 +98,12 @@ fn run_cohort(cohort: &str) -> PolicyMetrics {
             assert_eq!(completed.scheduler_instruction_samples, 1);
             assert_eq!(completed.work_instruction_samples, 1);
         }
-        _ => unreachable!("fixed cohort list"),
     }
 
     let cancellation = update_measurement(pic, canister_id, Method::Cancel);
     assert_eq!(
         cancellation.changed,
-        matches!(cohort, "after-completion" | "watchdog")
+        matches!(cohort, Cohort::AfterCompletion | Cohort::Watchdog)
     );
     assert_eq!(observe(pic, canister_id).next_deadline_ns, None);
     assert!(!update_measurement(pic, canister_id, Method::Cancel).changed);
@@ -113,7 +113,7 @@ fn run_cohort(cohort: &str) -> PolicyMetrics {
     assert_eq!(cancelled.callbacks, completed.callbacks);
     assert_eq!(cancelled.next_deadline_ns, None);
 
-    let memory_sampling = if cohort == "watchdog" {
+    let memory_sampling = if cohort == Cohort::Watchdog {
         let measurement: MemorySamplingMeasurement = update_wire(
             pic,
             canister_id,
@@ -157,7 +157,7 @@ fn run_cohort(cohort: &str) -> PolicyMetrics {
 fn run_watchdog_calibration(representative_work: bool) -> CalibrationMetrics {
     let owned = fresh_pocket_ic();
     let pic = owned.instance();
-    let canister_id = install_probe(pic, cohort_wasm("watchdog"));
+    let canister_id = install_probe(pic, cohort_wasm(Cohort::Watchdog));
     if representative_work {
         update_unit(pic, canister_id, Method::UseRepresentativeWatchdogWork);
     }
@@ -180,11 +180,8 @@ fn run_watchdog_calibration(representative_work: bool) -> CalibrationMetrics {
     }
 }
 
-fn cohort_wasm(cohort: &str) -> Vec<u8> {
-    let (_, variable) = crate::build::COHORTS
-        .iter()
-        .find(|(label, _)| *label == cohort)
-        .expect("known policy cohort");
+fn cohort_wasm(cohort: Cohort) -> Vec<u8> {
+    let variable = cohort.environment();
     let path = env::var_os(variable)
         .map(PathBuf::from)
         .unwrap_or_else(|| panic!("{variable} must name the resolved cohort Wasm artifact"));
@@ -192,7 +189,7 @@ fn cohort_wasm(cohort: &str) -> Vec<u8> {
     let report: crate::report::BuildContext =
         serde_json::from_str(&env::var("IC_TIMERS_COHORT_CONTEXT").expect("driver context"))
             .expect("valid context");
-    report.verify_artifact(cohort, &wasm);
+    report.verify_artifact(cohort.name(), &wasm);
     wasm
 }
 

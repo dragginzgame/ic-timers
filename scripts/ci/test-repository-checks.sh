@@ -179,7 +179,7 @@ done
 # The owner checker rejects Candid codecs and missing Wire admission hooks.
 probe_dir=testing/crates/ic-timers-runtime-probe/src
 mkdir -p "$probe_dir"
-for codec in 'use ic_platform::candid::DecodeLimits;' 'use candid::CandidType;' \
+for codec in 'use ic_platform::candid::DecodeLimits;' 'use candid::;' \
     'fn checkpoint() { stable_save(()); }'; do
     printf '%s\n' "$codec" > "$probe_dir/leak.rs"
     expect_failure 'probe protocols must use Wire' bash scripts/ci/check-provider-boundary.sh
