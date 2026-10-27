@@ -3,10 +3,17 @@
 ## Current authority
 
 One [snapshot](../.shared-tooling.snapshot) records **131** canonical payloads
-from reviewed Shared Tooling **0.26.21**, revision
-`66c91c4412856baa147482e648fc80428db8b179`.
+from reviewed Shared Tooling **0.26.22**, revision
+`5fc904a935d82ad31f0fba14434b71ccb8c10345`.
 Canonical impact/apply ran from a clean clone of that committed revision with
-the reviewed roots; exported files remain supplier-owned. A subsequent same-revision
+the existing reviewed roots; exported files remain supplier-owned. This refresh
+updates five governance documents, with no payload additions/removals, executable
+changes or tool selections. It makes the owned-type Candid prohibition explicit
+and strengthens error, source-inspection, subprocess and diagnostic guidance.
+Existing dependency/provider checks enforce Timers' codec and deployment boundary;
+the broader guidance adds no new executable enforcement or automatic audit.
+
+Under the preceding 0.26.21 revision, a same-revision
 export retired the generic `scripts/ci/test-failure-evidence.py` root after its
 manual-workflow dispatch was removed. Timers retains its own
 `test_failure_evidence.py` and downloaded-artifact verifier. Shared qualifies the
@@ -18,9 +25,8 @@ checks remain selected.
 The compact baseline delegates task-specific detail to
 [`rules/engineering-details.md`](../rules/engineering-details.md). Validation
 follows a coherent edit batch with the smallest meaningful affected checks;
-line metrics and symbol inventories are opt-in. This refresh changes the baseline
-and changelog guidance only. Current and future root entries use emoji category
-headings; older history, release identities and dates stay intact. Formatting
+line metrics and symbol inventories are opt-in. Current and future root entries
+use emoji category headings; older history, release identities and dates stay intact. Formatting
 does not add a deployment gate. The optional npm SDK boundary
 checks remain unselected because Timers has no npm consumer. Repository purpose
 and its GitHub description remain aligned.

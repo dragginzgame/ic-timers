@@ -2,6 +2,21 @@
 
 All notable changes to this project are recorded here.
 
+## [0.31.9] - Unreleased
+
+### 📦 Dependencies
+
+- Adopt Platform 0.7.0 and Build/Host/Testkit 0.68.12. Timers does not use the
+  retired Candid compiler APIs; runtime features and executor identities remain
+  unchanged. Prepare the selected contributor tools again through
+  `make install-release-editor install-testkit-server`.
+
+### 🥾 Governance
+
+- Adopt Shared Tooling 0.26.22, clarifying owned-type Candid restrictions and
+  native input/error-handling guidance. Existing deployment checks remain in
+  place; the updated rules do not add executable enforcement.
+
 ## [0.31.8] - 2026-10-27
 
 ### 📦 Dependencies

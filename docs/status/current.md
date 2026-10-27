@@ -6,71 +6,69 @@ Last updated: 2026-10-27
 
 ## Source and pending work
 
-Released base: **0.31.7**, `f159476`; current source is maintainer commit
-`86bca11` containing the named native-fixture cleanup. The undated **0.31.8**
-section also records the accepted dependency/evidence-owner adoption. Published
-APIs and timer semantics are unchanged, so the next patch remains appropriate.
-Cargo package versions remain 0.31.7. Commits, staging, pushes and release
+Released base: **0.31.8**, `69910ed`. The undated **0.31.9** draft records the
+accepted IC Tooling, Shared Tooling and Platform adoption. Platform's removed
+Candid compiler APIs have no Timers consumers; the published timer API, runtime
+semantics and protocols are unchanged, so the next patch remains appropriate.
+Cargo package versions remain 0.31.8. Staging, commits, pushes and release
 execution remain maintainer-owned.
 
-The dependency batch began with an already updated lock selecting Platform
-0.6.20 and Build/Host/Testkit 0.68.11, plus the pending handoff edit. Both were
-preserved. Compatible `cargo update` selected no additional packages; the lock
-is byte-identical to that incoming selection. Root dependency minimums now name
-those releases and the existing Wire 0.7.18 / Metrics 0.16.3 selections.
-Official sparse-index records verify these are the latest published releases;
-Wire's sibling 0.7.19 notes do not establish publication. Published Build and
-Platform archive checksums match the registry. No sibling source is substituted.
-Shared Tooling remains the reviewed 0.26.21 snapshot.
+The batch began with a pending root lock update to Build/Host/Testkit 0.68.12
+and Platform 0.6.21. That work is preserved; the root catalog now selects the
+published Platform 0.7.0 and Tooling 0.68.12 minimums. The lock additionally
+selects Platform/macros 0.7.0. Official registry records and matching published
+archive checksums establish availability. Wire 0.7.18 and Metrics 0.16.3 stay
+unchanged; no unpublished sibling source is used.
 
-## Completed cleanup and ownership
+## Shared adoption and ownership
 
-The preceding committed test cleanup replaces numeric policies, trace commands,
-result cases and Watchdog scenarios with named cases. Original exhaustive words,
-prefix checks, independent expected outcomes and capture/lifecycle cases remain.
-Its focused evidence is `/tmp/ic-timers-native-cases-0318.iRKVot/`.
+Shared Tooling **0.26.22**, revision
+`5fc904a935d82ad31f0fba14434b71ccb8c10345`, is verified against upstream main
+and adopted from a clean clone through canonical impact/apply. All 131 payloads
+verify. The existing roots are preserved; five governance documents change,
+without executable, tool-version, payload-roster or gate changes. The local
+[adoption guide](../shared-tooling.md) distinguishes updated guidance from
+executable enforcement. No optional audit or schedule was activated.
 
-Build 0.68.11 supplies `WasmBuildEvidence::record()`. The qualification driver now
-retains that owner through measurement and calls `verify_current()` before
-accepting results, removing the parallel spec/input/build tuple and manual
-fingerprint comparisons. Timers still owns recipes, exact artifact cardinality,
-report context, loaded-Wasm admission and durable publication. Report schema,
-probe protocols, runtime behavior and deployed feature selections are unchanged.
-Persistent input-change refusal belongs to Build; callers still hold source
-custody, since checks cannot detect edits reverted between observations.
+The new rules clarify owned-type Candid restrictions, mechanical error derives,
+complete source inspection, strict machine-output admission, subprocess bounds
+and safe diagnostics. Existing Timers declaration/graph/provider checks retain
+codec and deployment enforcement; adopting broader prose does not add a general
+scanner or qualify native-host behavior.
 
-## Issues and upstream boundary
+The deployed timer library still selects only Platform's executor/ic0 features,
+with one executor 2.0.0 and ic0 1.2.0 identity. Candid, Wire and host tooling
+remain excluded from its resolved normal/build graph. Probes retain their Wire
+protocol and existing runtime feature selection. The native simulator test graph
+contains both Platform 0.7.0 and 0.6.21: published Testkit 0.68.12 still requires
+`^0.6.19`. This is a host-test facade duplication, not a parallel timer provider;
+no patch, source override or consumer compatibility layer was introduced. Testkit
+must publish a 0.7-compatible requirement to eliminate its remaining facade.
 
-[Timers #75](https://github.com/dragginzgame/ic-timers/issues/75) was closed after
-[released-main run 40474305674](https://github.com/dragginzgame/ic-timers/actions/runs/40474305674)
-passed Linux, MSRV and native macOS Intel/ARM64. The preceding backlog check
-found no remaining open Timers issues or PRs; this dependency batch did not
-repeat or change that inventory.
-
-[IC Tooling #255](https://github.com/dragginzgame/ic-tooling/issues/255) is no
-longer a publication blocker for this consumer: its narrow accessor is verified
-in the downloaded 0.68.11 package and adopted locally. Upstream issue closure and
-its separate native-host acceptance remain supplier-owned.
+The preceding 0.31.8 adoption already delegates retained build ownership and
+freshness to `WasmBuildEvidence`, including its published `record()` accessor
+([Tooling #255](https://github.com/dragginzgame/ic-tooling/issues/255)). Exact
+artifact selection, recipe/report context and final publication stay Timers-owned.
 
 ## Verification and limits
 
-Dependency before-images, official registry records and focused logs are in
-`/tmp/ic-timers-deps-0318.9bj5hB/`. Rust 1.91 strict Clippy passes for library,
+Before-images, official registry records, impact/apply output and focused logs:
+`/tmp/ic-timers-adoption-0319.yLi7Qi/`. Rust 1.91 strict Clippy passes for library,
 coordinator/test targets, runtime probe and protocol. All 15 selected native
-tests pass: three build-driver, three report-admission and nine private-platform
-subjects. Rust 1.91 Wasm compilation passes for library, runtime probe and the
-size probe's default baseline selection. Formatting, changelog, pin/inheritance,
-external-IC declaration, native/Wasm graph and private-provider checks pass.
+tests pass: build-driver (3), report admission (3), private platform (9).
+Rust 1.91 Wasm compilation passes for library, runtime probe and the size probe's
+default baseline. Snapshot integrity, formatting, changelog, pin/inheritance,
+external-IC declarations, native/Wasm graph and private-provider checks pass.
 
-The selected release editor and Testkit CLI were explicitly prepared and pass
-offline admission; Testkit admits its existing PocketIC 16.1.0 server. Initial
-checks correctly refused unprepared selections. Testkit's first setup reached
-the bounded 60-second wait on an active sibling-owned installer; once that owner
-exited, a second setup reused its completed build. No foreign lock was removed.
-Both setup attempts and final admissions are retained with the focused logs.
+Selected editor and Testkit CLI 0.68.12 setup and offline admission pass; Testkit
+admits the existing PocketIC 16.1.0 server. The first server setup timed out on
+an active sibling-owned installation slot. After that installer exited, the
+second setup reused its completed build. Both attempts remain retained; no
+foreign lock or previous tool/evidence generation was removed.
 
-The deployed library graph retains only executor 2.0.0 and ic0 1.2.0 through
-Platform, with no Candid, Wire or host tooling. Candid remains transitive in the
-native simulator test graph through Platform/PocketIC. This is graph admission
-and cross-compilation evidence, not a new installed-IC recovery qualification.
-No fresh full release gate, PocketIC measurement or native macOS run was performed.
+These are local Linux native tests and Wasm cross-compilation, not a fresh full
+release gate, installed-IC recovery, PocketIC measurement or native macOS run.
+The full user-operated release gate and required host matrix remain intact.
+Previous dependency/evidence-owner adoption logs remain at
+`/tmp/ic-timers-deps-0318.9bj5hB/`; preceding native-fixture evidence remains at
+`/tmp/ic-timers-native-cases-0318.iRKVot/`, each with its original input scope.

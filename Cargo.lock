@@ -779,9 +779,9 @@ dependencies = [
 
 [[package]]
 name = "ic-build"
-version = "0.68.11"
+version = "0.68.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e8ac09a6015c1d9437de6c65dd0d6e0b7e7ccf92aaddf234ddd52009a942f34"
+checksum = "376671b1ada1568f9ceac3f78d4427d653f4c7cd80aa607691fe740af8b9d943"
 dependencies = [
  "cargo_metadata",
  "ic-host-artifacts",
@@ -821,9 +821,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-artifacts"
-version = "0.68.11"
+version = "0.68.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df03354e6f970f887cbb44b2c62fdab956df6bb368aebcc87bf2f2c9a8bb9565"
+checksum = "edb95a14c94d265ac37af080aeb4ac34fc9fc23d4c5006f67f5a392b0314a440"
 dependencies = [
  "flate2",
  "sha2",
@@ -831,9 +831,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-fs"
-version = "0.68.11"
+version = "0.68.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c14989d4c1eb665f9f9c77242842de15a96c1d9131656c85b54a062901c9cac5"
+checksum = "aabb147a5ed028184d43ea1a2ad5f1eb4dd514a3389cd8d8bbe79a901402ae24"
 dependencies = [
  "ic-host-artifacts",
  "rustix",
@@ -842,9 +842,9 @@ dependencies = [
 
 [[package]]
 name = "ic-host-process"
-version = "0.68.11"
+version = "0.68.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "170ad49ff0ae55710785ea75d1ce6446cb2ba1d4120e18bbe978537f1506270c"
+checksum = "b38129cea401bb4d45ed3068847b31dd680c76e34059a635098747af3cadb991"
 dependencies = [
  "command-fds",
  "ic-host-artifacts",
@@ -883,15 +883,29 @@ checksum = "4b29592cae8a0f2d6f1d7d8d4fbd107cfbb3f3ad2e3e18515d7f598665037056"
 
 [[package]]
 name = "ic-platform"
-version = "0.6.20"
+version = "0.6.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7345878bbf473daa1989d28b1f9828e22e63c2f21e776dd5a3e9eace8609016e"
+checksum = "f82b7556c1a6acf55a82b0bdc789fc6d4cb4f9c3e0113e911354817387b866e0"
 dependencies = [
  "candid",
  "crc32fast",
  "data-encoding",
- "ic-cdk-executor",
  "ic-management-canister-types 0.11.0",
+ "ic0",
+ "ic_principal",
+ "pocket-ic",
+ "serde",
+]
+
+[[package]]
+name = "ic-platform"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "677aad73f8b1339cbe1cd7c851f4140bdcdc91c3838fda425bb82549dcd7c35d"
+dependencies = [
+ "crc32fast",
+ "data-encoding",
+ "ic-cdk-executor",
  "ic-platform-macros",
  "ic0",
  "ic_principal",
@@ -903,9 +917,9 @@ dependencies = [
 
 [[package]]
 name = "ic-platform-macros"
-version = "0.6.20"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eeca714c21648339c9719ff5cc97762b643d56006ea1761149107b44370298fc"
+checksum = "55473c96a300e051643ded29e5904e2efb131f531c322e2b1610619f3052648f"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -914,14 +928,14 @@ dependencies = [
 
 [[package]]
 name = "ic-testkit"
-version = "0.68.11"
+version = "0.68.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "65d61ee2d4fe185df4afa65c4ee1cbfb960e2c7296478b61913a8977831ee04f"
+checksum = "053cb818b980a3ddd195a579c1f734415308002cdea898bd3261d6743f0ff25a"
 dependencies = [
  "ic-host-artifacts",
  "ic-host-fs",
  "ic-host-process",
- "ic-platform",
+ "ic-platform 0.6.21",
  "ic-wire",
  "libc",
  "serde",
@@ -934,7 +948,7 @@ name = "ic-timers"
 version = "0.31.8"
 dependencies = [
  "ic-metrics",
- "ic-platform",
+ "ic-platform 0.7.0",
  "thiserror 2.0.18",
 ]
 
@@ -947,7 +961,7 @@ dependencies = [
  "ic-host-artifacts",
  "ic-host-fs",
  "ic-host-process",
- "ic-platform",
+ "ic-platform 0.7.0",
  "ic-testkit",
  "ic-timers-test-protocol",
  "ic-wire",
@@ -959,7 +973,7 @@ dependencies = [
 name = "ic-timers-runtime-probe"
 version = "0.31.8"
 dependencies = [
- "ic-platform",
+ "ic-platform 0.7.0",
  "ic-timers",
  "ic-timers-test-protocol",
  "ic-wire",
@@ -970,7 +984,7 @@ dependencies = [
 name = "ic-timers-size-probe"
 version = "0.31.8"
 dependencies = [
- "ic-platform",
+ "ic-platform 0.7.0",
  "ic-timers",
  "ic-timers-test-protocol",
  "ic-wire",
