@@ -3,12 +3,12 @@
 ## Current authority
 
 One [snapshot](../.shared-tooling.snapshot) records **134** canonical payloads
-from reviewed Shared Tooling **0.27.2**, revision
-`7efce1e36275ff9e4bbbdd9ccab9a8d94520fd98`.
+from reviewed Shared Tooling **0.27.3**, revision
+`7ee5c83744aa822ecd070703dbf0a7d95076d5f6`.
 Canonical impact/apply ran from a clean clone of that committed revision with
-the existing reviewed roots; exported files remain supplier-owned. This refresh
-updates the Rust formatter and its interface guide, adding `RustSource.pm` as a
-declared companion. The hook fixture stages that module with its formatter.
+the existing reviewed roots; exported files remain supplier-owned. The retained
+formatter adoption includes `RustSource.pm` as a declared companion. The hook
+fixture stages that module with its formatter.
 Balanced attribute inspection avoids treating unrelated later path text as a
 module override; actual redirects and incomplete syntax still disable reuse.
 Both driver and lexer participate in the input fingerprint.
@@ -17,15 +17,33 @@ The latest revision derives formatting fixtures from explicit roots and their
 companion closure, including new helpers. Timers stages that copied closure
 without a second helper roster. The common fixture preparer now admits consumer
 directory names containing newlines while still validating relative payload paths.
-The source changelog's 0.27.3 section is pending; the snapshot version above comes
-from its committed `VERSION`, with the exact reviewed revision authoritative.
+Adoption also compares every declared payload's bytes and executable mode with
+that independently selected full commit through the trusted source verifier.
+Ordinary builds keep their existing offline integrity checks and need no source
+checkout, GitHub access or new CI gate.
+
+Shared's unattended maintenance runner is now report-only with source-read and
+evidence-write permissions, isolated configuration, no connected apps/network
+and no approval escalation. It is not called by Timers' setup or release flow;
+this adoption starts no task or schedule. Installed scheduled hosts require
+their own requalification before resuming. The optional sccache 0.19.0 catalog
+entry adds no common tool, compiler wrapper, installation or host claim here.
+Existing tool versions and product build options remain selected.
+The changed catalog/build inputs require explicit common Cargo-tool receipt
+preparation even though their pinned versions are unchanged. Run
+`make install-rust-tools install-release-editor install-testkit-server`, then
+the existing offline admission checks; earlier immutable installations remain.
+
+The baseline permits justified internal relative links while retaining regular
+snapshots and shipped assets. Timers keeps its existing all-regular repository
+inventory check; no internal source links or exception machinery are introduced.
 
 Supplier dependency findings have one remediation issue at their canonical owner.
 Native compiler/system setup must precede Cargo-tool preparation; subsequent
 changes require explicit re-preparation. Timers' existing setup prepares Rust
 before common and selected Cargo tools, adds no later native installer, and
-retains offline admission. This refresh changes no executable catalog, tool
-fingerprint policy, release gate or product requirement.
+retains offline admission. The common installation roster, tool fingerprint
+policy, release gate and product requirements remain unchanged.
 
 Shared's new stack diagram and optional daily refresh remain unselected; this
 adoption adds no scheduled command, diagram generator or dependency fetch. The
@@ -47,7 +65,7 @@ change. Scanner CLI dependencies and generic submodule/standalone fixtures remai
 with their upstream owner; they are not added to Timers' normal gates.
 
 The gzip guidance names IC Host Artifacts as encoder owner. Timers has no
-local application gzip implementation to migrate. Tool selections, release
+local application gzip implementation to migrate. Common executable versions, release
 delivery and product validation gates remain unchanged. Broader governance
 guidance adds no general executable scanner or automatic audit.
 

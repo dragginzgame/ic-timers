@@ -94,6 +94,8 @@ methods! {
     ExpiredOrdinaryContextRejected = 15 => "expired_ordinary_context_rejected",
     FillInventory = 16 => "fill_inventory",
     FixtureDispatchPayload = 17 => "fixture_dispatch_payload",
+    FixtureForeignDispatch = 59 => "fixture_foreign_dispatch",
+    FixtureGlobalTimerSet = 60 => "fixture_global_timer_set",
     InventoryMeasurement = 18 => "inventory_measurement",
     MemorySamplingOverhead = 19 => "memory_sampling_overhead",
     Observe = 20 => "observe",

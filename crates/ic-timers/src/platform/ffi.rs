@@ -6,7 +6,10 @@
 //! terminal event. Message rollback restores the table if a callback traps.
 #![allow(unsafe_code)]
 
-use super::backend::{self, DISPATCH_LIMIT, METHOD};
+use super::{
+    DISPATCH_METHOD,
+    backend::{self, DISPATCH_LIMIT},
+};
 
 // SAFETY: one timer owner per final Wasm; the boundary checker confines exports
 // here. The IC invokes this no-argument entrypoint in global-timer context.
@@ -28,7 +31,7 @@ extern "C" fn global_timer() {
             // Reserve memory before checking liquid cycles. There are no further
             // allocations between this check and submitting the call.
             if ic_platform::ic0::canister_liquid_cycle_balance128()
-                < ic_platform::ic0::cost_call(METHOD.len() as u64, 8)
+                < ic_platform::ic0::cost_call(DISPATCH_METHOD.len() as u64, 8)
             {
                 drop(backend::take_flight(slot));
                 backend::defer(now);
@@ -40,7 +43,7 @@ extern "C" fn global_timer() {
             unsafe {
                 ic_platform::ic0::call_new(
                     &principal[..len],
-                    METHOD,
+                    DISPATCH_METHOD,
                     response,
                     slot,
                     response,

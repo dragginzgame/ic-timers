@@ -25,6 +25,8 @@
 mod callback;
 #[forbid(unsafe_code)]
 mod control;
+#[forbid(unsafe_code)]
+mod ingress;
 mod platform;
 #[forbid(unsafe_code)]
 mod registry;
@@ -38,6 +40,7 @@ mod snapshot;
 pub use callback::{
     AfterCompletionDecision, AfterCompletionRunResult, OnceDecision, OnceRunResult,
 };
+pub use ingress::is_timer_dispatch_method;
 pub use registry::{MAX_TIMER_REGISTRATIONS, RegisterError};
 pub use runtime::{
     AfterCompletionContext, AfterCompletionRegistration, OnceContext, OnceRegistration, TimerError,

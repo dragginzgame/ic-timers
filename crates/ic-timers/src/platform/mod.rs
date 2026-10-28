@@ -9,6 +9,7 @@
 )]
 
 use crate::snapshot::MemoryPageExtent;
+pub(crate) const DISPATCH_METHOD: &str = "<ic-timers internal> dispatch";
 #[cfg(test)]
 use std::{future::Future, time::Duration};
 
@@ -16,6 +17,7 @@ use std::{future::Future, time::Duration};
 mod backend;
 #[cfg(not(test))]
 mod ffi;
+mod ownership;
 mod queue;
 mod slots;
 
@@ -83,8 +85,8 @@ pub(crate) fn trap(message: &str) -> ! {
 #[cfg(test)]
 pub(crate) use fake::{
     TimerHandle, advance_instructions, canister_version, clear_tasks, clear_timer,
-    discard_next_due, grow_memory_pages, instruction_counter, memory_pages, reset, run_next_due,
-    set_time, set_timer, time_ns, timer_count, trap,
+    discard_next_due, discard_timer_at, grow_memory_pages, instruction_counter, memory_pages,
+    reset, run_next_due, set_time, set_timer, time_ns, timer_count, trap,
 };
 
 #[cfg(test)]
@@ -262,6 +264,20 @@ mod fake {
             return false;
         };
         let removed = TASKS.with(|tasks| tasks.borrow_mut().remove(&next_handle));
+        removed.is_some()
+    }
+
+    pub(crate) fn discard_timer_at(deadline_ns: u64) -> bool {
+        let handle = TASKS.with_borrow(|tasks| {
+            tasks
+                .iter()
+                .find(|(_, task)| !task.started && task.deadline_ns == deadline_ns)
+                .map(|(handle, _)| *handle)
+        });
+        let Some(handle) = handle else {
+            return false;
+        };
+        let removed = TASKS.with_borrow_mut(|tasks| tasks.remove(&handle));
         removed.is_some()
     }
 

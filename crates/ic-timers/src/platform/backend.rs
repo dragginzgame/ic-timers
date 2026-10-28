@@ -1,6 +1,7 @@
 //! One-shot scheduling state; the FFI module alone registers IC callbacks.
 #![forbid(unsafe_code)]
 
+use super::ownership::TimerOwnership;
 use super::queue::{AdmissionError, Queue};
 use ic_platform::executor::MethodHandle;
 use std::{
@@ -15,7 +16,6 @@ use std::{
 const PENDING_LIMIT: usize = 2 * crate::registry::MAX_TIMER_REGISTRATIONS + 2;
 pub(super) const DISPATCH_LIMIT: usize = 128;
 pub(super) const RETRY_NS: u64 = 1_000_000_000;
-pub(super) const METHOD: &str = "<ic-timers internal> dispatch";
 type Task = Pin<Box<dyn Future<Output = ()>>>;
 
 /// Linear authority over a pending task, never an executor task handle.
@@ -32,6 +32,7 @@ thread_local! {
     static QUEUE: RefCell<Queue<Task, PENDING_LIMIT>> = const { RefCell::new(Queue::new()) };
     static FLIGHTS: RefCell<super::slots::Slots<Flight, DISPATCH_LIMIT>> = const { RefCell::new(super::slots::Slots::new()) };
     static BLOCKED_UNTIL: Cell<u64> = const { Cell::new(0) };
+    static TIMER_OWNER: Cell<TimerOwnership> = const { Cell::new(TimerOwnership::new()) };
 }
 
 pub(crate) fn try_set_timer(
@@ -65,7 +66,14 @@ pub(super) fn remove(id: u64) -> Option<Task> {
 pub(super) fn rearm() {
     let next = QUEUE.with_borrow(Queue::next);
     let timestamp = next.map_or(0, |(deadline, _)| deadline.max(BLOCKED_UNTIL.get()).max(1));
-    ic_platform::ic0::global_timer_set(timestamp);
+    let prior = ic_platform::ic0::global_timer_set(timestamp);
+    let mut owner = TIMER_OWNER.get();
+    if !owner.record_replacement(prior, timestamp, ic_platform::ic0::time()) {
+        // IC rollback restores the system timer and queue changes in this
+        // message. Do not advance the expected value on a rejected observation.
+        ic_platform::ic0::trap(b"ic-timers: competing global timer owner");
+    }
+    TIMER_OWNER.set(owner);
 }
 
 pub(super) fn due(now: u64) -> Option<u64> {

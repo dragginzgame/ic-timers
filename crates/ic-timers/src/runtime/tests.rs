@@ -2501,6 +2501,142 @@ fn retained_watchdog_context_expires_without_clearing_successor() {
 }
 
 #[test]
+fn abandoned_initial_and_successor_schedulers_reconcile_all_owner_contracts() {
+    for successor in [false, true] {
+        let expected_deadline = if successor { 20 } else { 15 };
+        for desired in [
+            WatchdogReconcileState::Scheduled,
+            WatchdogReconcileState::ScheduledImmediately,
+            WatchdogReconcileState::ScheduledAt(expected_deadline),
+        ] {
+            let _fixture = setup();
+            let timer = identity("abandoned-scheduler");
+            let calls = Rc::new(Cell::new(0));
+            let callback_calls = Rc::clone(&calls);
+            let cadence = TimerCadence::from_nanos(5).unwrap();
+            let mut owner = Some(
+                register_watchdog(
+                    timer.clone(),
+                    cadence,
+                    TimerStart::Retained {
+                        initial: Some(TimerSchedule::At(15)),
+                    },
+                    move |_| {
+                        callback_calls.set(callback_calls.get() + 1);
+                        WatchdogRunResult::new(
+                            TimerCompletion::success(1),
+                            WatchdogDecision::Continue,
+                        )
+                    },
+                )
+                .unwrap(),
+            );
+            if successor {
+                set_time(15);
+                assert!(run_next_due());
+                assert!(run_next_due());
+            }
+            let before = timer_snapshot(&timer).unwrap().unwrap();
+            let deadline = before.next_deadline_ns().unwrap();
+            assert_eq!(deadline, expected_deadline);
+            let old = with_registry_mut(|registry| Ok(registry.take_wakeup_handle(&timer)))
+                .unwrap()
+                .unwrap();
+            let (old_token, handle) = old.into_parts();
+            bind_provider_handle(&old_token, handle, None).unwrap();
+            let stale = dispatch_wakeup(WakeupToken::Scheduler(old_token));
+            set_time(deadline);
+            assert!(discard_next_due());
+            assert!(!owner.as_ref().unwrap().has_armed_wakeup().unwrap());
+            assert_eq!(timer_snapshot(&timer).unwrap().unwrap(), before);
+            for _ in 0..2 {
+                reconcile_watchdog(&mut owner, &timer, cadence, desired, |_| {
+                    unreachable!("existing callback retained")
+                })
+                .unwrap();
+            }
+            drop(stale); // old generation cannot mark the replacement abandoned
+            assert!(owner.as_ref().unwrap().has_armed_wakeup().unwrap());
+            assert_eq!(timer_count(), 1);
+            assert!(run_next_due());
+            assert!(run_next_due());
+            assert_eq!(calls.get(), u64::from(successor) + 1);
+            let after = timer_snapshot(&timer).unwrap().unwrap();
+            assert_eq!(after.registration_id(), before.registration_id());
+            assert_eq!(
+                after
+                    .observability()
+                    .counters()
+                    .unacknowledged()
+                    .exact_total(),
+                Ok(0)
+            );
+        }
+    }
+}
+
+#[test]
+fn abandoned_successor_repair_keeps_queued_work_and_pending_reconciliation() {
+    for discard_work in [false, true] {
+        let _fixture = setup();
+        let timer = identity("lost-successor-with-pending-work");
+        let calls = Rc::new(Cell::new(0));
+        let callback_calls = Rc::clone(&calls);
+        let cadence = TimerCadence::from_nanos(5).unwrap();
+        let mut owner = Some(
+            register_watchdog(
+                timer.clone(),
+                cadence,
+                TimerStart::Retained {
+                    initial: Some(TimerSchedule::At(10)),
+                },
+                move |_| {
+                    callback_calls.set(callback_calls.get() + 1);
+                    WatchdogRunResult::new(TimerCompletion::success(1), WatchdogDecision::Continue)
+                },
+            )
+            .unwrap(),
+        );
+        assert!(run_next_due()); // successor at 15, work at 10
+        if discard_work {
+            assert!(discard_next_due());
+        }
+        assert!(platform::discard_timer_at(15));
+        assert!(!owner.as_ref().unwrap().has_armed_wakeup().unwrap());
+        reconcile_watchdog(
+            &mut owner,
+            &timer,
+            cadence,
+            WatchdogReconcileState::ScheduledAt(100),
+            |_| unreachable!(),
+        )
+        .unwrap();
+        assert!(owner.as_ref().unwrap().has_armed_wakeup().unwrap());
+        assert_eq!(timer_count(), if discard_work { 1 } else { 2 });
+        if discard_work {
+            set_time(15);
+            assert!(run_next_due());
+        }
+        assert!(run_next_due());
+        assert_eq!(calls.get(), 1);
+        let after = timer_snapshot(&timer).unwrap().unwrap();
+        assert_eq!(
+            after.next_deadline_ns(),
+            Some(if discard_work { 20 } else { 100 })
+        );
+        assert_eq!(
+            after
+                .observability()
+                .counters()
+                .unacknowledged()
+                .exact_total(),
+            Ok(u128::from(discard_work))
+        );
+        assert_eq!(timer_count(), 1);
+    }
+}
+
+#[test]
 fn watchdog_successor_retires_an_unacknowledged_dispatched_attempt() {
     let _fixture = setup();
     let timer = identity("watchdog-unacknowledged");

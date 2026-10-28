@@ -13,6 +13,166 @@ use std::{env, fs, path::PathBuf, time::Duration};
 const TIMER_EXECUTOR_METHOD: &str = "<ic-timers internal> dispatch";
 
 #[test]
+fn competing_global_timer_writes_trap_and_roll_back_timer_control() {
+    let owned = fresh_pocket_ic();
+    let pic = owned.instance();
+    let canister_id = install_probe(pic, probe_wasm());
+    let caller = ExternalPrincipal::anonymous();
+    let now = pic.get_time().as_nanos_since_unix_epoch();
+    let foreign = now + 100_000_000_000;
+    let set_foreign = |timestamp| {
+        update_wire::<u64, _>(
+            pic,
+            canister_id,
+            caller,
+            Method::FixtureGlobalTimerSet,
+            (timestamp,),
+        )
+        .unwrap()
+    };
+    let assert_conflict = |method: Method, args: Vec<u8>| {
+        let rejected = pic
+            .update_call(canister_id, caller, method.name(), args)
+            .unwrap_err();
+        assert!(
+            rejected
+                .reject_message
+                .contains("competing global timer owner"),
+            "{rejected:?}"
+        );
+    };
+    use ic_timers_test_protocol::rpc::REQUEST_LIMITS;
+    use ic_wire::native::encode_request;
+
+    // First acquisition refuses an already occupied global timer. Trapping
+    // rolls back registration, queue publication and the system timer write.
+    assert_eq!(set_foreign(foreign), 0);
+    assert_conflict(
+        Method::Start,
+        encode_request(Method::Start as u64, &(), REQUEST_LIMITS).unwrap(),
+    );
+    assert!(!snapshot(pic, canister_id).registered);
+    assert_eq!(set_foreign(0), foreign);
+    assert!(update_bool(pic, canister_id, Method::Start));
+    let armed = snapshot(pic, canister_id);
+    let deadline = armed.next_deadline_ns.unwrap();
+
+    assert_eq!(set_foreign(foreign), deadline);
+    assert_conflict(
+        Method::ScheduleAt,
+        encode_request(Method::ScheduleAt as u64, &(deadline + 1,), REQUEST_LIMITS).unwrap(),
+    );
+    assert_eq!(snapshot(pic, canister_id), armed);
+    assert_eq!(set_foreign(deadline), foreign);
+
+    assert_eq!(set_foreign(0), deadline);
+    assert_conflict(
+        Method::Stop,
+        encode_request(Method::Stop as u64, &(), REQUEST_LIMITS).unwrap(),
+    );
+    assert_eq!(snapshot(pic, canister_id), armed);
+    assert_eq!(set_foreign(deadline), 0);
+
+    // Restore the legitimate state solely within this adversarial fixture.
+    // Normal rearm, actual firing (prior timestamp zero) and cancellation work.
+    update_wire::<(), _>(
+        pic,
+        canister_id,
+        caller,
+        Method::ScheduleAt,
+        (deadline + 1,),
+    )
+    .unwrap();
+    pic.advance_time(Duration::from_nanos(1_000_000_001));
+    let completed = wait_for_probe(
+        pic,
+        32,
+        |pic| snapshot(pic, canister_id),
+        |s| s.completed_work == 1,
+    );
+    assert_eq!(completed.scheduler_started.total, 1);
+    update_unit(pic, canister_id, Method::Stop);
+    assert_eq!(snapshot(pic, canister_id).next_deadline_ns, None);
+    advance_and_tick(pic, Duration::from_secs(2), 16);
+    assert_eq!(snapshot(pic, canister_id).completed_work, 1);
+}
+
+#[test]
+fn host_inspection_refuses_timer_ingress_but_foreign_calls_still_authenticate() {
+    let owned = fresh_pocket_ic();
+    let pic = owned.instance();
+    let canister_id = install_probe(pic, probe_wasm());
+    let relay_id = install_probe(pic, probe_wasm());
+    assert!(update_bool(pic, canister_id, Method::Start));
+    let before = snapshot(pic, canister_id);
+    let balance = pic.cycle_balance(canister_id);
+    // The first pending dispatch ID is valid: admission must not rely on a
+    // malformed payload or a nonexistent task to prevent early execution.
+    let payload = 1_u64.to_le_bytes().to_vec();
+    let denied = pic
+        .update_call(
+            canister_id,
+            ExternalPrincipal::anonymous(),
+            TIMER_EXECUTOR_METHOD,
+            payload.clone(),
+        )
+        .unwrap_err();
+    assert_eq!(denied.error_code, ErrorCode::CanisterCalledTrap);
+    assert!(
+        denied
+            .reject_message
+            .contains("probe ingress: timer dispatch is internal")
+    );
+    assert_eq!(snapshot(pic, canister_id), before);
+    assert_eq!(pic.cycle_balance(canister_id), balance);
+
+    // The host's existing payload policy still runs for non-timer methods.
+    let denied = pic
+        .update_call(
+            canister_id,
+            ExternalPrincipal::anonymous(),
+            Method::Start.name(),
+            vec![0; ic_timers_test_protocol::rpc::REQUEST_LIMITS.bytes + 1],
+        )
+        .unwrap_err();
+    assert_eq!(denied.error_code, ErrorCode::CanisterCalledTrap);
+    assert!(
+        denied
+            .reject_message
+            .contains("probe ingress: host payload limit")
+    );
+    assert_eq!(snapshot(pic, canister_id), before);
+
+    let balance = pic.cycle_balance(canister_id);
+    let rejected: String = update_wire(
+        pic,
+        relay_id,
+        ExternalPrincipal::anonymous(),
+        Method::FixtureForeignDispatch,
+        (canister_id.as_slice().to_vec(), payload),
+    )
+    .unwrap();
+    assert!(rejected.contains("self-call required"), "{rejected}");
+    assert_eq!(snapshot(pic, canister_id), before);
+    let foreign_cost = balance - pic.cycle_balance(canister_id);
+    assert!(
+        foreign_cost > 0,
+        "endpoint authentication still costs target cycles"
+    );
+    println!("foreign_dispatch_authentication_cycles={foreign_cost}");
+
+    pic.advance_time(Duration::from_secs(1));
+    let completed = wait_for_probe(
+        pic,
+        32,
+        |pic| snapshot(pic, canister_id),
+        |s| s.completed_work == 1,
+    );
+    assert_eq!(completed.scheduler_started.total, 1);
+    assert_eq!(completed.work_started.total, 1);
+}
+
+#[test]
 fn typed_entrypoints_reject_invalid_wire_before_mutating_timer_state() {
     use ic_timers_test_protocol::rpc::{REQUEST_LIMITS, RESPONSE_LIMITS};
     use ic_wire::native::{decode_response, encode_request, encode_response};

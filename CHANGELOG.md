@@ -2,6 +2,37 @@
 
 All notable changes to this project are recorded here.
 
+## [0.31.13] - Unreleased
+
+### ➕ Added
+
+- Let hosts reject private timer ingress from their existing inspection hook,
+  while retaining endpoint authentication for foreign inter-canister calls
+  ([#79](https://github.com/dragginzgame/ic-timers/issues/79)).
+
+### 🩹 Fixed
+
+- Let owner reconciliation restore a confirmed abandoned Watchdog scheduler,
+  including an unchanged deadline, while preserving queued work and effect
+  uncertainty. Native regressions cover the repair; the installed stop/restart
+  interleaving remains unqualified
+  ([#77](https://github.com/dragginzgame/ic-timers/issues/77)).
+- Detect conflicting global-timer writes on the next backend rearm, preserving
+  legitimate timer expiry and trapping with message rollback on a mismatch
+  ([#78](https://github.com/dragginzgame/ic-timers/issues/78)).
+
+### 📦 Dependencies
+
+- Adopt IC Build/Host/Testkit 0.69.4, preserving timer APIs, probe protocols and
+  feature selections. Prepare the selected contributor tools with
+  `make install-rust-tools install-release-editor install-testkit-server`.
+
+### 🔧 Changed
+
+- Adopt Shared Tooling 0.27.3 with independently source-checked snapshot payloads
+  and report-only unattended-maintenance rules. Optional sccache and schedules
+  remain inactive.
+
 ## [0.31.12] - 2026-10-28
 
 ### 🧪 Testing

@@ -177,6 +177,31 @@ and successor deadline. An invalid selected delay stops the timer with a typed
 control failure, observable in a retained declaration's snapshot. A winning
 exact reconciliation can discard an invalid callback delay before that check.
 
+## Ingress admission
+
+The canister's existing inspection hook should refuse
+`ic_timers::is_timer_dispatch_method(&method)` before applying its ordinary
+ingress policy. Timers exports no `canister_inspect_message` of its own:
+
+```rust,ignore
+#[ic_platform::cdk::inspect_message]
+fn inspect_message() {
+    let method = ic_platform::cdk::api::msg_method_name();
+    if ic_timers::is_timer_dispatch_method(&method) {
+        return; // Do not accept private timer ingress.
+    }
+    inspect_application_ingress(); // Existing host policy owns acceptance.
+}
+```
+
+For Canic, this check belongs before the existing generated payload inspector's
+acceptance; do not define a second inspection export. Canic adoption is separate
+from this crate's API. Inspection applies only to ingress, so the private endpoint
+always authenticates the self-caller too. A rejected foreign inter-canister call
+still incurs target execution costs. The
+[IC inspection contract](https://docs.internetcomputer.org/references/ic-interface-spec/canister-interface/#ingress-message-inspection)
+does not make inspection an authorization or zero-cost guarantee.
+
 ## Minimal `Once` example
 
 The examples below use the released 0.30 API.

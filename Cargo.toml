@@ -33,11 +33,11 @@ thiserror = "2.0"
 
 # Tests and tooling only
 clap = { version = "4.6", default-features = false, features = ["std", "help", "usage", "error-context"] }
-ic-build = "0.69.3"
-ic-host-artifacts = "0.69.3"
-ic-host-fs = "0.69.3"
-ic-host-process = "0.69.3"
-ic-testkit = "0.69.3"
+ic-build = "0.69.4"
+ic-host-artifacts = "0.69.4"
+ic-host-fs = "0.69.4"
+ic-host-process = "0.69.4"
+ic-testkit = "0.69.4"
 ic-timers = { path = "crates/ic-timers" }
 ic-timers-test-protocol = { path = "testing/crates/ic-timers-test-protocol" }
 ic-wire = "0.7.18"

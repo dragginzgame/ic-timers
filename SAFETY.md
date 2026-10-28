@@ -208,6 +208,19 @@ the failed creation. See the [construction decision](docs/design/0.18-atomic-reg
   consumer-work message, not in the scheduler message that creates the next
   successor. The scheduler is fixed and bounded, but its normal return remains
   a protocol assumption.
+- Both initial and successor scheduler futures now carry the same pre-poll
+  delivery guard used by ordinary wakeups. If the provider/executor confirms
+  destruction of the current bound scheduler, cleanup clears its handle and
+  marks it for explicit owner reconciliation without scheduling from Drop.
+  `Scheduled`, `ScheduledImmediately` and unchanged `ScheduledAt` can rearm it.
+  Queued work keeps its existing attempt and recovery deadline; a lost work
+  attempt is retired only by the usual successor protocol. No scheduler-loss
+  completion or work measurement is fabricated. Native tests cover destruction,
+  stale generations and live/lost queued work. The installed stop-between-submit-
+  and-delivery case in [#77](https://github.com/dragginzgame/ic-timers/issues/77)
+  remains unqualified: local stop attempts ran the scheduler first. Successful
+  provider/executor destruction remains an assumption; a permanently live
+  pending future is not established abandoned merely by elapsed time.
 - `ContinueImmediately` is a consumer scheduling classification, not inferred
   progress or a configurable retry policy. Consumers use it after successful
   bounded progress, retain `Continue` for cadence-delayed retryable failures,
@@ -222,6 +235,13 @@ the failed creation. See the [construction decision](docs/design/0.18-atomic-reg
   or timer snapshots as mutation authority.
 - All timer consumers must resolve the same `ic-timers` Cargo package ID. Two
   resolved versions create two independent registries.
+- Hosts compose `is_timer_dispatch_method` into their existing ingress inspector
+  before accepting messages; Timers owns no inspection export. The dispatch
+  endpoint still checks its self-caller before queue access, because inspection
+  is non-replicated and foreign inter-canister calls bypass it. Such rejected
+  calls still cost the target execution cycles; ingress filtering is no general
+  denial-of-service or zero-charge guarantee. Canic's generated host hook must
+  adopt this composition separately.
 - There is deliberately no global suspend/resume switch. A consumer may cancel
   only claims it owns and must reconstruct them from its own authority; it
   cannot suspend another owner's watchdog through this crate.
@@ -241,6 +261,14 @@ the failed creation. See the [construction decision](docs/design/0.18-atomic-reg
   in a bounded table; response or cleanup consumes that slot exactly once.
   IC rollback restores the slot before cleanup after a response trap. The IC's
   callback-delivery contract is required for safe slot reuse.
+- Each backend rearm compares `global_timer_set`'s returned prior timestamp with
+  the last owned write. A conflicting nonzero value or a premature clear traps,
+  rolling back that message. Zero at or after the owned deadline is admitted
+  because the IC deactivates its timer when scheduling the one-shot. Equal
+  foreign writes, overdue foreign clears and foreign code that never returns
+  control to a backend rearm are not distinguishable. This check complements
+  package uniqueness and final-Wasm duplicate-export admission; it cannot
+  enforce exclusive ownership against arbitrary code sharing the canister.
 - Dispatch submission failure, low cycles and transport saturation defer the
   next dispatch by one second. Transient rejection or unknown response requeues
   only a still-pending task after one second. An accepted task cannot be replayed

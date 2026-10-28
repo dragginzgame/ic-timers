@@ -345,12 +345,20 @@ The remaining module hierarchy keeps six responsibilities separate:
    The bounded queue removes cancelled records immediately. The FFI module alone
    registers callbacks and exports the global timer/internal dispatch entrypoints;
    see the [backend design](design/0.26-owned-timer-backend.md).
+   Rearm validates the returned previous IC timer value against its last write;
+   an expired one-shot may legitimately return zero. Conflicting observations
+   trap with IC message rollback, within the detection limits in [SAFETY](../SAFETY.md).
    Page reads return the same inert extent representation used in snapshots,
    without a parallel platform value or a registry conversion.
 6. `runtime` owns the one canister-local registry static, erases consumer
    callbacks for registry storage, exposes registration claims, applies
    provider effects, and drives live `Once`/`AfterCompletion` dispatch and the
-   two-role watchdog protocol. Its three policy-specific delegated work
+   two-role watchdog protocol. Initial and successor scheduler futures share the
+   ordinary pre-poll delivery guard. Confirmed destruction records a lost
+   scheduler in canonical control; owner reconciliation rearms it without
+   replacing still-queued work. This native-qualified repair does not establish
+   the installed stop/restart interleaving tracked in issue #77.
+   Its three policy-specific delegated work
    contexts store their exact private callback token directly. Their control
    methods use the shared claim-transition boundary, which validates running-work
    authority before handle detachment and the registry operation.

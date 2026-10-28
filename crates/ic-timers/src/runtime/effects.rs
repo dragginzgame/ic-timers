@@ -5,8 +5,8 @@
 use super::take_provider_install_fault;
 use super::{
     CallbackToken, ProviderHandle, ProviderHandles, RUNTIME, RegistryEffect, RegistryTransition,
-    TimerError, TimerHandle, TimerIdentity, dispatch_wakeup, dispatch_watchdog_scheduler,
-    dispatch_watchdog_work, platform, with_registry_mut,
+    TimerError, TimerHandle, TimerIdentity, WakeupToken, dispatch_wakeup, dispatch_watchdog_work,
+    platform, with_registry_mut,
 };
 use std::time::Duration;
 
@@ -71,11 +71,10 @@ pub(super) fn apply_effect(
             if let Some(replaced_work) = handles.take_work() {
                 clear_provider_handle(replaced_work);
             }
-            let successor_token = successor.clone();
-            let successor_handle =
-                platform::try_set_timer(Duration::from_nanos(*successor_delay_ns), async move {
-                    dispatch_watchdog_scheduler(&successor_token);
-                })?;
+            let successor_handle = platform::try_set_timer(
+                Duration::from_nanos(*successor_delay_ns),
+                dispatch_wakeup(WakeupToken::Scheduler(successor.clone())),
+            )?;
             bind_provider_handle(successor, successor_handle, None)?;
 
             let work_token = work.clone();

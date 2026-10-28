@@ -19,6 +19,19 @@ mod scheduling_trace;
 mod transport;
 mod watchdog;
 
+// One host-owned hook composes timer exclusion with its own payload policy.
+// Inter-canister calls bypass this hook and must still authenticate at dispatch.
+#[ic_platform::cdk::inspect_message]
+fn inspect_message() {
+    if ic_timers::is_timer_dispatch_method(&ic_platform::cdk::api::msg_method_name()) {
+        ic_platform::cdk::api::trap("probe ingress: timer dispatch is internal");
+    }
+    if ic_platform::ic0::msg_arg_data_size() > ic_timers_test_protocol::rpc::REQUEST_LIMITS.bytes {
+        ic_platform::cdk::api::trap("probe ingress: host payload limit");
+    }
+    ic_platform::cdk::api::accept_message();
+}
+
 thread_local! {
     static REGISTRATION: RefCell<Option<WatchdogRegistration>> = const { RefCell::new(None) };
     static SECONDARY_REGISTRATION: RefCell<Option<WatchdogRegistration>> = const { RefCell::new(None) };
@@ -478,6 +491,32 @@ async fn fixture_dispatch_payload(payload: Vec<u8>) -> bool {
     .is_ok()
 }
 
+// A real foreign-canister caller bypasses the target's ingress inspection.
+#[ic_platform::cdk::update(
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::FixtureForeignDispatch as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::FixtureForeignDispatch as u64 }>"
+)]
+async fn fixture_foreign_dispatch(target: Vec<u8>, payload: Vec<u8>) -> String {
+    let target = ic_platform::principal::Principal::from_slice(&target);
+    match ic_platform::cdk::call::Call::unbounded_wait(target, "<ic-timers internal> dispatch")
+        .take_raw_args(payload)
+        .await
+    {
+        Ok(_) => String::new(),
+        Err(error) => error.to_string(),
+    }
+}
+
+// Deliberately violate ownership, without linking a second timer provider.
+#[ic_platform::cdk::update(
+    guard = "crate::codec::admit_request",
+    decode_with = "crate::codec::decode::<_, { ic_timers_test_protocol::rpc::Method::FixtureGlobalTimerSet as u64 }>",
+    encode_with = "crate::codec::encode::<_, { ic_timers_test_protocol::rpc::Method::FixtureGlobalTimerSet as u64 }>"
+)]
+fn fixture_global_timer_set(timestamp: u64) -> u64 {
+    ic_platform::ic0::global_timer_set(timestamp)
+}
 fn counter_observation(counter: ic_timers::MeasurementCounter) -> CounterObservation {
     CounterObservation {
         total: counter.total(),

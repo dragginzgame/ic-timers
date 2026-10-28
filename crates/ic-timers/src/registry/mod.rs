@@ -349,6 +349,9 @@ struct WatchdogControl {
     // Requests while awaiting work cannot replace that successor until completion.
     generation: u64,
     state: WatchdogState,
+    // Only confirmed destruction of the current bound scheduler sets this.
+    // A missing handle alone can also be a synchronous effect's detached state.
+    scheduler_abandoned: bool,
 }
 
 impl Default for WatchdogControl {
@@ -358,6 +361,7 @@ impl Default for WatchdogControl {
             state: WatchdogState::Inactive {
                 reason: InactiveReason::NeverScheduled,
             },
+            scheduler_abandoned: false,
         }
     }
 }
@@ -376,6 +380,7 @@ impl WatchdogControl {
         };
         self.generation = generation;
         self.state = WatchdogState::Scheduled { deadline_ns };
+        self.scheduler_abandoned = false;
         RegistryTransition::normal(RegistryEffect::ArmWakeup {
             token: WakeupToken::scheduler(claim, generation),
             delay_ns: deadline_ns.saturating_sub(now_ns),
@@ -453,7 +458,8 @@ impl Entry {
                     control.state,
                     WatchdogState::Scheduled { .. } | WatchdogState::AwaitingWork { .. }
                         if control.generation == token.callback_generation
-                            && (!final_arm || matches!(control.state, WatchdogState::Scheduled { .. }))
+                            && (!final_arm || matches!(control.state, WatchdogState::Scheduled { .. })
+                                || control.scheduler_abandoned)
                 ) =>
             {
                 Ok(&mut self.wakeup)
@@ -918,6 +924,10 @@ impl TimerRegistry {
         }))
     }
 
+    #[expect(
+        clippy::too_many_lines,
+        reason = "One atomic request and abandoned-scheduler repair transition."
+    )]
     fn ensure_watchdog(
         &mut self,
         claim: &RegistrationClaim,
@@ -952,19 +962,26 @@ impl TimerRegistry {
                 control.arm_scheduler(claim, now_ns, deadline_ns, WakeupArm::Initial)
             }
             WatchdogState::Scheduled { deadline_ns }
-                if match request {
-                    WatchdogScheduleRequest::Immediate => *deadline_ns > now_ns,
-                    WatchdogScheduleRequest::Reconcile(requested) => {
-                        *deadline_ns != requested.deadline_ns
-                    }
-                    WatchdogScheduleRequest::Cadence => false,
-                } =>
+                if control.scheduler_abandoned
+                    || match request {
+                        WatchdogScheduleRequest::Immediate => *deadline_ns > now_ns,
+                        WatchdogScheduleRequest::Reconcile(requested) => {
+                            *deadline_ns != requested.deadline_ns
+                        }
+                        WatchdogScheduleRequest::Cadence => false,
+                    } =>
             {
-                let deadline_ns = match request {
+                let selected_deadline_ns = match request {
                     WatchdogScheduleRequest::Reconcile(requested) => requested.deadline_ns,
-                    WatchdogScheduleRequest::Immediate | WatchdogScheduleRequest::Cadence => now_ns,
+                    WatchdogScheduleRequest::Immediate => (*deadline_ns).min(now_ns),
+                    WatchdogScheduleRequest::Cadence => *deadline_ns,
                 };
-                control.arm_scheduler(claim, now_ns, deadline_ns, WakeupArm::Replacement)
+                let arm = if control.scheduler_abandoned {
+                    WakeupArm::Initial
+                } else {
+                    WakeupArm::Replacement
+                };
+                control.arm_scheduler(claim, now_ns, selected_deadline_ns, arm)
             }
             WatchdogState::Scheduled { .. } => RegistryTransition::normal(RegistryEffect::None),
             WatchdogState::AwaitingWork {
@@ -986,7 +1003,26 @@ impl TimerRegistry {
                 RegistryTransition::normal(RegistryEffect::None)
             }
         };
-        if matches!(transition.effect(), RegistryEffect::ArmWakeup { .. }) {
+        let transition = if control.scheduler_abandoned
+            && let WatchdogState::AwaitingWork {
+                successor_deadline_ns,
+                ..
+            } = control.state
+        {
+            // Keep the current work attempt and its committed recovery deadline.
+            // Reconciliation can select its eventual successor through pending;
+            // it must not duplicate work that might already be queued.
+            RegistryTransition::normal(RegistryEffect::ArmWakeup {
+                token: WakeupToken::scheduler(claim, control.generation),
+                delay_ns: successor_deadline_ns.saturating_sub(now_ns),
+                arm: WakeupArm::Initial,
+            })
+        } else {
+            transition
+        };
+        if matches!(transition.effect(), RegistryEffect::ArmWakeup { .. })
+            && matches!(control.state, WatchdogState::Scheduled { .. })
+        {
             entry.scheduling_mode = mode;
         }
         if matches!(
@@ -1287,6 +1323,35 @@ impl TimerRegistry {
         })
     }
 
+    pub(crate) fn owns_scheduler_delivery(&self, token: &CallbackToken) -> bool {
+        self.entries.get(token.identity()).is_some_and(|entry| {
+            token.role == CallbackRole::WatchdogScheduler
+                && entry.owns_token_claim(token)
+                && matches!(&entry.kind, EntryKind::Watchdog { control, .. }
+                    if control.generation == token.callback_generation
+                        && !matches!(control.state, WatchdogState::Inactive { .. }))
+                && entry
+                    .wakeup
+                    .as_ref()
+                    .is_some_and(|owned| owned.callback_generation == token.callback_generation)
+        })
+    }
+
+    /// Record loss without provider calls, changing work authority or fabricating
+    /// completion. Explicit owner reconciliation can rearm this scheduler later.
+    pub(crate) fn abandon_scheduler(&mut self, token: &CallbackToken) {
+        if !self.owns_scheduler_delivery(token) {
+            return;
+        }
+        let Some(entry) = self.entries.get_mut(token.identity()) else {
+            return;
+        };
+        if let EntryKind::Watchdog { control, .. } = &mut entry.kind {
+            entry.wakeup = None;
+            control.scheduler_abandoned = true;
+        }
+    }
+
     pub(crate) fn begin_watchdog_scheduler(
         &mut self,
         token: &CallbackToken,
@@ -1357,6 +1422,7 @@ impl TimerRegistry {
         };
 
         control.generation = generation;
+        control.scheduler_abandoned = false;
         control.state = WatchdogState::AwaitingWork {
             successor_deadline_ns,
             attempt_status: WatchdogAttemptStatus::Dispatched,
@@ -1669,6 +1735,11 @@ impl TimerRegistry {
             callback_generation: token.callback_generation,
             handle,
         });
+        if token.role == CallbackRole::WatchdogScheduler
+            && let EntryKind::Watchdog { control, .. } = &mut entry.kind
+        {
+            control.scheduler_abandoned = false;
+        }
         if let Some(delay_ns) = armed_delay_ns {
             entry.record_arm(token, delay_ns);
         }

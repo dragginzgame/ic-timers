@@ -438,6 +438,10 @@ impl WatchdogRegistration {
     /// watchdog work this returns `true` only because the scheduler has already
     /// committed and installed the cadence successor. This is a volatile
     /// observation, not a delivery guarantee.
+    /// Confirmed scheduler-delivery abandonment clears this observation; an
+    /// owner can restore the wake-up through ensure or reconciliation, including
+    /// an unchanged exact deadline. A stuck delivery that is never destroyed
+    /// cannot be inferred from this observation.
     pub fn has_armed_wakeup(&self) -> Result<bool, TimerError> {
         has_armed_wakeup_claim(&self.claim)
     }
@@ -881,6 +885,9 @@ where
 /// installs an observable retained declaration. `ScheduledImmediately` arms
 /// its first scheduler at deadline now without synchronous consumer work.
 /// `ScheduledAt` reconciles an exact deadline, including moving it later.
+/// A confirmed abandoned scheduler is rearmed even for an unchanged deadline.
+/// Still-dispatched work retains its attempt and committed recovery cadence;
+/// this helper does not authorize replay of uncertain application effects.
 /// This helper owns no lifecycle export and persists no policy, generation,
 /// provider handle, or callback.
 /// Transient `RemoveWhenStopped` watchdogs use [`register_watchdog`] directly.
@@ -1101,37 +1108,27 @@ fn retire_failed_claim(claim: &RegistrationClaim, error: TimerError) -> Result<(
 fn dispatch_wakeup(token: WakeupToken) -> impl Future<Output = ()> {
     // Construct outside the async body: a provider rejection can discard the
     // future before its first poll, after rolling registry acceptance back.
-    let delivery = match token {
-        WakeupToken::Ordinary(token) => WakeupDelivery::Ordinary(OrdinaryDelivery {
-            token,
-            completed: false,
-        }),
-        WakeupToken::Scheduler(token) => WakeupDelivery::Scheduler(token),
+    let mut delivery = WakeupDelivery {
+        token,
+        completed: false,
     };
     async move {
-        match delivery {
-            WakeupDelivery::Ordinary(mut delivery) => {
-                dispatch_ordinary(&delivery.token).await;
-                delivery.completed = true;
-                // Capture the whole guard until normal completion.
-                drop(delivery);
-            }
-            WakeupDelivery::Scheduler(token) => dispatch_watchdog_scheduler(&token),
+        match &delivery.token {
+            WakeupToken::Ordinary(token) => dispatch_ordinary(token).await,
+            WakeupToken::Scheduler(token) => dispatch_watchdog_scheduler(token),
         }
+        delivery.completed = true;
+        // Capture the whole guard until normal completion.
+        drop(delivery);
     }
 }
 
-enum WakeupDelivery {
-    Ordinary(OrdinaryDelivery),
-    Scheduler(CallbackToken),
-}
-
-struct OrdinaryDelivery {
-    token: CallbackToken,
+struct WakeupDelivery {
+    token: WakeupToken,
     completed: bool,
 }
 
-impl Drop for OrdinaryDelivery {
+impl Drop for WakeupDelivery {
     fn drop(&mut self) {
         if self.completed {
             return;
@@ -1142,21 +1139,27 @@ impl Drop for OrdinaryDelivery {
                 // while another shared borrow exists. Its transition owns
                 // cleanup; do not turn that typed failure into a Drop trap.
                 let runtime = runtime.try_borrow().map_err(|_| TimerError::RuntimeBusy)?;
-                return if runtime
-                    .as_ref()
-                    .is_some_and(|registry| registry.owns_ordinary_delivery(&self.token))
-                {
+                return if runtime.as_ref().is_some_and(|registry| match &self.token {
+                    WakeupToken::Ordinary(token) => registry.owns_ordinary_delivery(token),
+                    WakeupToken::Scheduler(token) => registry.owns_scheduler_delivery(token),
+                }) {
                     Err(TimerError::RuntimeBusy)
                 } else {
                     Ok(None)
                 };
             };
-            Ok(runtime
-                .as_mut()
-                .and_then(|registry| registry.abandon_ordinary(&self.token, platform::time_ns())))
+            Ok(runtime.as_mut().and_then(|registry| match &self.token {
+                WakeupToken::Ordinary(token) => {
+                    registry.abandon_ordinary(token, platform::time_ns())
+                }
+                WakeupToken::Scheduler(token) => {
+                    registry.abandon_scheduler(token);
+                    None
+                }
+            }))
         });
         let removed = removed
-            .unwrap_or_else(|error| trap_callback_failure("ordinary delivery abandonment", &error));
+            .unwrap_or_else(|error| trap_callback_failure("wakeup delivery abandonment", &error));
         drop(removed);
     }
 }

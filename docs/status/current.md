@@ -4,105 +4,132 @@
 
 Last updated: 2026-10-28
 
-## Source and pending work
+## Source and delivery
 
-Released base: **0.31.11**, `eca0235`. The undated **0.31.12** draft retains
-pending Shared Tooling/dependency adoption and the accepted freeze/top-up
-regression. Cargo package versions remain 0.31.11. Unrelated work is preserved;
-no staging, commits, pushes or release execution were performed.
+Base and verified remote `main`: **0.31.12**, `5a03925f46b2eafe5881f1402ce15ec5dfa4d3bc`.
+The checkout was clean before the issue work. The undated **0.31.13** draft
+collects compatible fixes/additions for issues 77–79 and the tooling adoption
+below. Package versions remain 0.31.12. No staging, commits, pushes,
+release execution or sibling edits were performed. Keep user-owned Git/release
+delivery; the fixes are not yet on the default branch.
 
-The root minimums now match selected published Tooling **0.69.3** and Platform
-**0.7.1**. All 12 direct registry dependencies were checked against crates.io;
-Wire **0.7.18**, Metrics **0.16.3**, Clap **4.6.7**, Serde **1.0.229** and
-Serde JSON **1.0.154** are already current. The sole constrained update is
-Thiserror: PocketIC 16.1.0 requires exactly **2.0.18**, so Cargo rejected the
-targeted **2.0.21** update. Keep that existing selection; no local shim or
-supplier override was introduced. The failed resolution left Cargo.lock
-unchanged, including the previous externally selected IC patch updates.
+The prior dependency/Shared/freeze batch is committed in the base. The pending
+root catalog now requires published Build/Host/Testkit **0.69.4**, matching the
+incoming maintainer-updated lock. That lock is preserved byte-for-byte. Platform
+**0.7.1**, Metrics **0.16.3**, Wire **0.7.18** and PocketIC **16.1.0** remain selected.
+The published PocketIC pin still constrains Thiserror to **2.0.18**.
 
-## Freeze regression and boundary
+## Current upstream adoption
 
-`tests::frozen_canister_resumes_overdue_timer_after_top_up_only` arms a Watchdog,
-then raises its real freezing reserve above the observed positive balance. The
-reserve uses the instance's reported storage charge, avoiding an assumed probe
-size or PocketIC creation balance. Five simulated frozen minutes span the
-original deadline. A valid update must reject with typed `SysTransient` /
-`CanisterOutOfCycles`, while the positive balance remains below the reserve.
+Shared **0.27.3**, independently selected revision
+`7ee5c83744aa822ecd070703dbf0a7d95076d5f6`, is exported through the canonical
+impact/apply workflow with all **134** payloads and unchanged entrypoint roots.
+Trusted source comparison proves every declared byte and executable mode against
+that commit; ordinary checks remain offline. Optional sccache, compiler wrappers
+and schedules are not activated. Unattended maintenance's report-only launch
+requires separate installed-host qualification before any scheduled resumption.
+Timers retains its existing stricter all-regular repository inventory.
 
-Only an external top-up and replica ticks restore progress. A read-only snapshot
-before further rounds shows the overdue registration and zero scheduler/work
-progress were retained. The test requires one overdue completion, no additional
-work under unchanged time, and the next normal cadence completion. Module hash
-and raised freezing threshold remain unchanged; the upgrade-reconstruction flag
-stays clear. No ensure/reconcile call, raw timer repair or upgrade is used.
+Evidence: `/tmp/ic-timers-tooling-03113.y1v9ur/`. Published archives show identical
+Rust implementation files between Tooling 0.69.3 and 0.69.4; reviewed changes align
+dependency minimums with the already selected Platform/Wire graph. The changed
+Shared catalog invalidated a prior common Cargo receipt; explicit setup reused
+admitted builds and prepared fresh selections. Common host/Cargo admission,
+editor **0.69.4**, Testkit **0.69.4** and server admission now pass offline.
+Setup command: `make install-rust-tools install-release-editor install-testkit-server`.
 
-The subject is in the driver's required watchdog roster, so the normal recovery
-and release gate must discover and execute it. The existing near-threshold
-self-call-cost test is retained as a separate case. This qualifies an armed
-Watchdog before work begins, not every timer policy, freeze during an await, or
-recovery after cycle exhaustion uninstalls the canister. README, architecture,
-SAFETY and the release guide state that scope. No runtime implementation, probe
-protocol, supported API or feature selection was changed by this test work.
+Current-selection checks pass: locked MSRV metadata, direct and transitive
+deployment boundaries, pin/source policy, trusted/local snapshot checks and the
+actual consumer export/corruption fixture, formatting, changed-script syntax,
+strict Rust 1.91 coordinator/test Clippy and required-subject discovery. Optimized
+probe Wasm still matches the prior issue-proof artifact exactly. The installed
+ingress and competing-owner subjects both pass freshly with Testkit 0.69.4.
+Other earlier runtime checks below retain their original harness/dependency
+scope; this adoption does not close #77's gap or qualify macOS/full release gates.
+Pending product/probe source changes are preserved exactly.
 
-## Pending tooling retained
+## Prepared changes and acceptance boundaries
 
-Shared Tooling **0.27.2**, revision
-`7efce1e36275ff9e4bbbdd9ccab9a8d94520fd98`, is the reviewed 134-payload
-snapshot, applied through its canonical impact/exporter workflow. Its source
-has pending 0.27.3 notes; committed VERSION still says 0.27.2. The refresh adds
-supplier-finding ownership and native bootstrap guidance, plus newline-safe
-fixture roots. Timers' hook fixture stages its copied companion closure without
-a duplicate helper roster. Optional stack refresh, Node setup and scanner
-selections remain inactive; executable catalogs and product gates are unchanged.
-The current library graph check
-passes with one qualified executor 2.0.0/ic0 1.2.0 path through Platform;
-Candid, Wire and host tooling remain excluded from deployed normal/build edges.
-Native simulator tests retain required external Candid through Platform.
+- [#79](https://github.com/dragginzgame/ic-timers/issues/79): new pure
+  `is_timer_dispatch_method` predicate composes with the host's existing ingress
+  inspector. Timers exports no inspection hook. The runtime probe's single
+  inspector combines private-method refusal with its own payload policy; the
+  authenticated endpoint remains independent. Native negative cases and an
+  installed ingress/foreign-call/self-dispatch regression pass. Direct refused
+  ingress leaves the fixture's observed target balance unchanged; foreign
+  authentication charges **5,485,070 cycles** in the final fixture. Canic's
+  generated hook still needs separate adoption before its payload inspector
+  accepts ingress. Its checkout was read only, not qualified.
+- [#78](https://github.com/dragginzgame/ic-timers/issues/78): the private backend
+  records its last timer write and validates the next returned prior timestamp.
+  Conflict traps preserve IC message rollback. Zero at/after the owned deadline
+  is legitimate one-shot consumption. Native state transitions and installed
+  first-arm/overwrite/premature-clear/rollback/normal-fire/cancel cases pass.
+  Equal writes, overdue foreign clears and interference with no subsequent
+  backend rearm remain undetectable. One provider/export owner remains required.
+- [#77](https://github.com/dragginzgame/ic-timers/issues/77): initial and successor
+  scheduler futures share the ordinary pre-poll delivery guard. Confirmed loss
+  clears only the current scheduler handle and marks canonical control for owner
+  repair. All three reconciliation modes, including unchanged exact deadlines,
+  restore it. Queued work keeps its attempt and committed recovery cadence;
+  no completion or uncertain-effect replay is invented. Native tests cover both
+  scheduler paths, stale generations and live/lost queued work. Jobs' README
+  `ScheduledAt` and Canic's `Scheduled`/`ScheduledImmediately` callers were traced.
+  **Remaining gap:** installed stop-between-submit-and-delivery and scheduler-body
+  trap acceptance are not qualified. Every attempted stop sequence executed the
+  scheduler first, including a controller-canister stop submitted in the timer's
+  round. The maintainer confirmed the original reproducer is unavailable. Do not
+  describe these attempts as recovery proof; a deterministic boundary fixture is
+  still needed.
 
-## Dependency adoption verification
+All three canonical issues have factual progress comments and remain open.
+No PRs were open when triaged. There are no duplicate/superseded closures.
+The next concrete work is the missing #77 installed reproducer, then Canic's
+host-hook adoption in its authorized owner. Delivery/required acceptance also
+precedes closing any of these issues.
 
-Evidence: `/tmp/ic-timers-upstream-03112.xc99Cb/`, including the incoming dirty
-patch/before-images, registry inventory, failed targeted update, reviewed source
-checkout and impact report. Root locked MSRV metadata, direct dependency policy,
-transitive deployment exclusions/feature restrictions and singleton executor/ic0
-identities pass. No Candid or host dependency was added to deployed normal/build
-edges. Native simulator tests still require external Candid through Platform.
+## Verification and retained evidence
 
-Explicit editor/Testkit setup and subsequent offline admission pass for 0.69.3,
-closing the prior editor-preparation gap. PocketIC remains **16.1.0**. Rust 1.91
-strict library/test Clippy, coordinator/runtime-probe/protocol Clippy, optimized
-runtime-probe Wasm and all four size-probe Wasm Clippy feature selections pass.
-Snapshot integrity, formatting, actual hook integration, substituted release
-command routing, pin policy, changelog and diff checks pass. Probe wire protocol,
-features and timer APIs are unchanged. No new issue or external write was needed.
+Earlier issue evidence root: `/tmp/ic-timers-issues-03113.HKcNGJ/`. Its final logs
+qualify the retained product source on Linux using Rust **1.91.0**, the original
+Tooling **0.69.3** harness and PocketIC **16.1.0**.
+The exact optimized runtime-probe bytes are retained as `runtime-probe.wasm`,
+with `final-wasm.sha256`. The loaded copy and workspace artifact match.
 
-Cargo.lock matches this task's incoming lock. The rebuilt runtime-probe digest
-also exactly matches the freeze proof below, so its two focused PocketIC results
-are reused rather than presented as fresh executions after this manifest refresh.
+Passes: locked metadata; strict library/coordinator/protocol/runtime-probe Clippy;
+optimized probe Wasm; public docs with warnings denied; direct provider and
+transitive deployment graph/feature exclusions; formatting, changelog and diff
+checks. Native evidence includes 45 Watchdog-filtered tests, the scheduler and
+ordinary abandonment regressions, three exact ordinary guard tests, four
+ownership state tests and the ingress predicate test. Required-subject discovery
+passes after adding the two installed regressions to the watchdog roster.
 
-## Freeze evidence and limits
+Nine named PocketIC subjects pass against the final bytes: ingress admission,
+competing ownership, existing stop/resume, trapped work, instruction exhaustion,
+response-trap cleanup, ordinary pre-await abandonment, genuine freeze/top-up,
+and near-threshold low-cycle recovery. These are focused executions, not a full
+watchdog/cohort/release gate. A normal stop/resume pass does not qualify #77's
+different scheduler-abandonment interleaving.
 
-Before-images, fixture diagnostics, selected lock/metadata, exact Wasm bytes/hash,
-server logs and focused results are retained at
-`/tmp/ic-timers-freeze-03112.voNdez/`. The `updated-*` logs qualify the final
-Tooling 0.69.3 / Platform 0.7.1 graph; older logs retain their narrower input scope.
-The lock changed during the first verification pass, so its earlier runtime
-results were not reused as qualification of the new graph.
+Failed development diagnostics are retained: initially missing diagnostics
+directory, inspection's actual `CanisterCalledTrap` classification, an unnecessary
+integer conversion, counter Result/Option assertions, and lint corrections.
+Unsuccessful stop experiments and their source patch are retained separately.
+Their temporary management encoder, native Candid features, boundary exception,
+probe DTO/RPC additions and failing test were removed; no such dependency or
+enforcement expansion remains. No failed experiment is counted as a pass.
+The controller trial also exposed distinct management status DTO identities;
+its corrected fixture still missed the timing boundary. Its patch and helper
+are retained separately. After removal, hashes prove restoration of every prior
+qualified source/dependency input; the rebuilt Wasm again matches the exact
+nine-subject PocketIC artifact. Passing evidence is reused for those inputs.
 
-Final Linux evidence passes: Rust 1.91 strict coordinator/test Clippy, optimized
-`timer-probe` Wasm build, the new real PocketIC freeze test, the adjacent low-cycle
-PocketIC test and exact required-subject discovery regression. Testkit CLI 0.69.3
-was explicitly prepared and admits PocketIC **16.1.0** offline. The final lock
-and loaded-Wasm digest stay unchanged across the focused tests. Formatting,
-provider/deployment boundary, changelog and diff checks pass.
+Base main CI [40658240875](https://github.com/dragginzgame/ic-timers/actions/runs/40658240875)
+and tag CI [40658240699](https://github.com/dragginzgame/ic-timers/actions/runs/40658240699)
+both succeeded for `5a03925`; neither tests the local fixes. No new hosted run,
+full local gate, native macOS or live installed-IC qualification was performed.
+Keep the full maintainer-owned release and host requirements intact.
 
-Initial fixture failures and their corrections are explained in
-`fixture-development-notes.txt`; the transient type-inference compiler log was
-overwritten, with its cause/excerpt retained in the notes/tool transcript.
-No runtime defect was found or runtime repair introduced.
-
-No fresh full recovery/cohort/release gate, native macOS or installed-IC run was
-performed. This is source-bound Linux PocketIC evidence. Normal release
-preparation must retain the complete product/host gates.
-Prior tooling and Shared evidence remain at `/tmp/ic-timers-deps-03112.5RKZ5o/`
-and `/tmp/ic-timers-shared-03112.nWc5TV/` for their original inputs only.
+Earlier accepted freeze evidence remains at `/tmp/ic-timers-freeze-03112.voNdez/`;
+the previous dependency/Shared evidence is `/tmp/ic-timers-upstream-03112.xc99Cb/`.
+Those runs retain their original source/artifact scope.
