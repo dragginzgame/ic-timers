@@ -51,6 +51,22 @@ impl ProbeLifetime {
     pub const ALL: [Self; 2] = [Self::Retained, Self::RemoveWhenStopped];
 }
 
+/// Owner reconciliation contracts exercised after confirmed scheduler abandonment.
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+pub enum SchedulerReconcileMode {
+    Scheduled,
+    ScheduledImmediately,
+    ScheduledAt,
+}
+
+impl SchedulerReconcileMode {
+    pub const ALL: [Self; 3] = [
+        Self::Scheduled,
+        Self::ScheduledImmediately,
+        Self::ScheduledAt,
+    ];
+}
+
 /// Frame identity for the four-field fixture checkpoint; not an RPC endpoint.
 pub const CHECKPOINT_ID: u64 = 0x5449_4d45_5253_4350;
 
@@ -106,6 +122,7 @@ methods! {
     PressureReply = 25 => "pressure_reply",
     RearmCancelledDispatchBatchTimer = 26 => "rearm_cancelled_dispatch_batch_timer",
     ReconcileOrdinaryAt = 27 => "reconcile_ordinary_at",
+    ReconcileSchedulerPressure = 63 => "reconcile_scheduler_pressure",
     RejectInitialReconciliation = 28 => "reject_initial_reconciliation",
     RejectInitialSchedule = 29 => "reject_initial_schedule",
     ReleaseDispatchBatch = 30 => "release_dispatch_batch",
@@ -116,6 +133,7 @@ methods! {
     ReplaceRegistration = 35 => "replace_registration",
     ScheduleAt = 36 => "schedule_at",
     ScheduleAtOnNextWork = 37 => "schedule_at_on_next_work",
+    SchedulerPressureCompleted = 62 => "scheduler_pressure_completed",
     SchedulingTrace = 38 => "scheduling_trace",
     Snapshot = 39 => "snapshot",
     Start = 40 => "start",
@@ -123,6 +141,7 @@ methods! {
     StartImmediateChurn = 42 => "start_immediate_churn",
     StartImmediately = 43 => "start_immediately",
     StartOrdinary = 44 => "start_ordinary",
+    StartSchedulerPressure = 61 => "start_scheduler_pressure",
     StartSchedulingTrace = 45 => "start_scheduling_trace",
     StartSecondary = 46 => "start_secondary",
     StartupTimerProbeArmExhaustion = 47 => "startup_timer_probe_arm_exhaustion",

@@ -2,6 +2,15 @@
 
 All notable changes to this project are recorded here.
 
+## [0.31.15]
+
+### 🧪 Tests
+
+- Qualify explicit Watchdog owner repair after stop/restart abandons a queued
+  initial or successor scheduler. Real round pressure establishes the missing
+  interleaving for all three reconciliation modes; runtime behavior is unchanged
+  ([#77](https://github.com/dragginzgame/ic-timers/issues/77)).
+
 ## [0.31.14] - 2026-10-28
 
 ### 🔧 Changed

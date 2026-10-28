@@ -15,6 +15,7 @@ mod codec;
 mod dispatch_batch;
 mod mixed;
 mod ordinary;
+mod scheduler_pressure;
 mod scheduling_trace;
 mod transport;
 mod watchdog;

@@ -235,11 +235,14 @@ the failed creation. See the [construction decision](docs/design/0.18-atomic-reg
   Queued work keeps its existing attempt and recovery deadline; a lost work
   attempt is retired only by the usual successor protocol. No scheduler-loss
   completion or work measurement is fabricated. Native tests cover destruction,
-  stale generations and live/lost queued work. The installed stop-between-submit-
-  and-delivery case in [#77](https://github.com/dragginzgame/ic-timers/issues/77)
-  remains unqualified: local stop attempts ran the scheduler first. Successful
-  provider/executor destruction remains an assumption; a permanently live
-  pending future is not established abandoned merely by elapsed time.
+  stale generations and live/lost queued work. The installed round-pressure
+  fixture in [#77](https://github.com/dragginzgame/ic-timers/issues/77) observes a
+  completed earlier dispatch with the scheduler still unstarted, then stops and
+  restarts the canister. Initial and successor scheduling recover under all
+  three owner requests; time and ticks without owner repair do not resume work.
+  Disabling scheduler-loss recording makes this fixture fail. This qualifies
+  that queued stop/restart boundary, not a scheduler-body trap or destruction
+  of every possible pending future. Elapsed time alone never proves abandonment.
 - `ContinueImmediately` is a consumer scheduling classification, not inferred
   progress or a configurable retry policy. Consumers use it after successful
   bounded progress, retain `Continue` for cadence-delayed retryable failures,

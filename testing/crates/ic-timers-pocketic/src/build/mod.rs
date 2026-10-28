@@ -83,6 +83,7 @@ const COHORT_SUBJECT: &str =
 
 // These subjects anchor the maintained recovery contract, not incidental test counts.
 const REQUIRED_WATCHDOG_SUBJECTS: &[&str] = &[
+    "tests::scheduler_abandonment_under_round_pressure_recovers_after_stop",
     "tests::host_inspection_refuses_timer_ingress_but_foreign_calls_still_authenticate",
     "tests::competing_global_timer_writes_trap_and_roll_back_timer_control",
     "tests::trapped_work_keeps_committed_successor_and_executor_is_private",

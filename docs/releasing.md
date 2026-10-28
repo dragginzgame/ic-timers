@@ -142,11 +142,12 @@ inherited streaming output and typed timeout/nonzero-exit failures. OS spawn,
 signal and reap syscalls can exceed elapsed-time budgets; group signalling does
 not prove every descendant has exited. Native macOS timing remains unqualified.
 
-The receipt reader, filesystem publication and injected build spawner use published Host and Build 0.68,
-whose artifact engine accepts the same `OwnedChild` identity.
+The receipt reader, filesystem publication and injected build spawner use the
+root-lock-selected published Host and Build, whose artifact engine accepts the
+same `OwnedChild` identity.
 Update these together when exchanging Host values; metadata/tree observation's
-command/byte boundary does not cover this build API. Testkit 0.68 selects the
-same Host family. It and Platform/Wire/protocol are dev-dependencies of the driver;
+command/byte boundary does not cover this build API. The selected Testkit uses
+the same Host family. It and Platform/Wire/protocol are dev-dependencies of the driver;
 only the child test binary needs the simulator and codecs. No aliases or local
 child conversions are needed.
 The child selects Testkit's `wire` feature for one-call typed transport; Timers
@@ -169,6 +170,15 @@ Cohorts must select its one fully qualified subject, run with `--exact`.
 Failed discovery, invalid output and missing subjects fail even if Cargo exits
 zero. Discovery executes no test bodies or simulator calls and shares the
 worker's existing elapsed-time/process-group budget.
+
+The required scheduler-abandonment subject runs instruction-heavy ordinary timers
+before a due Watchdog self-call. It must observe a committed earlier dispatch and
+no scheduler start before stopping the canister. After restart, time and ticks
+alone must not restore work; explicit `Scheduled`, `ScheduledImmediately` and
+unchanged `ScheduledAt` reconciliation each restore exactly one attempt for
+initial and successor scheduling. Registration identity and completed work remain
+intact. This fixture exercises actual IC scheduling and the production backend;
+it does not inject a provider or claim scheduler-body trap recovery.
 
 The required freeze/top-up subject raises the real freezing reserve above the
 observed positive balance, advances five minutes while frozen across an armed

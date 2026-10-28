@@ -3,7 +3,9 @@ use super::harness::{query_wire, update_wire};
 use ic_platform::pocket_ic::{CanisterSettings, ErrorCode, PocketIc, RejectCode};
 use ic_platform::principal::ExternalPrincipal;
 use ic_testkit::pic::{PocketIcInstance, advance_and_tick};
-use ic_timers_test_protocol::rpc::{Method, OrdinaryPolicy, ProbeLifetime, ProbePolicy};
+use ic_timers_test_protocol::rpc::{
+    Method, OrdinaryPolicy, ProbeLifetime, ProbePolicy, SchedulerReconcileMode,
+};
 use ic_timers_test_protocol::{
     ChurnObservation, DispatchBatchObservation, OrdinaryObservation, ProbeMemorySummary,
     ProbeSnapshot, TimerProbeSnapshot,
@@ -645,6 +647,115 @@ fn instruction_exhaustion_leaves_successor_for_later_progress() {
         .expect("normally completed recovery work must retain a memory sample");
     assert_eq!(recovered_work_memory.samples, 1);
     assert_memory_summary_is_coherent(recovered_work_memory);
+}
+
+#[test]
+fn scheduler_abandonment_under_round_pressure_recovers_after_stop() {
+    for successor in [false, true] {
+        for mode in SchedulerReconcileMode::ALL {
+            let owned = fresh_pocket_ic();
+            let pic = owned.instance();
+            let canister_id = install_probe(pic, probe_wasm());
+            if successor {
+                assert!(update_bool(pic, canister_id, Method::Start));
+                pic.advance_time(Duration::from_secs(1));
+                wait_for_probe(
+                    pic,
+                    32,
+                    |pic| snapshot(pic, canister_id),
+                    |s| s.completed_work == 1,
+                );
+            }
+            update_wire::<(), _>(
+                pic,
+                canister_id,
+                ExternalPrincipal::anonymous(),
+                Method::StartSchedulerPressure,
+                (successor,),
+            )
+            .unwrap();
+            let armed = snapshot(pic, canister_id);
+            let deadline = armed.next_deadline_ns.unwrap();
+            pic.advance_time(Duration::from_nanos(
+                deadline
+                    .checked_sub(pic.get_time().as_nanos_since_unix_epoch())
+                    .unwrap(),
+            ));
+            let pressure: u64 = wait_for_probe(
+                pic,
+                8,
+                |pic| {
+                    query_wire(
+                        pic,
+                        canister_id,
+                        ExternalPrincipal::anonymous(),
+                        Method::SchedulerPressureCompleted,
+                        (),
+                    )
+                    .expect("observe committed round pressure")
+                },
+                |completed| *completed > 0,
+            );
+            let before_stop = snapshot(pic, canister_id);
+            println!("successor={successor} mode={mode:?} committed_pressure={pressure}");
+            assert_eq!(
+                before_stop.scheduler_started.total, armed.scheduler_started.total,
+                "must reach the queued scheduler boundary"
+            );
+            pic.stop_canister(canister_id, None)
+                .expect("stop queued scheduler");
+            pic.start_canister(canister_id, None)
+                .expect("restart queued scheduler");
+            // Time and ticks alone must not be mistaken for explicit owner repair.
+            advance_and_tick(pic, Duration::from_secs(2), 16);
+            let stopped = snapshot(pic, canister_id);
+            assert_eq!(stopped.registration_id, armed.registration_id);
+            assert_eq!(stopped.work_dispatched, armed.work_dispatched);
+            assert_eq!(stopped.work_started, armed.work_started);
+            assert_eq!(stopped.work_completed, armed.work_completed);
+            assert_eq!(stopped.unacknowledged, armed.unacknowledged);
+            assert_eq!(
+                stopped.scheduler_started.total, armed.scheduler_started.total,
+                "stop must abandon the scheduler before its first poll"
+            );
+            assert_eq!(stopped.completed_work, armed.completed_work);
+            let repaired: bool = update_wire(
+                pic,
+                canister_id,
+                ExternalPrincipal::anonymous(),
+                Method::ReconcileSchedulerPressure,
+                (mode, deadline),
+            )
+            .unwrap();
+            assert!(repaired);
+            let recovered = wait_for_probe(
+                pic,
+                64,
+                |pic| snapshot(pic, canister_id),
+                |s| s.completed_work == armed.completed_work + 1,
+            );
+            assert_eq!(
+                recovered.scheduler_started.total,
+                armed.scheduler_started.total + 1
+            );
+            assert_eq!(
+                recovered.work_dispatched.total,
+                armed.work_dispatched.total + 1
+            );
+            assert_eq!(
+                recovered.work_completed.total,
+                armed.work_completed.total + 1
+            );
+            assert_eq!(recovered.work_started.total, armed.work_started.total + 1);
+            assert_eq!(recovered.registration_id, armed.registration_id);
+            assert_eq!(recovered.unacknowledged, armed.unacknowledged);
+            advance_and_tick(pic, Duration::ZERO, 16);
+            assert_eq!(
+                snapshot(pic, canister_id).completed_work,
+                armed.completed_work + 1
+            );
+        }
+    }
 }
 
 #[test]
