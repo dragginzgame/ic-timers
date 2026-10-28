@@ -151,6 +151,32 @@ RUSTUP_AUTO_INSTALL=0 cargo tree --offline -p ic-timers --target wasm32-unknown-
 bash "$checker"
 reset_manifests
 
+# Relay owns application delivery above Timers. A canonical-name check must also
+# reject renamed target/build edges; the local stub resolves without downloads.
+mkdir -p relay-substitute/src
+cat > relay-substitute/Cargo.toml <<'EOF'
+[package]
+name = "ic-relay"
+version = "0.0.0"
+edition = "2024"
+
+[workspace]
+EOF
+touch relay-substitute/src/lib.rs
+perl -pi -e 's/^resolver = /exclude = ["relay-substitute"]\nresolver = /' Cargo.toml
+perl -pi -e 's/^\[workspace.dependencies\]/[workspace.dependencies]\napplication-delivery = { package = "ic-relay", path = "relay-substitute" }/' Cargo.toml
+for table in "target.'cfg(target_arch = \"wasm32\")'.dependencies" "target.'cfg(unix)'.build-dependencies"; do
+    cp "$root/crates/ic-timers/Cargo.toml" crates/ic-timers/Cargo.toml
+    printf '\n[%s]\napplication-delivery.workspace = true\n' "$table" >> crates/ic-timers/Cargo.toml
+    RUSTUP_AUTO_INSTALL=0 cargo tree --offline -p ic-timers --target wasm32-unknown-unknown > /dev/null
+    if bash "$checker" > relay-failure.log 2>&1; then
+        echo "error: library admitted application Relay below timer infrastructure: $table" >&2
+        exit 1
+    fi
+    grep -q 'forbidden ic-relay' relay-failure.log
+done
+reset_manifests
+
 # The common direct guard composes with Timers' stricter deployment policy.
 # Principal is intentionally absent from the local declaration list: it must
 # still reject an optional renamed target/build edge through the common owner.

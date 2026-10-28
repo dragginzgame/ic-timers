@@ -42,6 +42,25 @@ records the implementation requirements; [current status](docs/status/current.md
 and the [host matrix](docs/releasing.md#host-support) identify qualified evidence
 and remaining host gaps.
 
+## Platform and application call ownership
+
+IC Platform owns the system-call and executor primitives. Timers consumes its
+`ic0` and `executor` features for private infrastructure dispatch; it does not
+use Platform's application call builders. Timers owns dispatch generations,
+flight-slot reservation before the liquidity check and submission, the 128-call
+per-turn bound, and terminal response/cleanup association. A submitted slot is
+not reused until its terminal event; immediate refusal releases it locally.
+These are timer-delivery invariants, not application RPC policy.
+
+Application calls and codecs belong above this runtime. Platform owns reusable
+one-shot application calls; Relay may own higher-level application delivery.
+Neither an application call wrapper nor Relay belongs below Timers. The library
+dependency check excludes Relay, codecs and Platform runtime features, including
+renamed target-specific normal/build dependencies. Watchdog scheduling does not
+grant authority to repeat an application effect whose outcome is uncertain.
+See [Platform #75](https://github.com/dragginzgame/ic-platform/issues/75) and
+[Timers #80](https://github.com/dragginzgame/ic-timers/issues/80).
+
 ## Current guarantees
 
 The current runtime provides:

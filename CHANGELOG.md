@@ -2,6 +2,15 @@
 
 All notable changes to this project are recorded here.
 
+## [0.31.14]
+
+### 🔧 Changed
+
+- Document the Platform/Timers/application call ownership boundary and reject
+  application Relay dependencies below the published runtime, including renamed
+  target-specific build dependencies. No runtime API or behavior changes
+  ([#80](https://github.com/dragginzgame/ic-timers/issues/80)).
+
 ## [0.31.13] - 2026-10-28
 
 ### ➕ Added

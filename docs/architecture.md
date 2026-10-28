@@ -62,7 +62,7 @@ on it or introduce a persisted-format migration.
 
 Registry-published `ic-platform` is the selected boundary; the current lock and
 source-qualified receipts are recorded in [current status](status/current.md).
-Published Platform 0.6 owns the maintained non-cryptographic runtime and
+Published Platform owns the maintained non-cryptographic runtime and
 explicit-codec generator. It selects no full CDK package and copies no executor.
 The root catalog disables default Platform features. The library selects only
 `executor` and `ic0`; the two canister probes select `cdk` (including its new
@@ -76,7 +76,8 @@ Parser, Agent, certification and ledger capabilities remain unselected.
 The private platform uses `ic_platform::ic0` for its existing system calls,
 retaining context placement, method handles, protected spawning and callback/trap cleanup. The lockfile still
 resolves one `ic-cdk-executor` 2.0.0 shared with Platform's runtime. Native substitutes cannot
-qualify those IC paths. The library's executor/system-only graph excludes
+qualify those IC paths. [The call ownership boundary](../SAFETY.md#platform-and-application-call-ownership)
+keeps application call builders and Relay above the runtime. The library's executor/system-only graph excludes
 Principal/Account, Serde, SHA-2, text encoding and Candid. Probe entrypoint/runtime
 features imply `principal`, retaining their existing identities and behavior.
 None of those identities cross the published timer API or probe wire records;

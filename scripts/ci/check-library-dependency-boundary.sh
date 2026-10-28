@@ -48,7 +48,7 @@ for my $target ('wasm32-unknown-unknown', $host) {
         if ($library) {
             push @check, '--forbid-pattern', '^ic-(?:wire(?:-|$)|timers-)';
             push @check, map { ('--forbid', $_) }
-                qw(ic_principal serde serde_core serde_derive sha2 digest crc32fast data-encoding);
+                qw(ic-relay ic_principal serde serde_core serde_derive sha2 digest crc32fast data-encoding);
         }
         if ($protocol) {
             push @check, map { ('--forbid', $_) } qw(ic-platform ic-timers ic-cdk-executor ic0);

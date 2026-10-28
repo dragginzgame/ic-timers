@@ -6,130 +6,123 @@ Last updated: 2026-10-28
 
 ## Source and delivery
 
-Base and verified remote `main`: **0.31.12**, `5a03925f46b2eafe5881f1402ce15ec5dfa4d3bc`.
-The checkout was clean before the issue work. The undated **0.31.13** draft
-collects compatible fixes/additions for issues 77–79 and the tooling adoption
-below. Package versions remain 0.31.12. No staging, commits, pushes,
-release execution or sibling edits were performed. Keep user-owned Git/release
-delivery; the fixes are not yet on the default branch.
+Base and verified remote `main`: **0.31.13**,
+`c9c22eaae725c62de5b1918aeda45702f9f213b9`. Registry publication of 0.31.13 is
+verified (not yanked). The checkout was clean before this follow-up. The pending
+**0.31.14** draft describes repository-only boundary enforcement/documentation;
+no Timers runtime, public API, Cargo version or root lock changed. Bundle this
+into the next code-bearing release unless the maintainer explicitly selects a
+repository-only patch. No staging, commits, pushes or release execution ran.
 
-The prior dependency/Shared/freeze batch is committed in the base. The pending
-root catalog now requires published Build/Host/Testkit **0.69.4**, matching the
-incoming maintainer-updated lock. That lock is preserved byte-for-byte. Platform
-**0.7.1**, Metrics **0.16.3**, Wire **0.7.18** and PocketIC **16.1.0** remain selected.
-The published PocketIC pin still constrains Thiserror to **2.0.18**.
+Shared **0.27.3** remains at reviewed revision
+`7ee5c83744aa822ecd070703dbf0a7d95076d5f6` (134 exported payloads). Build/Host/Testkit
+**0.69.4**, Platform **0.7.1**, Metrics **0.16.3**, Wire **0.7.18** and PocketIC
+**16.1.0** remain selected. PocketIC still constrains Thiserror to **2.0.18**.
+The prepared tool selections and adoption proof remain at
+`/tmp/ic-timers-tooling-03113.y1v9ur/`; ordinary checks remain offline.
 
-## Current upstream adoption
+## Issue disposition
 
-Shared **0.27.3**, independently selected revision
-`7ee5c83744aa822ecd070703dbf0a7d95076d5f6`, is exported through the canonical
-impact/apply workflow with all **134** payloads and unchanged entrypoint roots.
-Trusted source comparison proves every declared byte and executable mode against
-that commit; ordinary checks remain offline. Optional sccache, compiler wrappers
-and schedules are not activated. Unattended maintenance's report-only launch
-requires separate installed-host qualification before any scheduled resumption.
-Timers retains its existing stricter all-regular repository inventory.
+- [#78](https://github.com/dragginzgame/ic-timers/issues/78) is **closed** after
+  delivery and review of native ownership states plus installed competing-setter
+  rollback/firing/cancellation evidence. Equal writes, overdue foreign clears and
+  interference followed by no rearm remain undetectable; keep one global owner.
+- [#79](https://github.com/dragginzgame/ic-timers/issues/79): the published pure
+  predicate composes with the host's existing inspector. Timers exports no second
+  hook, and endpoint caller authentication remains independent. Installed Timers
+  evidence covers ingress refusal, foreign-call authentication and legitimate
+  self-dispatch. Direct refused ingress had no observed target cycle decrease;
+  foreign refusal cost 5,485,070 cycles in that fixture. Canic adoption is now
+  prepared and installed-tested in the isolated checkout below; it is not on
+  Canic main. Keep the issue open for the remaining delivery boundary.
+- [#77](https://github.com/dragginzgame/ic-timers/issues/77): 0.31.13 delivers the
+  shared pre-poll delivery guard and exact owner reconciliation repair, including
+  unchanged deadlines and initial/successor scheduling. Native tests cover stale
+  generation isolation and live/lost queued work without effect replay.
+  **Still unqualified:** installed stop-between-submit-and-scheduler-poll and
+  scheduler-body trap acceptance. All prior stop experiments ran the scheduler
+  first, including a same-round controller stop. The maintainer has no original
+  reproducer. Do not repeat unchanged experiments or count ordinary stop/resume
+  as this proof. Temporary encoders, RPCs, Candid selections and exceptions were
+  removed; the retained qualified probe bytes were restored exactly.
+- [#80](https://github.com/dragginzgame/ic-timers/issues/80): pending docs/checks
+  specify Platform primitives versus Timers' private dispatch/flight ownership,
+  keeping application calls/Relay above the runtime. A real offline Cargo fixture
+  refuses renamed target-normal and host-build Relay edges; the existing codec,
+  feature, executor-source and coordinator boundaries remain. No application-call
+  wrapper, callback change or extra runtime was introduced. Delivery remains pending.
 
-Evidence: `/tmp/ic-timers-tooling-03113.y1v9ur/`. Published archives show identical
-Rust implementation files between Tooling 0.69.3 and 0.69.4; reviewed changes align
-dependency minimums with the already selected Platform/Wire graph. The changed
-Shared catalog invalidated a prior common Cargo receipt; explicit setup reused
-admitted builds and prepared fresh selections. Common host/Cargo admission,
-editor **0.69.4**, Testkit **0.69.4** and server admission now pass offline.
-Setup command: `make install-rust-tools install-release-editor install-testkit-server`.
+## Authorized Canic work
 
-Current-selection checks pass: locked MSRV metadata, direct and transitive
-deployment boundaries, pin/source policy, trusted/local snapshot checks and the
-actual consumer export/corruption fixture, formatting, changed-script syntax,
-strict Rust 1.91 coordinator/test Clippy and required-subject discovery. Optimized
-probe Wasm still matches the prior issue-proof artifact exactly. The installed
-ingress and competing-owner subjects both pass freshly with Testkit 0.69.4.
-Other earlier runtime checks below retain their original harness/dependency
-scope; this adoption does not close #77's gap or qualify macOS/full release gates.
-Pending product/probe source changes are preserved exactly.
+The maintainer selected **Prepare focused Canic changes**. Scope is that exact
+repository; other siblings remain read-only. Shared's isolation requirement keeps
+`/home/adam/projects/canic` untouched, including its substantial pending Wire/Host
+batch. Prepared checkout: `/tmp/ic-timers-backlog-03114.GlZdEf/canic`, based on
+verified Canic main **0.112.0**, `5c236ab130c0d63892ef281b45bdc3fa353e012f`.
+No staging/commit/push/version mutation occurred there. The original catalog
+independently advanced to Timers 0.31.13/Tooling 0.69.4 during preparation;
+a read-only apply check confirms `canic-code.patch` fits the three changed source
+files. Reconcile existing metadata/changelog work rather than overwriting it
+with the isolated base's full patch.
 
-## Prepared changes and acceptance boundaries
+Its existing single inspector now rejects Timers' private method before argument
+copy/acceptance. The pool's duplicate cancellation custody is shared locally,
+preserving maintenance-first ordering, empty success and typed busy/provider
+failures ([Canic #695](https://github.com/dragginzgame/canic/issues/695)). The root
+minimum is published Timers **0.31.13**; all three locks move only Timers and its
+required Platform/macros **0.7.1**. The undated **0.112.1** notes and runtime ingress
+documentation are updated. This evidence qualifies that isolated base plus patch,
+not the original dirty Canic batch.
 
-- [#79](https://github.com/dragginzgame/ic-timers/issues/79): new pure
-  `is_timer_dispatch_method` predicate composes with the host's existing ingress
-  inspector. Timers exports no inspection hook. The runtime probe's single
-  inspector combines private-method refusal with its own payload policy; the
-  authenticated endpoint remains independent. Native negative cases and an
-  installed ingress/foreign-call/self-dispatch regression pass. Direct refused
-  ingress leaves the fixture's observed target balance unchanged; foreign
-  authentication charges **5,485,070 cycles** in the final fixture. Canic's
-  generated hook still needs separate adoption before its payload inspector
-  accepts ingress. Its checkout was read only, not qualified.
-- [#78](https://github.com/dragginzgame/ic-timers/issues/78): the private backend
-  records its last timer write and validates the next returned prior timestamp.
-  Conflict traps preserve IC message rollback. Zero at/after the owned deadline
-  is legitimate one-shot consumption. Native state transitions and installed
-  first-arm/overwrite/premature-clear/rollback/normal-fire/cancel cases pass.
-  Equal writes, overdue foreign clears and interference with no subsequent
-  backend rearm remain undetectable. One provider/export owner remains required.
-- [#77](https://github.com/dragginzgame/ic-timers/issues/77): initial and successor
-  scheduler futures share the ordinary pre-poll delivery guard. Confirmed loss
-  clears only the current scheduler handle and marks canonical control for owner
-  repair. All three reconciliation modes, including unchanged exact deadlines,
-  restore it. Queued work keeps its attempt and committed recovery cadence;
-  no completion or uncertain-effect replay is invented. Native tests cover both
-  scheduler paths, stale generations and live/lost queued work. Jobs' README
-  `ScheduledAt` and Canic's `Scheduled`/`ScheduledImmediately` callers were traced.
-  **Remaining gap:** installed stop-between-submit-and-delivery and scheduler-body
-  trap acceptance are not qualified. Every attempted stop sequence executed the
-  scheduler first, including a controller-canister stop submitted in the timer's
-  round. The maintainer confirmed the original reproducer is unavailable. Do not
-  describe these attempts as recovery proof; a deterministic boundary fixture is
-  still needed.
+Canic [#688](https://github.com/dragginzgame/canic/issues/688) and
+[#689](https://github.com/dragginzgame/canic/issues/689) are closed after verifying
+their existing metric/output consolidations on remote main. Core's metric source
+matches its retained focused proof; all five host output paths preserve kind and
+record-before-measure ordering. Fresh query/update/binary command-mode tests pass.
+These closures do not certify unrelated failed Canic CI jobs.
 
-All three canonical issues have factual progress comments and remain open.
-No PRs were open when triaged. There are no duplicate/superseded closures.
-The next concrete work is the missing #77 installed reproducer, then Canic's
-host-hook adoption in its authorized owner. Delivery/required acceptance also
-precedes closing any of these issues.
+The larger call-stack retirement stays with
+[Canic #700](https://github.com/dragginzgame/canic/issues/700) and
+[Platform #75](https://github.com/dragginzgame/ic-platform/issues/75).
+A Rust 1.91 witness against published Platform 0.7.1 confirms that a prepared Call
+cannot own a runtime-selected method name: the owning factory fails E0515 while
+the borrowed control passes. Minimal example and acceptance checks are posted on
+the existing issues. Platform already supplies `get_cost`; no duplicate request
+wrapper or invented cost API was added.
 
-## Verification and retained evidence
+## Verification and limits
 
-Earlier issue evidence root: `/tmp/ic-timers-issues-03113.HKcNGJ/`. Its final logs
-qualify the retained product source on Linux using Rust **1.91.0**, the original
-Tooling **0.69.3** harness and PocketIC **16.1.0**.
-The exact optimized runtime-probe bytes are retained as `runtime-probe.wasm`,
-with `final-wasm.sha256`. The loaded copy and workspace artifact match.
+Current evidence: `/tmp/ic-timers-backlog-03114.GlZdEf/`. Timers' actual dependency
+fixture passes (including renamed Relay normal/build edges and existing negative
+cases), as do direct dependency checks, provider checks, Bash syntax, scoped
+ShellCheck with source following, changelog admission and whitespace checks. The
+root lock matches HEAD byte-for-byte. Initial fixture diagnostics are retained:
+a nested workspace needed exclusion; target-build cfgs must select the host.
 
-Passes: locked metadata; strict library/coordinator/protocol/runtime-probe Clippy;
-optimized probe Wasm; public docs with warnings denied; direct provider and
-transitive deployment graph/feature exclusions; formatting, changelog and diff
-checks. Native evidence includes 45 Watchdog-filtered tests, the scheduler and
-ordinary abandonment regressions, three exact ordinary guard tests, four
-ownership state tests and the ingress predicate test. Required-subject discovery
-passes after adding the two installed regressions to the watchdog roster.
+Canic's native cancellation regression and strict pool library/test Clippy pass.
+The two installed ingress tests pass with Rust 1.99.1, Testkit 0.69.0 and admitted
+PocketIC 16.1.0: private ingress refusal leaves the observed target balance
+unchanged, ordinary calls succeed, and default/explicit/named limits hold. Strict
+Core library and ingress-target Clippy pass. Rust 1.91 Wasm checks for both changed libraries, direct boundaries, all three
+provider identity checks, native changelog governance and three host command-mode
+tests also pass. Full and code-only Canic patches plus a PR description are in
+the evidence directory. No broad release gate or native macOS/live IC
+qualification is claimed for these prepared changes.
 
-Nine named PocketIC subjects pass against the final bytes: ingress admission,
-competing ownership, existing stop/resume, trapped work, instruction exhaustion,
-response-trap cleanup, ordinary pre-await abandonment, genuine freeze/top-up,
-and near-threshold low-cycle recovery. These are focused executions, not a full
-watchdog/cohort/release gate. A normal stop/resume pass does not qualify #77's
-different scheduler-abandonment interleaving.
+Published Timers main CI
+[40671619214](https://github.com/dragginzgame/ic-timers/actions/runs/40671619214)
+has passed Linux checks, MSRV and macOS arm64; Intel macOS was still running at
+last observation. The tag-only job passed separately. Neither run tests the new
+repository-only boundary changes. Canic main CI
+[40659441082](https://github.com/dragginzgame/canic/actions/runs/40659441082) passes
+preflight/security/checks/MSRV/release-build but fails both macOS Host builds and
+ordinary/PocketIC jobs; these precede this isolated patch. Do not claim Canic's
+complete batch is qualified.
 
-Failed development diagnostics are retained: initially missing diagnostics
-directory, inspection's actual `CanisterCalledTrap` classification, an unnecessary
-integer conversion, counter Result/Option assertions, and lint corrections.
-Unsuccessful stop experiments and their source patch are retained separately.
-Their temporary management encoder, native Candid features, boundary exception,
-probe DTO/RPC additions and failing test were removed; no such dependency or
-enforcement expansion remains. No failed experiment is counted as a pass.
-The controller trial also exposed distinct management status DTO identities;
-its corrected fixture still missed the timing boundary. Its patch and helper
-are retained separately. After removal, hashes prove restoration of every prior
-qualified source/dependency input; the rebuilt Wasm again matches the exact
-nine-subject PocketIC artifact. Passing evidence is reused for those inputs.
-
-Base main CI [40658240875](https://github.com/dragginzgame/ic-timers/actions/runs/40658240875)
-and tag CI [40658240699](https://github.com/dragginzgame/ic-timers/actions/runs/40658240699)
-both succeeded for `5a03925`; neither tests the local fixes. No new hosted run,
-full local gate, native macOS or live installed-IC qualification was performed.
-Keep the full maintainer-owned release and host requirements intact.
-
-Earlier accepted freeze evidence remains at `/tmp/ic-timers-freeze-03112.voNdez/`;
-the previous dependency/Shared evidence is `/tmp/ic-timers-upstream-03112.xc99Cb/`.
-Those runs retain their original source/artifact scope.
+Earlier runtime evidence: `/tmp/ic-timers-issues-03113.HKcNGJ/`, including the
+optimized runtime-probe hash
+`380e416c802e945de291051cd2d5ee1371c029b79bba36b19d0ca5e57e3ad41c`, native
+Watchdog/ordinary/ownership/ingress tests and nine focused PocketIC subjects.
+Earlier freeze proof remains at `/tmp/ic-timers-freeze-03112.voNdez/` and dependency
+proof at `/tmp/ic-timers-upstream-03112.xc99Cb/`. Each retains its original graph,
+artifact and host scope. Preserve full user-operated release and host gates.
