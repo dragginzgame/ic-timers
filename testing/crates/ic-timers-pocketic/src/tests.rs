@@ -1,6 +1,6 @@
 use super::harness::{INIT_CYCLES, fresh_pocket_ic, install_probe, update_unit, wait_for_probe};
 use super::harness::{query_wire, update_wire};
-use ic_platform::pocket_ic::PocketIc;
+use ic_platform::pocket_ic::{CanisterSettings, ErrorCode, PocketIc, RejectCode};
 use ic_platform::principal::ExternalPrincipal;
 use ic_testkit::pic::{PocketIcInstance, advance_and_tick};
 use ic_timers_test_protocol::rpc::{Method, OrdinaryPolicy, ProbeLifetime, ProbePolicy};
@@ -571,6 +571,100 @@ fn insufficient_cycles_defer_due_work_until_top_up() {
     let progressed = snapshot(pic, canister_id);
     assert_eq!(progressed.completed_work, 1);
     assert_eq!(progressed.scheduler_started.total, 1);
+}
+
+#[test]
+fn frozen_canister_resumes_overdue_timer_after_top_up_only() {
+    let owned = fresh_pocket_ic();
+    let pic = owned.instance();
+    let canister_id = install_probe(pic, probe_wasm());
+    assert!(update_bool(pic, canister_id, Method::Start));
+    let before = snapshot(pic, canister_id);
+    assert_eq!(before.completed_work, 0);
+    assert_eq!(before.scheduler_started.total, 0);
+    let deadline = before.next_deadline_ns.expect("armed watchdog");
+
+    // Raise the real freezing reserve above the existing balance without burning
+    // all cycles or uninstalling the canister. Derive it from this instance's
+    // storage charge, rather than relying on a particular probe Wasm size.
+    let status = pic.canister_status(canister_id, None).unwrap();
+    let balance = pic.cycle_balance(canister_id);
+    let idle_per_day: u128 = status.idle_cycles_burned_per_day.0.try_into().unwrap();
+    assert!(idle_per_day > 0);
+    let freezing_seconds = u64::try_from((balance * 4 * 86_400).div_ceil(idle_per_day))
+        .expect("fixture freezing threshold fits u64");
+    let freezing_reserve = idle_per_day * u128::from(freezing_seconds) / 86_400;
+    pic.update_canister_settings(
+        canister_id,
+        None,
+        CanisterSettings {
+            freezing_threshold: Some(freezing_seconds.into()),
+            ..CanisterSettings::default()
+        },
+    )
+    .expect("raise freezing reserve");
+    pic.advance_time(Duration::from_secs(300));
+    advance_and_tick(pic, Duration::ZERO, 16);
+    assert!(pic.get_time().as_nanos_since_unix_epoch() > deadline);
+    let frozen_balance = pic.cycle_balance(canister_id);
+    assert!(frozen_balance > 0, "frozen, not uninstalled");
+    assert!(frozen_balance < freezing_reserve);
+    let rejected = pic
+        .update_call(
+            canister_id,
+            ExternalPrincipal::anonymous(),
+            Method::Stop.name(),
+            ic_wire::native::encode_request(
+                Method::Stop as u64,
+                &(),
+                ic_timers_test_protocol::rpc::REQUEST_LIMITS,
+            )
+            .unwrap(),
+        )
+        .expect_err("a valid timer control update must reject while frozen");
+    assert_eq!(rejected.reject_code, RejectCode::SysTransient);
+    assert_eq!(rejected.error_code, ErrorCode::CanisterOutOfCycles);
+    // No ensure/reconcile call, threshold reset, raw timer write or upgrade can
+    // repair the wakeup here. A top-up and replica rounds must suffice.
+    pic.add_cycles(canister_id, balance * 16);
+    // Read-only observation before another round proves the frozen interval
+    // left the overdue registration intact and executed no timer work.
+    let thawed = snapshot(pic, canister_id);
+    assert!(thawed.registered);
+    assert_eq!(thawed.scheduler_started.total, 0);
+    assert_eq!(thawed.completed_work, 0);
+    assert_eq!(thawed.next_deadline_ns, Some(deadline));
+    let resumed = wait_for_probe(
+        pic,
+        32,
+        |pic| snapshot(pic, canister_id),
+        |s| s.completed_work > 0,
+    );
+    assert!(resumed.registered);
+    assert_eq!(resumed.completed_work, 1);
+    assert_eq!(resumed.scheduler_started.total, 1);
+    assert_eq!(resumed.work_started.total, 1);
+    assert_eq!(resumed.work_completed.total, 1);
+    assert!(!resumed.post_upgrade_reconstructed);
+    assert!(
+        resumed
+            .next_deadline_ns
+            .is_some_and(|next| next > pic.get_time().as_nanos_since_unix_epoch())
+    );
+    advance_and_tick(pic, Duration::ZERO, 16);
+    assert_eq!(snapshot(pic, canister_id).completed_work, 1);
+    pic.advance_time(Duration::from_secs(1));
+    let recurring = wait_for_probe(
+        pic,
+        32,
+        |pic| snapshot(pic, canister_id),
+        |s| s.completed_work >= 2,
+    );
+    assert_eq!(recurring.completed_work, 2);
+    assert_eq!(recurring.scheduler_started.total, 2);
+    let after = pic.canister_status(canister_id, None).unwrap();
+    assert_eq!(after.module_hash, status.module_hash);
+    assert_eq!(after.settings.freezing_threshold, freezing_seconds);
 }
 
 #[test]

@@ -2,6 +2,28 @@
 
 All notable changes to this project are recorded here.
 
+## [0.31.12] - Unreleased
+
+### 🧪 Testing
+
+- Require a genuine freeze/top-up PocketIC regression: preserve an overdue
+  watchdog while updates reject, then recover and resume cadence using only
+  external funding, without an upgrade or timer repair call.
+
+### 📦 Dependencies
+
+- Adopt Build/Host/Testkit 0.69.3 and Platform 0.7.1 in the root catalog and
+  lockfile, retaining current Wire 0.7.18 and Metrics 0.16.3. Preserve timer
+  protocols and feature selections. Prepare contributor tools through
+  `make install-release-editor install-testkit-server`.
+
+### 🔧 Changed
+
+- Adopt Shared Tooling 0.27.2, including formatting-cache detection around
+  conditional Rust attributes, dependency-finding ownership and native bootstrap
+  guidance. Stage the hook fixture's complete companion closure instead of
+  maintaining a second helper list; optional stack-diagram refresh remains inactive.
+
 ## [0.31.11] - 2026-10-27
 
 ### 🔧 Changed

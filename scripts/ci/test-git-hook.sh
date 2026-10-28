@@ -50,10 +50,13 @@ edition.workspace = true
 EOF
     printf 'pub fn fixture( ){}\n' > "${member}/src/lib.rs"
 done
-git add Makefile make/ ci/tool-versions.env Cargo.toml \
-    crates/hook-fixture testing/crates/hook-probe \
-    scripts/ci/check-format-tools.sh scripts/ci/check-make-execution.sh \
-    scripts/ci/run-formatting.sh scripts/ci/run-rust-formatting.pl
+# Stage the overlaid closure and fixture workspace, including new companions,
+# without maintaining a second transitive helper list or removing gitlinks.
+git ls-files --modified --others --exclude-standard -z > "${temporary_root}/stage-inputs"
+while IFS= read -r -d '' path; do
+    [[ -f "$path" && ! -L "$path" ]] || continue
+    git --literal-pathspecs add -- "$path"
+done < "${temporary_root}/stage-inputs"
 printf 'unrelated working edit\n' >> README.md
 cp README.md "${temporary_root}/unrelated-readme"
 # Preserve distinct index and working lock bytes across selected-file formatting.

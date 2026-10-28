@@ -107,6 +107,9 @@ The current runtime provides:
   hook, stop/resume, insufficient cycles followed by top-up, a 300-second
   overdue jump without replay, two simultaneous timers, and isolation when one
   timer traps;
+- focused PocketIC evidence that an armed Watchdog survives a positive-balance
+  freeze past its deadline, then delivers one overdue callback and resumes
+  cadence after external funding alone, without upgrade or timer repair calls;
 - terminal cancellation both normally and in the committed scheduler/work gap,
   leaving later provider delivery unable to invoke consumer work;
 - external rejection of the provider's internal timer-executor route; and
@@ -243,6 +246,9 @@ the failed creation. See the [construction decision](docs/design/0.18-atomic-reg
   only a still-pending task after one second. An accepted task cannot be replayed
   from that transport identity. This does not establish exactly-once application
   effects or remove the need for durable application reconciliation.
+- The freeze/top-up subject covers a Watchdog armed before freezing. It does
+  not qualify every freeze during running/awaiting work, every timer policy, or
+  recovery after cycle exhaustion has uninstalled the canister.
 - Armed records and outstanding transport slots are bounded separately. Future
   captures, running work, executor allocations and canister memory are not
   globally bounded by these limits. Older provider-heap churn receipts describe

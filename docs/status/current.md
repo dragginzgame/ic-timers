@@ -2,71 +2,107 @@
 
 # Current status
 
-Last updated: 2026-10-27
+Last updated: 2026-10-28
 
 ## Source and pending work
 
-Released base: **0.31.10**, `2d06f7e`. The undated **0.31.11** draft now records
-Shared Tooling 0.26.24, retaining the preceding uncommitted 0.26.23 adoption and
-its consumer-hook fixture changes. The new refresh began with that pending work;
-no reset, staging or commit was performed. Cargo manifests, lockfile and package
-versions remain byte-identical to the incoming source.
+Released base: **0.31.11**, `eca0235`. The undated **0.31.12** draft retains
+pending Shared Tooling/dependency adoption and the accepted freeze/top-up
+regression. Cargo package versions remain 0.31.11. Unrelated work is preserved;
+no staging, commits, pushes or release execution were performed.
 
-This is compatible repository-only work: no timer API, implementation, protocol
-or deployed dependency changes. Bundle it with the next code-bearing release by
-default; an explicit maintainer-owned bump may select a repository-only patch
-under the existing exception. All release execution remains maintainer-owned,
-with the complete product and native-host gates intact.
+The root minimums now match selected published Tooling **0.69.3** and Platform
+**0.7.1**. All 12 direct registry dependencies were checked against crates.io;
+Wire **0.7.18**, Metrics **0.16.3**, Clap **4.6.7**, Serde **1.0.229** and
+Serde JSON **1.0.154** are already current. The sole constrained update is
+Thiserror: PocketIC 16.1.0 requires exactly **2.0.18**, so Cargo rejected the
+targeted **2.0.21** update. Keep that existing selection; no local shim or
+supplier override was introduced. The failed resolution left Cargo.lock
+unchanged, including the previous externally selected IC patch updates.
 
-## Shared adoption and ownership
+## Freeze regression and boundary
 
-Shared Tooling **0.26.24**, revision
-`bd4d5541e388ca75e12509781711f1c6668db302`, is verified against upstream main
-and adopted from a clean clone through canonical impact/apply with the existing
-roots. All 133 canonical payloads verify. Relative to the pending 0.26.23 export,
-one missing Node guide is added through declared governance companions; none
-retire. The earlier formatter companion and local fixture edits are preserved.
+`tests::frozen_canister_resumes_overdue_timer_after_top_up_only` arms a Watchdog,
+then raises its real freezing reserve above the observed positive balance. The
+reserve uses the instance's reported storage charge, avoiding an assumed probe
+size or PocketIC creation balance. Five simulated frozen minutes span the
+original deadline. A valid update must reject with typed `SysTransient` /
+`CanisterOutOfCycles`, while the positive balance remains below the reserve.
 
-The staged-file hook now keeps tracked submodules opaque. The standard Rust
-formatter adds an explicitly selected standalone-file/edition interface, which
-runs uncached. Timers has neither submodules nor standalone formatting inputs,
-so its root grouped workspace selection needs no adapter or additional option.
-The optional runtime-scanner source is not selected or compiled here; no scanner
-package or Clap dependency change is needed. The Node guide is documentation,
-not activation of Node setup, tooling or deployment gates.
+Only an external top-up and replica ticks restore progress. A read-only snapshot
+before further rounds shows the overdue registration and zero scheduler/work
+progress were retained. The test requires one overdue completion, no additional
+work under unchanged time, and the next normal cadence completion. Module hash
+and raised freezing threshold remain unchanged; the upgrade-reconstruction flag
+stays clear. No ensure/reconcile call, raw timer repair or upgrade is used.
 
-Existing standard formatting retains visible pass timings, strict prepared-tool
-admission and reuse only for unchanged successful inputs. Isolated hook trees
-always execute both passes. The consumer fixture stages the formatter helper,
-forces substituted failure passes with `FORMAT_RUST_ARGS=--no-cache`, and checks
-actual Timers routing, partial-staging refusal, selected-file/index isolation,
-lock-byte preservation, failure status/logs and stopping before Rustfmt.
-Generic submodule, standalone-input and invalidation matrices remain upstream.
-The [adoption guide](../shared-tooling.md) records these boundaries.
+The subject is in the driver's required watchdog roster, so the normal recovery
+and release gate must discover and execute it. The existing near-threshold
+self-call-cost test is retained as a separate case. This qualifies an armed
+Watchdog before work begins, not every timer policy, freeze during an await, or
+recovery after cycle exhaustion uninstalls the canister. README, architecture,
+SAFETY and the release guide state that scope. No runtime implementation, probe
+protocol, supported API or feature selection was changed by this test work.
 
-## Dependency boundary retained
+## Pending tooling retained
 
-Build/Host/Testkit remain **0.69.0**, with one Platform **0.7.0** package;
-Metrics 0.16.3 and Wire 0.7.18 are unchanged. The library's existing executor/ic0
-selection and qualified identities remain intact. Candid, Wire and host tooling
-remain excluded from that deployed graph; native simulator tests retain required
-transitive Candid through Platform/PocketIC. This refresh changes no dependency
-input. Prior dependency/tool admission evidence remains at
-`/tmp/ic-timers-tooling-03110.BwVqaF/`, with its original scope.
+Shared Tooling **0.27.2**, revision
+`7efce1e36275ff9e4bbbdd9ccab9a8d94520fd98`, is the reviewed 134-payload
+snapshot, applied through its canonical impact/exporter workflow. Its source
+has pending 0.27.3 notes; committed VERSION still says 0.27.2. The refresh adds
+supplier-finding ownership and native bootstrap guidance, plus newline-safe
+fixture roots. Timers' hook fixture stages its copied companion closure without
+a duplicate helper roster. Optional stack refresh, Node setup and scanner
+selections remain inactive; executable catalogs and product gates are unchanged.
+The current library graph check
+passes with one qualified executor 2.0.0/ic0 1.2.0 path through Platform;
+Candid, Wire and host tooling remain excluded from deployed normal/build edges.
+Native simulator tests retain required external Candid through Platform.
 
-## Verification and limits
+## Dependency adoption verification
 
-Current before-images, impact/apply output and focused logs are retained at
-`/tmp/ic-timers-shared-03111-update.yvn2FT/`. Snapshot integrity verifies 133
-payloads. The actual consumer hook fixture passes with the updated hook/driver,
-including injected sorter failures and worktree/index isolation. Root formatting
-runs both passes and records stable inputs; a second unchanged check reuses the
-result. Cargo manifest/lock comparisons, Bash/Perl syntax, changelog and diff
-checks pass. Release Make routing passes with an isolated substitute runner and
-no release effects. Earlier 0.26.23 logs remain at
-`/tmp/ic-timers-shared-03111.1gQlCY/` for their original inputs.
+Evidence: `/tmp/ic-timers-upstream-03112.xc99Cb/`, including the incoming dirty
+patch/before-images, registry inventory, failed targeted update, reviewed source
+checkout and impact report. Root locked MSRV metadata, direct dependency policy,
+transitive deployment exclusions/feature restrictions and singleton executor/ic0
+identities pass. No Candid or host dependency was added to deployed normal/build
+edges. Native simulator tests still require external Candid through Platform.
 
-These are focused Linux tooling checks. No fresh Rust build/test, full release
-gate, PocketIC measurement or native macOS run was performed. No claim of generic
-submodule/standalone qualification is made for Timers' absent use cases; Linux
-execution does not qualify native macOS.
+Explicit editor/Testkit setup and subsequent offline admission pass for 0.69.3,
+closing the prior editor-preparation gap. PocketIC remains **16.1.0**. Rust 1.91
+strict library/test Clippy, coordinator/runtime-probe/protocol Clippy, optimized
+runtime-probe Wasm and all four size-probe Wasm Clippy feature selections pass.
+Snapshot integrity, formatting, actual hook integration, substituted release
+command routing, pin policy, changelog and diff checks pass. Probe wire protocol,
+features and timer APIs are unchanged. No new issue or external write was needed.
+
+Cargo.lock matches this task's incoming lock. The rebuilt runtime-probe digest
+also exactly matches the freeze proof below, so its two focused PocketIC results
+are reused rather than presented as fresh executions after this manifest refresh.
+
+## Freeze evidence and limits
+
+Before-images, fixture diagnostics, selected lock/metadata, exact Wasm bytes/hash,
+server logs and focused results are retained at
+`/tmp/ic-timers-freeze-03112.voNdez/`. The `updated-*` logs qualify the final
+Tooling 0.69.3 / Platform 0.7.1 graph; older logs retain their narrower input scope.
+The lock changed during the first verification pass, so its earlier runtime
+results were not reused as qualification of the new graph.
+
+Final Linux evidence passes: Rust 1.91 strict coordinator/test Clippy, optimized
+`timer-probe` Wasm build, the new real PocketIC freeze test, the adjacent low-cycle
+PocketIC test and exact required-subject discovery regression. Testkit CLI 0.69.3
+was explicitly prepared and admits PocketIC **16.1.0** offline. The final lock
+and loaded-Wasm digest stay unchanged across the focused tests. Formatting,
+provider/deployment boundary, changelog and diff checks pass.
+
+Initial fixture failures and their corrections are explained in
+`fixture-development-notes.txt`; the transient type-inference compiler log was
+overwritten, with its cause/excerpt retained in the notes/tool transcript.
+No runtime defect was found or runtime repair introduced.
+
+No fresh full recovery/cohort/release gate, native macOS or installed-IC run was
+performed. This is source-bound Linux PocketIC evidence. Normal release
+preparation must retain the complete product/host gates.
+Prior tooling and Shared evidence remain at `/tmp/ic-timers-deps-03112.5RKZ5o/`
+and `/tmp/ic-timers-shared-03112.nWc5TV/` for their original inputs only.

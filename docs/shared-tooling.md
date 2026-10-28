@@ -2,31 +2,51 @@
 
 ## Current authority
 
-One [snapshot](../.shared-tooling.snapshot) records **133** canonical payloads
-from reviewed Shared Tooling **0.26.24**, revision
-`bd4d5541e388ca75e12509781711f1c6668db302`.
+One [snapshot](../.shared-tooling.snapshot) records **134** canonical payloads
+from reviewed Shared Tooling **0.27.2**, revision
+`7efce1e36275ff9e4bbbdd9ccab9a8d94520fd98`.
 Canonical impact/apply ran from a clean clone of that committed revision with
-the existing reviewed roots; exported files remain supplier-owned. The pending
-0.26.23 formatter adoption is retained. This refresh updates its helper and the
-staged-file hook, and adds the missing Node prerequisite guide through the
-declared governance closure. Node setup remains inactive.
+the existing reviewed roots; exported files remain supplier-owned. This refresh
+updates the Rust formatter and its interface guide, adding `RustSource.pm` as a
+declared companion. The hook fixture stages that module with its formatter.
+Balanced attribute inspection avoids treating unrelated later path text as a
+module override; actual redirects and incomplete syntax still disable reuse.
+Both driver and lexer participate in the input fingerprint.
+
+The latest revision derives formatting fixtures from explicit roots and their
+companion closure, including new helpers. Timers stages that copied closure
+without a second helper roster. The common fixture preparer now admits consumer
+directory names containing newlines while still validating relative payload paths.
+The source changelog's 0.27.3 section is pending; the snapshot version above comes
+from its committed `VERSION`, with the exact reviewed revision authoritative.
+
+Supplier dependency findings have one remediation issue at their canonical owner.
+Native compiler/system setup must precede Cargo-tool preparation; subsequent
+changes require explicit re-preparation. Timers' existing setup prepares Rust
+before common and selected Cargo tools, adds no later native installer, and
+retains offline admission. This refresh changes no executable catalog, tool
+fingerprint policy, release gate or product requirement.
+
+Shared's new stack diagram and optional daily refresh remain unselected; this
+adoption adds no scheduled command, diagram generator or dependency fetch. The
+existing Node prerequisite guide remains documentation without activating setup.
 
 The Rust formatter companion owns standard pass orchestration and progress.
 Timers already uses the root-workspace defaults, so it needs no custom
-adapter or extra workspace selection. The hook fixture stages the new helper and
-qualifies both timed passes, selected-file/index isolation and retained sorter
+adapter or extra workspace selection. The hook fixture stages the complete
+helper closure and qualifies both timed passes, selected-file/index isolation and retained sorter
 failures. Forced fixture passes use `FORMAT_RUST_ARGS=--no-cache`; normal callers
 can reuse unchanged successful inputs after prepared-tool admission. Isolated
 hook worktrees always execute their formatters. Shared owns the generic reuse
 and invalidation matrix; Timers retains its actual consumer/hook checks.
 
 Timers has no tracked submodules, standalone Rust formatter inputs or consumer
-of the optional runtime-scanner source. The new opaque-gitlink hook behavior and
+of the optional runtime-scanner source. Opaque-gitlink hook behavior and the
 standalone formatter interface need no local adapter, feature or dependency
 change. Scanner CLI dependencies and generic submodule/standalone fixtures remain
 with their upstream owner; they are not added to Timers' normal gates.
 
-The new gzip guidance names IC Host Artifacts as encoder owner. Timers has no
+The gzip guidance names IC Host Artifacts as encoder owner. Timers has no
 local application gzip implementation to migrate. Tool selections, release
 delivery and product validation gates remain unchanged. Broader governance
 guidance adds no general executable scanner or automatic audit.

@@ -170,6 +170,14 @@ Failed discovery, invalid output and missing subjects fail even if Cargo exits
 zero. Discovery executes no test bodies or simulator calls and shares the
 worker's existing elapsed-time/process-group budget.
 
+The required freeze/top-up subject raises the real freezing reserve above the
+observed positive balance, advances five minutes while frozen across an armed
+Watchdog's deadline, and requires a typed out-of-cycles rejection of a valid update. Only
+external funding and replica ticks may resume delivery and the next cadence;
+query observations cannot repair the timer. The threshold and module hash stay
+unchanged after freezing, and the post-upgrade reconstruction flag stays clear.
+This qualifies that armed-watchdog window, not all in-flight or policy cases.
+
 IC Build's published `WasmBuildEvidence` owns each acquired build, retained cache
 lease and input observation through measurement. Timers borrows its record to
 select exactly one artifact and populate the existing report context, then calls

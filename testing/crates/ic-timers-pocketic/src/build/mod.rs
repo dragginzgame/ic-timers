@@ -86,6 +86,7 @@ const REQUIRED_WATCHDOG_SUBJECTS: &[&str] = &[
     "tests::trapped_work_keeps_committed_successor_and_executor_is_private",
     "tests::instruction_exhaustion_leaves_successor_for_later_progress",
     "tests::insufficient_cycles_defer_due_work_until_top_up",
+    "tests::frozen_canister_resumes_overdue_timer_after_top_up_only",
     "tests::dispatch_response_trap_cleanup_preserves_pending_work_for_retry",
     "tests::ordinary_trap_before_await_retires_the_rolled_back_scheduled_delivery",
     "tests::ordinary_continuation_trap_retires_running_work_and_releases_expired_authority",

@@ -538,6 +538,13 @@ trap isolation, and rejection of external executor ingress. The testkit/PocketIC
 16 harness requires renewed execution of the full recovery and cohort gates;
 source review and verified artifact hashes do not qualify those behaviors.
 
+The focused freeze/top-up regression additionally exercises an armed Watchdog
+through a genuine positive-balance, five-minute freeze spanning its deadline.
+It requires automatic delivery and continued cadence after external funding,
+without an upgrade, threshold reset or timer repair call. Its Linux PocketIC
+16.1.0 evidence covers that window; other freeze/await interleavings and native
+macOS retain their own qualification requirements. See [SAFETY.md](SAFETY.md).
+
 ## Documentation map
 
 | Document | Purpose |
