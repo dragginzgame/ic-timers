@@ -2,6 +2,16 @@
 
 All notable changes to this project are recorded here.
 
+## [0.31.16]
+
+### 📦 Dependencies
+
+- Adopt published IC Platform 0.7.2 and Wire 0.7.19, preserving executor/ic0-only
+  library features, framed probe protocols and existing resource limits.
+- Adopt IC Build/Host/Testkit 0.69.6 and remove the temporary Build pin after
+  the upstream macOS source-inventory correction
+  ([IC Tooling #262](https://github.com/dragginzgame/ic-tooling/issues/262)).
+
 ## [0.31.15] - 2026-10-28
 
 ### 🧪 Tests

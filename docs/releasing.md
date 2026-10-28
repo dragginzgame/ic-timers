@@ -387,7 +387,12 @@ shared-server reuse or recovery guarantees.
 ## Dependency pin exceptions
 
 The reviewed [exception list](../ci/dependency-pinning-exceptions.json) is empty.
-Platform 0.6 owns the runtime and exact selections for executor `=2.0.0` and
+IC Tooling 0.69.6 fixes the macOS source-inventory mode regression tracked in
+[IC Tooling #262](https://github.com/dragginzgame/ic-tooling/issues/262); the
+temporary Build 0.69.4 pin is removed. The corrected owner retains native mode
+types until numeric JSON serialization. No consumer-local workaround is needed.
+
+Platform owns the runtime and exact selections for executor `=2.0.0` and
 IC0 `=1.2.0`; Timers declares none of these providers directly. The library
 selects only `executor` and `ic0`, while canister probes select `cdk` and its
 included `runtime` feature. The root

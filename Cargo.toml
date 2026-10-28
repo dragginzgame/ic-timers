@@ -28,19 +28,19 @@ categories = ["asynchronous", "wasm"]
 [workspace.dependencies]
 # Production dependencies
 ic-metrics = "0.16.3"
-ic-platform = { version = "0.7.1", default-features = false }
+ic-platform = { version = "0.7.2", default-features = false }
 thiserror = "2.0"
 
 # Tests and tooling only
 clap = { version = "4.6", default-features = false, features = ["std", "help", "usage", "error-context"] }
-ic-build = "0.69.4"
-ic-host-artifacts = "0.69.4"
-ic-host-fs = "0.69.4"
-ic-host-process = "0.69.4"
-ic-testkit = "0.69.4"
+ic-build = "0.69.6"
+ic-host-artifacts = "0.69.6"
+ic-host-fs = "0.69.6"
+ic-host-process = "0.69.6"
+ic-testkit = "0.69.6"
 ic-timers = { path = "crates/ic-timers" }
 ic-timers-test-protocol = { path = "testing/crates/ic-timers-test-protocol" }
-ic-wire = "0.7.18"
+ic-wire = "0.7.19"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
