@@ -6,105 +6,105 @@ Last updated: 2026-10-29
 
 ## Source and accepted work
 
-Local main is **0.31.16**, `a7ae6ae34f93c9a64daaf372149323e01bb7919d`.
-The maintainer requested latest published Wire, Metrics, Platform and IC Tooling.
-Only Cargo.lock was dirty on entry. Preserve its incoming AWS LC 1.19.0/sys
-0.47.0, Platform 0.7.4 and Wire 0.7.21 selections. This task updates the catalog
-and raises the incoming Metrics 0.16.7/Tooling 0.69.8 selections below.
-No staging, commits, pushes, package version mutation, release commands or sibling
-edits ran. Cargo package versions remain 0.31.16. The undated **0.32.0** draft is
-required because public Metrics Rust type identities change; this is not a patch.
+Local main is **0.32.0**, `8f2fdfd4fe0838c3e2c32b9e1e225c55ae238a8a`.
+The maintainer requested latest IC Tooling and Wire on top of the pending
+Platform/Metrics batch. Existing dirty work is preserved. The root catalog now
+selects Tooling **0.70.0** and Wire **0.7.22**. The incoming lock already had Wire
+0.7.22; bounded resolution replaces the incoming Tooling 0.69.14 family and drops
+its old Platform 0.7.6 dependency. Incoming Platform 0.8.1, Metrics 0.17.3 and
+unrelated versions remain unchanged. There is one undated **0.32.1** draft.
+Tooling's upstream minor affects unused ledger/Registry types, not Timers' public
+API; this remains a compatible patch. Cargo package versions stay 0.32.0.
+No staging, commits, pushes, release commands, package version mutation or sibling
+source edits ran.
 
 ## Published dependencies and ownership
 
-Official crates.io index records and checksum-verified archives establish the
-selected releases; Rust 1.91 remains supported. Evidence/source reviews are in
-`/tmp/ic-timers-deps-03117._b1jgizn/` (its scratch name predates minor selection).
+Official crates.io records verify the latest non-yanked stable selections at
+adoption. Checksum-verified archives, exact-revision notes and source comparisons
+are retained at `/tmp/ic-timers-tooling-wire.r_zgg1ky/`. Rust 1.91 is unchanged.
 
-| Owner | Catalog and resolved selection | Published source revision |
+| Owner | Selected release | Published source revision |
 | --- | --- | --- |
-| Metrics | **0.17.0** | `c45bb5acd680ab1933c98b1e7c9fcd966a11eaff` |
-| Platform and macros | **0.7.4** | `ca2ac1eb3b65a4e3adec2eb64f06bf942ca22af9` |
-| Wire and derive | **0.7.21** | `15c8b7ac881c008b2af0bd2c3d79502605a36d0d` |
-| Build, Host Artifacts/FS/Process, Testkit | **0.69.9** | `ce660e30e20ec407baf446fc7c4f2b7587779761` |
+| Build, Host Artifacts/FS/Process, Testkit | **0.70.0** | `ecc8d61d19f0b711788f7e10e5dd728d0db6ff60` |
+| Wire and derive | **0.7.22** | `ac08fdc1757b7d3f1483caecadd7ac1c817a30d8` |
 
-The library still directly selects only Metrics, Thiserror and Platform
-`executor`/`ic0`. Metrics 0.17 makes validated Serde transport mandatory, plus
-Wire TypeScript metadata on native hosts. Counter, aggregate and summary
-arithmetic source remains unchanged from the previously selected 0.16.3.
-Consumers exchanging those public types with direct Metrics dependencies must
-select 0.17; no local aliases or compatibility path were added. Optional heap
-recording is unselected. Storage/memory remain out of scope.
+Tooling 0.70 adopts published Platform 0.8.1. Its ledger and Registry types have
+new Platform-owned Rust identities, but Timers uses neither capability. The used
+Tooling Rust source trees are unchanged from 0.69.14, and Wire's runtime and
+macro source trees are byte-identical to 0.7.21. No caller, codec limit, frame,
+error contract, callback, trap, lifecycle or internal eight-byte dispatch change
+was needed. No compatibility alias, local wrapper or policy relaxation was added.
 
-Graph policy now admits Metrics' Serde and native Wire path while retaining
-Wasm exclusion of Wire/Postcard/JSON parsing and the native coordinator's codec
-and simulator exclusions. Existing dev-only library Wire use remains admitted;
-renamed target/build dependencies and Platform feature leaks remain rejected.
-A new real-Cargo negative fixture covers JSON leakage after Serde admission.
-Deployment probe graphs also contain no JSON parser. The library and probes
-remain Candid/full-CDK-free. Candid 0.10.39 remains in the native test worker's
-PocketIC transport graph. Executor **2.0.0** and ic0 **1.2.0** remain singular
-Platform-owned identities. Platform's selected CDK/executor/IC0 implementations
-and Wire derive implementation are unchanged; the eight-byte internal dispatch,
-framed probe protocols, resource limits and callback/trap contracts remain intact.
+The complete locked workspace now resolves **one Platform 0.8.1**, including the
+native test worker. The old Platform 0.7.6 package is removed. Executor **2.0.0**,
+ic0 **1.2.0**, PocketIC **16.1.0** and external Principal **0.1.5** remain singular
+identities. The library selects only Platform `executor`/`ic0`; probes use `cdk`
+with owned Principal. Deployed probes exclude external Principal, SHA-2/digest,
+Candid and JSON parsing. The Wasm library also excludes Wire/Postcard and host
+tooling. Native Testkit explicitly selects external conversions for its existing
+client API; it introduces no deployed timer authority.
 
-Tooling 0.69.9's complete baseline-snapshot restoration fix is supplier-owned;
-Timers uses fresh Testkit instances, not custom snapshot recipes. The canonical
-editor/Testkit setup and offline admission select 0.69.9; Testkit still owns
-server **16.1.0**. The Build 0.69.6 macOS mode correction is retained, with no
-local workaround or exact-pin exception. Shared **0.27.3** is unchanged; this
-request selected IC Tooling. Thiserror remains **2.0.18**.
+[IC Tooling #267 — Adopt Platform 0.8 in Testkit](https://github.com/dragginzgame/ic-tooling/issues/267)
+has a published supplier correction and fresh Timers consumer proof posted.
+It was still open at the last read; no issue state was changed. Supplier closure
+uses its own qualification, not a consumer publication/acknowledgement gate.
+There is no remaining local duplicate-Platform adoption blocker.
 
-## Earlier issue handoff (not re-triaged during this adoption)
+Canonical editor/Testkit setup and offline admission select **0.70.0**. Testkit
+continues to own server 16.1.0 admission and fresh-instance lifecycle. Metrics'
+catalog minimum remains **0.17.2**, resolving incoming **0.17.3**; its Rust source
+is unchanged from 0.17.2. Required Serde and native Wire metadata remain, with
+recording unselected and no Logging package. Thiserror **2.0.18** and Shared
+**0.27.3** are unchanged. Candid **0.10.39** remains in the native PocketIC control
+graph only; the normal coordinator excludes codecs and simulator capabilities.
+Storage/memory remain out of scope.
 
-- **#77 is closed**: 0.31.15 delivered the required installed queued-scheduler
-  stop/restart regression. Fresh qualification on the final graph passes all six
-  initial/successor and owner-mode trajectories, preserving registration identity,
-  completed work and unacknowledged state. Earlier causal negative control remains
-  at `/tmp/ic-timers-scheduler-pressure.YxSpot/`. Scheduler-body normal return is
-  still the protocol assumption; arbitrary traps/permanently live futures are not
-  qualified. This closure grants no uncertain-effect replay authority.
-- **#78/#80 are closed**: global-timer conflict detection and the application-call
-  ownership boundary are delivered. Detection retains its documented limitations.
-- **#79 remains open** for Canic consumer delivery. Its ingress/cancellation patch
-  is prepared and qualified at `/tmp/ic-timers-backlog-03114.GlZdEf/canic` with
-  `canic-code.patch` in the parent directory. Original Canic main is still
-  `5c236ab130c0d63892ef281b45bdc3fa353e012f`; its dirty working checkout was untouched.
-  Canic #695 likewise awaits delivery; #688/#689 were already closed.
-- **Canic #700's supply blocker is resolved**: published **ic-call 0.7.2** owns
-  dynamic method/argument custody over Platform 0.7.2. A registry-only standalone
-  witness passes Rust 1.91 native execution and Wasm compilation, with singular
-  Platform/executor/ic0 and no Candid/full CDK. It is not added below Timers.
-  The public Call/CallBuilder/CallResult retirement is a breaking minor; Canic's
-  delivery-cadence Human Minor Closeout Gate requires a maintainer-requested and
-  accepted 0.112 closeout before next-minor implementation. This exact blocker
-  and the witness are recorded on #700. Platform #75 also records publication
-  and its migration document's stale unpublished-supplier sentence. No new
-  compatibility builder or mirror waiting issue was introduced.
+## Issue delivery and next work
 
-## Current qualification
+The previous live triage found only Timers **#79** open and no open PRs; this
+adoption did not change issue state. Its Timers predicate and installed proof
+are delivered. Canic's prepared inspector integration is still a separate
+consumer delivery, not grounds for another Timers implementation.
 
-Evidence: `/tmp/ic-timers-deps-03117._b1jgizn/`. Passes: locked/offline metadata;
-strict Rust 1.91 library/runtime-probe/protocol/coordinator Clippy; six Metrics
-forwarding/overflow/role tests; wide completed/stale snapshot integration;
-all three build-owner native tests; library-only MSRV Wasm; canonical editor and
-Testkit setup/admission; version preflight/rollback/dirty-worktree preparation;
-formatting; direct IC/pin/provider checks; native/Wasm transitive/feature/provider
-identity exclusions; updated positive/negative dependency fixtures; changelog and
-diff checks. The library/probe target trees separately confirm no Wasm JSON,
-PocketIC or Candid paths. No product runtime implementation changed.
+- **#77/#78/#80 are closed**: queued-scheduler repair evidence, global-timer
+  conflict detection and application-call ownership are delivered. Scheduler-body
+  normal return remains the protocol assumption; arbitrary scheduler traps or
+  permanently live futures remain unqualified. No uncertain-effect replay is
+  authorized. Causal stop/restart evidence remains at
+  `/tmp/ic-timers-scheduler-pressure.YxSpot/`.
+- **#79 / Canic #695**: prepared ingress/cancellation work remains at
+  `/tmp/ic-timers-backlog-03114.GlZdEf/canic`, with `canic-code.patch` in the parent.
+  The original sibling working checkout remains untouched. The last live Canic
+  main inspection still lacked these changes; do not close before delivery.
+- **Canic #700**: published `ic-call` 0.7.2 resolves its supply blocker, with an
+  existing Rust 1.91 native/Wasm witness. The public Call/CallBuilder/CallResult
+  retirement remains a Canic breaking minor, subject to its maintainer-requested
+  and accepted 0.112 Human Minor Closeout Gate. The blocker and proof are recorded
+  on #700. Platform #75 owns its remaining migration-document follow-up.
 
-A disposable registry-only Build 0.69.9 consumer built the actual optimized runtime
-probe and held its evidence through four installed PocketIC subjects: all six
-queued-scheduler stop/restart trajectories, malformed Wire admission,
-ingress/foreign-call authentication and response-trap cleanup. All passed;
-source/build evidence remained current throughout. Retained Wasm SHA-256:
-`6531c5535241a7afcfb987c61168434d3c504469ecc73ad2a05f2664deea9424`.
-The first temporary witness attempt lacked its diagnostics parent and stopped
-before server startup; its failure is retained separately. Creating that scratch
-directory fixed the witness; no repository behavior was changed for the retry.
+## Qualification
 
-Fresh native macOS, full local release/cohort gates and live IC were not run.
-The retained focused evidence does not replace normal maintainer-operated
-release and host requirements. Older evidence retains its original source/graph
-scope at the paths recorded in previous handoffs.
+Current evidence: `/tmp/ic-timers-tooling-wire.r_zgg1ky/`.
+Passes: locked/offline metadata and explicit one-Platform assertion; strict Rust
+1.91 library/runtime-probe/protocol/coordinator Clippy; three native build-owner
+tests; library-only MSRV Wasm; canonical editor/Testkit setup/admission; actual
+version preflight/rollback/dirty-worktree preparation; formatting; pin and direct
+IC checks; all native/Wasm library/probe/protocol/coordinator dependency, feature
+and identity exclusions; real-Cargo positive/negative boundary fixtures;
+changelog admission and diff checks. Unrelated incoming versions and the root
+package version are preserved. No product runtime implementation changed.
+
+A disposable registry-only Build 0.70.0 consumer built the actual optimized probe
+and held its evidence through four installed PocketIC subjects: all six
+queued-scheduler stop/restart trajectories, malformed Wire admission/typed errors,
+ingress/foreign-call authentication and response-trap cleanup. Each subject ran
+and passed, and source/build evidence remained current throughout. Retained Wasm
+SHA-256: `9cbebccf720df2bf50286b9775732df8068dad03f2b0ea80152482a97054c310`.
+
+Released 0.32.0's [CI](https://github.com/dragginzgame/ic-timers/actions/runs/40839164860)
+passed Linux, MSRV and both native macOS jobs on its older supplier graph. Fresh
+native macOS, full local release/cohort gates and live IC were not run for this
+adoption. Preserve normal maintainer-operated release and host requirements.
+Earlier evidence at `/tmp/ic-timers-platform.kwzduv0m/` retains its original
+Tooling 0.69.14 / two-Platform graph scope.

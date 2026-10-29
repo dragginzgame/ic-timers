@@ -2,6 +2,18 @@
 
 All notable changes to this project are recorded here.
 
+## [0.32.1]
+
+### 📦 Dependencies
+
+- Adopt published Metrics 0.17.2, Platform 0.8.1, Wire 0.7.22 and
+  IC Build/Host/Testkit 0.70.0, preserving timer APIs, measurement arithmetic,
+  executor/IC0 identities, probe protocols and dependency boundaries.
+- Keep deployed probe runtimes free of external Principal and hashing
+  dependencies through Platform's owned Principal boundary. Native Testkit now
+  shares Platform 0.8, removing the older 0.7 dependency
+  ([IC Tooling #267 — Adopt Platform 0.8 in Testkit](https://github.com/dragginzgame/ic-tooling/issues/267)).
+
 ## [0.32.0] - 2026-10-29
 
 ### ⚠️ Breaking

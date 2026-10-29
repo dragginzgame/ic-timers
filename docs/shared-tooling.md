@@ -201,14 +201,18 @@ Testkit and the probe protocol serve qualification packages here.
 Candid remains transitive only in the native driver through PocketIC/Testkit. Local probe protocols use Wire; Platform's `cdk`
 feature and both canister graphs are Candid-free. Full CDK/macros and the retired
 Testkit Candid adapter are absent from the workspace graph.
-The driver test binary and Testkit share Platform 0.7; the driver selects
-`pocket-ic` explicitly for direct client imports, including Principal support.
+The driver test binary and Testkit share Platform 0.8. The driver selects
+`pocket-ic` for direct client imports, including external Principal support.
+Both use the same upstream PocketIC and external Principal identities; the
+older native Platform 0.7 dependency is removed.
 Testkit's native provider fixtures also select Platform's Candid/management
 support; those features remain excluded from deployed library and probe graphs. Its
 normal coordinator excludes Platform, Testkit, Wire and the probe protocol;
 they are dev-dependencies used by the maintained integration tests. The library
 and canister graphs exclude native simulator features. Build, Host and Testkit
-share the 0.69.9 family, with no older parallel Host or Platform provider.
+share the family selected by the root lockfile, with no older parallel Host or
+Platform.
+Deployed roots have one Platform, executor and IC0 provider each.
 The catalog's
 local `ic-timers` entry is the probes' dependency on the production library.
 The coordinator uses published Host FS for baseline alias admission and

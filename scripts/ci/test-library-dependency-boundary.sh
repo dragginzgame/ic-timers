@@ -100,6 +100,17 @@ if bash "$checker" > probe-failure.log 2>&1; then
 fi
 grep -q 'forbidden candid' probe-failure.log
 reset_manifests
+
+# Raw entrypoint probes use owned Principal bytes; only native external clients
+# may select the separate registry conversion capability introduced in Platform 0.8.
+perl -pi -e 's/\["cdk"\]/["cdk", "principal-external"]/' testing/crates/ic-timers-runtime-probe/Cargo.toml
+RUSTUP_AUTO_INSTALL=0 cargo tree --offline -p ic-timers-runtime-probe --target wasm32-unknown-unknown > /dev/null
+if bash "$checker" > probe-external-failure.log 2>&1; then
+    echo 'error: canister probe admitted external Principal conversions' >&2
+    exit 1
+fi
+grep -q 'forbidden dependency feature edge: ic-platform/principal-external' probe-external-failure.log
+reset_manifests
 cat >> testing/crates/ic-timers-test-protocol/Cargo.toml <<'EOF'
 
 [build-dependencies]

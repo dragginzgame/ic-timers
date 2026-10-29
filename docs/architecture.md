@@ -69,7 +69,7 @@ The root catalog disables default Platform features. The library selects only
 `executor` and `ic0`; the two canister probes select `cdk` (including its new
 `runtime` feature) for entrypoint contexts,
 protected calls/spawning, traps, cycle burning and stable byte I/O. The native
-harness selects `pocket-ic` explicitly, including Principal support, and uses
+harness selects `pocket-ic` explicitly, including `principal-external`, and uses
 `principal::ExternalPrincipal`
 for PocketIC's external API identity. The protocol package has no Platform edge.
 Parser, Agent, certification and ledger capabilities remain unselected.
@@ -83,7 +83,8 @@ selection remains executor/system-only, excluding Principal/Account, SHA-2, text
 encoding and Candid. Metrics 0.17 owns required Serde numeric transport and
 native Wire metadata. The Wasm library excludes Wire, Postcard, JSON parsing and
 host tooling; Timers declares no direct codec dependency. Probe entrypoint/runtime
-features imply `principal`, retaining their existing identities and behavior.
+features imply owned `principal`, excluding the external Principal and hashing
+dependencies. Byte representations and behavior are retained.
 None of those identities cross the published timer API or probe wire records;
 this adoption changes no stored data or codec representation.
 
@@ -136,12 +137,17 @@ implementation details. The retired `ic-testkit-candid` package remains absent.
 The driver selects Platform, Testkit, Wire and the probe protocol only for its
 test binary. Its normal build coordinator uses Build and Host for artifacts and
 process custody, plus Clap/Serde/JSON for commands and receipts. It does not link
-the simulator or codecs. Build, Host and Testkit share published 0.69.9;
-the driver and Testkit select the same Platform 0.7.4 identity. The selected
-Testkit also selects Platform's Candid/management support for native provider
+the simulator or codecs. Build, Host and Testkit share the published family
+selected by the root lockfile. The driver and Testkit share Platform 0.8,
+including the same external Principal and PocketIC package identities. Tooling
+0.70 removes the older native Platform 0.7 dependency requested in
+[IC Tooling #267 — Adopt Platform 0.8 in Testkit](https://github.com/dragginzgame/ic-tooling/issues/267).
+Timers passes external client types across the test boundary, not owned
+Principal values.
+Testkit also selects Candid/management support for native provider
 fixtures; PocketIC retains Candid for its simulator protocols. These are native
 qualification dependencies. Independent library and canister graphs
-remain Candid-free and share that Platform identity.
+remain Candid-free and select only Platform 0.8.
 These host-only providers do not enter deployed graphs; there is no unpublished
 override.
 The local provider check also rejects Candid codec paths and default-codec
