@@ -73,7 +73,7 @@ perl -pi -e 's/"executor", "ic0"/"executor", "ic0", "principal"/' crates/ic-time
 if bash "$checker" > principal-failure.log 2>&1; then
     echo 'error: library admitted Platform Principal support' >&2; exit 1
 fi
-grep -Eq 'forbidden (ic_principal|serde|serde_core|serde_derive|sha2|digest|crc32fast|data-encoding)' principal-failure.log
+grep -Eq 'forbidden (ic_principal|sha2|digest|crc32fast|data-encoding)' principal-failure.log
 reset_manifests
 
 # Runtime APIs belong only to entrypoint-owning probes; the published library
@@ -149,6 +149,20 @@ ic-wire.workspace = true
 EOF
 RUSTUP_AUTO_INSTALL=0 cargo tree --offline -p ic-timers --target wasm32-unknown-unknown > /dev/null
 bash "$checker"
+reset_manifests
+
+# Metrics' required Serde transport must not admit host JSON parsing into Wasm.
+cat >> crates/ic-timers/Cargo.toml <<'EOF'
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+serde_json.workspace = true
+EOF
+RUSTUP_AUTO_INSTALL=0 cargo tree --offline -p ic-timers --target wasm32-unknown-unknown > /dev/null
+if bash "$checker" > json-failure.log 2>&1; then
+    echo 'error: library admitted JSON parsing into Wasm' >&2
+    exit 1
+fi
+grep -q 'forbidden serde_json' json-failure.log
 reset_manifests
 
 # Relay owns application delivery above Timers. A canonical-name check must also

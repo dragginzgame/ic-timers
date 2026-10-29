@@ -2,6 +2,20 @@
 
 All notable changes to this project are recorded here.
 
+## [0.32.0]
+
+### ⚠️ Breaking
+
+- Adopt Metrics 0.17 for the public measurement counters and summaries. Consumers
+  exchanging these types with a direct Metrics dependency must select its 0.17
+  line. Serde transport is now required; native builds include Metrics-owned Wire
+  metadata, while the Wasm timer library remains Wire- and Candid-free.
+
+### 📦 Dependencies
+
+- Adopt published Platform 0.7.4, Wire 0.7.21 and IC Build/Host/Testkit 0.69.9.
+  Preserve the executor/IC0 identities, timer dispatch and framed probe protocols.
+
 ## [0.31.16] - 2026-10-28
 
 ### 📦 Dependencies

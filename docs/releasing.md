@@ -255,7 +255,7 @@ retention. Artifact upload alone does not qualify a failed or cancelled job.
 Changed dependencies or tools require an explicitly reviewed new baseline; there is no automatic rewrite or cross-context
 comparison. Deltas are review evidence, not an arbitrary performance pass/fail
 budget. Whole-message and unaccounted instruction totals remain unavailable;
-cycle costs are not converted to instructions. Build 0.68's published
+cycle costs are not converted to instructions. Build's published
 `recipe_identity()` supplies the source-independent configuration admission
 requested in [Build #241](https://github.com/dragginzgame/ic-tooling/issues/241).
 It covers observed compiler/Cargo identities, package/example/target/profile,
@@ -313,8 +313,11 @@ cargo tree --locked --offline -p ic-timers --all-features \
 `actions-check` runs the dependency policy for the library, both probes and the
 protocol on Wasm and the actual native Rust host, with all features and
 normal/build edges. It rejects Candid, full CDK, host tooling and unsupported Platform features in
-runtime roots; the library excludes probe/Wire packages and the protocol excludes
-runtime authority. A native coordinator check also rejects Platform, Testkit,
+runtime roots; the library excludes probe packages and the protocol excludes
+runtime authority. Metrics supplies Serde on both targets and Wire metadata only
+on the native host. The Wasm library excludes Wire, Postcard and JSON parsing;
+Timers itself retains no direct library codec dependency.
+A native coordinator check also rejects Platform, Testkit,
 PocketIC, Candid, Wire and runtime/protocol packages on its normal/build edges;
 their dev-only use remains admitted. It delegates graph mechanics to Shared,
 and requires the qualified executor/IC0 identities. The separate Shared direct

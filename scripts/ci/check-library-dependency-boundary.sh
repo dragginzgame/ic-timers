@@ -46,9 +46,15 @@ for my $target ('wasm32-unknown-unknown', $host) {
         }
         push @check, '--forbid-pattern', '^ic-(?:build(?:-|$)|host-|testkit(?:-|$))';
         if ($library) {
-            push @check, '--forbid-pattern', '^ic-(?:wire(?:-|$)|timers-)';
+            push @check, '--forbid-pattern', '^ic-timers-';
+            # Metrics owns required Serde transport and native Wire metadata.
+            # Neither its host codecs nor host parsing belong in deployed Wasm.
+            if ($target eq 'wasm32-unknown-unknown') {
+                push @check, '--forbid-pattern', '^ic-wire(?:-|$)';
+                push @check, map { ('--forbid', $_) } qw(serde_json serde_bytes postcard);
+            }
             push @check, map { ('--forbid', $_) }
-                qw(ic-relay ic_principal serde serde_core serde_derive sha2 digest crc32fast data-encoding);
+                qw(ic-relay ic_principal sha2 digest crc32fast data-encoding);
         }
         if ($protocol) {
             push @check, map { ('--forbid', $_) } qw(ic-platform ic-timers ic-cdk-executor ic0);

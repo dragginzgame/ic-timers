@@ -192,28 +192,29 @@ The [root manifest](../Cargo.toml) separates `Production packages` from
 There is still one catalog and lockfile; member dependency tables determine
 actual use through `workspace = true`.
 
-The published `ic-timers` library uses Metrics, Thiserror and Platform
-(executor and raw IC system bindings). Serde is qualification-only and belongs
-in the tests/tooling catalog group; the library's lean Platform graph excludes it.
-Wire, Platform's canister runtime, Build, Host FS/Process, Testkit and the probe protocol serve
-qualification packages here.
-Candid remains transitive only in the native driver through PocketIC/Testkit. Local probe protocols use Wire; Platform 0.6's `cdk`
+The published `ic-timers` library directly uses Metrics, Thiserror and Platform
+(executor and raw IC system bindings). Metrics 0.17 supplies required Serde
+transport and native-only Wire metadata transitively. The catalog's direct Serde
+and Wire entries serve qualification packages; the deployed Wasm library has
+neither Wire nor JSON parsing. Platform's canister runtime, Build, Host FS/Process,
+Testkit and the probe protocol serve qualification packages here.
+Candid remains transitive only in the native driver through PocketIC/Testkit. Local probe protocols use Wire; Platform's `cdk`
 feature and both canister graphs are Candid-free. Full CDK/macros and the retired
 Testkit Candid adapter are absent from the workspace graph.
-The driver test binary and Testkit 0.68 share Platform 0.6; the driver selects
+The driver test binary and Testkit share Platform 0.7; the driver selects
 `pocket-ic` explicitly for direct client imports, including Principal support.
 Testkit's native provider fixtures also select Platform's Candid/management
 support; those features remain excluded from deployed library and probe graphs. Its
 normal coordinator excludes Platform, Testkit, Wire and the probe protocol;
 they are dev-dependencies used by the maintained integration tests. The library
 and canister graphs exclude native simulator features. Build, Host and Testkit
-share the 0.68 family, with no older parallel Host or Platform provider.
+share the 0.69.9 family, with no older parallel Host or Platform provider.
 The catalog's
 local `ic-timers` entry is the probes' dependency on the production library.
-The coordinator uses published Host FS 0.68.7 for baseline alias admission and
+The coordinator uses published Host FS for baseline alias admission and
 atomic report publication; its test-support feature is dev-only. Testkit's `wire`
 feature is also dev-only and supplies native typed call handling. No new resolved
-package identity is introduced by these explicit edges.
+package identity is introduced by these explicit tooling edges.
 
 Shared's Make defaults select `cargo sort --workspace --grouped` for formatting
 and add `--check` for independent checks; the duplicate local overrides are removed. Hooks use the same `make fmt` policy
@@ -291,7 +292,7 @@ optional renamed target/build Principal edge absent from the local list. The
 local list remains an input to deployment graph checks, so its overlapping
 entries are retained for that independent purpose. It also forbids direct Candid/CDK-family,
 Platform macro-helper, retired Testkit decoder, IC0 and executor declarations in
-every member. Platform 0.6 owns generator/runtime paths, raw stable passthroughs and
+every member. Platform owns generator/runtime paths, raw stable passthroughs and
 exact upstream selections. There are no consumer exceptions. See the
 [published boundary](architecture.md#candid-and-cdk-dependency-boundary).
 The checker resolves aliases through Cargo metadata and
@@ -302,7 +303,10 @@ there are no maintained independent Cargo fixtures or manifests.
 Shared's `check-cargo-graph.pl` for the library, both canister probes and the
 protocol package, independently for Wasm and the actual Rust host. Library and
 probe graphs exclude Candid, full CDK and host tooling. The library additionally
-excludes Wire/probe packages, Principal, Serde, SHA-2/digest and text dependencies.
+excludes probe packages, Principal, SHA-2/digest and text dependencies. Serde
+belongs to Metrics' required numeric transport. Wire metadata is native-only;
+the Wasm library additionally excludes Wire, Postcard and JSON parsing. Timers
+retains no direct library codec dependency.
 The protocol excludes Platform and timer authority. Platform may select only
 executor/IC0 for the library, plus `cdk`/`runtime`/`principal` for probes.
 The checker derives forbidden feature names from the selected Platform catalog
@@ -311,7 +315,8 @@ successful-metadata admission of one registry executor 2.0.0 and IC0 1.2.0.
 Shared identity counts supplement rather than replace those source/version checks.
 
 Real-Cargo consumer fixtures cover Principal/Candid/default feature leakage, renamed target
-and build dependencies, protocol authority exclusion, permitted dev-only Wire and
+and build dependencies, protocol authority exclusion, permitted dev-only Wire,
+Wasm JSON rejection and
 same-version executor source replacement. Shared owns generic parser and failed-
 producer fixtures; those are no longer repeated here. Source symlink checks run
 in `actions-check`; package verification admits the prepared archive's license.

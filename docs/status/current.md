@@ -2,65 +2,60 @@
 
 # Current status
 
-Last updated: 2026-10-28
+Last updated: 2026-10-29
 
 ## Source and accepted work
 
-Verified remote/local main: **0.31.15**, `4a77ac185bf71489efcbc60ed9be15bea2a19c05`.
-The maintainer requested latest Platform/Wire and IC Tooling adoption, plus
-continued issue work.
-The existing Platform/Wire adoption and supplier selections are preserved.
-The Tooling-fix follow-up raises all five Tooling catalog minimums to **0.69.6**;
-its sole additional lock change is Build 0.69.4 → 0.69.6. The incoming lock's
-Platform 0.7.3 and Host/Testkit 0.69.6 selections remain intact. Cargo package
-versions remain 0.31.15; the undated **0.31.16** draft covers this batch. No staging,
-commits, pushes, package version mutation, release commands or sibling source
-edits ran.
+Local main is **0.31.16**, `a7ae6ae34f93c9a64daaf372149323e01bb7919d`.
+The maintainer requested latest published Wire, Metrics, Platform and IC Tooling.
+Only Cargo.lock was dirty on entry. Preserve its incoming AWS LC 1.19.0/sys
+0.47.0, Platform 0.7.4 and Wire 0.7.21 selections. This task updates the catalog
+and raises the incoming Metrics 0.16.7/Tooling 0.69.8 selections below.
+No staging, commits, pushes, package version mutation, release commands or sibling
+edits ran. Cargo package versions remain 0.31.16. The undated **0.32.0** draft is
+required because public Metrics Rust type identities change; this is not a patch.
 
-## Published dependencies and boundary
+## Published dependencies and ownership
 
-Root catalog minimums are **Platform 0.7.2** and **Wire 0.7.19**, including
-matching macros. The incoming lock now resolves Platform **0.7.3** and Wire
-**0.7.19**; those selections are preserved. The selected Platform CDK source is
-unchanged from 0.7.2. The earlier Platform/Wire publication/source review remains
-in `/tmp/ic-timers-platform-wire-03116.PlTAOv/` with its original graph scope.
+Official crates.io index records and checksum-verified archives establish the
+selected releases; Rust 1.91 remains supported. Evidence/source reviews are in
+`/tmp/ic-timers-deps-03117._b1jgizn/` (its scratch name predates minor selection).
 
-The library still selects only Platform `executor`/`ic0`; both selected source
-subtrees, runtime adapters and entrypoint macro bodies are unchanged from 0.7.1.
-Wire adds caller-slice/payload APIs and metadata improvements; existing framed
-codec bodies, probe method identities and resource limits remain unchanged.
-No local wrapper, new application call dependency or codec migration was added.
-The library and both Wasm probes remain Candid/full-CDK-free. Executor **2.0.0**
-and ic0 **1.2.0** remain singular transitive Platform-owned identities. Candid
-**0.10.39** remains in the native test worker's external PocketIC/control graph;
-the normal build coordinator excludes it. Storage/memory remain out of scope.
+| Owner | Catalog and resolved selection | Published source revision |
+| --- | --- | --- |
+| Metrics | **0.17.0** | `c45bb5acd680ab1933c98b1e7c9fcd966a11eaff` |
+| Platform and macros | **0.7.4** | `ca2ac1eb3b65a4e3adec2eb64f06bf942ca22af9` |
+| Wire and derive | **0.7.21** | `15c8b7ac881c008b2af0bd2c3d79502605a36d0d` |
+| Build, Host Artifacts/FS/Process, Testkit | **0.69.9** | `ce660e30e20ec407baf446fc7c4f2b7587779761` |
 
-Shared **0.27.3** (`7ee5c83744aa822ecd070703dbf0a7d95076d5f6`) is unchanged.
-Metrics stays **0.16.3**, PocketIC **16.1.0** and Thiserror **2.0.18**.
-Official crates.io sparse-index records verify **0.69.6** is the highest
-non-yanked stable release for all five used Tooling packages: Build,
-Host Artifacts/FS/Process and Testkit. Their archives/checksums and source
-revision `cba072ee8fe288eb92bb4a4ddf9753b8abc4b580` were inspected. Rust 1.91
-remains supported. No unpublished supplier checkout is selected.
+The library still directly selects only Metrics, Thiserror and Platform
+`executor`/`ic0`. Metrics 0.17 makes validated Serde transport mandatory, plus
+Wire TypeScript metadata on native hosts. Counter, aggregate and summary
+arithmetic source remains unchanged from the previously selected 0.16.3.
+Consumers exchanging those public types with direct Metrics dependencies must
+select 0.17; no local aliases or compatibility path were added. Optional heap
+recording is unselected. Storage/memory remain out of scope.
 
-## macOS source-inventory correction
+Graph policy now admits Metrics' Serde and native Wire path while retaining
+Wasm exclusion of Wire/Postcard/JSON parsing and the native coordinator's codec
+and simulator exclusions. Existing dev-only library Wire use remains admitted;
+renamed target/build dependencies and Platform feature leaks remain rejected.
+A new real-Cargo negative fixture covers JSON leakage after Serde admission.
+Deployment probe graphs also contain no JSON parser. The library and probes
+remain Candid/full-CDK-free. Candid 0.10.39 remains in the native test worker's
+PocketIC transport graph. Executor **2.0.0** and ic0 **1.2.0** remain singular
+Platform-owned identities. Platform's selected CDK/executor/IC0 implementations
+and Wire derive implementation are unchanged; the eight-byte internal dispatch,
+framed probe protocols, resource limits and callback/trap contracts remain intact.
 
-Main CI [40681579067](https://github.com/dragginzgame/ic-timers/actions/runs/40681579067)
-passed Linux checks/MSRV but failed both macOS tool-preparation jobs: released
-Build 0.69.5 put Darwin u16 mode bits into a u32 source record (E0308).
-Canonical owner: [IC Tooling #262](https://github.com/dragginzgame/ic-tooling/issues/262).
+Tooling 0.69.9's complete baseline-snapshot restoration fix is supplier-owned;
+Timers uses fresh Testkit instances, not custom snapshot recipes. The canonical
+editor/Testkit setup and offline admission select 0.69.9; Testkit still owns
+server **16.1.0**. The Build 0.69.6 macOS mode correction is retained, with no
+local workaround or exact-pin exception. Shared **0.27.3** is unchanged; this
+request selected IC Tooling. Thiserror remains **2.0.18**.
 
-Published **0.69.6** retains the native `Mode` through inventory creation and
-converts its bits only at numeric JSON serialization, preserving the permission
-mask and stored shape. The temporary Build 0.69.4 exact pin and its exception
-are removed; the reviewed exception list is empty again. No local cast, fork
-or weaker host gate was introduced. The selected 0.69.6 release editor passes
-explicit setup/admission and the actual Timers preparation fixture. Testkit
-0.69.6 retains server 16.1.0 and the canonical setup/check path.
-Fresh native macOS execution remains unverified locally; Linux checks do not
-qualify either required macOS host.
-
-## Issue delivery and next work
+## Earlier issue handoff (not re-triaged during this adoption)
 
 - **#77 is closed**: 0.31.15 delivered the required installed queued-scheduler
   stop/restart regression. Fresh qualification on the final graph passes all six
@@ -89,25 +84,27 @@ qualify either required macOS host.
 
 ## Current qualification
 
-Current Tooling evidence: `/tmp/ic-timers-tooling-fix-03116.OVRUJz/`.
-Passes: Rust 1.91 locked/offline metadata; strict coordinator Clippy; all three
-build-owner native tests; canonical editor/Testkit setup and admission;
-version preflight/rollback/dirty-worktree preparation; formatting; dependency
-pin checks; direct Candid/CDK boundary and library/probe/protocol/coordinator
-transitive feature/identity exclusions; changelog admission and diff checks.
+Evidence: `/tmp/ic-timers-deps-03117._b1jgizn/`. Passes: locked/offline metadata;
+strict Rust 1.91 library/runtime-probe/protocol/coordinator Clippy; six Metrics
+forwarding/overflow/role tests; wide completed/stale snapshot integration;
+all three build-owner native tests; library-only MSRV Wasm; canonical editor and
+Testkit setup/admission; version preflight/rollback/dirty-worktree preparation;
+formatting; direct IC/pin/provider checks; native/Wasm transitive/feature/provider
+identity exclusions; updated positive/negative dependency fixtures; changelog and
+diff checks. The library/probe target trees separately confirm no Wasm JSON,
+PocketIC or Candid paths. No product runtime implementation changed.
 
-A disposable registry-only Build 0.69.6 consumer built the actual optimized
-runtime probe with Rust 1.91 and retained its build evidence through four
-installed PocketIC subjects: all six scheduler recovery trajectories, malformed
-Wire admission, ingress/foreign-call authentication and response-trap cleanup.
-All four passed and source/build evidence remained current throughout.
-Retained optimized Wasm SHA-256:
-`48d8b7f4800d89b9bff4595b3b14ab56b4af04b94b4a38e3b6f0b0917979274a`.
-Testkit 0.69.6 owns the admitted server; Platform 0.7.3/Wire 0.7.19 are the
-resolved probe graph. The disposable witness is evidence, not a new maintained
-integration or alternate build owner.
+A disposable registry-only Build 0.69.9 consumer built the actual optimized runtime
+probe and held its evidence through four installed PocketIC subjects: all six
+queued-scheduler stop/restart trajectories, malformed Wire admission,
+ingress/foreign-call authentication and response-trap cleanup. All passed;
+source/build evidence remained current throughout. Retained Wasm SHA-256:
+`6531c5535241a7afcfb987c61168434d3c504469ecc73ad2a05f2664deea9424`.
+The first temporary witness attempt lacked its diagnostics parent and stopped
+before server startup; its failure is retained separately. Creating that scratch
+directory fixed the witness; no repository behavior was changed for the retry.
 
-Earlier library/probe/protocol strict lint and library-only MSRV Wasm evidence
-remain at `/tmp/ic-timers-platform-wire-03116.PlTAOv/` with their original
-Platform 0.7.2 graph scope. Native macOS, full local release gates and live IC
-were not rerun. Preserve all normal maintainer-operated release/host requirements.
+Fresh native macOS, full local release/cohort gates and live IC were not run.
+The retained focused evidence does not replace normal maintainer-operated
+release and host requirements. Older evidence retains its original source/graph
+scope at the paths recorded in previous handoffs.
