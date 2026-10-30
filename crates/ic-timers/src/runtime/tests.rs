@@ -26,6 +26,41 @@ impl TestPolicy {
     const ALL: [Self; 3] = [Self::Once, Self::AfterCompletion, Self::Watchdog];
 }
 
+// Share only immediate stopping callbacks. Suspension and reentrant callback
+// subjects keep their own bodies and authority checks.
+fn stopping_once(
+    mut work: impl FnMut() + 'static,
+) -> impl FnMut(OnceContext) -> std::future::Ready<OnceRunResult> {
+    move |_| {
+        work();
+        std::future::ready(OnceRunResult::new(
+            TimerCompletion::no_work(),
+            OnceDecision::Stop,
+        ))
+    }
+}
+
+fn stopping_after_completion(
+    mut work: impl FnMut() + 'static,
+) -> impl FnMut(AfterCompletionContext) -> std::future::Ready<AfterCompletionRunResult> {
+    move |_| {
+        work();
+        std::future::ready(AfterCompletionRunResult::new(
+            TimerCompletion::no_work(),
+            AfterCompletionDecision::Stop,
+        ))
+    }
+}
+
+fn stopping_watchdog(
+    mut work: impl FnMut() + 'static,
+) -> impl FnMut(WatchdogContext) -> WatchdogRunResult {
+    move |_| {
+        work();
+        WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
+    }
+}
+
 #[derive(Clone, Default)]
 struct SuspendedWork {
     ready: Rc<Cell<bool>>,
@@ -314,7 +349,7 @@ fn stale_delivery_drop_cannot_retire_rearmed_or_reused_identity() {
     let detached = with_registry_mut(|registry| Ok(registry.take_wakeup_handle(&timer)))
         .unwrap()
         .unwrap();
-    let (token, handle) = detached.into_parts();
+    let (token, handle) = detached;
     bind_provider_handle(&token, handle, None).unwrap();
     let old_delivery = dispatch_wakeup(WakeupToken::Ordinary(token.clone()));
     registration
@@ -1847,7 +1882,7 @@ fn stale_reused_identity_callback_cannot_change_handles_or_measurements() {
             .ok_or(TimerError::OwnershipInvariant)
     })
     .expect("old provider handle should detach");
-    let (old_token, old_provider_handle) = old_handle.into_parts();
+    let (old_token, old_provider_handle) = old_handle;
     platform::clear_timer(old_provider_handle);
     old.cancel()
         .expect("old transient registration should be removed");
@@ -2542,7 +2577,7 @@ fn abandoned_initial_and_successor_schedulers_reconcile_all_owner_contracts() {
             let old = with_registry_mut(|registry| Ok(registry.take_wakeup_handle(&timer)))
                 .unwrap()
                 .unwrap();
-            let (old_token, handle) = old.into_parts();
+            let (old_token, handle) = old;
             bind_provider_handle(&old_token, handle, None).unwrap();
             let stale = dispatch_wakeup(WakeupToken::Scheduler(old_token));
             set_time(deadline);
@@ -2869,7 +2904,7 @@ fn rejected_provider_binding_clears_handles_for_unavailable_or_expired_authority
     let detached = with_registry_mut(|registry| Ok(registry.take_wakeup_handle(&timer)))
         .expect("registry should be available")
         .expect("provider handle should detach");
-    let (token, handle) = detached.into_parts();
+    let (token, handle) = detached;
 
     let rejected = RUNTIME.with(|runtime| {
         let _borrow = runtime.borrow();
@@ -2898,48 +2933,56 @@ fn rejected_provider_binding_clears_handles_for_unavailable_or_expired_authority
 }
 
 #[test]
-fn provider_restoration_drains_all_detached_handles_after_first_failure() {
-    let _fixture = setup();
-    let timer = identity("provider-restore-drain");
-    let registration = register_watchdog(
-        timer.clone(),
-        TimerCadence::from_nanos(5).expect("fixture cadence should be valid"),
-        TimerStart::Retained { initial: None },
-        |_context| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue),
-    )
-    .expect("watchdog registration should succeed");
-    registration
-        .ensure_scheduled()
-        .expect("initial scheduler should arm");
-
-    set_time(15);
-    assert!(run_next_due(), "scheduler callback should execute");
-    assert_eq!(timer_count(), 2, "successor and work should be armed");
-    let handles = with_registry_mut(|registry| {
-        registry
-            .take_provider_handles_for_claim(&registration.claim)
-            .map_err(TimerError::from)
-    })
-    .expect("both handles should detach");
-
-    inject_provider_install_fault();
-    assert!(matches!(
-        restore_provider_handles(handles),
-        Err(TimerError::OwnershipInvariant)
-    ));
-    assert_eq!(
-        timer_count(),
-        1,
-        "the failed handle should clear while the remaining handle is restored"
-    );
-
-    let mut restored = with_registry_mut(|registry| Ok(registry.take_provider_handles(&timer)))
-        .expect("restored handle should detach for fixture cleanup");
-    let restored_wakeup = restored.take_wakeup();
-    let restored_work = restored.take_work();
-    assert!(restored_wakeup.is_none());
-    clear_provider_handle(restored_work.expect("work handle must have been restored"));
-    assert_eq!(timer_count(), 0);
+fn unchanged_watchdog_successor_and_queued_work_stay_bound_without_reinstallation() {
+    for abandon_successor in [false, true] {
+        let _fixture = setup();
+        let timer = identity("provider-unaffected-handles");
+        let registration = register_watchdog(
+            timer.clone(),
+            TimerCadence::from_nanos(5).unwrap(),
+            TimerStart::Retained {
+                initial: Some(TimerSchedule::At(15)),
+            },
+            |_| WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Continue),
+        )
+        .unwrap();
+        set_time(15);
+        assert!(run_next_due());
+        assert_eq!(timer_count(), 2);
+        if abandon_successor {
+            assert!(platform::discard_timer_at(20));
+            assert_eq!(timer_count(), 1);
+            // Only the replacement scheduler binds. Queued work must remain
+            // installed, without consuming another provider admission.
+            inject_provider_install_fault_after(1);
+            registration.ensure_scheduled().unwrap();
+            assert_eq!(timer_count(), 2);
+        } else {
+            inject_provider_install_fault();
+        }
+        // Continue retains its prearmed successor without rebinding it.
+        assert!(run_next_due());
+        assert_eq!(timer_count(), 1);
+        assert!(registration.has_armed_wakeup().unwrap());
+        let snapshot = timer_snapshot(&timer).unwrap().unwrap();
+        assert_eq!(snapshot.next_deadline_ns(), Some(20));
+        assert_eq!(
+            snapshot
+                .observability()
+                .counters()
+                .work_completed()
+                .exact_total(),
+            Ok(1)
+        );
+        // The injected fault remains for the next real binding, proving neither
+        // unaffected capability passed through the provider installer.
+        assert!(matches!(
+            registration.ensure_scheduled_immediately(),
+            Err(TimerError::OwnershipInvariant)
+        ));
+        assert_eq!(timer_count(), 0);
+        registration.unregister().unwrap();
+    }
 }
 
 #[test]
@@ -2971,7 +3014,7 @@ fn terminal_scheduler_failure_clears_queued_work_before_transient_removal() {
         let wakeup = with_registry_mut(|registry| Ok(registry.take_wakeup_handle(&timer)))
             .unwrap()
             .unwrap();
-        let (scheduler, handle) = wakeup.into_parts();
+        let (scheduler, handle) = wakeup;
         platform::clear_timer(handle);
         assert_eq!(timer_count(), 1);
         set_time(u64::MAX);
@@ -3237,7 +3280,7 @@ fn stale_watchdog_dispatch_clears_partial_arms_without_confirming_work() {
             .unwrap())
     })
     .unwrap();
-    let (scheduler, handle) = handle.into_parts();
+    let (scheduler, handle) = handle;
     platform::clear_timer(handle);
     let first = with_registry_mut(|registry| Ok(registry.begin_watchdog_scheduler(&scheduler, 15)))
         .unwrap();
@@ -4333,10 +4376,13 @@ fn cancellation_and_unregistration_release_captures_after_provider_cleanup() {
             };
             let claim = match policy {
                 TestPolicy::Once => {
-                    register_once(timer, start, move |_| {
-                        std::hint::black_box(&captured);
-                        async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
-                    })
+                    register_once(
+                        timer,
+                        start,
+                        stopping_once(move || {
+                            std::hint::black_box(&captured);
+                        }),
+                    )
                     .unwrap()
                     .claim
                 }
@@ -4345,15 +4391,9 @@ fn cancellation_and_unregistration_release_captures_after_provider_cleanup() {
                         timer,
                         TimerCadence::from_nanos(5).unwrap(),
                         start,
-                        move |_| {
+                        stopping_after_completion(move || {
                             std::hint::black_box(&captured);
-                            async {
-                                AfterCompletionRunResult::new(
-                                    TimerCompletion::no_work(),
-                                    AfterCompletionDecision::Stop,
-                                )
-                            }
-                        },
+                        }),
                     )
                     .unwrap()
                     .claim
@@ -4413,10 +4453,9 @@ fn rejected_registration_releases_its_captures_outside_registry_borrow() {
                 TimerStart::Retained {
                     initial: Some(TimerSchedule::At(20)),
                 },
-                move |_| {
+                stopping_once(move || {
                     std::hint::black_box(&captured);
-                    async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
-                },
+                }),
             )
             .map(|_| ()),
             TestPolicy::AfterCompletion => register_after_completion(
@@ -4425,15 +4464,9 @@ fn rejected_registration_releases_its_captures_outside_registry_borrow() {
                 TimerStart::Retained {
                     initial: Some(TimerSchedule::At(20)),
                 },
-                move |_| {
+                stopping_after_completion(move || {
                     std::hint::black_box(&captured);
-                    async {
-                        AfterCompletionRunResult::new(
-                            TimerCompletion::no_work(),
-                            AfterCompletionDecision::Stop,
-                        )
-                    }
-                },
+                }),
             )
             .map(|_| ()),
             TestPolicy::Watchdog => register_watchdog(
@@ -4442,10 +4475,9 @@ fn rejected_registration_releases_its_captures_outside_registry_borrow() {
                 TimerStart::Retained {
                     initial: Some(TimerSchedule::At(20)),
                 },
-                move |_| {
+                stopping_watchdog(move || {
                     std::hint::black_box(&captured);
-                    WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
-                },
+                }),
             )
             .map(|_| ()),
         };
@@ -4474,10 +4506,9 @@ fn terminal_provider_and_scheduler_failures_release_captures_outside_registry_bo
         TimerStart::RemoveWhenStopped {
             initial: TimerSchedule::At(30),
         },
-        move |_| {
+        stopping_once(move || {
             std::hint::black_box(&captured);
-            async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
-        },
+        }),
     )
     .unwrap();
     inject_provider_install_fault();
@@ -4499,10 +4530,9 @@ fn terminal_provider_and_scheduler_failures_release_captures_outside_registry_bo
         TimerStart::RemoveWhenStopped {
             initial: TimerSchedule::At(u64::MAX),
         },
-        move |_| {
+        stopping_watchdog(move || {
             std::hint::black_box(&captured);
-            WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
-        },
+        }),
     )
     .unwrap();
     set_time(u64::MAX);
@@ -4546,10 +4576,14 @@ fn repeated_reconciliation_releases_unused_factory_before_applying_control() {
     );
     assert!(run_next_due());
     let captured = CancelContextOnDrop(context);
-    reconcile_once(&mut slot, &timer, Some(TimerSchedule::At(20)), move |_| {
-        std::hint::black_box(&captured);
-        async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
-    })
+    reconcile_once(
+        &mut slot,
+        &timer,
+        Some(TimerSchedule::At(20)),
+        stopping_once(move || {
+            std::hint::black_box(&captured);
+        }),
+    )
     .unwrap();
     gate.resume();
     assert!(run_next_due());
@@ -4603,10 +4637,7 @@ impl ReconciliationSlot {
                 scheduled.then_some(TimerSchedule::After(Duration::from_nanos(
                     cadence.as_nanos(),
                 ))),
-                move |_| {
-                    record();
-                    async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
-                },
+                stopping_once(record),
             ),
             Self::AfterCompletion(slot) => reconcile_after_completion(
                 slot,
@@ -4617,15 +4648,7 @@ impl ReconciliationSlot {
                 } else {
                     TimerReconcileState::Inactive
                 },
-                move |_| {
-                    record();
-                    async {
-                        AfterCompletionRunResult::new(
-                            TimerCompletion::no_work(),
-                            AfterCompletionDecision::Stop,
-                        )
-                    }
-                },
+                stopping_after_completion(record),
             ),
             Self::Watchdog(slot) => reconcile_watchdog(
                 slot,
@@ -4636,10 +4659,7 @@ impl ReconciliationSlot {
                 } else {
                     WatchdogReconcileState::Inactive
                 },
-                move |_| {
-                    record();
-                    WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
-                },
+                stopping_watchdog(record),
             ),
         }
     }
@@ -4731,10 +4751,9 @@ fn first_once_reconciliation_rejects_unencodable_delay_without_retaining_authori
         &mut slot,
         &timer,
         Some(TimerSchedule::After(Duration::MAX)),
-        move |_| {
+        stopping_once(move || {
             std::hint::black_box(&captured);
-            async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
-        },
+        }),
     );
     assert!(matches!(
         result,
@@ -4835,35 +4854,25 @@ fn initial_registration_with_capture(
     start: TimerStart,
     captured: RemovalCapture,
 ) -> Result<RegistrationClaim, TimerError> {
+    let work = move || {
+        std::hint::black_box(&captured);
+    };
     match policy {
-        TestPolicy::Once => register_once(timer, start, move |_| {
-            std::hint::black_box(&captured);
-            async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
-        })
-        .map(|registration| registration.claim),
+        TestPolicy::Once => {
+            register_once(timer, start, stopping_once(work)).map(|registration| registration.claim)
+        }
         TestPolicy::AfterCompletion => register_after_completion(
             timer,
             TimerCadence::from_nanos(5).unwrap(),
             start,
-            move |_| {
-                std::hint::black_box(&captured);
-                async {
-                    AfterCompletionRunResult::new(
-                        TimerCompletion::no_work(),
-                        AfterCompletionDecision::Stop,
-                    )
-                }
-            },
+            stopping_after_completion(work),
         )
         .map(|registration| registration.claim),
         TestPolicy::Watchdog => register_watchdog(
             timer,
             TimerCadence::from_nanos(5).unwrap(),
             start,
-            move |_| {
-                std::hint::black_box(&captured);
-                WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
-            },
+            stopping_watchdog(work),
         )
         .map(|registration| registration.claim),
     }
@@ -5053,10 +5062,9 @@ fn initial_capacity_rejection_preserves_existing_declarations_and_releases_facto
         TimerStart::RemoveWhenStopped {
             initial: TimerSchedule::At(20),
         },
-        move |_| {
+        stopping_once(move || {
             std::hint::black_box(&captured);
-            async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
-        },
+        }),
     );
     assert!(matches!(
         rejected,

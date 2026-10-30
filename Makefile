@@ -146,7 +146,6 @@ shell-check:
 release-check:
 	bash scripts/ci/test-fixture-completion.sh
 	+$(MAKE) --no-print-directory shared-tooling-check
-	bash scripts/ci/test-shared-snapshots.sh
 	bash scripts/ci/test-rust-preparation.sh
 	bash scripts/ci/test-failure-evidence.sh
 	bash scripts/ci/check-release-commands.sh "$(CURDIR)" \

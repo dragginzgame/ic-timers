@@ -567,25 +567,34 @@ fn provider_roles_keep_paired_handles_distinct_and_reject_policy_mismatches() {
             CallbackRole::OrdinaryWork | CallbackRole::WatchdogScheduler => {
                 registry.take_wakeup_handle(token.identity())
             }
-            CallbackRole::WatchdogWork => registry
-                .entry_mut(token.claim())
-                .unwrap()
-                .take_work_handle(token.identity()),
+            CallbackRole::WatchdogWork => {
+                let entry = registry.entry_mut(token.claim()).unwrap();
+                entry.work.take().map(|owned| {
+                    (
+                        CallbackToken::new(
+                            token.identity().clone(),
+                            entry.claim_generation,
+                            owned.callback_generation,
+                            CallbackRole::WatchdogWork,
+                        ),
+                        owned.handle,
+                    )
+                })
+            }
         }
         .expect("malformed consumption must leave every owned handle intact");
-        let (detached_token, handle) = detached.into_parts();
+        let (detached_token, handle) = detached;
         assert_eq!(&detached_token, token);
         registry
             .install_provider_handle(&detached_token, handle, None)
             .unwrap();
     }
     for claim in [&ordinary, &watchdog] {
-        let mut handles = registry.take_provider_handles_for_claim(claim).unwrap();
+        let mut handles = registry.take_provider_handles(claim.identity());
         for handle in [handles.take_wakeup(), handles.take_work()]
             .into_iter()
             .flatten()
         {
-            let (_, handle) = handle.into_parts();
             crate::platform::clear_timer(handle);
         }
     }

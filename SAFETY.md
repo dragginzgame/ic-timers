@@ -135,8 +135,8 @@ The current runtime provides:
 - fail-closed handling of unexpected internal callback completion, provider
   ownership, cleanup, and accounting errors. Watchdog work traps its current
   message instead of returning after losing the committed successor. Detached
-  failure paths restore or clear every linear provider capability before
-  returning an error. Terminal watchdog control failures also clear any
+  failure paths clear every detached linear provider capability before
+  returning an error; unaffected capabilities remain installed. Terminal watchdog control failures also clear any
   pending nested command and check generation/deadline arithmetic before
   advancing the allocation counter. Provider-effect shape is checked before platform
   calls, including exact identity and claim-generation agreement between a

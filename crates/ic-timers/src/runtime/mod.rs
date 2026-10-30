@@ -4,9 +4,9 @@ use crate::{
     callback::{AfterCompletionRunResult, OnceRunResult, OrdinaryRunResult},
     platform::{self, TimerHandle},
     registry::{
-        CallbackRole, CallbackToken, OrdinaryCallback, ProviderHandle, ProviderHandles,
-        RegisterError, RegistrationClaim, RegistryEffect, RegistryError, RegistryTransition,
-        TimerRegistry, WakeupToken, WatchdogCallback,
+        CallbackRole, CallbackToken, OrdinaryCallback, ProviderHandles, RegisterError,
+        RegistrationClaim, RegistryEffect, RegistryError, RegistryTransition, TimerRegistry,
+        WakeupToken, WatchdogCallback,
     },
     schedule::{OrdinaryDirective, ScheduleError, TimerCadence, TimerSchedule},
     snapshot::{
@@ -21,10 +21,7 @@ use thiserror::Error;
 
 mod effects;
 #[cfg(test)]
-use effects::{
-    apply_effect, bind_provider_handle, clear_entry_provider_handles, clear_provider_handle,
-    restore_provider_handles,
-};
+use effects::{apply_effect, bind_provider_handle, clear_entry_provider_handles};
 use effects::{clear_provider_handles, finish_transition};
 
 thread_local! {
@@ -1208,13 +1205,7 @@ fn finish_ordinary_callback(token: &CallbackToken, result: OrdinaryRunResult) {
 fn dispatch_watchdog_scheduler(token: &CallbackToken) {
     let measurement = CallbackMeasurementStart::capture();
     let dispatched = with_registry_mut(|registry| {
-        let handles = registry
-            .take_watchdog_scheduler_handles(token)
-            .map_err(TimerError::from)?;
-        Ok((
-            registry.begin_watchdog_scheduler(token, platform::time_ns()),
-            handles,
-        ))
+        Ok(registry.transition_watchdog_scheduler(token, platform::time_ns()))
     });
     let (transition, handles) = dispatched
         .unwrap_or_else(|error| trap_callback_failure("watchdog scheduler transition", &error));
@@ -1248,22 +1239,19 @@ fn dispatch_watchdog_work(token: &CallbackToken) {
 
 fn finish_watchdog_dispatch(token: &CallbackToken, result: WatchdogRunResult) {
     // Unlike synchronous public control, an unexpected callback-completion
-    // failure must trap. IC message rollback restores these temporarily
-    // detached heap capabilities while the previously committed successor
-    // remains armed by the scheduler message.
+    // failure must trap. IC message rollback restores the transition and any
+    // replaced successor committed by the earlier scheduler message.
     let completed = with_registry_mut(|registry| {
-        let handles = registry
-            .take_provider_handles_for_claim(token.claim())
-            .map_err(TimerError::from)?;
         #[cfg(test)]
         {
             if take_watchdog_completion_fault() {
                 return Err(TimerError::OwnershipInvariant);
             }
         }
-        let transition = registry
+        let mut transition = registry
             .complete_watchdog_work(token, platform::time_ns(), result)
             .map_err(TimerError::from)?;
+        let handles = registry.detach_transition_handles(token.identity(), &mut transition);
         Ok((transition, handles))
     });
     let (transition, handles) =

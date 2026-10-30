@@ -334,6 +334,12 @@ transport remains intentional and outside the deployed-canister policy.
 
 ## Consumer fixture selection
 
+The standalone `test-shared-snapshots.sh` consumer copy is retired. The normal
+`shared-tooling-check` still admits the actual snapshot; the tag-workflow fixture
+copies that export and verifies corruption refuses before Cargo graph checks.
+Shared's reviewed `test-snapshot-verifier.sh` owns generic corruption semantics.
+The release gate and fixture-completion roster no longer dispatch the extra copy.
+
 The release gate no longer dispatches Shared's generic snapshot-verifier,
 checksum-parser or workflow-step-parser matrices. They are qualified by the
 reviewed revision's `test-snapshot-distribution.sh` and `test-portable-tools.sh`.

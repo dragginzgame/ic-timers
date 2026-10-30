@@ -223,33 +223,20 @@ struct OwnedProviderHandle {
     handle: TimerHandle,
 }
 
-/// One temporarily detached exact provider capability.
-#[must_use = "restore or clear the detached provider handle"]
-pub struct ProviderHandle {
-    token: CallbackToken,
-    handle: TimerHandle,
-}
-
-impl ProviderHandle {
-    pub(crate) fn into_parts(self) -> (CallbackToken, TimerHandle) {
-        (self.token, self.handle)
-    }
-}
-
 /// The at-most-two provider capabilities owned by one timer entry.
-#[must_use = "restore or clear every detached provider handle"]
+#[must_use = "clear every detached provider handle"]
 #[derive(Default)]
 pub struct ProviderHandles {
-    wakeup: Option<ProviderHandle>,
-    work: Option<ProviderHandle>,
+    wakeup: Option<TimerHandle>,
+    work: Option<TimerHandle>,
 }
 
 impl ProviderHandles {
-    pub(crate) const fn take_wakeup(&mut self) -> Option<ProviderHandle> {
+    pub(crate) const fn take_wakeup(&mut self) -> Option<TimerHandle> {
         self.wakeup.take()
     }
 
-    pub(crate) const fn take_work(&mut self) -> Option<ProviderHandle> {
+    pub(crate) const fn take_work(&mut self) -> Option<TimerHandle> {
         self.work.take()
     }
 }
@@ -437,7 +424,7 @@ impl Entry {
         }
     }
 
-    /// Validate the role, live generation and state once for binding or restoration.
+    /// Validate the role, live generation and state for each provider binding.
     const fn provider_handle_slot(
         &mut self,
         token: &CallbackToken,
@@ -555,28 +542,18 @@ impl Entry {
             && matches!(self.lifetime, DeclarationLifetime::RemoveWhenStopped)
     }
 
-    fn take_wakeup_handle(&mut self, identity: &TimerIdentity) -> Option<ProviderHandle> {
-        let role = self.kind.wakeup_role();
-        self.wakeup
-            .take()
-            .map(|owned| detach_provider_handle(identity, self.claim_generation, role, owned))
+    fn take_wakeup_handle(&mut self) -> Option<TimerHandle> {
+        self.wakeup.take().map(|owned| owned.handle)
     }
 
-    fn take_work_handle(&mut self, identity: &TimerIdentity) -> Option<ProviderHandle> {
-        self.work.take().map(|owned| {
-            detach_provider_handle(
-                identity,
-                self.claim_generation,
-                CallbackRole::WatchdogWork,
-                owned,
-            )
-        })
+    fn take_work_handle(&mut self) -> Option<TimerHandle> {
+        self.work.take().map(|owned| owned.handle)
     }
 
-    fn take_provider_handles(&mut self, identity: &TimerIdentity) -> ProviderHandles {
+    fn take_provider_handles(&mut self) -> ProviderHandles {
         ProviderHandles {
-            wakeup: self.take_wakeup_handle(identity),
-            work: self.take_work_handle(identity),
+            wakeup: self.take_wakeup_handle(),
+            work: self.take_work_handle(),
         }
     }
 
@@ -732,14 +709,48 @@ impl TimerRegistry {
     ) -> Result<(RegistryTransition, ProviderHandles), RegistryError> {
         self.entry(claim)?;
         let mut transition = operation(self)?;
-        let handles = if let Some(entry) = &mut transition.removed {
-            entry.take_provider_handles(claim.identity())
-        } else if matches!(transition.effect(), RegistryEffect::None) {
-            ProviderHandles::default()
-        } else {
-            self.take_provider_handles(claim.identity())
-        };
+        let handles = self.detach_transition_handles(claim.identity(), &mut transition);
         Ok((transition, handles))
+    }
+
+    /// Leave unaffected capabilities bound. Detached handles belong solely to
+    /// cleanup; removed declarations must release every handle before captures.
+    pub(crate) fn detach_transition_handles(
+        &mut self,
+        identity: &TimerIdentity,
+        transition: &mut RegistryTransition,
+    ) -> ProviderHandles {
+        if let Some(entry) = &mut transition.removed {
+            return entry.take_provider_handles();
+        }
+        let selected = match transition.effect() {
+            RegistryEffect::None
+            | RegistryEffect::ArmWakeup {
+                arm: WakeupArm::Initial,
+                ..
+            } => return ProviderHandles::default(),
+            RegistryEffect::ArmWakeup {
+                arm: WakeupArm::Replacement,
+                ..
+            } => CallbacksToClear::Wakeup,
+            RegistryEffect::ClearCallbacks { handles } => *handles,
+            RegistryEffect::DispatchWatchdog { .. } => CallbacksToClear::WakeupAndWork,
+        };
+        let Some(entry) = self.entries.get_mut(identity) else {
+            return ProviderHandles::default();
+        };
+        ProviderHandles {
+            wakeup: if selected.includes_wakeup() {
+                entry.take_wakeup_handle()
+            } else {
+                None
+            },
+            work: if selected.includes_work() {
+                entry.take_work_handle()
+            } else {
+                None
+            },
+        }
     }
 
     /// Apply an initial schedule already checked before claim allocation.
@@ -1472,10 +1483,6 @@ impl TimerRegistry {
         }
     }
 
-    #[expect(
-        clippy::too_many_lines,
-        reason = "One atomic successor and request-arbitration transition."
-    )]
     pub(crate) fn complete_watchdog_work(
         &mut self,
         token: &CallbackToken,
@@ -1503,52 +1510,19 @@ impl TimerRegistry {
 
             let completion = result.completion();
             entry.observability.record_completion(completion, now_ns);
-            let mut stop_reason = InactiveReason::Stopped;
-            let mut pending_schedule = None;
-            let decision = if completion.outcome() == TimerCompletionOutcome::InvariantFailure {
-                stop_reason = InactiveReason::InvariantFailure;
-                WatchdogDecision::Stop
-            } else {
-                match pending {
-                    Some(WatchdogPending::Cancel) => {
-                        stop_reason = InactiveReason::Cancelled;
-                        WatchdogDecision::Stop
-                    }
-                    Some(WatchdogPending::Unregister) => WatchdogDecision::Stop,
-                    Some(WatchdogPending::Ensure) => WatchdogDecision::Continue,
-                    Some(WatchdogPending::EnsureImmediately) => {
-                        WatchdogDecision::ContinueImmediately
-                    }
-                    Some(WatchdogPending::Reconcile(requested)) => {
-                        pending_schedule = Some(requested);
-                        WatchdogDecision::ScheduleAt(requested.deadline_ns)
-                    }
-                    None => result.decision(),
-                }
-            };
-
-            let transition = match decision {
-                WatchdogDecision::Continue => {
-                    control.state = WatchdogState::Scheduled {
-                        deadline_ns: successor_deadline_ns,
-                    };
-                    entry.scheduling_mode = TimerSchedulingMode::Watchdog;
-                    entry.latest_requested_delay_ns = Some(cadence.as_nanos());
-                    RegistryTransition::normal(RegistryEffect::None)
-                }
-                WatchdogDecision::ContinueImmediately | WatchdogDecision::ScheduleAt(_) => {
-                    let (deadline_ns, retain_successor) =
-                        if let WatchdogDecision::ScheduleAt(deadline_ns) = decision {
-                            entry.scheduling_mode = pending_schedule
-                                .map_or(TimerSchedulingMode::Deadline, |requested| requested.mode);
-                            entry.latest_requested_delay_ns =
-                                pending_schedule.and_then(|requested| requested.requested_delay_ns);
-                            (deadline_ns, successor_deadline_ns == deadline_ns)
-                        } else {
-                            entry.scheduling_mode = TimerSchedulingMode::Continuation;
-                            entry.latest_requested_delay_ns = Some(0);
-                            (now_ns, successor_deadline_ns <= now_ns)
-                        };
+            let transition = match prepare_watchdog_completion(
+                pending,
+                result,
+                now_ns,
+                successor_deadline_ns,
+                cadence,
+            ) {
+                WatchdogCompletion::Schedule {
+                    requested,
+                    retain_successor,
+                } => {
+                    entry.scheduling_mode = requested.mode;
+                    entry.latest_requested_delay_ns = requested.requested_delay_ns;
                     if retain_successor {
                         control.state = WatchdogState::Scheduled {
                             deadline_ns: successor_deadline_ns,
@@ -1558,18 +1532,16 @@ impl TimerRegistry {
                         control.arm_scheduler(
                             token.claim(),
                             now_ns,
-                            deadline_ns,
+                            requested.deadline_ns,
                             WakeupArm::Replacement,
                         )
                     }
                 }
-                WatchdogDecision::Stop => {
-                    if stop_reason == InactiveReason::Cancelled {
+                WatchdogCompletion::Stop(reason) => {
+                    if reason == InactiveReason::Cancelled {
                         entry.observability.counters_mut().record_cancellation();
                     }
-                    control.state = WatchdogState::Inactive {
-                        reason: stop_reason,
-                    };
+                    control.state = WatchdogState::Inactive { reason };
                     RegistryTransition::normal(RegistryEffect::ClearCallbacks {
                         handles: CallbacksToClear::Wakeup,
                     })
@@ -1682,7 +1654,7 @@ impl TimerRegistry {
                     };
                 }
             }
-            let handles = entry.take_provider_handles(identity);
+            let handles = entry.take_provider_handles();
             (
                 handles,
                 matches!(entry.lifetime, DeclarationLifetime::RemoveWhenStopped),
@@ -1713,7 +1685,7 @@ impl TimerRegistry {
     }
 
     /// Bind a handle and, for the final arm, commit its successful-arm facts.
-    /// A missing delay restores ownership or stages a Watchdog successor only.
+    /// A missing delay stages a Watchdog successor without committing arm facts.
     pub(crate) fn install_provider_handle(
         &mut self,
         token: &CallbackToken,
@@ -1750,44 +1722,42 @@ impl TimerRegistry {
     pub(crate) fn take_wakeup_handle(
         &mut self,
         identity: &TimerIdentity,
-    ) -> Option<ProviderHandle> {
+    ) -> Option<(CallbackToken, TimerHandle)> {
         let entry = self.entries.get_mut(identity)?;
-        entry.take_wakeup_handle(identity)
+        let owned = entry.wakeup.take()?;
+        Some((
+            CallbackToken::new(
+                identity.clone(),
+                entry.claim_generation,
+                owned.callback_generation,
+                entry.kind.wakeup_role(),
+            ),
+            owned.handle,
+        ))
     }
 
     pub(crate) fn take_provider_handles(&mut self, identity: &TimerIdentity) -> ProviderHandles {
         self.entries
             .get_mut(identity)
             .map_or_else(ProviderHandles::default, |entry| {
-                entry.take_provider_handles(identity)
+                entry.take_provider_handles()
             })
     }
 
-    pub(crate) fn take_provider_handles_for_claim(
-        &mut self,
-        claim: &RegistrationClaim,
-    ) -> Result<ProviderHandles, RegistryError> {
-        let identity = claim.identity();
-        let entry = self.entry_mut(claim)?;
-        Ok(entry.take_provider_handles(identity))
-    }
-
-    /// Consume the delivered scheduler handle before detaching the remaining
-    /// capabilities. A scheduler transition can remove a transient declaration.
-    pub(crate) fn take_watchdog_scheduler_handles(
+    /// Consume the delivered scheduler before transition/removal, then detach
+    /// only capabilities that the selected effect must clear.
+    pub(crate) fn transition_watchdog_scheduler(
         &mut self,
         token: &CallbackToken,
-    ) -> Result<ProviderHandles, RegistryError> {
-        let entry = match self.entry_mut(token.claim()) {
-            Ok(entry) => entry,
-            // Removed or superseded claims are normal stale callback delivery.
-            Err(RegistryError::UnknownRegistration | RegistryError::StaleRegistration) => {
-                return Ok(ProviderHandles::default());
-            }
-            Err(error) => return Err(error),
-        };
-        entry.consume_provider_handle(token);
-        Ok(entry.take_provider_handles(token.identity()))
+        now_ns: u64,
+    ) -> (RegistryTransition, ProviderHandles) {
+        // Removed or superseded claims are normal stale callback delivery.
+        if let Ok(entry) = self.entry_mut(token.claim()) {
+            entry.consume_provider_handle(token);
+        }
+        let mut transition = self.begin_watchdog_scheduler(token, now_ns);
+        let handles = self.detach_transition_handles(token.identity(), &mut transition);
+        (transition, handles)
     }
 
     /// Model successful platform application in provider-neutral transition tests.
@@ -1871,23 +1841,6 @@ fn token_for(
     )
 }
 
-fn detach_provider_handle(
-    identity: &TimerIdentity,
-    claim_generation: u64,
-    role: CallbackRole,
-    owned: OwnedProviderHandle,
-) -> ProviderHandle {
-    ProviderHandle {
-        token: CallbackToken::new(
-            identity.clone(),
-            claim_generation,
-            owned.callback_generation,
-            role,
-        ),
-        handle: owned.handle,
-    }
-}
-
 const fn clear_wakeup_if(clear_wakeup: bool) -> RegistryEffect {
     if clear_wakeup {
         RegistryEffect::ClearCallbacks {
@@ -1963,6 +1916,76 @@ fn prepare_ordinary_completion(
             };
             Ok((selected, snapshot, false))
         }
+    }
+}
+
+// Resolve the winner and its observation metadata together before mutating
+// control. A pending exact schedule keeps its already validated relative origin.
+enum WatchdogCompletion {
+    Stop(InactiveReason),
+    Schedule {
+        requested: ResolvedSchedule,
+        retain_successor: bool,
+    },
+}
+
+fn prepare_watchdog_completion(
+    pending: Option<WatchdogPending>,
+    result: WatchdogRunResult,
+    now_ns: u64,
+    successor_deadline_ns: u64,
+    cadence: TimerCadence,
+) -> WatchdogCompletion {
+    if result.completion().outcome() == TimerCompletionOutcome::InvariantFailure {
+        return WatchdogCompletion::Stop(InactiveReason::InvariantFailure);
+    }
+    let decision = match pending {
+        Some(WatchdogPending::Cancel) => {
+            return WatchdogCompletion::Stop(InactiveReason::Cancelled);
+        }
+        Some(WatchdogPending::Unregister) => {
+            return WatchdogCompletion::Stop(InactiveReason::Stopped);
+        }
+        Some(WatchdogPending::Reconcile(requested)) => {
+            return WatchdogCompletion::Schedule {
+                retain_successor: requested.deadline_ns == successor_deadline_ns,
+                requested,
+            };
+        }
+        Some(WatchdogPending::Ensure) => WatchdogDecision::Continue,
+        Some(WatchdogPending::EnsureImmediately) => WatchdogDecision::ContinueImmediately,
+        None => result.decision(),
+    };
+    let (requested, retain_successor) = match decision {
+        WatchdogDecision::Stop => return WatchdogCompletion::Stop(InactiveReason::Stopped),
+        WatchdogDecision::Continue => (
+            ResolvedSchedule {
+                deadline_ns: successor_deadline_ns,
+                requested_delay_ns: Some(cadence.as_nanos()),
+                mode: TimerSchedulingMode::Watchdog,
+            },
+            true,
+        ),
+        WatchdogDecision::ContinueImmediately => (
+            ResolvedSchedule {
+                deadline_ns: now_ns,
+                requested_delay_ns: Some(0),
+                mode: TimerSchedulingMode::Continuation,
+            },
+            successor_deadline_ns <= now_ns,
+        ),
+        WatchdogDecision::ScheduleAt(deadline_ns) => (
+            ResolvedSchedule {
+                deadline_ns,
+                requested_delay_ns: None,
+                mode: TimerSchedulingMode::Deadline,
+            },
+            successor_deadline_ns == deadline_ns,
+        ),
+    };
+    WatchdogCompletion::Schedule {
+        requested,
+        retain_successor,
     }
 }
 

@@ -1,12 +1,12 @@
-//! Apply registry effects while restoring or clearing every linear provider handle.
+//! Apply registry effects after clearing their selected linear provider handles.
 //! Captures are released only after the registry borrow and provider cleanup end.
 
 #[cfg(test)]
 use super::take_provider_install_fault;
 use super::{
-    CallbackToken, ProviderHandle, ProviderHandles, RUNTIME, RegistryEffect, RegistryTransition,
-    TimerError, TimerHandle, TimerIdentity, WakeupToken, dispatch_wakeup, dispatch_watchdog_work,
-    platform, with_registry_mut,
+    CallbackToken, ProviderHandles, RUNTIME, RegistryEffect, RegistryTransition, TimerError,
+    TimerHandle, TimerIdentity, WakeupToken, dispatch_wakeup, dispatch_watchdog_work, platform,
+    with_registry_mut,
 };
 use std::time::Duration;
 
@@ -25,39 +25,21 @@ pub(super) fn finish_transition(
 
 pub(super) fn apply_effect(
     effect: &RegistryEffect,
-    mut handles: ProviderHandles,
+    handles: ProviderHandles,
 ) -> Result<(), TimerError> {
+    // The registry leaves unaffected handles installed. Every detached handle
+    // here is selected for cleanup, including all handles of a removed entry.
+    clear_provider_handles(handles);
     match effect {
-        RegistryEffect::None => restore_provider_handles(handles),
+        RegistryEffect::None | RegistryEffect::ClearCallbacks { .. } => Ok(()),
         RegistryEffect::ArmWakeup {
-            token,
-            delay_ns,
-            arm,
+            token, delay_ns, ..
         } => {
-            if arm.replaces_existing()
-                && let Some(replaced) = handles.take_wakeup()
-            {
-                clear_provider_handle(replaced);
-            }
-            restore_provider_handles(handles)?;
             let handle = platform::try_set_timer(
                 Duration::from_nanos(*delay_ns),
                 dispatch_wakeup(token.clone()),
             )?;
             bind_provider_handle(token.token(), handle, Some(*delay_ns))
-        }
-        RegistryEffect::ClearCallbacks { handles: selected } => {
-            if selected.includes_wakeup()
-                && let Some(wakeup) = handles.take_wakeup()
-            {
-                clear_provider_handle(wakeup);
-            }
-            if selected.includes_work()
-                && let Some(work) = handles.take_work()
-            {
-                clear_provider_handle(work);
-            }
-            restore_provider_handles(handles)
         }
         RegistryEffect::DispatchWatchdog {
             dispatch,
@@ -65,12 +47,6 @@ pub(super) fn apply_effect(
         } => {
             let successor = dispatch.successor();
             let work = dispatch.work();
-            if let Some(wakeup) = handles.take_wakeup() {
-                clear_provider_handle(wakeup);
-            }
-            if let Some(replaced_work) = handles.take_work() {
-                clear_provider_handle(replaced_work);
-            }
             let successor_handle = platform::try_set_timer(
                 Duration::from_nanos(*successor_delay_ns),
                 dispatch_wakeup(WakeupToken::Scheduler(successor.clone())),
@@ -121,34 +97,12 @@ pub(super) fn bind_provider_handle(
         })
 }
 
-pub(super) fn restore_provider_handles(mut handles: ProviderHandles) -> Result<(), TimerError> {
-    // Every detached linear capability must be restored or cleared even when
-    // restoring an earlier handle fails.
-    let wakeup_failure = handles
-        .take_wakeup()
-        .and_then(|handle| restore_provider_handle(handle).err());
-    let work_failure = handles
-        .take_work()
-        .and_then(|handle| restore_provider_handle(handle).err());
-    wakeup_failure.or(work_failure).map_or(Ok(()), Err)
-}
-
-fn restore_provider_handle(handle: ProviderHandle) -> Result<(), TimerError> {
-    let (token, handle) = handle.into_parts();
-    bind_provider_handle(&token, handle, None)
-}
-
-pub(super) fn clear_provider_handle(handle: ProviderHandle) {
-    let (_, handle) = handle.into_parts();
-    platform::clear_timer(handle);
-}
-
 pub(super) fn clear_provider_handles(mut handles: ProviderHandles) {
     if let Some(wakeup) = handles.take_wakeup() {
-        clear_provider_handle(wakeup);
+        platform::clear_timer(wakeup);
     }
     if let Some(work) = handles.take_work() {
-        clear_provider_handle(work);
+        platform::clear_timer(work);
     }
 }
 

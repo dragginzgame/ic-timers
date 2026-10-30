@@ -2,6 +2,24 @@
 
 All notable changes to this project are recorded here.
 
+## [0.32.2]
+
+### ♻️ Refactoring
+
+- Leave unaffected provider handles bound and clear only the capabilities selected
+  by each registry effect. Remove handle restoration and its token-bearing
+  cleanup wrapper. Resolve Watchdog completion decisions together with their
+  schedule metadata, preserving timer
+  APIs, command precedence, callback cleanup and rollback rules.
+- Share immediate stopping callbacks in native and installed probe fixtures and
+  remove unused registration storage from the scheduling trace.
+
+### 🛠️ Tooling
+
+- Remove the redundant standalone snapshot-corruption suite. Keep snapshot
+  admission and its failure ordering in the actual tag-workflow fixture; Shared
+  Tooling owns the generic verifier rejection matrix.
+
 ## [0.32.1] - 2026-10-29
 
 ### 📦 Dependencies

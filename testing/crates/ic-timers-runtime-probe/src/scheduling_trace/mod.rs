@@ -1,16 +1,20 @@
 //! Observable deadline order, callback-created timers and self-cancellation.
 
 use ic_timers::{
-    AfterCompletionDecision, AfterCompletionRegistration, AfterCompletionRunResult, OnceDecision,
-    OnceRegistration, OnceRunResult, TimerCadence, TimerCompletion, TimerIdentity, TimerSchedule,
-    TimerStart, register_after_completion, register_once,
+    AfterCompletionDecision, AfterCompletionRunResult, OnceDecision, OnceRunResult, TimerCadence,
+    TimerCompletion, TimerIdentity, TimerSchedule, TimerStart, register_after_completion,
+    register_once,
 };
-use std::{cell::RefCell, time::Duration};
+use std::{
+    cell::{Cell, RefCell},
+    time::Duration,
+};
 
+// The registry retains callbacks; this trace controls them only through their
+// callback contexts, so it deliberately discards registration capabilities.
 thread_local! {
     static EVENTS: RefCell<Vec<u8>> = const { RefCell::new(Vec::new()) };
-    static ONCE: RefCell<Vec<OnceRegistration>> = const { RefCell::new(Vec::new()) };
-    static PERIODIC: RefCell<Option<AfterCompletionRegistration>> = const { RefCell::new(None) };
+    static STARTED: Cell<bool> = const { Cell::new(false) };
 }
 
 fn identity(name: &str) -> TimerIdentity {
@@ -18,7 +22,7 @@ fn identity(name: &str) -> TimerIdentity {
 }
 
 fn install_once(name: &str, seconds: u64, event: u8) {
-    let registration = register_once(
+    let _ = register_once(
         identity(name),
         TimerStart::RemoveWhenStopped {
             initial: TimerSchedule::After(Duration::from_secs(seconds)),
@@ -29,7 +33,6 @@ fn install_once(name: &str, seconds: u64, event: u8) {
         },
     )
     .expect("trace registration");
-    ONCE.with_borrow_mut(|slots| slots.push(registration));
 }
 
 #[ic_platform::cdk::update(
@@ -38,8 +41,8 @@ fn install_once(name: &str, seconds: u64, event: u8) {
     encode_with = "crate::codec::encode_unit::<{ ic_timers_test_protocol::rpc::Method::StartSchedulingTrace as u64 }>"
 )]
 fn start_scheduling_trace() {
-    assert!(ONCE.with_borrow(Vec::is_empty), "fresh trace");
-    let parent = register_once(
+    assert!(!STARTED.replace(true), "fresh trace");
+    let _ = register_once(
         identity("parent"),
         TimerStart::RemoveWhenStopped {
             initial: TimerSchedule::After(Duration::from_secs(1)),
@@ -51,10 +54,9 @@ fn start_scheduling_trace() {
         },
     )
     .expect("parent registration");
-    ONCE.with_borrow_mut(|slots| slots.push(parent));
     install_once("middle", 2, 2);
     install_once("late", 4, 4);
-    let periodic = register_after_completion(
+    let _ = register_after_completion(
         identity("self-cancelling-periodic"),
         TimerCadence::new(Duration::from_secs(1)).expect("trace cadence"),
         TimerStart::Retained {
@@ -70,8 +72,7 @@ fn start_scheduling_trace() {
         },
     )
     .expect("periodic trace registration");
-    PERIODIC.with_borrow_mut(|slot| *slot = Some(periodic));
-    let once = register_once(
+    let _ = register_once(
         identity("self-cancelling-once"),
         TimerStart::RemoveWhenStopped {
             initial: TimerSchedule::After(Duration::from_secs(8)),
@@ -83,7 +84,6 @@ fn start_scheduling_trace() {
         },
     )
     .expect("self-cancelling one-shot registration");
-    ONCE.with_borrow_mut(|slots| slots.push(once));
 }
 
 #[ic_platform::cdk::query(

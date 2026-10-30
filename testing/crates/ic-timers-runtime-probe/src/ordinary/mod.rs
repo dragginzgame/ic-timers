@@ -15,6 +15,7 @@ use ic_timers_test_protocol::{
 };
 use std::{
     cell::{Cell, RefCell},
+    future::{Ready, ready},
     rc::Rc,
 };
 
@@ -46,6 +47,39 @@ impl Drop for CapturedState {
             accessible.set(accessible.get() && timer_inventory().is_ok());
         });
         CAPTURES_DROPPED.with(|count| count.set(count.get().saturating_add(1)));
+    }
+}
+
+// The failure/removal subjects retain the same capture until the declaration
+// retires. Their callbacks complete immediately and never introduce an await.
+fn once_callback(captured: CapturedState) -> impl FnMut(OnceContext) -> Ready<OnceRunResult> {
+    move |_| {
+        std::hint::black_box(&captured);
+        ready(OnceRunResult::new(
+            TimerCompletion::no_work(),
+            OnceDecision::Stop,
+        ))
+    }
+}
+
+fn after_completion_callback(
+    captured: CapturedState,
+) -> impl FnMut(AfterCompletionContext) -> Ready<AfterCompletionRunResult> {
+    move |_| {
+        std::hint::black_box(&captured);
+        ready(AfterCompletionRunResult::new(
+            TimerCompletion::no_work(),
+            AfterCompletionDecision::Stop,
+        ))
+    }
+}
+
+fn watchdog_callback(
+    captured: CapturedState,
+) -> impl FnMut(ic_timers::WatchdogContext) -> WatchdogRunResult {
+    move |_| {
+        std::hint::black_box(&captured);
+        WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
     }
 }
 
@@ -379,10 +413,7 @@ fn remove_armed_callback(policy: ProbePolicy) {
                 TimerStart::Retained {
                     initial: Some(TimerSchedule::At(deadline)),
                 },
-                move |_| {
-                    std::hint::black_box(&captured);
-                    async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
-                },
+                once_callback(captured),
             )
             .expect("register Once");
             timer.unregister().expect("unregister Once");
@@ -394,15 +425,7 @@ fn remove_armed_callback(policy: ProbePolicy) {
                 TimerStart::RemoveWhenStopped {
                     initial: TimerSchedule::At(deadline),
                 },
-                move |_| {
-                    std::hint::black_box(&captured);
-                    async {
-                        AfterCompletionRunResult::new(
-                            TimerCompletion::no_work(),
-                            AfterCompletionDecision::Stop,
-                        )
-                    }
-                },
+                after_completion_callback(captured),
             )
             .expect("register after-completion");
             timer.cancel().expect("cancel transient");
@@ -414,10 +437,7 @@ fn remove_armed_callback(policy: ProbePolicy) {
                 TimerStart::Retained {
                     initial: Some(TimerSchedule::At(deadline)),
                 },
-                move |_| {
-                    std::hint::black_box(&captured);
-                    WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
-                },
+                watchdog_callback(captured),
             )
             .expect("register Watchdog");
             timer.unregister().expect("unregister Watchdog");
@@ -444,34 +464,19 @@ fn reject_initial_schedule(policy: ProbePolicy, lifetime: ProbeLifetime) -> (boo
     };
     let captured = CapturedState;
     let result = match policy {
-        ProbePolicy::Once => register_once(identity(), start, move |_| {
-            std::hint::black_box(&captured);
-            async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
-        })
-        .map(|_| ()),
+        ProbePolicy::Once => register_once(identity(), start, once_callback(captured)).map(|_| ()),
         ProbePolicy::AfterCompletion => register_after_completion(
             identity(),
             TimerCadence::from_nanos(super::CADENCE_NS).expect("cadence"),
             start,
-            move |_| {
-                std::hint::black_box(&captured);
-                async {
-                    AfterCompletionRunResult::new(
-                        TimerCompletion::no_work(),
-                        AfterCompletionDecision::Stop,
-                    )
-                }
-            },
+            after_completion_callback(captured),
         )
         .map(|_| ()),
         ProbePolicy::Watchdog => register_watchdog(
             identity(),
             TimerCadence::from_nanos(super::CADENCE_NS).expect("cadence"),
             start,
-            move |_| {
-                std::hint::black_box(&captured);
-                WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
-            },
+            watchdog_callback(captured),
         )
         .map(|_| ()),
     };
@@ -507,10 +512,7 @@ fn reject_initial_reconciliation(policy: ProbePolicy) -> (bool, bool, u64, bool)
                 &mut slot,
                 &identity(),
                 Some(TimerSchedule::After(std::time::Duration::MAX)),
-                move |_| {
-                    std::hint::black_box(&captured);
-                    async { OnceRunResult::new(TimerCompletion::no_work(), OnceDecision::Stop) }
-                },
+                once_callback(captured),
             );
             (result, slot.is_none())
         }
@@ -521,15 +523,7 @@ fn reject_initial_reconciliation(policy: ProbePolicy) -> (bool, bool, u64, bool)
                 &identity(),
                 cadence,
                 TimerReconcileState::Scheduled,
-                move |_| {
-                    std::hint::black_box(&captured);
-                    async {
-                        AfterCompletionRunResult::new(
-                            TimerCompletion::no_work(),
-                            AfterCompletionDecision::Stop,
-                        )
-                    }
-                },
+                after_completion_callback(captured),
             );
             (result, slot.is_none())
         }
@@ -540,10 +534,7 @@ fn reject_initial_reconciliation(policy: ProbePolicy) -> (bool, bool, u64, bool)
                 &identity(),
                 cadence,
                 WatchdogReconcileState::Scheduled,
-                move |_| {
-                    std::hint::black_box(&captured);
-                    WatchdogRunResult::new(TimerCompletion::no_work(), WatchdogDecision::Stop)
-                },
+                watchdog_callback(captured),
             );
             (result, slot.is_none())
         }

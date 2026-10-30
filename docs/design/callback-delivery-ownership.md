@@ -3,6 +3,29 @@
 This records the implementation and evidence scope of the callback delivery
 change. It does not select a release or establish deployment validation.
 
+## Effect-selected handle cleanup
+
+The 0.32.2 cleanup supersedes the historical detachment/restoration stages below.
+The registry applies a transition before selecting the handles that its effect
+will clear: replacement arms select the wakeup, explicit clears select their
+named roles, and Watchdog dispatch selects both. Initial arms and no-effect
+transitions leave existing capabilities bound. A removed entry transfers all
+its handles through the transition so runtime cleanup still precedes capture
+release outside registry access.
+
+Scheduler delivery consumes its exact fired handle before the transition, but
+remaining handle selection follows the transition, including terminal removal.
+Work completion uses the same selection, retaining its separate trap/IC rollback
+contract. The runtime has no provider-handle restoration path. Retained successors
+and queued work are never reinstalled merely to finish another transition. Cleanup
+carries raw linear handles, without constructing tokens solely for restoration;
+only native stale-delivery fixtures construct a token when taking a live handle.
+
+Native regressions inject a binding failure after the one real scheduler repair
+and before no-effect completion; unaffected work/successor ownership must survive
+without consuming it. Installed recovery, cancellation and callback-cleanup
+subjects remain required evidence for the IC paths.
+
 ## Prepared Metrics 0.10 adoption
 
 The maintainer-selected root graph now uses Metrics 0.10. Its public

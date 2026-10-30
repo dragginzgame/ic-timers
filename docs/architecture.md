@@ -329,11 +329,16 @@ The remaining module hierarchy keeps six responsibilities separate:
    transition. The shared entry predicate uses that transition's failure and
    declaration lifetime; no second lookup reconstructs the decision. The registry's
    existing removal exit transfers the removed entry into its transition.
-   Public control leaves handles bound for no-op/rejected requests and detaches
-   them after actual transitions, including from removed entries. Runtime applies
-   provider cleanup before releasing removed captures outside registry access.
-   Watchdog dispatch/completion retain their separate pre-transition detachment
-   and rollback rules; see the [capture ownership contract](design/callback-delivery-ownership.md#capture-removal-and-coalesced-requests).
+   Public control and Watchdog dispatch/completion detach only the handles their
+   effects will clear, after the registry transition. Removed entries transfer
+   all handles into cleanup. Unaffected handles stay bound; no restoration step
+   can fail or reinstall them. Runtime clears detached handles before arming
+   replacements or releasing removed captures outside registry access.
+   Watchdog work completion retains its trap/rollback rule; see the
+   [capture ownership contract](design/callback-delivery-ownership.md#capture-removal-and-coalesced-requests).
+   Watchdog completion resolves pending-command precedence, stop reason and
+   schedule metadata together before applying the selected action. Exact requests
+   retain their validated scheduling origin; invariant failure still wins.
    Watchdog cancellation selects the handles to clear in one state match. An
    immediate stop uses that selection for state replacement, cancellation
    accounting and provider cleanup; running work keeps its pending command, and
@@ -350,7 +355,8 @@ The remaining module hierarchy keeps six responsibilities separate:
    without failure, keeping exhausted initial arms distinct from coalesced demand.
    Owned provider roles follow entry policy and handle slot rather than a copied
    field. Installation and consumption reject policy/role mismatches before using
-   a slot; detached handles retain complete tokens for restoration and cleanup.
+   a slot. Cleanup carries only the selected linear handles; it does not rebuild
+   callback tokens for a restoration path.
 5. `platform` owns pending one-shot tasks, authenticated self-call dispatch and
    IC system facts. Its handle is linear and it owns no recurrence policy.
    The bounded queue removes cancelled records immediately. The FFI module alone
@@ -367,12 +373,14 @@ The remaining module hierarchy keeps six responsibilities separate:
    two-role watchdog protocol. Initial and successor scheduler futures share the
    ordinary pre-poll delivery guard. Confirmed destruction records a lost
    scheduler in canonical control; owner reconciliation rearms it without
-   replacing still-queued work. This native-qualified repair does not establish
-   the installed stop/restart interleaving tracked in issue #77.
+   replacing still-queued work. Maintained PocketIC round-pressure stop/restart
+   subjects cover initial and successor scheduler abandonment with all three
+   owner reconciliation modes. Scheduler-body normal return remains the protocol
+   assumption; these subjects do not qualify arbitrary scheduler traps.
    Its three policy-specific delegated work
    contexts store their exact private callback token directly. Their control
    methods use the shared claim-transition boundary, which validates running-work
-   authority before handle detachment and the registry operation.
+   authority before the registry operation and subsequent handle detachment.
    Each private token contains its registration claim, callback generation and
    role. Context control and callback cleanup borrow that claim instead of
    reconstructing it. Owned delivery tokens remain cloneable; registration
@@ -381,19 +389,19 @@ The remaining module hierarchy keeps six responsibilities separate:
    Claim-originated effect failures retire the declaration instead of leaving
    registry state scheduled without a provider handle. Lifecycle verification
    checks the exact claim and immutable declaration metadata directly rather
-   than reconstructing authority from a snapshot. Synchronous operations that
-   detach handles restore all of them before returning an unexpected registry
-   error, retiring the exact claim if restoration cannot recover ownership.
-   One detached-claim finalizer owns registry-error restoration and successful
-   transition application, including retirement after unexpected provider failure.
-   Callback finalization remains separate to preserve Watchdog rollback rules.
+   than reconstructing authority from a snapshot. Rejected operations leave
+   provider handles bound. One effect finalizer clears the selected detached
+   capabilities and applies arms, retiring the exact claim after unexpected
+   provider failure. Callback finalization remains separate to preserve Watchdog
+   rollback rules.
    One consuming binding operation installs a raw provider handle or clears it
-   on rejection after releasing the registry borrow. Arm and restoration callers
-   receive only the typed error; Watchdog dispatch separately clears its installed
+   on rejection after releasing the registry borrow. Arm callers receive only
+   the typed error; Watchdog dispatch separately clears its installed
    successor if later work binding fails. Final handle installation and successful
    arm accounting share one registry borrow and one role/generation/state check.
-   A staged Watchdog successor and restored handles do not commit arm counters;
-   successful work installation commits both Watchdog dispatch counters.
+   A staged Watchdog successor does not commit arm counters; successful work
+   installation commits both Watchdog dispatch counters. Retaining an installed
+   successor performs no new binding or arm accounting.
    Effect application consumes one complete registry effect; its shape is
    validated before cleanup or platform calls. Its matched branches perform
    binding directly without passing the effect through another variant match or
@@ -410,8 +418,8 @@ The remaining module hierarchy keeps six responsibilities separate:
    invoking consumer work; there is no separate callback lookup or second borrow.
    Ordinary and Watchdog work delivery consume the matching fired handle through
    that selected entry before acceptance, without a separate registry consumption
-   pass. Scheduler delivery consumes its handle and detaches remaining capabilities
-   through one lookup before the Watchdog transition can remove a declaration.
+   pass. Scheduler delivery consumes its handle before the Watchdog transition;
+   its effect then selects cleanup from the surviving or removed declaration.
    Duplicate or stale acceptance returns no callback and keeps its existing stale
    accounting. Installation owns the required role, generation and state checks;
    pure transition tests model successful application through those same predicates.
@@ -566,7 +574,7 @@ preceded the owned backend; current behavior is defined by the facade,
 implementation and maintained tests above.
 
 Provider-effect application lives in the private `runtime/effects.rs` owner.
-It retains the existing ordering: detach under registry control, restore or clear
-every linear handle, then release removed callback captures outside registry
-borrows. Policy arbitration remains in the registry's atomic transitions; the
+The registry selects handles for cleanup after its transition, leaving unaffected
+capabilities installed. Runtime clears those detached handles before applying
+arms, then releases removed callback captures outside registry borrows. Policy arbitration remains in the registry's atomic transitions; the
 module boundary adds no provider, public interface or compatibility layer.
