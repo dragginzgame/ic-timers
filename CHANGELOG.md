@@ -2,7 +2,7 @@
 
 All notable changes to this project are recorded here.
 
-## [0.32.4]
+## [0.32.4] - 2026-10-30
 
 ### 🧪 Testing
 
