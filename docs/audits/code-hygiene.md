@@ -35,8 +35,9 @@ Retain these local obligations:
   validation boundaries retain typed rejection and negative coverage.
 - Delegated callback capabilities expire with the exact claim, role and work
   attempt. A registration's longer lifetime cannot authorize stale delivery.
-- Registry arbitration, effect confirmation, handle restoration and callback
-  finalization retain their distinct suspension and rollback obligations.
+- Registry arbitration, provider binding, effect-selected handle cleanup and
+  callback finalization retain their distinct suspension and rollback obligations.
+  Unaffected handles remain bound; there is no production restoration path.
   Preserve atomic transitions when reviewing large functions or similar flows.
 - Scheduler starts, work dispatches, work starts, completions, unacknowledged
   attempts and measurements remain separate events. Counters, totals, deadlines

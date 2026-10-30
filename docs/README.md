@@ -66,6 +66,8 @@ constraints for the release in which they were written.
 - [Releasing](releasing.md): version selection, validation, and publication.
 - [Historical release evidence](changelog/README.md): recorded release subjects.
 - [Shared Tooling adoption](shared-tooling.md): pinned baseline and local overlay.
+- [Shared Tooling history](evidence/shared-tooling-history.md): archived adoption
+  decisions and source-bound qualification, distinct from current setup rules.
 - [Host support](releasing.md#host-support): required macOS workflows and current
   qualification gaps.
 - [Current status](status/current.md): compact handoff for the next maintainer

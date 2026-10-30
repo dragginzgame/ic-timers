@@ -2,6 +2,20 @@
 
 All notable changes to this project are recorded here.
 
+## [0.32.3]
+
+### 🛠️ Tooling
+
+- Select development and minimum Rust compilers from their canonical files in
+  setup, Make and CI, preserving explicit MSRV overrides. Prepare host parsers
+  before compiler selection and keep Cargo-tool setup after Rust bootstrap.
+
+### 📚 Documentation
+
+- Update the public API examples and workspace description, correct obsolete
+  handle-restoration guidance, and separate current setup and ownership rules
+  from historical adoption evidence.
+
 ## [0.32.2] - 2026-10-30
 
 ### ♻️ Refactoring

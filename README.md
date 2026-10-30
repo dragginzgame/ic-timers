@@ -57,7 +57,7 @@ but it does not promise that a task will happen exactly once.
 
 | Field | Value |
 | --- | --- |
-| Released API line | `0.30` |
+| Released API line | `0.32` |
 
 IC Timers is written in Rust 2024 and supports Rust
 1.91.0 and newer. The private backend owns one-shot dispatch through IC
@@ -204,14 +204,14 @@ does not make inspection an authorization or zero-cost guarantee.
 
 ## Minimal `Once` example
 
-The examples below use the released 0.30 API.
+The examples below use the released 0.32 API.
 
 Select one exact published package version when this crate participates in a
 shared framework/application registry:
 
 ```toml
 [dependencies]
-ic-timers = "=0.30.8"
+ic-timers = "=0.32.2"
 ```
 
 Every framework and application crate linked into the same canister must use
@@ -498,7 +498,8 @@ operational measurements.
 ## Development and evidence
 
 The root `Cargo.toml` owns all dependencies, including Testkit, for the library
-and three unpublished probes. Every member uses `workspace = true` and shares
+and four unpublished qualification packages (two canister probes, the native
+driver and their shared protocol). Every member uses `workspace = true` and shares
 the root `Cargo.lock`. Ordinary Cargo commands default to the library; the probe
 targets select their packages explicitly and preserve their Wasm settings through
 the `timer-probe` profile.
@@ -517,18 +518,21 @@ remain defined in [AGENTS.md](AGENTS.md).
 | `make cloc` | Report Rust LOC/test counts for all root workspace members |
 | `make fmt` / `make fmt-check` | Sort manifests and format or check Rust for all workspace members |
 | `make ci` | Run the normal warning-denied checks, native tests, Wasm build, and package checks |
-| `make msrv` | Check the library and its doctests with Rust 1.91.0 |
-| `make testing-check` | Check workspace formatting and lint supported unpublished probes with Rust 1.91.0 |
+| `make msrv` | Check the library and its doctests with the manifest-selected Rust floor |
+| `make testing-check` | Check workspace formatting and lint unpublished probes with the selected minimum compiler |
 | `make repository-check` | Validate repository-only documentation, evidence, or tooling work |
 | `make pocketic-watchdog` | Run the focused real-canister watchdog recovery matrix |
 | `make pocketic-cohorts` | Compare real-canister policy cohorts and measurements |
 | `make release-impact` | Classify changes as crate-impacting, repository-only, or absent |
 
-Normal development and hosted CI use Rust 1.99.1. Hosted CI also lints every
-supported probe configuration with both Rust 1.99.1 and Rust 1.91.0.
-`make update-dev` explicitly prepares both compilers with Clippy, rustfmt and
-the Wasm target before installing/checking the common toolsets and hook. Local
-setup and CI use the same reviewed Rust installer; validation remains offline.
+[Cargo.toml](Cargo.toml) owns the minimum Rust version, and
+[rust-toolchain.toml](rust-toolchain.toml) owns the development compiler. Hosted CI
+lints supported probe configurations with both selections. `make update-dev`
+prepares host parsers first, reads those files, and then prepares both compilers
+with Clippy, rustfmt and the Wasm target before installing/checking Cargo tools
+and the hook. `make update-dev MSRV=x.y.z` explicitly overrides the minimum
+selection. Local setup and CI use the same reviewed Rust installer; validation
+remains offline.
 For manual setup, prepare both Rust toolchains and run `make install-tools`
 followed by `make tools-check`.
 Timers' normal setup selects no IC executable bundle. The optional standalone

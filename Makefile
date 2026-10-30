@@ -5,7 +5,9 @@
 	release-impact release-tag-check release-verify repository-check shell-check test testing-check update-dev \
 	version wasm-check
 
-MSRV ?= 1.91.0
+# Deferred until a compiler-selecting target needs it. Read-only checks require
+# prepared host parsers; explicit MSRV command/environment overrides still win.
+MSRV ?= $(or $(shell PATH="$(CURDIR)/.tools/host/bin:$$PATH" bash "$(CURDIR)/scripts/ci/read-cargo-workspace-rust-version.sh" "$(CURDIR)/Cargo.toml"),$(error Cannot read workspace rust-version; run make install-host-tools))
 VERSION ?=
 LOCAL_TOOL_INSTALL_TARGETS := install-release-editor install-testkit-server
 LOCAL_TOOL_CHECK_TARGETS := release-editor-check pocketic-check
@@ -200,7 +202,7 @@ clean:
 	+cargo clean
 
 update-dev:
-	bash scripts/dev/update-dev.sh "$(MSRV)"
+	@bash scripts/dev/update-dev.sh $(if $(filter file,$(origin MSRV)),,"$(MSRV)")
 
 ensure-clean:
 	@if ! git rev-parse --verify HEAD >/dev/null 2>&1; then \

@@ -1,7 +1,10 @@
 # Callback delivery ownership
 
-This records the implementation and evidence scope of the callback delivery
-change. It does not select a release or establish deployment validation.
+The [architecture](../architecture.md) and [safety boundary](../../SAFETY.md)
+define current behavior. The first section summarizes the delivered 0.32.2
+cleanup; later sections preserve historical implementation and evidence records
+for their named releases, including APIs and dependencies that no longer exist.
+They do not select current versions or establish deployment qualification.
 
 ## Effect-selected handle cleanup
 

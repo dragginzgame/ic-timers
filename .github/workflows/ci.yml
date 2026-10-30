@@ -1,9 +1,5 @@
 name: CI
 
-env:
-  IC_TIMERS_MSRV: 1.91.0
-  IC_TIMERS_INTERNAL_TOOLCHAIN: 1.99.1
-
 permissions:
   contents: read
 
@@ -42,6 +38,13 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/ic-timers-fixtures"
           printf 'TMPDIR=%s/ic-timers-fixtures\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Read canonical Rust policy
+        id: rust-policy
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          make install-host-tools 2>&1 | tee "$RUNNER_TEMP/tools-install.log"
+          export PATH="$GITHUB_WORKSPACE/.tools/host/bin:$PATH"
+          bash scripts/ci/read-rust-policy.sh >> "$GITHUB_ENV"
       - name: Prepare minimum Rust toolchain
         id: prepare-rust-minimum
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
@@ -87,6 +90,13 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.failure_stage == 'early' }}
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: bash scripts/ci/qualify-failure-evidence.sh early
+      - name: Read canonical Rust policy
+        id: rust-policy
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          make install-host-tools 2>&1 | tee "$RUNNER_TEMP/tools-install.log"
+          export PATH="$GITHUB_WORKSPACE/.tools/host/bin:$PATH"
+          bash scripts/ci/read-rust-policy.sh >> "$GITHUB_ENV"
       - name: Prepare development Rust toolchain
         id: prepare-rust-development
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
@@ -168,6 +178,13 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.failure_stage == 'early' }}
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
         run: bash scripts/ci/qualify-failure-evidence.sh early
+      - name: Read canonical Rust policy
+        id: rust-policy
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          make install-host-tools 2>&1 | tee "$RUNNER_TEMP/tools-install.log"
+          export PATH="$GITHUB_WORKSPACE/.tools/host/bin:$PATH"
+          bash scripts/ci/read-rust-policy.sh >> "$GITHUB_ENV"
       - name: Prepare minimum Rust toolchain
         id: prepare-rust-minimum
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}
@@ -271,6 +288,13 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/ic-timers-fixtures"
           printf 'TMPDIR=%s/ic-timers-fixtures\n' "$RUNNER_TEMP" >> "$GITHUB_ENV"
+      - name: Read canonical Rust policy
+        id: rust-policy
+        shell: /bin/bash --noprofile --norc -e -o pipefail {0}
+        run: |
+          make install-host-tools 2>&1 | tee "$RUNNER_TEMP/tools-install.log"
+          export PATH="$GITHUB_WORKSPACE/.tools/host/bin:$PATH"
+          bash scripts/ci/read-rust-policy.sh >> "$GITHUB_ENV"
       - name: Prepare development Rust toolchain
         id: prepare-rust-development
         shell: /bin/bash --noprofile --norc -e -o pipefail {0}

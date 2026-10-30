@@ -131,6 +131,13 @@ best-effort seven-day/512 MiB retention; active records remain protected, so
 these are retention targets rather than hard disk bounds. Testkit's offline server admission
 still precedes the driver. A build failure stops before any PocketIC test runs.
 
+The default `MSRV` comes from `workspace.package.rust-version` in the root
+manifest; explicit command-line/environment overrides select another compiler
+without changing that declared support floor. Development selection comes from
+`rust-toolchain.toml`. CI prepares host parsers before reading both files, then
+prepares Rust before common/selected Cargo tools. Local `make update-dev` follows
+the same order. Compiler selection adds no installation to ordinary checks.
+
 The driver supervises one build/test worker in a Host-owned process group with
 an elapsed-time budget of 30 minutes, a two-second TERM grace and a five-second
 reap budget. This covers build/cache waits, Cargo tests and synchronous PocketIC
