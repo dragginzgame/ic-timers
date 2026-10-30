@@ -349,6 +349,14 @@ fn ordinary_observation() -> OrdinaryObservation {
         }
     });
     OrdinaryObservation {
+        registration_id: snapshot.as_ref().map(|value| {
+            let id = value.registration_id();
+            (
+                id.epoch().canister_version(),
+                id.epoch().started_at_ns(),
+                id.sequence(),
+            )
+        }),
         declared: snapshot.is_some(),
         running: snapshot
             .as_ref()
@@ -359,6 +367,12 @@ fn ordinary_observation() -> OrdinaryObservation {
         completed: COMPLETIONS.with(Cell::get),
         completed_at_ns: COMPLETED_AT_NS.with(Cell::get),
         next_deadline_ns: snapshot.as_ref().and_then(|value| value.next_deadline_ns()),
+        work_started: snapshot
+            .as_ref()
+            .map(|value| {
+                super::counter_observation(value.observability().counters().work_started())
+            })
+            .unwrap_or_default(),
         work_completed: snapshot
             .as_ref()
             .map(|value| {
@@ -369,6 +383,12 @@ fn ordinary_observation() -> OrdinaryObservation {
             value.state()
                 == TimerRuntimeStateSnapshot::Inactive {
                     reason: InactiveReason::Abandoned,
+                }
+        }),
+        invariant_failure: snapshot.as_ref().is_some_and(|value| {
+            value.state()
+                == TimerRuntimeStateSnapshot::Inactive {
+                    reason: InactiveReason::InvariantFailure,
                 }
         }),
         armed,

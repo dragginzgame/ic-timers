@@ -60,6 +60,7 @@ pub struct ProbeSnapshot {
 /// Ordinary callback suspension, abandonment and capture-release observations.
 #[derive(Serialize, Debug, Deserialize)]
 pub struct OrdinaryObservation {
+    pub registration_id: Option<(u64, u64, u64)>,
     pub declared: bool,
     pub running: bool,
     pub waiting: bool,
@@ -68,8 +69,10 @@ pub struct OrdinaryObservation {
     pub completed: u64,
     pub completed_at_ns: Option<u64>,
     pub next_deadline_ns: Option<u64>,
+    pub work_started: CounterObservation,
     pub work_completed: CounterObservation,
     pub abandoned: bool,
+    pub invariant_failure: bool,
     pub armed: bool,
     pub unacknowledged: CounterObservation,
     pub instruction_samples: u64,

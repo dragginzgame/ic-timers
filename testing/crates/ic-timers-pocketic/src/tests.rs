@@ -846,18 +846,22 @@ fn insufficient_cycles_defer_due_work_until_top_up() {
 
 #[test]
 fn frozen_canister_resumes_overdue_timer_after_top_up_only() {
+    assert_frozen_watchdog_resumes_after_top_up(false);
+}
+
+#[test]
+fn freeze_between_scheduler_and_work_resumes_after_top_up_only() {
+    assert_frozen_watchdog_resumes_after_top_up(true);
+}
+
+fn assert_frozen_watchdog_resumes_after_top_up(after_scheduler: bool) {
     let owned = fresh_pocket_ic();
     let pic = owned.instance();
     let canister_id = install_probe(pic, probe_wasm());
-    assert!(update_bool(pic, canister_id, Method::Start));
-    let before = snapshot(pic, canister_id);
-    assert_eq!(before.completed_work, 0);
-    assert_eq!(before.scheduler_started.total, 0);
-    let deadline = before.next_deadline_ns.expect("armed watchdog");
-
     // Raise the real freezing reserve above the existing balance without burning
     // all cycles or uninstalling the canister. Derive it from this instance's
-    // storage charge, rather than relying on a particular probe Wasm size.
+    // storage charge before making work due: management observation must not
+    // silently consume the scheduler/work gap being qualified.
     let status = pic.canister_status(canister_id, None).unwrap();
     let balance = pic.cycle_balance(canister_id);
     let idle_per_day: u128 = status.idle_cycles_burned_per_day.0.try_into().unwrap();
@@ -865,6 +869,106 @@ fn frozen_canister_resumes_overdue_timer_after_top_up_only() {
     let freezing_seconds = u64::try_from((balance * 4 * 86_400).div_ceil(idle_per_day))
         .expect("fixture freezing threshold fits u64");
     let freezing_reserve = idle_per_day * u128::from(freezing_seconds) / 86_400;
+    assert!(update_bool(pic, canister_id, Method::Start));
+    let armed = snapshot(pic, canister_id);
+    assert_eq!(armed.scheduler_started.total, 0);
+    assert_eq!(armed.completed_work, 0);
+    let before = if after_scheduler {
+        pic.advance_time(Duration::from_secs(1));
+        let dispatched = wait_for_probe(
+            pic,
+            12,
+            |pic| snapshot(pic, canister_id),
+            |s| s.work_dispatched.total == 1 && s.work_started.total == 0,
+        );
+        assert_eq!(dispatched.scheduler_started.total, 1);
+        assert_eq!(dispatched.completed_work, 0);
+        assert!(dispatched.next_deadline_ns > armed.next_deadline_ns);
+        dispatched
+    } else {
+        armed
+    };
+    let deadline = before
+        .next_deadline_ns
+        .expect("committed watchdog deadline");
+    freeze_for_five_minutes(pic, canister_id, freezing_seconds, freezing_reserve);
+    assert!(pic.get_time().as_nanos_since_unix_epoch() > deadline);
+    // No ensure/reconcile call, threshold reset, raw timer write or upgrade can
+    // repair the wakeup here. A top-up and replica rounds must suffice.
+    pic.add_cycles(canister_id, balance * 16);
+    // Read-only observation before another round proves the frozen interval
+    // left the overdue registration intact and executed no timer work.
+    let thawed = snapshot(pic, canister_id);
+    assert!(thawed.registered);
+    assert_eq!(thawed.registration_id, before.registration_id);
+    assert_eq!(
+        thawed.scheduler_started.total,
+        before.scheduler_started.total
+    );
+    assert_eq!(thawed.work_dispatched.total, before.work_dispatched.total);
+    assert_eq!(thawed.work_started.total, 0);
+    assert_eq!(thawed.completed_work, 0);
+    assert_eq!(thawed.next_deadline_ns, Some(deadline));
+    // The gap case has both queued work and an overdue committed successor.
+    // Each may execute once. Freezing before the initial scheduler has only one
+    // overdue attempt; neither case replays five minutes of missed cadence.
+    let settled_count = if after_scheduler { 2 } else { 1 };
+    let resumed = wait_for_probe(
+        pic,
+        32,
+        |pic| snapshot(pic, canister_id),
+        |s| s.completed_work > 0,
+    );
+    assert!(resumed.registered);
+    assert_eq!(resumed.completed_work, 1);
+    assert!((1..=u128::from(settled_count)).contains(&resumed.scheduler_started.total));
+    assert_eq!(resumed.work_started.total, 1);
+    assert_eq!(resumed.work_completed.total, 1);
+    assert!(!resumed.post_upgrade_reconstructed);
+    advance_and_tick(pic, Duration::ZERO, 16);
+    let settled = snapshot(pic, canister_id);
+    assert!(settled.registered);
+    assert_eq!(settled.registration_id, before.registration_id);
+    assert_eq!(settled.completed_work, settled_count);
+    assert_eq!(settled.scheduler_started.total, u128::from(settled_count));
+    assert_eq!(settled.work_dispatched.total, u128::from(settled_count));
+    assert_eq!(settled.work_started.total, u128::from(settled_count));
+    assert_eq!(settled.work_completed.total, u128::from(settled_count));
+    assert_eq!(settled.unacknowledged.total, 0);
+    assert!(
+        settled
+            .next_deadline_ns
+            .is_some_and(|next| next > pic.get_time().as_nanos_since_unix_epoch())
+    );
+    pic.advance_time(Duration::from_secs(1));
+    let recurring = wait_for_probe(
+        pic,
+        32,
+        |pic| snapshot(pic, canister_id),
+        |s| s.completed_work > settled_count,
+    );
+    assert_eq!(recurring.registration_id, before.registration_id);
+    assert_eq!(recurring.completed_work, settled_count + 1);
+    assert_eq!(
+        recurring.scheduler_started.total,
+        u128::from(settled_count + 1)
+    );
+    assert_eq!(recurring.work_started.total, u128::from(settled_count + 1));
+    assert_eq!(
+        recurring.work_completed.total,
+        u128::from(settled_count + 1)
+    );
+    let after = pic.canister_status(canister_id, None).unwrap();
+    assert_eq!(after.module_hash, status.module_hash);
+    assert_eq!(after.settings.freezing_threshold, freezing_seconds);
+}
+
+fn freeze_for_five_minutes(
+    pic: &PocketIc,
+    canister_id: ExternalPrincipal,
+    freezing_seconds: u64,
+    freezing_reserve: u128,
+) {
     pic.update_canister_settings(
         canister_id,
         None,
@@ -876,7 +980,6 @@ fn frozen_canister_resumes_overdue_timer_after_top_up_only() {
     .expect("raise freezing reserve");
     pic.advance_time(Duration::from_secs(300));
     advance_and_tick(pic, Duration::ZERO, 16);
-    assert!(pic.get_time().as_nanos_since_unix_epoch() > deadline);
     let frozen_balance = pic.cycle_balance(canister_id);
     assert!(frozen_balance > 0, "frozen, not uninstalled");
     assert!(frozen_balance < freezing_reserve);
@@ -895,47 +998,6 @@ fn frozen_canister_resumes_overdue_timer_after_top_up_only() {
         .expect_err("a valid timer control update must reject while frozen");
     assert_eq!(rejected.reject_code, RejectCode::SysTransient);
     assert_eq!(rejected.error_code, ErrorCode::CanisterOutOfCycles);
-    // No ensure/reconcile call, threshold reset, raw timer write or upgrade can
-    // repair the wakeup here. A top-up and replica rounds must suffice.
-    pic.add_cycles(canister_id, balance * 16);
-    // Read-only observation before another round proves the frozen interval
-    // left the overdue registration intact and executed no timer work.
-    let thawed = snapshot(pic, canister_id);
-    assert!(thawed.registered);
-    assert_eq!(thawed.scheduler_started.total, 0);
-    assert_eq!(thawed.completed_work, 0);
-    assert_eq!(thawed.next_deadline_ns, Some(deadline));
-    let resumed = wait_for_probe(
-        pic,
-        32,
-        |pic| snapshot(pic, canister_id),
-        |s| s.completed_work > 0,
-    );
-    assert!(resumed.registered);
-    assert_eq!(resumed.completed_work, 1);
-    assert_eq!(resumed.scheduler_started.total, 1);
-    assert_eq!(resumed.work_started.total, 1);
-    assert_eq!(resumed.work_completed.total, 1);
-    assert!(!resumed.post_upgrade_reconstructed);
-    assert!(
-        resumed
-            .next_deadline_ns
-            .is_some_and(|next| next > pic.get_time().as_nanos_since_unix_epoch())
-    );
-    advance_and_tick(pic, Duration::ZERO, 16);
-    assert_eq!(snapshot(pic, canister_id).completed_work, 1);
-    pic.advance_time(Duration::from_secs(1));
-    let recurring = wait_for_probe(
-        pic,
-        32,
-        |pic| snapshot(pic, canister_id),
-        |s| s.completed_work >= 2,
-    );
-    assert_eq!(recurring.completed_work, 2);
-    assert_eq!(recurring.scheduler_started.total, 2);
-    let after = pic.canister_status(canister_id, None).unwrap();
-    assert_eq!(after.module_hash, status.module_hash);
-    assert_eq!(after.settings.freezing_threshold, freezing_seconds);
 }
 
 #[test]
@@ -1104,9 +1166,156 @@ fn ordinary_observation(pic: &PocketIc, canister_id: ExternalPrincipal) -> Ordin
         (),
     )
     .expect("probe query succeeds");
+    assert!(!observed.work_started.total_overflowed);
     assert!(!observed.work_completed.total_overflowed);
     assert!(!observed.unacknowledged.total_overflowed);
     observed
+}
+
+#[test]
+fn once_frozen_await_failure_retires_without_replay() {
+    assert_frozen_await_failure_retires(OrdinaryPolicy::Once);
+}
+
+#[test]
+fn after_completion_frozen_await_failure_retires_without_replay() {
+    assert_frozen_await_failure_retires(OrdinaryPolicy::AfterCompletion);
+}
+
+fn assert_frozen_await_failure_retires(policy: OrdinaryPolicy) {
+    let owned = fresh_pocket_ic();
+    let pic = owned.instance();
+    let canister_id = install_probe(pic, probe_wasm());
+    let started_at = pic.get_time().as_nanos_since_unix_epoch();
+    let status = pic.canister_status(canister_id, None).unwrap();
+    let balance = pic.cycle_balance(canister_id);
+    let idle_per_day: u128 = status.idle_cycles_burned_per_day.0.try_into().unwrap();
+    assert!(idle_per_day > 0);
+    let freezing_seconds = u64::try_from((balance * 4 * 86_400).div_ceil(idle_per_day)).unwrap();
+    let freezing_reserve = idle_per_day * u128::from(freezing_seconds) / 86_400;
+    update_wire::<(), _>(
+        pic,
+        canister_id,
+        ExternalPrincipal::anonymous(),
+        Method::StartOrdinary,
+        (policy, ProbeLifetime::Retained),
+    )
+    .unwrap();
+    let suspended = wait_for_probe(
+        pic,
+        32,
+        |pic| ordinary_observation(pic, canister_id),
+        |s| s.running && s.waiting && s.gate_replies > 0,
+    );
+    assert!(suspended.registration_id.is_some());
+    assert_eq!(suspended.work_started.total, 1);
+    assert_eq!(suspended.completed, 0);
+    assert_eq!(suspended.next_deadline_ns, None);
+    assert_eq!(suspended.gate_error, None);
+
+    freeze_for_five_minutes(pic, canister_id, freezing_seconds, freezing_reserve);
+    pic.add_cycles(canister_id, balance * 16);
+    // Query before another replica round: funding cannot hide a completion,
+    // abandoned attempt or ownership change that already happened while frozen.
+    let thawed = ordinary_observation(pic, canister_id);
+    assert_eq!(thawed.registration_id, suspended.registration_id);
+    assert!(thawed.declared && thawed.invariant_failure, "{thawed:?}");
+    assert!(!thawed.running && !thawed.waiting && !thawed.armed && !thawed.abandoned);
+    assert_eq!(thawed.work_started.total, 1);
+    // A pre-funded response can resume while frozen. This probe's next call
+    // fails for lack of liquid cycles; its callback returns InvariantFailure.
+    // That is a normally completed failed attempt, not delivery abandonment.
+    assert_eq!(thawed.work_completed.total, 1);
+    assert_eq!(thawed.completed, 0);
+    assert_eq!(thawed.completed_at_ns, None);
+    assert_eq!(thawed.next_deadline_ns, None);
+    assert_eq!(thawed.unacknowledged.total, 0);
+    assert!(
+        thawed.gate_error.as_ref().is_some_and(
+            |error| error.starts_with("insufficient liquid cycles balance, available: 0,")
+        ),
+        "{thawed:?}"
+    );
+    assert!(update_bool(
+        pic,
+        canister_id,
+        Method::ExpiredOrdinaryContextRejected
+    ));
+    pic.advance_time(Duration::from_secs(1));
+    advance_and_tick(pic, Duration::ZERO, 16);
+    let settled = ordinary_observation(pic, canister_id);
+    assert_eq!(settled.registration_id, suspended.registration_id);
+    assert!(settled.invariant_failure && !settled.running && !settled.armed);
+    assert_eq!(
+        settled.work_started.total, 1,
+        "funding must not replay accepted work"
+    );
+    assert_eq!(settled.work_completed.total, 1);
+    assert_eq!(settled.completed, 0);
+    assert_eq!(settled.unacknowledged.total, 0);
+
+    // The application explicitly schedules a fresh attempt after funding and
+    // permits its awaited operation to succeed. No automatic retry is claimed.
+    update_unit(pic, canister_id, Method::ReleaseOrdinaryWork);
+    update_deadline(
+        pic,
+        canister_id,
+        Method::ReconcileOrdinaryAt,
+        pic.get_time().as_nanos_since_unix_epoch(),
+    );
+    let completed = wait_for_probe(
+        pic,
+        32,
+        |pic| ordinary_observation(pic, canister_id),
+        |s| s.completed == 1,
+    );
+    assert_eq!(completed.registration_id, suspended.registration_id);
+    assert!(!completed.running && !completed.waiting);
+    assert!(!completed.invariant_failure && !completed.abandoned);
+    assert_eq!(completed.work_started.total, 2);
+    assert_eq!(completed.work_completed.total, 2);
+    assert_eq!(completed.unacknowledged.total, 0);
+    // This existing diagnostic keeps the most recent gate error across attempts.
+    assert_eq!(completed.gate_error, thawed.gate_error);
+    assert!(completed.gate_replies > suspended.gate_replies);
+    if policy == OrdinaryPolicy::Once {
+        assert!(!completed.armed);
+        assert_eq!(completed.next_deadline_ns, None);
+        advance_and_tick(pic, Duration::from_secs(5), 16);
+        let settled = ordinary_observation(pic, canister_id);
+        assert_eq!(settled.completed, 1);
+        assert_eq!(settled.work_started.total, 2);
+        assert_eq!(settled.work_completed.total, 2);
+    } else {
+        let completed_at = completed.completed_at_ns.unwrap();
+        assert!(completed_at >= started_at + 300_000_000_000);
+        assert_eq!(
+            completed.next_deadline_ns,
+            Some(completed_at + 1_000_000_000)
+        );
+        advance_and_tick(pic, Duration::ZERO, 16);
+        assert_eq!(ordinary_observation(pic, canister_id).work_started.total, 2);
+        pic.advance_time(Duration::from_secs(1));
+        let recurring = wait_for_probe(
+            pic,
+            32,
+            |pic| ordinary_observation(pic, canister_id),
+            |s| s.completed == 2,
+        );
+        assert_eq!(recurring.registration_id, suspended.registration_id);
+        assert_eq!(recurring.work_started.total, 3);
+        assert_eq!(recurring.work_completed.total, 3);
+        assert!(!recurring.running && !recurring.waiting);
+        assert_eq!(recurring.unacknowledged.total, 0);
+        assert_eq!(recurring.gate_error, thawed.gate_error);
+        assert_eq!(
+            recurring.next_deadline_ns,
+            Some(recurring.completed_at_ns.unwrap() + 1_000_000_000)
+        );
+    }
+    let after = pic.canister_status(canister_id, None).unwrap();
+    assert_eq!(after.module_hash, status.module_hash);
+    assert_eq!(after.settings.freezing_threshold, freezing_seconds);
 }
 
 #[test]

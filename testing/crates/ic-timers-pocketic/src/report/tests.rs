@@ -33,6 +33,74 @@ fn fixture_report() -> Report {
 }
 
 #[test]
+fn runtime_receipt_retains_build_identity_and_refuses_incomplete_or_existing_output() {
+    let fixture =
+        ic_host_fs::testing::FixtureDirectory::new(&std::env::temp_dir(), "timer-runtime-receipt")
+            .unwrap();
+    let report = fixture_report();
+    let mut artifact = report.artifacts["watchdog"].clone();
+    artifact.feature = "default".into();
+    let build = BuildContext {
+        schema: report.schema,
+        context: report.context,
+        artifacts: BTreeMap::from([("runtime".into(), artifact)]),
+    };
+    let subjects: Vec<String> = vec!["tests::first".into(), "tests::second".into()];
+    let qualification = Qualification::Focused {
+        subjects: subjects.clone(),
+    };
+    let output = fixture.path().join("runtime.json");
+    for missing in ["compiler", "lock", "artifact"] {
+        let mut invalid = build.clone();
+        match missing {
+            "compiler" => invalid.context.rustc.clear(),
+            "lock" => invalid.context.lock_sha256.clear(),
+            "artifact" => invalid
+                .artifacts
+                .get_mut("runtime")
+                .unwrap()
+                .wasm_sha256
+                .clear(),
+            _ => unreachable!(),
+        }
+        assert!(
+            invalid
+                .publish_runtime_receipt(&output, &qualification, &subjects)
+                .is_err()
+        );
+        assert!(!output.exists());
+    }
+    let mut missing = build.clone();
+    missing.artifacts.clear();
+    assert!(
+        missing
+            .publish_runtime_receipt(&output, &qualification, &subjects)
+            .is_err()
+    );
+    assert!(
+        build
+            .publish_runtime_receipt(&output, &qualification, &[])
+            .is_err()
+    );
+    assert!(!output.exists());
+    build
+        .publish_runtime_receipt(&output, &qualification, &subjects)
+        .unwrap();
+    let bytes = fs::read(&output).unwrap();
+    let value: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+    assert_eq!(value["selection"], "focused");
+    assert_eq!(value["subjects"], serde_json::json!(subjects));
+    assert_eq!(value["verification"], "passed");
+    assert_eq!(value["build"], serde_json::to_value(&build).unwrap());
+    assert!(
+        build
+            .publish_runtime_receipt(&output, &Qualification::Watchdog, &subjects)
+            .is_err()
+    );
+    assert_eq!(fs::read(&output).unwrap(), bytes);
+}
+
+#[test]
 fn missing_or_incomplete_candidate_never_replaces_a_previous_report() {
     let fixture =
         ic_host_fs::testing::FixtureDirectory::new(&std::env::temp_dir(), "timer-report-admission")

@@ -5,6 +5,7 @@ use ic_build::cargo::{
     environment::ConfigurationLimits,
     selection::{CargoFeatureSelection, CargoSelection},
 };
+use ic_host_fs::durable::{PublicationMode, WriteOptions, write_bytes};
 use ic_host_process::{
     child::CleanupPolicy,
     tool::{OutputLimit, OutputLimits, ToolError, capture_command, run_group_command},
@@ -24,9 +25,12 @@ const CONFIGURATION_LIMITS: ConfigurationLimits = ConfigurationLimits {
     depth: 32,
 };
 
-/// A complete qualification selection; only cohorts has report paths.
+/// Full qualification or an explicitly narrower development selection.
 pub(crate) enum Qualification {
     Watchdog,
+    Focused {
+        subjects: Vec<String>,
+    },
     Cohorts {
         report: PathBuf,
         baseline: Option<PathBuf>,
@@ -37,6 +41,7 @@ impl Qualification {
     pub(crate) const fn name(&self) -> &'static str {
         match self {
             Self::Watchdog => "watchdog",
+            Self::Focused { .. } => "focused",
             Self::Cohorts { .. } => "cohorts",
         }
     }
@@ -90,6 +95,9 @@ const REQUIRED_WATCHDOG_SUBJECTS: &[&str] = &[
     "tests::instruction_exhaustion_leaves_successor_for_later_progress",
     "tests::insufficient_cycles_defer_due_work_until_top_up",
     "tests::frozen_canister_resumes_overdue_timer_after_top_up_only",
+    "tests::freeze_between_scheduler_and_work_resumes_after_top_up_only",
+    "tests::once_frozen_await_failure_retires_without_replay",
+    "tests::after_completion_frozen_await_failure_retires_without_replay",
     "tests::dispatch_response_trap_cleanup_preserves_pending_work_for_retry",
     "tests::ordinary_trap_before_await_retires_the_rolled_back_scheduled_delivery",
     "tests::ordinary_continuation_trap_retires_running_work_and_releases_expired_authority",
@@ -98,26 +106,69 @@ const REQUIRED_WATCHDOG_SUBJECTS: &[&str] = &[
     "tests::maximum_capacity_dispatch_preserves_every_survivor_under_pressure_and_await",
 ];
 
-fn test_listing(command: &mut Command) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+fn test_listing(
+    command: &mut Command,
+    diagnostics: &Path,
+    stage: &str,
+) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
     // The owning worker supplies the elapsed deadline and process group. Host
     // bounds discovery output and preserves a failed producer's status/evidence.
-    let output = capture_command(
+    let result = capture_command(
         command,
         OutputLimits {
             stdout: OutputLimit::Terminate(64 * 1024),
             stderr: OutputLimit::Terminate(256 * 1024),
             timeout: None,
         },
-    )?
-    .require_success()?;
-    Ok(output.stdout)
+    )
+    .and_then(|output| output.require_success());
+    let (stdout, stderr) = match &result {
+        Ok(output) => (output.stdout.as_slice(), output.stderr.as_slice()),
+        Err(error) => error.evidence().map_or((&[][..], &[][..]), |evidence| {
+            (evidence.stdout.as_slice(), evidence.stderr.as_slice())
+        }),
+    };
+    let summary = format!("{result:?}\n");
+    let retained = (|| {
+        for (suffix, bytes) in [
+            ("stdout", stdout),
+            ("stderr", stderr),
+            ("status.txt", summary.as_bytes()),
+        ] {
+            write_bytes(
+                &diagnostics.join(format!("{stage}.{suffix}")),
+                WriteOptions {
+                    mode: PublicationMode::Replace,
+                    permissions: 0o600,
+                },
+                bytes,
+            )?;
+        }
+        Ok::<_, Box<dyn std::error::Error>>(())
+    })();
+    if result.is_err() && retained.is_ok() {
+        eprintln!(
+            "discovery failed; stderr: {}",
+            diagnostics.join(format!("{stage}.stderr")).display()
+        );
+    }
+    if let Err(error) = retained {
+        eprintln!("could not save {stage} evidence: {error}");
+        // A secondary persistence failure must not replace the typed producer
+        // failure (including its original bounded output and cleanup outcome).
+        if result.is_ok() {
+            return Err(error);
+        }
+    }
+    Ok(result?.stdout)
 }
 
 fn discover_subjects(
     command: &mut Command,
     qualification: &Qualification,
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let output = test_listing(command)?;
+    diagnostics: &Path,
+) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+    let output = test_listing(command, diagnostics, "discovery")?;
     let names = std::str::from_utf8(&output)?
         .lines()
         .map(|line| line.strip_suffix(": test").ok_or("invalid test listing"))
@@ -127,6 +178,19 @@ fn discover_subjects(
             .iter()
             .all(|name| names.contains(name)),
         Qualification::Cohorts { .. } => names == [COHORT_SUBJECT],
+        Qualification::Focused { subjects } => {
+            !subjects.is_empty()
+                && names.len() == subjects.len()
+                && subjects.iter().all(|subject| {
+                    subject.starts_with("tests::")
+                        && names.iter().filter(|name| **name == subject).count() == 1
+                })
+                && subjects
+                    .iter()
+                    .collect::<std::collections::BTreeSet<_>>()
+                    .len()
+                    == subjects.len()
+        }
     };
     if !admitted {
         return Err(format!(
@@ -137,11 +201,11 @@ fn discover_subjects(
     }
     // Listing includes ignored tests. Refuse ignored selected subjects rather than
     // silently qualifying a partial run or overriding an intentional ignore.
-    let ignored = test_listing(command.arg("--ignored"))?;
+    let ignored = test_listing(command.arg("--ignored"), diagnostics, "ignored")?;
     if !ignored.is_empty() {
         return Err("qualification selection contains ignored subjects".into());
     }
-    Ok(output)
+    Ok(names.into_iter().map(str::to_owned).collect())
 }
 
 pub(crate) fn run(qualification: &Qualification) -> Result<(), Box<dyn std::error::Error>> {
@@ -149,7 +213,7 @@ pub(crate) fn run(qualification: &Qualification) -> Result<(), Box<dyn std::erro
         .join("../../..")
         .canonicalize()?;
     let (report_path, baseline) = match qualification {
-        Qualification::Watchdog => (None, None),
+        Qualification::Watchdog | Qualification::Focused { .. } => (None, None),
         Qualification::Cohorts { report, baseline } => (
             Some(root.join(report)),
             baseline.as_ref().map(|path| root.join(path)),
@@ -159,23 +223,16 @@ pub(crate) fn run(qualification: &Qualification) -> Result<(), Box<dyn std::erro
         let baseline = baseline.canonicalize()?;
         ic_host_fs::durable::validate_non_aliasing(output, &[&baseline], 40)?;
     }
-    let filter = match qualification {
-        Qualification::Watchdog => "tests::",
-        Qualification::Cohorts { .. } => COHORT_SUBJECT,
-    };
-    // Retain failures (including a completed child's unadmitted report) without
-    // ever consulting the previous final output. Host owns unique allocation.
-    let mut scratch = ic_host_fs::owned_directory::OwnedDirectory::new(
-        ic_host_fs::directory::create_unique_directory(
-            &std::env::temp_dir().canonicalize()?,
-            "timer-qualification",
-            0o700,
-            std::num::NonZeroUsize::new(128),
-        )?,
-    );
-    scratch.disarm();
-    eprintln!("qualification diagnostics: {}", scratch.path().display());
-    let candidate = scratch.path().join("cohorts.json");
+    // Retain invocation evidence on success and failure without consulting a
+    // previous final report. Host owns unique private directory allocation.
+    let scratch = ic_host_fs::directory::create_unique_directory(
+        &std::env::temp_dir().canonicalize()?,
+        "timer-qualification",
+        0o700,
+        std::num::NonZeroUsize::new(128),
+    )?;
+    eprintln!("qualification diagnostics: {}", scratch.display());
+    let candidate = scratch.join("cohorts.json");
     let mut tests = Command::new("cargo");
     tests.current_dir(&root).args([
         "test",
@@ -184,24 +241,33 @@ pub(crate) fn run(qualification: &Qualification) -> Result<(), Box<dyn std::erro
         "--bin",
         "ic-timers-pocketic",
         "--locked",
-        filter,
+        "--",
     ]);
+    match qualification {
+        Qualification::Watchdog => {
+            tests.arg("tests::");
+        }
+        Qualification::Focused { subjects } => {
+            tests.arg("--exact").args(subjects);
+        }
+        Qualification::Cohorts { .. } => {
+            tests.args(["--exact", COHORT_SUBJECT]);
+        }
+    }
     let mut discovery = Command::new(tests.get_program());
     discovery
         .current_dir(&root)
         .args(tests.get_args())
-        .args(["--", "--list", "--format", "terse"]);
-    if matches!(qualification, Qualification::Cohorts { .. }) {
-        discovery.arg("--exact");
-        tests.args(["--", "--exact", "--nocapture"]);
-    }
+        .args(["--list", "--format", "terse"]);
+    tests.arg("--nocapture");
+    let subjects = discover_subjects(&mut discovery, qualification, &scratch)?;
     std::fs::write(
-        scratch.path().join("subjects.txt"),
-        discover_subjects(&mut discovery, qualification)?,
+        scratch.join("subjects.txt"),
+        format!("{}\n", subjects.join("\n")),
     )?;
     let mut builds = Vec::new();
     let mut report = crate::report::BuildContext::new(&root)?;
-    let recipes = if matches!(qualification, Qualification::Watchdog) {
+    let recipes = if !matches!(qualification, Qualification::Cohorts { .. }) {
         vec![(
             "runtime",
             "IC_TIMERS_PROBE_WASM",
@@ -255,9 +321,12 @@ pub(crate) fn run(qualification: &Qualification) -> Result<(), Box<dyn std::erro
             return Err(format!("expected exactly one Wasm artifact for {label}").into());
         };
         tests.env(variable, artifact);
-        if matches!(qualification, Qualification::Cohorts { .. }) {
-            report.record_build(label, built.record(), artifact)?;
-        }
+        report.record_build(
+            label,
+            feature.unwrap_or("default"),
+            built.record(),
+            artifact,
+        )?;
         // Retain exact artifacts until the child tests finish reading them.
         builds.push(built);
     }
@@ -265,7 +334,7 @@ pub(crate) fn run(qualification: &Qualification) -> Result<(), Box<dyn std::erro
         tests.env("IC_TIMERS_COHORT_REPORT", &candidate);
         tests.env("IC_TIMERS_COHORT_CONTEXT", serde_json::to_string(&report)?);
     }
-    tests.env("IC_TIMERS_DIAGNOSTICS", scratch.path());
+    tests.env("IC_TIMERS_DIAGNOSTICS", &scratch);
     let status = tests.status()?;
     for built in &builds {
         built.verify_current()?;
@@ -285,8 +354,9 @@ pub(crate) fn run(qualification: &Qualification) -> Result<(), Box<dyn std::erro
             completed.compare(baseline)?;
         }
         completed.publish(path)?;
+    } else {
+        report.publish_runtime_receipt(&scratch.join("runtime.json"), qualification, &subjects)?;
     }
-    scratch.cleanup()?;
     Ok(())
 }
 

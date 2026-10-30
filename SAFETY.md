@@ -126,9 +126,17 @@ The current runtime provides:
   hook, stop/resume, insufficient cycles followed by top-up, a 300-second
   overdue jump without replay, two simultaneous timers, and isolation when one
   timer traps;
-- focused PocketIC evidence that an armed Watchdog survives a positive-balance
-  freeze past its deadline, then delivers one overdue callback and resumes
-  cadence after external funding alone, without upgrade or timer repair calls;
+- focused PocketIC evidence that a Watchdog survives a positive-balance freeze
+  before its initial scheduler or in the committed scheduler/work gap. External
+  funding alone restores delivery and cadence without changing registration
+  ownership, upgrading or repairing timers. The gap case completes its queued
+  attempt and overdue successor once each, without replaying missed cadence;
+- focused PocketIC evidence for `Once` and `AfterCompletion` work awaiting
+  self-calls when frozen. The probe maps an insufficient-liquid-cycles call
+  error to `InvariantFailure`; the attempt completes as failed, expires its
+  callback context and leaves no running work, wakeup or unacknowledged attempt.
+  Funding alone does not replay it. Explicit scheduling under the retained
+  registration permits fresh success, with recurrence based on that completion;
 - terminal cancellation both normally and in the committed scheduler/work gap,
   leaving later provider delivery unable to invoke consumer work;
 - external rejection of the provider's internal timer-executor route; and
@@ -296,9 +304,14 @@ the failed creation. See the [construction decision](docs/design/0.18-atomic-reg
   only a still-pending task after one second. An accepted task cannot be replayed
   from that transport identity. This does not establish exactly-once application
   effects or remove the need for durable application reconciliation.
-- The freeze/top-up subject covers a Watchdog armed before freezing. It does
-  not qualify every freeze during running/awaiting work, every timer policy, or
-  recovery after cycle exhaustion has uninstalled the canister.
+- The freeze/top-up subjects cover an armed Watchdog and its committed
+  scheduler/work gap, plus ordinary async work whose next self-call fails for
+  lack of liquid cycles and whose callback reports `InvariantFailure`. This
+  last outcome is the probe application's policy, not automatic handling of
+  every call error. Callback responses can execute while frozen; funding need
+  not revive an already terminal attempt. Arbitrary pending futures, other freeze
+  interleavings and recovery after cycle exhaustion has uninstalled the canister
+  remain unqualified.
 - Armed records and outstanding transport slots are bounded separately. Future
   captures, running work, executor allocations and canister memory are not
   globally bounded by these limits. Older provider-heap churn receipts describe

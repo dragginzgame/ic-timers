@@ -1,9 +1,9 @@
 mod build;
 mod report;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let args = clap::Command::new("ic-timers-pocketic")
-        .about("Build and run timer qualification through the corresponding Make target")
+fn command() -> clap::Command {
+    clap::Command::new("ic-timers-pocketic")
+        .about("Build and run timer qualification or exact development subjects")
         .arg(
             clap::Arg::new("worker")
                 .long("worker")
@@ -12,6 +12,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .subcommand_required(true)
         .subcommand(clap::Command::new("watchdog"))
+        .subcommand(
+            clap::Command::new("focused")
+                .about("Run exact runtime subjects; does not replace watchdog qualification")
+                .arg(clap::Arg::new("subjects").required(true).num_args(1..)),
+        )
         .subcommand(
             clap::Command::new("cohorts")
                 .arg(
@@ -26,10 +31,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         .value_parser(clap::value_parser!(std::path::PathBuf)),
                 ),
         )
-        .get_matches();
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let args = command().get_matches();
     let (mode, options) = args.subcommand().expect("required subcommand");
     let qualification = match mode {
         "watchdog" => build::Qualification::Watchdog,
+        "focused" => build::Qualification::Focused {
+            subjects: options
+                .get_many::<String>("subjects")
+                .expect("required subjects")
+                .cloned()
+                .collect(),
+        },
         "cohorts" => build::Qualification::Cohorts {
             report: options
                 .get_one::<std::path::PathBuf>("report")
@@ -44,6 +59,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         let mut worker = std::process::Command::new(std::env::current_exe()?);
         worker.args(["--worker", qualification.name()]);
+        if let build::Qualification::Focused { subjects } = &qualification {
+            worker.args(subjects);
+        }
         if let build::Qualification::Cohorts { report, baseline } = &qualification {
             worker.arg("--report").arg(report);
             if let Some(baseline) = baseline {

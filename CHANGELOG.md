@@ -2,6 +2,23 @@
 
 All notable changes to this project are recorded here.
 
+## [0.32.4]
+
+### 🧪 Testing
+
+- Add exact runtime-subject selection to the existing PocketIC driver, retaining
+  source-bound Wasm custody, timeout handling and strict discovery admission.
+  Focused runs do not replace the full release recovery and cohort gates.
+- Retain bounded discovery diagnostics and successful runtime receipts with
+  selected subjects and build identities. Preserve invocation evidence after
+  success and keep original producer errors when saving diagnostics fails.
+- Cover freezing after the Watchdog commits its successor and before queued work
+  starts. Share freeze/top-up assertions with the armed-timer regression and
+  require unchanged ownership, bounded overdue delivery and continued cadence.
+- Cover freezing during async `Once` and `AfterCompletion` work. Verify that
+  application-declared call failure retires without replay or stuck execution,
+  explicit retry preserves ownership, and recurrence follows successful completion.
+
 ## [0.32.3] - 2026-10-30
 
 ### 🛠️ Tooling

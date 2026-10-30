@@ -567,12 +567,22 @@ trap isolation, and rejection of external executor ingress. The testkit/PocketIC
 16 harness requires renewed execution of the full recovery and cohort gates;
 source review and verified artifact hashes do not qualify those behaviors.
 
-The focused freeze/top-up regression additionally exercises an armed Watchdog
-through a genuine positive-balance, five-minute freeze spanning its deadline.
-It requires automatic delivery and continued cadence after external funding,
-without an upgrade, threshold reset or timer repair call. Its Linux PocketIC
-16.1.0 evidence covers that window; other freeze/await interleavings and native
-macOS retain their own qualification requirements. See [SAFETY.md](SAFETY.md).
+The focused freeze/top-up regressions exercise a Watchdog through a genuine
+positive-balance, five-minute freeze, both before its first scheduler and after
+the scheduler commits a successor but before queued work starts. External funding
+alone restores delivery and cadence with unchanged registration ownership. In
+the second window, queued work and the overdue successor each complete once;
+missed cadence is not replayed. Linux PocketIC 16.1.0 evidence covers these
+windows.
+
+Additional `Once` and `AfterCompletion` cases freeze work awaiting real self-calls.
+A response can resume while frozen, but the next call has no liquid cycles.
+The probe reports `InvariantFailure`, ending that attempt without replay or a
+stuck running state. Funding alone does not restart it; explicit scheduling under
+the retained registration allows a fresh attempt, and recurrence follows its
+successful completion. Applications own their call-error and retry policy. These
+specific Linux PocketIC 16.1.0 fixtures do not qualify arbitrary pending futures,
+other freeze interleavings or native macOS. See [SAFETY.md](SAFETY.md).
 
 ## Documentation map
 

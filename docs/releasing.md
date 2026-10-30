@@ -178,6 +178,22 @@ Failed discovery, invalid output and missing subjects fail even if Cargo exits
 zero. Discovery executes no test bodies or simulator calls and shares the
 worker's existing elapsed-time/process-group budget.
 
+For focused development evidence, pass one or more fully qualified runtime
+subjects to the same driver:
+
+```sh
+POCKET_IC_BIN="$(bash scripts/dev/testkit-server.sh check)" \
+  RUSTUP_TOOLCHAIN=1.91.0 cargo run -p ic-timers-pocketic --locked -- \
+  focused tests::freeze_between_scheduler_and_work_resumes_after_top_up_only \
+  tests::frozen_canister_resumes_overdue_timer_after_top_up_only
+```
+
+Discovery and execution both use `--exact`. Empty, duplicate, missing, non-runtime
+and ignored selections refuse before building canisters. Focused runs retain
+the same artifact custody, diagnostics and worker/server deadlines. They provide
+only the named evidence; `pocketic-watchdog` still requires the complete recovery
+roster and the release gate still includes all policy cohorts.
+
 The required scheduler-abandonment subject runs instruction-heavy ordinary timers
 before a due Watchdog self-call. It must observe a committed earlier dispatch and
 no scheduler start before stopping the canister. After restart, time and ticks
@@ -187,13 +203,32 @@ initial and successor scheduling. Registration identity and completed work remai
 intact. This fixture exercises actual IC scheduling and the production backend;
 it does not inject a provider or claim scheduler-body trap recovery.
 
-The required freeze/top-up subject raises the real freezing reserve above the
-observed positive balance, advances five minutes while frozen across an armed
-Watchdog's deadline, and requires a typed out-of-cycles rejection of a valid update. Only
+The required freeze/top-up subjects raise the real freezing reserve above the
+observed positive balance, advance five minutes while frozen across a committed
+Watchdog deadline, and require a typed out-of-cycles rejection of a valid update. Only
 external funding and replica ticks may resume delivery and the next cadence;
 query observations cannot repair the timer. The threshold and module hash stay
 unchanged after freezing, and the post-upgrade reconstruction flag stays clear.
-This qualifies that armed-watchdog window, not all in-flight or policy cases.
+The second subject first observes a committed successor and dispatched but
+unstarted work. After thawing, the queued attempt and overdue successor may each
+complete once; missed cadence is not replayed. Both subjects require unchanged
+registration ownership and continued cadence. These qualify the armed and
+committed scheduler/work windows.
+
+The required `Once` and `AfterCompletion` frozen-await subjects first observe
+one running callback awaiting real self-calls, then use the same positive-balance
+five-minute freeze. A response resumes and the next call fails for insufficient
+liquid cycles. The probe deliberately returns `InvariantFailure` for that error;
+this is application policy, not a runtime retry decision. After funding, a query
+before another round must show that the attempt completed as failed, no wakeup
+remains and its retained registration is unchanged. Control through the expired
+callback context must reject.
+Further time/ticks cannot replay it or turn it into delivery abandonment.
+Only explicit scheduling starts a new attempt. `Once` completes it once, while
+`AfterCompletion` must schedule and execute recurrence from the new successful
+completion time. Start/completion counters distinguish the failed attempt from
+fresh work. Module hash and freezing threshold remain unchanged. These subjects
+do not qualify arbitrary pending futures or every frozen callback interleaving.
 
 IC Build's published `WasmBuildEvidence` owns each acquired build, retained cache
 lease and input observation through measurement. Timers borrows its record to
@@ -204,12 +239,32 @@ persistent changes, not edits reverted between observations. Timers still owns
 subject selection, exact loaded-Wasm admission and completed-report publication.
 
 Each invocation allocates a fresh private `timer-qualification-*` directory under
-the selected temporary root. Its path is printed and failures retain the directory;
-successful runs clean it up. Successful discovery leaves `subjects.txt` there.
+the selected temporary root. Its path is printed and the directory is retained
+on success and failure. Successful discovery leaves fully qualified names, one
+per line, in `subjects.txt`. Each listing captures bounded raw stdout/stderr and
+status, byte-count and truncation metadata in `discovery.*` or `ignored.*` files.
+A failed producer prints the stderr file's location; a secondary evidence-write
+failure does not replace its original typed error. No captured bytes are printed
+automatically. Each stream keeps the existing 64 KiB stdout/256 KiB stderr limits.
 Each Testkit instance writes stdout/stderr to a unique subdirectory of this
 invocation through the published caller-owned output interface. These logs survive
-instance teardown and remain with failed diagnostics; existing CI temporary-root
+instance teardown and remain with invocation diagnostics; existing CI temporary-root
 collection includes them. They inherit the invocation retention lifecycle.
+
+Successful `watchdog` and `focused` runs also print and retain `runtime.json` in
+that directory. It records the admitted subject names, selection mode, compiler
+identities, root-lock/server/Wasm hashes and Build fingerprint/input/recipe
+identities using the existing build context. The runtime artifact's `feature`
+label is `default`, describing its default-feature build. `verification: passed`
+is published only after test success and Build input/context rechecks; it qualifies
+only those subjects on that recorded host and graph. Failed tests or input checks
+never publish a success receipt. Receipt publication refuses an existing entry and
+uses owner-only permissions. Accept it only with a successful driver exit: a later
+publication error can leave a visible receipt, as with cohort publication.
+Cohort report shape and final-output publication are unchanged.
+These records are evidence, not reusable build leases or authority to skip release
+gates; preserve them before any explicit cleanup or temporary-root expiry.
+
 The child receives build context separately and constructs a complete report
 with required measurements. It writes its candidate there, never to the final
 output. The

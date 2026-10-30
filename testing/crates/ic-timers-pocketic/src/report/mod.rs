@@ -1,6 +1,6 @@
-//! Host-only cohort receipts and review comparisons; never deployed in probes.
+//! Host-only qualification receipts and cohort comparisons; never deployed in probes.
 
-use crate::build::Cohort;
+use crate::build::{Cohort, Qualification};
 use ic_build::artifacts::WasmBuildRecord;
 use ic_host_artifacts::artifact::{hash_reader, read_reader};
 use ic_host_fs::durable::{PublicationMode, WriteOptions, write_bytes};
@@ -137,7 +137,8 @@ impl BuildContext {
 
     pub(crate) fn record_build(
         &mut self,
-        cohort: &str,
+        label: &str,
+        feature: &str,
         record: &WasmBuildRecord,
         artifact: &Path,
     ) -> Result<()> {
@@ -156,18 +157,18 @@ impl BuildContext {
             ("target", &mut self.context.target, facts.target.clone()),
         ] {
             if !previous.is_empty() && *previous != value {
-                return Err(format!("cohort {key} changed during builds").into());
+                return Err(format!("probe {key} changed during builds").into());
             }
             *previous = value;
         }
         self.artifacts.insert(
-            cohort.into(),
+            label.into(),
             Artifact {
                 wasm_sha256: digest(artifact)?,
                 build_fingerprint: record.fingerprint().to_string(),
                 input_digest: record.input_digest().to_string(),
                 recipe_identity: record.recipe_identity().to_string(),
-                feature: cohort.into(),
+                feature: feature.into(),
             },
         );
         Ok(())
@@ -182,6 +183,38 @@ impl BuildContext {
         {
             return Err("qualification context changed during measurement".into());
         }
+        Ok(())
+    }
+
+    /// The driver calls this only after tests, Build and context checks succeed.
+    pub(crate) fn publish_runtime_receipt(
+        &self,
+        path: &Path,
+        qualification: &Qualification,
+        subjects: &[String],
+    ) -> Result<()> {
+        validate_build_context(self.schema, &self.context, &self.artifacts)?;
+        if matches!(qualification, Qualification::Cohorts { .. })
+            || subjects.is_empty()
+            || self.artifacts.len() != 1
+            || !self.artifacts.contains_key("runtime")
+        {
+            return Err("incomplete runtime receipt".into());
+        }
+        write_bytes(
+            path,
+            WriteOptions {
+                mode: PublicationMode::CreateNew,
+                permissions: 0o600,
+            },
+            &serde_json::to_vec_pretty(&serde_json::json!({
+                "selection": qualification.name(),
+                "subjects": subjects,
+                "verification": "passed",
+                "build": self,
+            }))?,
+        )?;
+        println!("runtime receipt: {}", path.display());
         Ok(())
     }
 
@@ -222,29 +255,13 @@ impl Report {
     }
 
     fn validate(&self) -> Result<()> {
-        let context = &self.context;
-        if self.schema != SCHEMA
-            || [
-                &context.lock_sha256,
-                &context.server_sha256,
-                &context.host,
-                &context.profile,
-                &context.rustc,
-                &context.cargo,
-                &context.target,
-            ]
-            .iter()
-            .any(|value| value.is_empty())
-            || self.artifacts.len() != Cohort::ALL.len()
+        validate_build_context(self.schema, &self.context, &self.artifacts)?;
+        if self.artifacts.len() != Cohort::ALL.len()
             || !Cohort::ALL.iter().all(|cohort| {
                 let name = cohort.name();
-                self.artifacts.get(name).is_some_and(|artifact| {
-                    artifact.feature == name
-                        && !artifact.wasm_sha256.is_empty()
-                        && !artifact.build_fingerprint.is_empty()
-                        && !artifact.input_digest.is_empty()
-                        && !artifact.recipe_identity.is_empty()
-                })
+                self.artifacts
+                    .get(name)
+                    .is_some_and(|artifact| artifact.feature == name)
             })
         {
             return Err("incomplete cohort report".into());
@@ -318,6 +335,41 @@ impl Report {
         )?;
         Ok(changes)
     }
+}
+
+fn validate_build_context(
+    schema: u32,
+    context: &Context,
+    artifacts: &BTreeMap<String, Artifact>,
+) -> Result<()> {
+    if schema != SCHEMA
+        || [
+            &context.lock_sha256,
+            &context.server_sha256,
+            &context.host,
+            &context.profile,
+            &context.rustc,
+            &context.cargo,
+            &context.target,
+        ]
+        .iter()
+        .any(|value| value.is_empty())
+        || artifacts.is_empty()
+        || artifacts.values().any(|artifact| {
+            [
+                &artifact.feature,
+                &artifact.wasm_sha256,
+                &artifact.build_fingerprint,
+                &artifact.input_digest,
+                &artifact.recipe_identity,
+            ]
+            .iter()
+            .any(|value| value.is_empty())
+        })
+    {
+        return Err("incomplete qualification build context".into());
+    }
+    Ok(())
 }
 
 pub(crate) fn digest(path: &Path) -> Result<String> {

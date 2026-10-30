@@ -512,8 +512,10 @@ preventing concurrent logical execution. Maintained
 [PocketIC subjects](../testing/crates/ic-timers-pocketic/src/tests.rs) exercise
 trap, actual instruction exhaustion, upgrade reconstruction, external-ingress
 rejection, independent timers, insufficient cycles followed by top-up,
-an armed Watchdog surviving a genuine freeze and top-up without repair calls,
-stop/resume, overdue coalescing and cancellation in the scheduler/work gap.
+an armed Watchdog and its committed scheduler/work gap surviving a genuine freeze
+and top-up without repair calls,
+retirement without replay when ordinary async work reports a failed self-call
+while frozen, stop/resume, overdue coalescing and cancellation in the scheduler/work gap.
 [SAFETY.md](../SAFETY.md) owns the guarantees and evidence limits; historical
 server versions and receipts do not qualify a new source/artifact combination.
 
