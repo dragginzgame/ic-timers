@@ -40,7 +40,7 @@ ic-host-process = "0.70.0"
 ic-testkit = "0.70.0"
 ic-timers = { path = "crates/ic-timers" }
 ic-timers-test-protocol = { path = "testing/crates/ic-timers-test-protocol" }
-ic-wire = "0.7.22"
+ic-wire = "0.14.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
