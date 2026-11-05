@@ -784,8 +784,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5e22e4f26b0128168127ed9570c0d3669bc9017a45a6823030be6cbee30dc724"
 dependencies = [
  "cargo_metadata",
- "ic-host-artifacts",
- "ic-host-fs",
+ "ic-host-artifacts 0.70.4",
+ "ic-host-fs 0.70.5",
  "ic-host-process",
  "rustix",
  "serde",
@@ -830,12 +830,32 @@ dependencies = [
 ]
 
 [[package]]
-name = "ic-host-fs"
-version = "0.70.4"
+name = "ic-host-artifacts"
+version = "0.73.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98036d002c4ea4be9eb0140f491ba7cd539ce5828c0055b8858f9732bd0bf1b4"
+checksum = "499c5dcde4cc97e49f2f653e6234639752f9b179ae387c6872ee6e5cc194fdce"
 dependencies = [
- "ic-host-artifacts",
+ "sha2",
+]
+
+[[package]]
+name = "ic-host-fs"
+version = "0.70.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2790e56d4939fa65db95917d1955d8652e7c8d78c8fc28007300414dec0ed65"
+dependencies = [
+ "ic-host-artifacts 0.70.4",
+ "rustix",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "ic-host-fs"
+version = "0.73.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ff18ef5150d939d6789e6b16cf174fc792e5267fbe39e94b1564f4a9e94c929d"
+dependencies = [
+ "ic-host-artifacts 0.73.6",
  "rustix",
  "thiserror 2.0.18",
 ]
@@ -847,8 +867,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2644499d11a5606a9b4ee968270f92363588a5ddf31d5120f0512b5955ed675d"
 dependencies = [
  "command-fds",
- "ic-host-artifacts",
- "ic-host-fs",
+ "ic-host-artifacts 0.70.4",
+ "ic-host-fs 0.70.5",
  "libc",
  "rustix",
 ]
@@ -922,8 +942,8 @@ version = "0.70.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "482730051006c51909d094d268d5bd34e731879dcb727f048926ebfed32e03bb"
 dependencies = [
- "ic-host-artifacts",
- "ic-host-fs",
+ "ic-host-artifacts 0.70.4",
+ "ic-host-fs 0.70.5",
  "ic-host-process",
  "ic-platform",
  "ic-wire",
@@ -948,8 +968,8 @@ version = "0.32.4"
 dependencies = [
  "clap",
  "ic-build",
- "ic-host-artifacts",
- "ic-host-fs",
+ "ic-host-artifacts 0.70.4",
+ "ic-host-fs 0.73.6",
  "ic-host-process",
  "ic-platform",
  "ic-testkit",
